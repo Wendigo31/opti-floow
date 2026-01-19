@@ -162,17 +162,17 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         return;
       }
 
-      // Insert the new company user (without user_id initially - will be set on first login)
+      // Insert the new company user (user_id is NULL - will be auto-linked on first login via trigger)
       const { error } = await supabase
         .from('company_users')
         .insert({
           license_id: selectedLicenseId,
-          user_id: crypto.randomUUID(), // Placeholder until user logs in
+          user_id: null, // Will be auto-linked when user logs in via PostgreSQL trigger
           email: newUserEmail.toLowerCase().trim(),
           role: newUserRole,
           display_name: newUserDisplayName.trim() || null,
           is_active: true,
-          accepted_at: new Date().toISOString(),
+          invited_at: new Date().toISOString(),
         });
 
       if (error) {
