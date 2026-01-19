@@ -224,11 +224,14 @@ export function Sidebar() {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className={cn(
-                "mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 cursor-help",
-                collapsed && "mx-2 p-2",
-                isDemoActive && "mt-2"
-              )}>
+              <NavLink
+                to="/my-restrictions"
+                className={cn(
+                  "block mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 cursor-pointer hover:bg-destructive/20 transition-colors",
+                  collapsed && "mx-2 p-2",
+                  isDemoActive && "mt-2"
+                )}
+              >
                 <div className="flex items-center gap-2">
                   <EyeOff className="w-4 h-4 text-destructive flex-shrink-0" />
                   {!collapsed && (
@@ -237,12 +240,12 @@ export function Sidebar() {
                         {restrictedFeaturesCount} restriction{restrictedFeaturesCount > 1 ? 's' : ''}
                       </p>
                       <p className="text-xs text-destructive/70 truncate">
-                        {language === 'fr' ? 'Accès limité' : language === 'es' ? 'Acceso limitado' : 'Limited access'}
+                        {language === 'fr' ? 'Cliquez pour voir' : language === 'es' ? 'Clic para ver' : 'Click to view'}
                       </p>
                     </div>
                   )}
                 </div>
-              </div>
+              </NavLink>
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs">
               <div className="space-y-2">
@@ -259,10 +262,10 @@ export function Sidebar() {
                 </ul>
                 <p className="text-xs text-muted-foreground pt-1 border-t border-border">
                   {language === 'fr' 
-                    ? 'Contactez votre administrateur pour modifier ces restrictions'
+                    ? 'Cliquez pour demander un accès'
                     : language === 'es'
-                    ? 'Contacte a tu administrador para cambiar estas restricciones'
-                    : 'Contact your administrator to change these restrictions'}
+                    ? 'Haga clic para solicitar acceso'
+                    : 'Click to request access'}
                 </p>
               </div>
             </TooltipContent>
