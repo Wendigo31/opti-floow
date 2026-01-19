@@ -16,7 +16,7 @@ import { useSavedTours } from '@/hooks/useSavedTours';
 import type { LocalClient } from '@/types/local';
 import type { SavedTour } from '@/types/savedTour';
 import { useLicense } from '@/hooks/useLicense';
-import { FeatureGate } from '@/components/license/FeatureGate';
+import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
@@ -173,23 +173,27 @@ export default function TripHistory() {
             <p className="text-muted-foreground">{t.history.subtitle}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setExcelImportOpen(true)}>
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Importer Excel
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                if (filteredTours.length > 0) {
-                  exportToursSummaryPDF(filteredTours);
-                  toast({ title: "Synthèse PDF exportée" });
-                }
-              }}
-              disabled={filteredTours.length === 0}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Exporter synthèse
-            </Button>
+            <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+              <Button variant="outline" onClick={() => setExcelImportOpen(true)}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Importer Excel
+              </Button>
+            </FeatureGate>
+            <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (filteredTours.length > 0) {
+                    exportToursSummaryPDF(filteredTours);
+                    toast({ title: "Synthèse PDF exportée" });
+                  }
+                }}
+                disabled={filteredTours.length === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exporter synthèse
+              </Button>
+            </FeatureGate>
             <Button variant="outline" onClick={() => fetchTours()} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Actualiser

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { toast } from 'sonner';
+import { FeatureGate } from '@/components/license/FeatureGate';
 
 const categoryIcons = {
   insurance: Shield,
@@ -361,10 +362,12 @@ export default function Charges() {
             {t.charges.subtitle}
           </p>
         </div>
-        <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
-          <Upload className="w-4 h-4" />
-          Importer Excel
-        </Button>
+        <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+          <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
+            <Upload className="w-4 h-4" />
+            Importer Excel
+          </Button>
+        </FeatureGate>
       </div>
       
       <ExcelImportDialog

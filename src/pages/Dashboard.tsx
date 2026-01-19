@@ -14,6 +14,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
 import { useLanguage } from '@/i18n/LanguageContext';
 import AIAnalysisPanel from '@/components/dashboard/AIAnalysisPanel';
+import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 
 type ChartType = 'pie' | 'donut' | 'bar' | 'radial';
 
@@ -36,7 +37,7 @@ export default function Dashboard() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [lastRoute] = useLocalStorage<StoredRoute | null>('last-calculated-route', null);
   
-  const canExportExcel = hasFeature('excel_export');
+  // Feature checks handled by FeatureGate components
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -175,20 +176,22 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1">{t.dashboard.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={() => setShowExportDialog(true)} variant="outline" size="sm" className="gap-2">
-            <FileDown className="w-4 h-4" />
-            PDF
-          </Button>
-          <Button 
-            onClick={canExportExcel ? handleExportExcel : undefined} 
-            variant="outline" size="sm" 
-            className={cn("gap-2", !canExportExcel && "opacity-50")}
-            disabled={!canExportExcel}
-          >
-            {!canExportExcel && <Lock className="w-3 h-3" />}
-            <FileSpreadsheet className="w-4 h-4" />
-            Excel
-          </Button>
+          <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+            <Button onClick={() => setShowExportDialog(true)} variant="outline" size="sm" className="gap-2">
+              <FileDown className="w-4 h-4" />
+              PDF
+            </Button>
+          </FeatureGate>
+          <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+            <Button 
+              onClick={handleExportExcel} 
+              variant="outline" size="sm" 
+              className="gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </Button>
+          </FeatureGate>
           <Button onClick={handleExportImage} variant="outline" size="sm" className="gap-2">
             <Image className="w-4 h-4" />
             Image

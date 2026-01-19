@@ -57,6 +57,7 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import type { SavedTour } from '@/types/savedTour';
 import jsPDF from 'jspdf';
+import { FeatureGate } from '@/components/license/FeatureGate';
 
 interface Client {
   id: string;
@@ -475,35 +476,39 @@ export default function Tours() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => exportTourToPDF(tour, false)}
-                        disabled={exporting}
-                        title="Export PDF standard"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
+                      <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => exportTourToPDF(tour, false)}
+                          disabled={exporting}
+                          title="Export PDF standard"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </FeatureGate>
                       {isEnterprise && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-purple-500"
-                                onClick={() => exportTourToPDF(tour, true)}
-                                disabled={exporting}
-                              >
-                                <Sparkles className="w-4 h-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Export PDF avec analyse IA</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <FeatureGate feature="btn_ai_optimize" showLockedIndicator={false}>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-purple-500"
+                                  onClick={() => exportTourToPDF(tour, true)}
+                                  disabled={exporting}
+                                >
+                                  <Sparkles className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Export PDF avec analyse IA</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FeatureGate>
                       )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

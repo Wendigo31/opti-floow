@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { FeatureGate } from '@/components/license/FeatureGate';
 
 interface ClientDetailDialogProps {
   client: LocalClient | null;
@@ -387,10 +388,12 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                 </div>
               </div>
               {itineraryReports.length > 0 && (
-                <Button variant="outline" size="sm" onClick={handleExportPDF}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Export PDF
-                </Button>
+                <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </Button>
+                </FeatureGate>
               )}
             </DialogTitle>
           </DialogHeader>
