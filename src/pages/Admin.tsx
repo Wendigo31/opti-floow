@@ -40,6 +40,7 @@ import { SchemaSyncManager } from '@/components/admin/SchemaSyncManager';
 import { CompanyUsersManager } from '@/components/admin/CompanyUsersManager';
 import { CompanyDataStats } from '@/components/admin/CompanyDataStats';
 import { CreateCompanyDialog } from '@/components/admin/CreateCompanyDialog';
+import { UserFeatureOverrides } from '@/components/admin/UserFeatureOverrides';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -901,6 +902,7 @@ export default function Admin() {
             </Button>
           </div>
           <CompanyUsersManager getAdminToken={getAdminToken} />
+          <UserFeatureOverrides getAdminToken={getAdminToken} />
           <CreateCompanyDialog 
             open={createCompanyOpen}
             onOpenChange={setCreateCompanyOpen}

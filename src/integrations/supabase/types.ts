@@ -1092,6 +1092,44 @@ export type Database = {
           },
         ]
       }
+      user_feature_overrides: {
+        Row: {
+          company_user_id: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          feature_key: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company_user_id: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feature_overrides_company_user_id_fkey"
+            columns: ["company_user_id"]
+            isOneToOne: false
+            referencedRelation: "company_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_trailers: {
         Row: {
           brand: string | null

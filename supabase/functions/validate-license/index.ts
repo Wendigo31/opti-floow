@@ -226,7 +226,13 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create client with service role key - this should bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Get client IP
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
