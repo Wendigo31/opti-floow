@@ -26,6 +26,36 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { useDemoMode } from '@/hooks/useDemoMode';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Feature labels for tooltip display
+const FEATURE_LABELS: Record<string, string> = {
+  basic_calculator: 'Calcul de rentabilité',
+  itinerary_planning: 'Planification itinéraire',
+  dashboard_basic: 'Tableau de bord simplifié',
+  dashboard_analytics: 'Tableau de bord analytique',
+  forecast: 'Prévisionnel',
+  trip_history: 'Historique des trajets',
+  multi_drivers: 'Multi-chauffeurs',
+  cost_analysis: 'Analyse détaillée des coûts',
+  ai_optimization: 'Optimisation IA',
+  ai_pdf_analysis: 'Analyse IA des PDF',
+  multi_agency: 'Multi-agences',
+  multi_users: 'Multi-utilisateurs',
+  page_dashboard: 'Tableau de bord',
+  page_calculator: 'Calculateur',
+  page_itinerary: 'Itinéraire',
+  page_tours: 'Tournées',
+  page_clients: 'Clients',
+  page_vehicles: 'Véhicules',
+  page_drivers: 'Conducteurs',
+  page_charges: 'Charges',
+  page_forecast: 'Prévisionnel',
+  page_ai_analysis: 'Analyse IA',
+  btn_export_pdf: 'Export PDF',
+  btn_export_excel: 'Export Excel',
+  btn_ai_optimize: 'Optimisation IA',
+};
 
 // Define which features are required for each nav item
 // If undefined, the item is always visible
@@ -68,8 +98,16 @@ export function Sidebar() {
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const currentDemoSession = getCurrentSession();
 
-  // Count restricted features (user-specific overrides that are disabled)
-  const restrictedFeaturesCount = licenseData?.userFeatureOverrides?.filter(o => !o.enabled).length || 0;
+  // Get restricted features (user-specific overrides that are disabled)
+  const restrictedFeatures = licenseData?.userFeatureOverrides?.filter(o => !o.enabled) || [];
+  const restrictedFeaturesCount = restrictedFeatures.length;
+  
+  // Get labels for restricted features
+  const getRestrictedFeatureLabels = () => {
+    return restrictedFeatures.map(o => 
+      FEATURE_LABELS[o.feature_key] || o.feature_key.replace(/_/g, ' ')
+    );
+  };
 
   // Check if plan meets requirement
   const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
@@ -183,25 +221,53 @@ export function Sidebar() {
 
       {/* Restricted Features Indicator */}
       {restrictedFeaturesCount > 0 && (
-        <div className={cn(
-          "mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30",
-          collapsed && "mx-2 p-2",
-          isDemoActive && "mt-2"
-        )}>
-          <div className="flex items-center gap-2">
-            <EyeOff className="w-4 h-4 text-destructive flex-shrink-0" />
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-destructive truncate">
-                  {restrictedFeaturesCount} restriction{restrictedFeaturesCount > 1 ? 's' : ''}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 cursor-help",
+                collapsed && "mx-2 p-2",
+                isDemoActive && "mt-2"
+              )}>
+                <div className="flex items-center gap-2">
+                  <EyeOff className="w-4 h-4 text-destructive flex-shrink-0" />
+                  {!collapsed && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-destructive truncate">
+                        {restrictedFeaturesCount} restriction{restrictedFeaturesCount > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-destructive/70 truncate">
+                        {language === 'fr' ? 'Accès limité' : language === 'es' ? 'Acceso limitado' : 'Limited access'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs">
+              <div className="space-y-2">
+                <p className="font-medium text-sm">
+                  {language === 'fr' ? 'Fonctionnalités restreintes' : language === 'es' ? 'Funciones restringidas' : 'Restricted features'}
                 </p>
-                <p className="text-xs text-destructive/70 truncate">
-                  {language === 'fr' ? 'Accès limité' : language === 'es' ? 'Acceso limitado' : 'Limited access'}
+                <ul className="text-xs space-y-1">
+                  {getRestrictedFeatureLabels().map((label, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <Lock className="w-3 h-3 text-destructive" />
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted-foreground pt-1 border-t border-border">
+                  {language === 'fr' 
+                    ? 'Contactez votre administrateur pour modifier ces restrictions'
+                    : language === 'es'
+                    ? 'Contacte a tu administrador para cambiar estas restricciones'
+                    : 'Contact your administrator to change these restrictions'}
                 </p>
               </div>
-            )}
-          </div>
-        </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
 
       {/* Navigation */}
