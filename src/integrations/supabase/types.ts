@@ -1235,6 +1235,24 @@ export type Database = {
           is_nullable: string
         }[]
       }
+      get_user_license_id: { Args: { p_user_id: string }; Returns: string }
+      is_company_admin: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_company_member: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_company_owner: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      license_has_members: { Args: { p_license_id: string }; Returns: boolean }
+      link_user_to_company: {
+        Args: { p_company_user_id: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

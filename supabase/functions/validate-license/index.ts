@@ -1476,20 +1476,19 @@ const handler = async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (existingMemberByEmail) {
-            // Update the existing record with the real Supabase user_id
-            const { error: updateError } = await supabase
-              .from("company_users")
-              .update({ 
-                user_id: authUserId,
-                accepted_at: now,
-                is_active: true,
-              })
-              .eq("id", existingMemberByEmail.id);
+            // Update the existing record with the real Supabase user_id using RPC to bypass RLS
+            const { data: linked, error: linkError } = await supabase
+              .rpc("link_user_to_company", {
+                p_company_user_id: existingMemberByEmail.id,
+                p_user_id: authUserId
+              });
               
-            if (updateError) {
-              console.error("[validate-license] Failed to update member user_id:", updateError);
+            if (linkError) {
+              console.error("[validate-license] Failed to link user to company:", linkError);
+            } else if (linked) {
+              console.log(`[validate-license] Linked user to company_users for ${normalizedEmail}`);
             } else {
-              console.log(`[validate-license] Updated company_users with real user_id for ${normalizedEmail}`);
+              console.log(`[validate-license] User already linked or not eligible for ${normalizedEmail}`);
             }
           } else {
             // No existing entry - check if there's already an owner for this license
