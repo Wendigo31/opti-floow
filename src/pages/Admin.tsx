@@ -135,6 +135,8 @@ interface LicenseFormData {
   address: string;
   city: string;
   postalCode: string;
+  assignToCompanyId: string | null; // ID of an existing company/license to assign this user to
+  userRole: 'owner' | 'admin' | 'member';
 }
 
 const emptyFormData: LicenseFormData = {
@@ -147,6 +149,8 @@ const emptyFormData: LicenseFormData = {
   address: '',
   city: '',
   postalCode: '',
+  assignToCompanyId: null,
+  userRole: 'member',
 };
 
 export default function Admin() {
@@ -488,6 +492,8 @@ export default function Admin() {
       address: license.address || '',
       city: license.city || '',
       postalCode: license.postal_code || '',
+      assignToCompanyId: null,
+      userRole: 'member',
     });
     setEditingLicenseId(license.id);
     setCreatedLicense(null);
@@ -503,33 +509,75 @@ export default function Admin() {
     setSaving(true);
     try {
       if (dialogMode === 'create') {
-        const { data, error } = await supabase.functions.invoke('validate-license', {
-          body: { 
-            action: 'create-license',
-            adminToken: getAdminToken(),
-            email: formData.email,
-            planType: formData.planType,
-            firstName: formData.firstName || null,
-            lastName: formData.lastName || null,
-            companyName: formData.companyName || null,
-            siren: formData.siren || null,
-            address: formData.address || null,
-            city: formData.city || null,
-            postalCode: formData.postalCode || null,
-          },
-        });
+        // If assigning to existing company, just add user to company_users
+        if (formData.assignToCompanyId) {
+          const selectedCompany = licenses.find(l => l.id === formData.assignToCompanyId);
+          
+          // Check max users limit
+          const { data: existingUsers } = await supabase
+            .from('company_users')
+            .select('id')
+            .eq('license_id', formData.assignToCompanyId);
+          
+          const currentCount = existingUsers?.length || 0;
+          const maxUsers = selectedCompany?.max_users || 999;
+          
+          if (currentCount >= maxUsers) {
+            toast.error(`Cette société est limitée à ${maxUsers} utilisateur(s)`);
+            setSaving(false);
+            return;
+          }
 
-        if (error) throw error;
-        
-        if (data?.success) {
-          setCreatedLicense({
-            code: data.licenseCode,
-            email: formData.email,
-          });
-          toast.success('Licence créée avec succès');
-          fetchLicenses();
+          // Add user to company_users
+          const { error: userError } = await supabase
+            .from('company_users')
+            .insert({
+              license_id: formData.assignToCompanyId,
+              user_id: crypto.randomUUID(),
+              email: formData.email.toLowerCase().trim(),
+              role: formData.userRole,
+              display_name: formData.firstName && formData.lastName 
+                ? `${formData.firstName} ${formData.lastName}`.trim() 
+                : formData.firstName || formData.lastName || null,
+              is_active: true,
+              accepted_at: new Date().toISOString(),
+            });
+
+          if (userError) throw userError;
+
+          toast.success(`Utilisateur ajouté à ${selectedCompany?.company_name || 'la société'}`);
+          setDialogOpen(false);
+          setFormData(emptyFormData);
         } else {
-          throw new Error(data?.error || 'Erreur lors de la création');
+          // Create new license (standalone)
+          const { data, error } = await supabase.functions.invoke('validate-license', {
+            body: { 
+              action: 'create-license',
+              adminToken: getAdminToken(),
+              email: formData.email,
+              planType: formData.planType,
+              firstName: formData.firstName || null,
+              lastName: formData.lastName || null,
+              companyName: formData.companyName || null,
+              siren: formData.siren || null,
+              address: formData.address || null,
+              city: formData.city || null,
+              postalCode: formData.postalCode || null,
+            },
+          });
+
+          if (error) throw error;
+          
+          if (data?.success) {
+            setCreatedLicense({
+              code: data.licenseCode,
+              email: formData.email,
+            });
+            toast.success('Licence créée avec succès');
+            fetchLicenses();
+          } else {
+            throw new Error(data?.error || 'Erreur lors de la création');
+          }
         }
       } else {
         // Edit existing license
@@ -936,6 +984,71 @@ export default function Admin() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                      {/* Assign to existing company (only in create mode) */}
+                      {dialogMode === 'create' && (
+                        <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-primary font-medium">
+                              <Building2 className="w-4 h-4" />
+                              Assigner à une société existante
+                            </Label>
+                            <Select 
+                              value={formData.assignToCompanyId || 'none'} 
+                              onValueChange={(v) => setFormData(prev => ({ 
+                                ...prev, 
+                                assignToCompanyId: v === 'none' ? null : v 
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Créer une nouvelle licence" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">
+                                  <div className="flex items-center gap-2">
+                                    <Plus className="w-4 h-4" />
+                                    Créer une nouvelle licence
+                                  </div>
+                                </SelectItem>
+                                {licenses.filter(l => l.company_name).map(license => (
+                                  <SelectItem key={license.id} value={license.id}>
+                                    <div className="flex items-center gap-2">
+                                      <Building2 className="w-4 h-4" />
+                                      {license.company_name}
+                                      <Badge variant="outline" className="ml-2 text-xs">
+                                        {license.plan_type?.toUpperCase()}
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Sélectionnez une société pour ajouter cet utilisateur comme membre
+                            </p>
+                          </div>
+                          
+                          {/* Role selector (only when assigning to company) */}
+                          {formData.assignToCompanyId && (
+                            <div className="space-y-2">
+                              <Label>Rôle dans la société</Label>
+                              <Select 
+                                value={formData.userRole} 
+                                onValueChange={(v: 'owner' | 'admin' | 'member') => setFormData(prev => ({ ...prev, userRole: v }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="member">Membre</SelectItem>
+                                  <SelectItem value="admin">Administrateur</SelectItem>
+                                  <SelectItem value="owner">Propriétaire</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Email */}
                       <div className="space-y-2">
                         <Label htmlFor="email">Email *</Label>
@@ -952,38 +1065,40 @@ export default function Admin() {
                         </div>
                       </div>
                       
-                      {/* Plan Type */}
-                      <div className="space-y-2">
-                        <Label htmlFor="planType">Forfait</Label>
-                        <Select 
-                          value={formData.planType} 
-                          onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="start">
-                              <div className="flex items-center gap-2">
-                                <Sparkles className="w-4 h-4" />
-                                Start
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="pro">
-                              <div className="flex items-center gap-2">
-                                <Star className="w-4 h-4" />
-                                Pro
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="enterprise">
-                              <div className="flex items-center gap-2">
-                                <Crown className="w-4 h-4" />
-                                Enterprise
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Plan Type - hidden when assigning to company */}
+                      {!formData.assignToCompanyId && (
+                        <div className="space-y-2">
+                          <Label htmlFor="planType">Forfait</Label>
+                          <Select 
+                            value={formData.planType} 
+                            onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="start">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4" />
+                                  Start
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="pro">
+                                <div className="flex items-center gap-2">
+                                  <Star className="w-4 h-4" />
+                                  Pro
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="enterprise">
+                                <div className="flex items-center gap-2">
+                                  <Crown className="w-4 h-4" />
+                                  Enterprise
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
 
                       {/* Name */}
                       <div className="grid grid-cols-2 gap-4">
@@ -1011,97 +1126,101 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Company */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="companyName">Entreprise</Label>
-                          <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                              id="companyName"
-                              placeholder="Nom de l'entreprise"
-                              value={formData.companyName}
-                              onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                              className="pl-10"
-                            />
+                      {/* Company fields - hidden when assigning to existing company */}
+                      {!formData.assignToCompanyId && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="companyName">Entreprise</Label>
+                              <div className="relative">
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                  id="companyName"
+                                  placeholder="Nom de l'entreprise"
+                                  value={formData.companyName}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="siren">SIREN / SIRET</Label>
+                              <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                  <Input
+                                    id="siren"
+                                    placeholder="123456789 ou 12345678901234"
+                                    value={formData.siren}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, siren: e.target.value }))}
+                                    className="pl-10"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  disabled={sireneLoading || !formData.siren?.trim()}
+                                  onClick={async () => {
+                                    const company = await sireneLookup(formData.siren);
+                                    if (company) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        companyName: company.companyName,
+                                        address: company.address,
+                                        city: company.city,
+                                        postalCode: company.postalCode,
+                                        siren: company.siren,
+                                      }));
+                                      toast.success(`Entreprise trouvée: ${company.companyName}`);
+                                    }
+                                  }}
+                                >
+                                  {sireneLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                                </Button>
+                              </div>
+                              {sireneError && <p className="text-xs text-destructive">{sireneError}</p>}
+                            </div>
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="siren">SIREN / SIRET</Label>
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
+                          {/* Address */}
+                          <div className="space-y-2">
+                            <Label htmlFor="address">Adresse</Label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                               <Input
-                                id="siren"
-                                placeholder="123456789 ou 12345678901234"
-                                value={formData.siren}
-                                onChange={(e) => setFormData(prev => ({ ...prev, siren: e.target.value }))}
+                                id="address"
+                                placeholder="Adresse complète"
+                                value={formData.address}
+                                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                                 className="pl-10"
                               />
                             </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              disabled={sireneLoading || !formData.siren?.trim()}
-                              onClick={async () => {
-                                const company = await sireneLookup(formData.siren);
-                                if (company) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    companyName: company.companyName,
-                                    address: company.address,
-                                    city: company.city,
-                                    postalCode: company.postalCode,
-                                    siren: company.siren,
-                                  }));
-                                  toast.success(`Entreprise trouvée: ${company.companyName}`);
-                                }
-                              }}
-                            >
-                              {sireneLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                            </Button>
                           </div>
-                          {sireneError && <p className="text-xs text-destructive">{sireneError}</p>}
-                        </div>
-                      </div>
 
-                      {/* Address */}
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Adresse</Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            id="address"
-                            placeholder="Adresse complète"
-                            value={formData.address}
-                            onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                            className="pl-10"
-                          />
-                        </div>
-                      </div>
-
-                      {/* City & Postal Code */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">Ville</Label>
-                          <Input
-                            id="city"
-                            placeholder="Ville"
-                            value={formData.city}
-                            onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="postalCode">Code postal</Label>
-                          <Input
-                            id="postalCode"
-                            placeholder="31000"
-                            value={formData.postalCode}
-                            onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
-                          />
-                        </div>
-                      </div>
+                          {/* City & Postal Code */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="city">Ville</Label>
+                              <Input
+                                id="city"
+                                placeholder="Ville"
+                                value={formData.city}
+                                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="postalCode">Code postal</Label>
+                              <Input
+                                id="postalCode"
+                                placeholder="31000"
+                                value={formData.postalCode}
+                                onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setDialogOpen(false)}>
