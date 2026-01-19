@@ -547,19 +547,17 @@ export default function Admin() {
             return;
           }
 
-          // Add user to company_users
+          // Add user to company via RPC (bypass RLS)
+          const displayName = formData.firstName && formData.lastName 
+            ? `${formData.firstName} ${formData.lastName}`.trim() 
+            : formData.firstName || formData.lastName || null;
+
           const { error: userError } = await supabase
-            .from('company_users')
-            .insert({
-              license_id: formData.assignToCompanyId,
-              user_id: crypto.randomUUID(),
-              email: formData.email.toLowerCase().trim(),
-              role: formData.userRole,
-              display_name: formData.firstName && formData.lastName 
-                ? `${formData.firstName} ${formData.lastName}`.trim() 
-                : formData.firstName || formData.lastName || null,
-              is_active: true,
-              accepted_at: new Date().toISOString(),
+            .rpc('admin_add_company_user', {
+              p_license_id: formData.assignToCompanyId,
+              p_email: formData.email.toLowerCase().trim(),
+              p_role: formData.userRole,
+              p_display_name: displayName,
             });
 
           if (userError) throw userError;
