@@ -1,19 +1,14 @@
 import { useState } from 'react';
 import { 
-  Settings2, 
-  Check, 
-  X,
   Sparkles,
   Star,
   Crown,
   Save,
   RotateCcw,
-  ChevronDown,
   ChevronRight,
   Shield,
   Zap,
   Info,
-  Plus,
   Euro,
   Package,
   Truck,
@@ -28,7 +23,8 @@ import {
   Infinity,
   Headphones,
   GraduationCap,
-  Building
+  Building,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -40,21 +36,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { 
   LicenseFeatures, 
   PLAN_DEFAULTS, 
   PRICING_PLANS,
   ADD_ONS,
+  FEATURE_CATEGORIES as FULL_FEATURE_CATEGORIES,
   type AddOn,
 } from '@/types/features';
-import { 
-  FEATURE_DEFINITIONS,
-  CATEGORY_LABELS,
-  getAddOnsForPlan,
-  type FeatureCategory as FCategory,
-} from '@/types/pricing';
 
 interface FeatureEditorProps {
   planType: 'start' | 'pro' | 'enterprise';
@@ -105,41 +95,12 @@ const addonIcons: Record<string, React.ComponentType<{ className?: string }>> = 
   GraduationCap,
 };
 
-// Define feature categories locally
-const FEATURE_CATEGORIES = [
-  {
-    category: 'calculation' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'calculation'),
-  },
-  {
-    category: 'navigation' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'navigation'),
-  },
-  {
-    category: 'analytics' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'analytics'),
-  },
-  {
-    category: 'history' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'history'),
-  },
-  {
-    category: 'fleet' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'fleet'),
-  },
-  {
-    category: 'export' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'export'),
-  },
-  {
-    category: 'ai' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'ai'),
-  },
-  {
-    category: 'enterprise' as FCategory,
-    features: FEATURE_DEFINITIONS.filter(f => f.category === 'enterprise'),
-  },
-].filter(c => c.features.length > 0);
+// Use the full feature categories from features.ts which includes pages, buttons, and company management
+// Each category has { name, nameEn, features: [...] } structure from features.ts
+const FEATURE_CATEGORIES = FULL_FEATURE_CATEGORIES.map(cat => ({
+  categoryName: cat.name, // This is the display name like "📱 Navigation & Pages"
+  features: cat.features.filter(f => !f.isLimit), // Exclude limit features (they have isLimit: true)
+})).filter(c => c.features.length > 0);
 
 // Limit definitions for admin UI
 const LIMIT_DEFINITIONS = [
@@ -161,7 +122,8 @@ export function FeatureEditor({
 }: FeatureEditorProps) {
   const defaults = PLAN_DEFAULTS[planType];
   const plan = PRICING_PLANS.find(p => p.id === planType)!;
-  const availableAddOns = getAddOnsForPlan(planType);
+  // Show ALL add-ons regardless of plan type - admin should be able to manage everything
+  const availableAddOns = ADD_ONS;
   
   const [features, setFeatures] = useState<Partial<LicenseFeatures>>(() => ({
     ...defaults,
@@ -170,7 +132,7 @@ export function FeatureEditor({
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>(activeAddOns);
   const [hasChanges, setHasChanges] = useState(false);
   const [openCategories, setOpenCategories] = useState<string[]>(
-    FEATURE_CATEGORIES.map(c => c.category)
+    FEATURE_CATEGORIES.map(c => c.categoryName)
   );
 
   const handleToggle = (key: string) => {
@@ -212,11 +174,11 @@ export function FeatureEditor({
     setHasChanges(false);
   };
 
-  const toggleCategory = (name: string) => {
+  const toggleCategory = (catName: string) => {
     setOpenCategories(prev => 
-      prev.includes(name) 
-        ? prev.filter(c => c !== name)
-        : [...prev, name]
+      prev.includes(catName) 
+        ? prev.filter(c => c !== catName)
+        : [...prev, catName]
     );
   };
 
@@ -228,8 +190,9 @@ export function FeatureEditor({
     return sum + (addon?.monthlyPrice || 0);
   }, 0);
 
-  // Count modifications
-  const totalFeatureModifications = FEATURE_DEFINITIONS.filter(f => {
+  // Count modifications - use all features from all categories
+  const allFeatures = FULL_FEATURE_CATEGORIES.flatMap(cat => cat.features);
+  const totalFeatureModifications = allFeatures.filter(f => {
     const key = f.key as keyof LicenseFeatures;
     return (features[key] as boolean) !== (defaults[key] as boolean);
   }).length;
@@ -345,8 +308,7 @@ export function FeatureEditor({
             {availableAddOns.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Aucun add-on disponible pour le forfait {planType}.</p>
-                <p className="text-sm">Toutes les fonctionnalités sont déjà incluses !</p>
+                <p>Aucun add-on disponible.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -415,19 +377,18 @@ export function FeatureEditor({
 
           {/* FEATURES TAB */}
           <TabsContent value="features" className="mt-0 space-y-3">
-            {FEATURE_CATEGORIES.map(({ category, features: categoryFeatures }) => {
-              const categoryInfo = CATEGORY_LABELS[category];
+            {FEATURE_CATEGORIES.map(({ categoryName, features: categoryFeatures }) => {
               const enabledCount = categoryFeatures.filter(f => (features as any)[f.key]).length;
               const modifiedCount = categoryFeatures.filter(f => 
                 (features as any)[f.key] !== (defaults as any)[f.key]
               ).length;
-              const isOpen = openCategories.includes(category);
+              const isOpen = openCategories.includes(categoryName);
               
               return (
                 <Collapsible 
-                  key={category} 
+                  key={categoryName} 
                   open={isOpen}
-                  onOpenChange={() => toggleCategory(category)}
+                  onOpenChange={() => toggleCategory(categoryName)}
                   className="border rounded-lg overflow-hidden"
                 >
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors bg-muted/20">
@@ -436,7 +397,7 @@ export function FeatureEditor({
                         "w-4 h-4 text-muted-foreground transition-transform duration-200",
                         isOpen && "rotate-90"
                       )} />
-                      <span className="font-medium text-sm">{categoryInfo.fr}</span>
+                      <span className="font-medium text-sm">{categoryName}</span>
                       <Badge variant="secondary" className="text-xs">
                         {enabledCount}/{categoryFeatures.length}
                       </Badge>
@@ -467,7 +428,7 @@ export function FeatureEditor({
                           >
                             <div className="flex-1 pr-4">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-sm">{feature.name}</span>
+                                <span className="font-medium text-sm">{feature.label}</span>
                                 {isOverridden && (
                                   <Badge variant="outline" className="text-xs border-primary/50 text-primary">
                                     Modifié
