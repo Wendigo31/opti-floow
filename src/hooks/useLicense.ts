@@ -4,6 +4,12 @@ import type { LicenseFeatures } from '@/types/features';
 
 export type PlanType = 'start' | 'pro' | 'enterprise';
 
+// User-specific feature override
+interface UserFeatureOverride {
+  feature_key: string;
+  enabled: boolean;
+}
+
 interface LicenseData {
   code: string;
   email: string;
@@ -26,11 +32,15 @@ interface LicenseData {
   maxYearlyCharges?: number | null;
   // Custom features from admin
   customFeatures?: Partial<LicenseFeatures> | null;
+  // User-specific feature overrides
+  userFeatureOverrides?: UserFeatureOverride[] | null;
   // Visibility settings
   showUserInfo?: boolean;
   showCompanyInfo?: boolean;
   showAddressInfo?: boolean;
   showLicenseInfo?: boolean;
+  // Company user info
+  companyUserId?: string | null;
 }
 
 // Cached license with offline support
@@ -425,7 +435,9 @@ export function useLicense(): UseLicenseReturn {
                 maxMonthlyCharges: checkResponse.licenseData?.maxMonthlyCharges ?? null,
                 maxYearlyCharges: checkResponse.licenseData?.maxYearlyCharges ?? null,
                 // Custom features from admin
-                customFeatures: checkResponse.features || null,
+                customFeatures: checkResponse.customFeatures || null,
+                // User-specific feature overrides
+                userFeatureOverrides: checkResponse.userFeatureOverrides || null,
                 // Visibility settings
                 showUserInfo: checkResponse.licenseData?.showUserInfo ?? true,
                 showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
@@ -531,6 +543,8 @@ export function useLicense(): UseLicenseReturn {
         maxYearlyCharges: response.licenseData.maxYearlyCharges ?? null,
         // Custom features from admin
         customFeatures: response.customFeatures || null,
+        // User-specific feature overrides
+        userFeatureOverrides: response.userFeatureOverrides || null,
         // Visibility settings
         showUserInfo: response.licenseData.showUserInfo ?? true,
         showCompanyInfo: response.licenseData.showCompanyInfo ?? true,
@@ -611,7 +625,8 @@ export function useLicense(): UseLicenseReturn {
           maxDailyCharges: checkResponse.licenseData?.maxDailyCharges ?? null,
           maxMonthlyCharges: checkResponse.licenseData?.maxMonthlyCharges ?? null,
           maxYearlyCharges: checkResponse.licenseData?.maxYearlyCharges ?? null,
-          customFeatures: checkResponse.features || null,
+          customFeatures: checkResponse.customFeatures || null,
+          userFeatureOverrides: checkResponse.userFeatureOverrides || null,
           showUserInfo: checkResponse.licenseData?.showUserInfo ?? true,
           showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
           showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
@@ -644,9 +659,18 @@ export function useLicense(): UseLicenseReturn {
 
   const planType: PlanType = licenseData?.planType || 'start';
 
-  // Check if a feature is enabled (custom features take priority over plan defaults)
+  // Check if a feature is enabled (user overrides > custom features > plan defaults)
   const hasFeature = useCallback((feature: FeatureKey): boolean => {
-    // First check custom features from admin
+    // First check user-specific overrides (highest priority)
+    const userOverrides = licenseData?.userFeatureOverrides;
+    if (userOverrides) {
+      const override = userOverrides.find(o => o.feature_key === feature);
+      if (override !== undefined) {
+        return override.enabled;
+      }
+    }
+    
+    // Then check custom features from admin (company-level)
     const customFeatures = licenseData?.customFeatures;
     if (customFeatures) {
       // Map FeatureKey to LicenseFeatures key
@@ -657,7 +681,7 @@ export function useLicense(): UseLicenseReturn {
     }
     // Fall back to plan defaults
     return PLAN_FEATURES[planType].includes(feature);
-  }, [planType, licenseData?.customFeatures]);
+  }, [planType, licenseData?.customFeatures, licenseData?.userFeatureOverrides]);
 
   // Get a specific feature value (for limits and other non-boolean values)
   const getFeatureValue = useCallback(<K extends keyof LicenseFeatures>(key: K): LicenseFeatures[K] | undefined => {

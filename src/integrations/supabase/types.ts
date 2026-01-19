@@ -295,7 +295,7 @@ export type Database = {
           license_id: string
           role: string
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -309,7 +309,7 @@ export type Database = {
           license_id: string
           role?: string
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -323,7 +323,7 @@ export type Database = {
           license_id?: string
           role?: string
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

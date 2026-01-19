@@ -1197,6 +1197,37 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("license_id", license.id)
         .maybeSingle();
 
+      // Fetch user-specific feature overrides if user is logged in
+      let userFeatureOverrides: { feature_key: string; enabled: boolean }[] = [];
+      const authHeader = req.headers.get("authorization");
+      if (authHeader) {
+        try {
+          // Get current user from JWT
+          const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+          if (user) {
+            // Find the company_user record for this user
+            const { data: companyUser } = await supabase
+              .from("company_users")
+              .select("id")
+              .eq("license_id", license.id)
+              .eq("user_id", user.id)
+              .maybeSingle();
+
+            if (companyUser) {
+              // Fetch user-specific overrides
+              const { data: overrides } = await supabase
+                .from("user_feature_overrides")
+                .select("feature_key, enabled")
+                .eq("company_user_id", companyUser.id);
+              
+              userFeatureOverrides = overrides || [];
+            }
+          }
+        } catch (e) {
+          console.error("[validate-license] Error fetching user overrides:", e);
+        }
+      }
+
       // Update last_used_at
       await supabase
         .from("licenses")
@@ -1229,6 +1260,7 @@ const handler = async (req: Request): Promise<Response> => {
             showLicenseInfo: license.show_license_info ?? true,
           },
           customFeatures: features || null,
+          userFeatureOverrides: userFeatureOverrides.length > 0 ? userFeatureOverrides : null,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -1554,6 +1586,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("[validate-license] License validated successfully for:", normalizedEmail, "with auth:", !!authSession);
 
+    // Fetch user-specific feature overrides if we have an auth session
+    let userFeatureOverrides: { feature_key: string; enabled: boolean }[] = [];
+    if (authSession?.user?.id) {
+      try {
+        // Find the company_user record for this user
+        const { data: companyUser } = await supabase
+          .from("company_users")
+          .select("id")
+          .eq("license_id", license.id)
+          .eq("user_id", authSession.user.id)
+          .maybeSingle();
+
+        if (companyUser) {
+          // Fetch user-specific overrides
+          const { data: overrides } = await supabase
+            .from("user_feature_overrides")
+            .select("feature_key, enabled")
+            .eq("company_user_id", companyUser.id);
+          
+          userFeatureOverrides = overrides || [];
+          console.log("[validate-license] User feature overrides:", userFeatureOverrides.length);
+        }
+      } catch (e) {
+        console.error("[validate-license] Error fetching user overrides:", e);
+      }
+    }
+
     // Build response with optional auth session
     const responsePayload: Record<string, any> = {
       success: true,
@@ -1582,6 +1641,7 @@ const handler = async (req: Request): Promise<Response> => {
         showLicenseInfo: license.show_license_info ?? true,
       },
       customFeatures: features || null,
+      userFeatureOverrides: userFeatureOverrides.length > 0 ? userFeatureOverrides : null,
     };
 
     // Include auth session if available
