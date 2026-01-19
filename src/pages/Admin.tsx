@@ -158,6 +158,7 @@ export default function Admin() {
   const { isLicensed, isLoading, licenseData } = useLicense();
   const { isActive: isDemoActive, currentSessionId, availableSessions, activateDemo, deactivateDemo, getCurrentSession } = useDemoMode();
   const [licenses, setLicenses] = useState<License[]>([]);
+  const [companyUserCounts, setCompanyUserCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -411,6 +412,22 @@ export default function Admin() {
       if (error) throw error;
       if (data?.licenses) {
         setLicenses(data.licenses);
+        
+        // Fetch user counts for each company
+        const licenseIds = data.licenses.map((l: License) => l.id);
+        if (licenseIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from('company_users')
+            .select('license_id')
+            .in('license_id', licenseIds);
+          
+          // Count users per license
+          const counts: Record<string, number> = {};
+          (usersData || []).forEach((u: { license_id: string }) => {
+            counts[u.license_id] = (counts[u.license_id] || 0) + 1;
+          });
+          setCompanyUserCounts(counts);
+        }
       }
     } catch (error: any) {
       console.error('Error fetching licenses:', error);
@@ -1009,17 +1026,33 @@ export default function Admin() {
                                     Créer une nouvelle licence
                                   </div>
                                 </SelectItem>
-                                {licenses.filter(l => l.company_name).map(license => (
-                                  <SelectItem key={license.id} value={license.id}>
-                                    <div className="flex items-center gap-2">
-                                      <Building2 className="w-4 h-4" />
-                                      {license.company_name}
-                                      <Badge variant="outline" className="ml-2 text-xs">
-                                        {license.plan_type?.toUpperCase()}
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
+                                {licenses.filter(l => l.company_name).map(license => {
+                                  const currentUsers = companyUserCounts[license.id] || 0;
+                                  const maxUsers = license.max_users || 999;
+                                  const isFull = currentUsers >= maxUsers && maxUsers !== 999;
+                                  
+                                  return (
+                                    <SelectItem 
+                                      key={license.id} 
+                                      value={license.id}
+                                      disabled={isFull}
+                                    >
+                                      <div className="flex items-center gap-2 w-full">
+                                        <Building2 className="w-4 h-4 flex-shrink-0" />
+                                        <span className="truncate">{license.company_name}</span>
+                                        <Badge 
+                                          variant={isFull ? "destructive" : "secondary"} 
+                                          className="ml-auto text-xs flex-shrink-0"
+                                        >
+                                          {currentUsers}/{maxUsers === 999 ? '∞' : maxUsers}
+                                        </Badge>
+                                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                                          {license.plan_type?.toUpperCase()}
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
