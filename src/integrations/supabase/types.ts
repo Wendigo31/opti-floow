@@ -1263,6 +1263,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_add_company_user: {
+        Args: {
+          p_display_name?: string
+          p_email: string
+          p_license_id: string
+          p_role?: string
+        }
+        Returns: string
+      }
+      admin_remove_company_user: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      admin_update_company_user_role: {
+        Args: { p_role: string; p_user_id: string }
+        Returns: boolean
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       get_table_columns: {
         Args: { table_name: string }

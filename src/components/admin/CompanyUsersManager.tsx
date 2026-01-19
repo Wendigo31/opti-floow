@@ -162,17 +162,13 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         return;
       }
 
-      // Insert the new company user (user_id is NULL - will be auto-linked on first login via trigger)
-      const { error } = await supabase
-        .from('company_users')
-        .insert({
-          license_id: selectedLicenseId,
-          user_id: null, // Will be auto-linked when user logs in via PostgreSQL trigger
-          email: newUserEmail.toLowerCase().trim(),
-          role: newUserRole,
-          display_name: newUserDisplayName.trim() || null,
-          is_active: true,
-          invited_at: new Date().toISOString(),
+      // Use RPC function to bypass RLS
+      const { data: newId, error } = await supabase
+        .rpc('admin_add_company_user', {
+          p_license_id: selectedLicenseId,
+          p_email: newUserEmail.toLowerCase().trim(),
+          p_role: newUserRole,
+          p_display_name: newUserDisplayName.trim() || null,
         });
 
       if (error) {
@@ -229,10 +225,11 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
       return;
     }
 
-    const { error } = await supabase
-      .from('company_users')
-      .delete()
-      .eq('id', userToRemove);
+    // Use RPC function to bypass RLS
+    const { data: success, error } = await supabase
+      .rpc('admin_remove_company_user', {
+        p_user_id: userToRemove,
+      });
 
     if (error) {
       toast({
@@ -251,10 +248,12 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   };
 
   const handleRoleChange = async (userId: string, newRole: 'admin' | 'member') => {
-    const { error } = await supabase
-      .from('company_users')
-      .update({ role: newRole })
-      .eq('id', userId);
+    // Use RPC function to bypass RLS
+    const { data: success, error } = await supabase
+      .rpc('admin_update_company_user_role', {
+        p_user_id: userId,
+        p_role: newRole,
+      });
 
     if (error) {
       toast({
