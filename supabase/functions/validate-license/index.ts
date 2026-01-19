@@ -539,7 +539,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Admin: Update limits for a license
     if (action === "update-limits") {
-      const { licenseId, maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges } = body;
+      const { licenseId, maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges, maxUsers } = body;
       const auth = await verifyAdminAuth(body, authHeader);
       
       console.log("Updating limits for license:", licenseId, "by admin:", auth.email);
@@ -566,6 +566,7 @@ const handler = async (req: Request): Promise<Response> => {
           max_daily_charges: maxDailyCharges,
           max_monthly_charges: maxMonthlyCharges,
           max_yearly_charges: maxYearlyCharges,
+          max_users: maxUsers,
         })
         .eq("id", licenseId);
 
@@ -579,7 +580,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log("Limits updated successfully:", licenseId);
 
-      await logAdminAction(supabase, auth.email || 'admin', 'update_limits', licenseId, { maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges }, clientIp);
+      await logAdminAction(supabase, auth.email || 'admin', 'update_limits', licenseId, { maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges, maxUsers }, clientIp);
 
       return new Response(
         JSON.stringify({ success: true }),
