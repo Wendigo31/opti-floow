@@ -36,6 +36,7 @@ import { depreciationMethods } from '@/types/vehicle';
 import { trailerDepreciationMethods } from '@/types/trailer';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { FeatureGate } from '@/components/license/FeatureGate';
 
 interface DepreciationReportProps {
   vehicles: Vehicle[];
@@ -366,10 +367,12 @@ export function DepreciationReport({ vehicles, trailers }: DepreciationReportPro
 
         {/* Export Button */}
         <div className="flex justify-end mt-4">
-          <Button onClick={exportToPDF} className="gap-2">
-            <Download className="w-4 h-4" />
-            Exporter en PDF
-          </Button>
+          <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+            <Button onClick={exportToPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              Exporter en PDF
+            </Button>
+          </FeatureGate>
         </div>
       </DialogContent>
     </Dialog>

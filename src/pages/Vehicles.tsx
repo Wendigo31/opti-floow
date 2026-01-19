@@ -70,6 +70,7 @@ import { calculateVehicleCosts, calculateTrailerCosts, formatCostPerKm, getCostP
 import { toast } from 'sonner';
 import { parseExcelFile } from '@/utils/excelImport';
 import * as XLSX from 'xlsx';
+import { FeatureGate } from '@/components/license/FeatureGate';
 
 // Lazy load VehicleReports
 const VehicleReportsContent = lazy(() => import('./VehicleReports'));
@@ -2047,13 +2048,17 @@ export default function Vehicles() {
               </SelectContent>
             </Select>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={downloadFleetTemplate} title="Télécharger le modèle Excel">
-                <Download className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} title="Importer depuis Excel">
-                <Upload className="w-4 h-4 mr-2" />
-                Import
-              </Button>
+              <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+                <Button variant="outline" onClick={downloadFleetTemplate} title="Télécharger le modèle Excel">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </FeatureGate>
+              <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} title="Importer depuis Excel">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import
+                </Button>
+              </FeatureGate>
               <Button onClick={handleAdd} disabled={isAdding}>
                 <Plus className="w-4 h-4 mr-2" />
                 Ajouter

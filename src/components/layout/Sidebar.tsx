@@ -16,7 +16,8 @@ import {
   Route,
   PlayCircle,
   StopCircle,
-  Settings
+  Settings,
+  EyeOff
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -32,28 +33,28 @@ type NavItemConfig = {
   to: string;
   icon: any;
   labelKey: keyof typeof import('@/i18n/translations').translations.fr.nav;
-  requiredFeature?: FeatureKey;
-  requiredPlan?: 'pro' | 'enterprise';
+  requiredFeature?: FeatureKey; // Feature flag from admin panel (can completely hide)
+  requiredPlan?: 'pro' | 'enterprise'; // Plan requirement (shows locked with upgrade prompt)
 };
 
 const navItems: NavItemConfig[] = [
   // Core calculation tools (Calculator now includes History via tabs)
-  { to: '/calculator', icon: Calculator, labelKey: 'calculator' },
-  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredPlan: 'pro' },
-  { to: '/tours', icon: Route, labelKey: 'tours', requiredPlan: 'pro' },
+  { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator' },
+  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro' },
+  { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro' },
   
   // Analysis & Reports (AI analysis integrated into dashboard)
-  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredPlan: 'pro' },
-  { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredPlan: 'pro' },
+  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro' },
+  { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro' },
   
   // Resource Management (Vehicle Reports now integrated in Vehicles page)
-  { to: '/vehicles', icon: Truck, labelKey: 'vehicles' },
-  { to: '/drivers', icon: Users, labelKey: 'drivers' },
-  { to: '/charges', icon: Building2, labelKey: 'charges' },
-  { to: '/clients', icon: UserCircle, labelKey: 'clients' },
+  { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles' },
+  { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers' },
+  { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges' },
+  { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
   
   // Settings & Subscription
-  { to: '/settings', icon: Settings, labelKey: 'settings' },
+  { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
   { to: '/info', icon: Info, labelKey: 'info' },
 ];
@@ -62,7 +63,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { planType } = useLicense();
+  const { planType, hasFeature } = useLicense();
   const { t, language } = useLanguage();
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const currentDemoSession = getCurrentSession();
@@ -181,8 +182,15 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.to;
-          const isLocked = !isPlanSufficient(item.requiredPlan);
           const label = t.nav[item.labelKey];
+          
+          // Check if feature is disabled via admin panel - completely hide if disabled
+          if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+            return null; // Hidden by admin
+          }
+          
+          // Check if plan is insufficient - show locked state with upgrade prompt
+          const isLocked = !isPlanSufficient(item.requiredPlan);
           
           if (isLocked) {
             return (

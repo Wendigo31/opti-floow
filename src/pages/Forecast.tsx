@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FeatureGate } from '@/components/license/FeatureGate';
+import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -222,10 +222,12 @@ export default function Forecast() {
               {t.forecast.subtitle}
             </p>
           </div>
-          <Button onClick={exportToPDF} className="gap-2">
-            <Download className="w-4 h-4" />
-            {t.dashboard.exportPDF}
-          </Button>
+          <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
+            <Button onClick={exportToPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              {t.dashboard.exportPDF}
+            </Button>
+          </FeatureGate>
         </div>
 
         {/* Filters */}
