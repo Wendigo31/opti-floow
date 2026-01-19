@@ -1,0 +1,1548 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Get admin emails from environment variable
+const getAdminEmails = (): string[] => {
+  const envEmails = Deno.env.get('ADMIN_EMAILS') || '';
+  return envEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+};
+
+interface ValidateLicenseRequest {
+  licenseCode: string;
+  email: string;
+}
+
+interface CheckLicenseRequest {
+  licenseCode: string;
+  email: string;
+}
+
+// Verify admin JWT token
+const verifyAdminToken = async (token: string): Promise<{ valid: boolean; payload?: any }> => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.log('[validate-license] JWT: invalid format (not 3 parts)');
+      return { valid: false };
+    }
+    
+    const [headerB64, payloadB64, signatureB64] = parts;
+    const data = `${headerB64}.${payloadB64}`;
+    
+    const encoder = new TextEncoder();
+    // Keep secret handling consistent across admin functions (trim to avoid newline/space mismatches)
+    const secret = (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
+    
+    if (!secret) {
+      console.error('[validate-license] ADMIN_SECRET_CODE not configured');
+      return { valid: false };
+    }
+    
+    // Import key for verification
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    
+    // Decode signature
+    const signatureStr = signatureB64.replace(/-/g, '+').replace(/_/g, '/');
+    const signaturePadded = signatureStr + '='.repeat((4 - signatureStr.length % 4) % 4);
+    const signature = Uint8Array.from(atob(signaturePadded), c => c.charCodeAt(0));
+    
+    // Verify signature
+    const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(data));
+    
+    if (!isValid) {
+      console.log('[validate-license] JWT: signature verification failed');
+      return { valid: false };
+    }
+    
+    // Decode payload
+    const payloadStr = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+    const payloadPadded = payloadStr + '='.repeat((4 - payloadStr.length % 4) % 4);
+    const payload = JSON.parse(atob(payloadPadded));
+    
+    // Check expiration
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      console.log('[validate-license] JWT: token expired', { exp: payload.exp, now });
+      return { valid: false };
+    }
+    
+    // Check role
+    if (payload.role !== 'admin') {
+      console.log('[validate-license] JWT: invalid role', payload.role);
+      return { valid: false };
+    }
+    
+    console.log('[validate-license] JWT: verification successful for', payload.email);
+    return { valid: true, payload };
+  } catch (error) {
+    console.error('[validate-license] JWT verification error:', error);
+    return { valid: false };
+  }
+};
+
+// Verify admin authorization - either by token or legacy email check
+const verifyAdminAuth = async (body: any, authHeader?: string | null): Promise<{ authorized: boolean; email?: string }> => {
+  // First, try JWT token from Authorization header
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const result = await verifyAdminToken(token);
+    if (result.valid && result.payload) {
+      return { authorized: true, email: result.payload.email };
+    }
+  }
+
+  // Second, try adminToken in body
+  if (body.adminToken) {
+    const result = await verifyAdminToken(body.adminToken);
+    if (result.valid && result.payload) {
+      return { authorized: true, email: result.payload.email };
+    }
+  }
+
+  // Legacy fallback: check adminEmail against ADMIN_EMAILS
+  // This is for backward compatibility during transition
+  const adminEmails = getAdminEmails();
+  if (body.adminEmail && adminEmails.includes(body.adminEmail.toLowerCase())) {
+    console.log('[validate-license] Warning: Using legacy email auth - should migrate to JWT');
+    return { authorized: true, email: body.adminEmail };
+  }
+
+  return { authorized: false };
+};
+
+// Rate limiting helper for license validation
+const checkRateLimit = async (
+  supabase: any,
+  identifier: string,
+  actionType: string,
+  maxAttempts: number,
+  windowMinutes: number
+): Promise<{ allowed: boolean; retryAfter?: number }> => {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowMinutes * 60 * 1000);
+
+  const { data: existing } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', identifier)
+    .eq('action_type', actionType)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from('rate_limits').insert({
+      identifier,
+      action_type: actionType,
+      attempts: 1,
+      first_attempt_at: now.toISOString(),
+      last_attempt_at: now.toISOString(),
+    });
+    return { allowed: true };
+  }
+
+  // Check if locked
+  if (existing.locked_until && new Date(existing.locked_until) > now) {
+    const retryAfter = Math.ceil((new Date(existing.locked_until).getTime() - now.getTime()) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  // Check if window has expired
+  if (new Date(existing.first_attempt_at) < windowStart) {
+    await supabase
+      .from('rate_limits')
+      .update({
+        attempts: 1,
+        first_attempt_at: now.toISOString(),
+        last_attempt_at: now.toISOString(),
+        locked_until: null,
+      })
+      .eq('id', existing.id);
+    return { allowed: true };
+  }
+
+  // Check if max attempts exceeded
+  if (existing.attempts >= maxAttempts) {
+    const lockedUntil = new Date(new Date(existing.first_attempt_at).getTime() + windowMinutes * 60 * 1000);
+    await supabase
+      .from('rate_limits')
+      .update({ locked_until: lockedUntil.toISOString() })
+      .eq('id', existing.id);
+    const retryAfter = Math.ceil((lockedUntil.getTime() - now.getTime()) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  // Increment counter
+  await supabase
+    .from('rate_limits')
+    .update({
+      attempts: existing.attempts + 1,
+      last_attempt_at: now.toISOString(),
+    })
+    .eq('id', existing.id);
+
+  return { allowed: true };
+};
+
+// Log admin action
+const logAdminAction = async (
+  supabase: any,
+  adminEmail: string,
+  action: string,
+  targetId: string | null,
+  details: object,
+  ipAddress: string
+): Promise<void> => {
+  try {
+    await supabase.from('admin_audit_log').insert({
+      admin_email: adminEmail,
+      action,
+      target_id: targetId,
+      details,
+      ip_address: ipAddress,
+    });
+  } catch (error) {
+    console.error('[validate-license] Failed to log admin action:', error);
+  }
+};
+
+const handler = async (req: Request): Promise<Response> => {
+  console.log("validate-license function called");
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get client IP
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    const authHeader = req.headers.get('authorization');
+    const body = await req.json();
+    const action = body.action || "validate";
+
+    // Admin: List all licenses with features
+    if (action === "list-all") {
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: licenses, error } = await supabase
+        .from("licenses")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("List licenses error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur base de données" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Fetch features for each license
+      const licensesWithFeatures = await Promise.all(
+        (licenses || []).map(async (license: any) => {
+          const { data: features } = await supabase
+            .from("license_features")
+            .select("*")
+            .eq("license_id", license.id)
+            .maybeSingle();
+          
+          return { ...license, features: features || null };
+        })
+      );
+
+      await logAdminAction(supabase, auth.email || 'admin', 'list_licenses', null, { count: licenses?.length || 0 }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true, licenses: licensesWithFeatures }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Toggle license status
+    if (action === "toggle-status") {
+      const { licenseId, isActive } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("licenses")
+        .update({ is_active: isActive })
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Toggle status error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur mise à jour" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      await logAdminAction(supabase, auth.email || 'admin', 'toggle_license_status', licenseId, { isActive }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Update plan type
+    if (action === "update-plan") {
+      const { licenseId, planType } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!['start', 'pro', 'enterprise'].includes(planType)) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Type de forfait invalide" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("licenses")
+        .update({ plan_type: planType })
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Update plan error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur mise à jour" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_plan', licenseId, { planType }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Create new license
+    if (action === "create-license") {
+      const { email, planType, firstName, lastName, companyName } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Creating license for:", email, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!email) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Email requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Generate unique license code: XXXX-XXXX-XXXX-XXXX
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const segments = [];
+        for (let s = 0; s < 4; s++) {
+          let segment = '';
+          for (let i = 0; i < 4; i++) {
+            segment += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          segments.push(segment);
+        }
+        return segments.join('-');
+      };
+
+      let licenseCode = generateCode();
+      
+      // Ensure uniqueness
+      let attempts = 0;
+      while (attempts < 10) {
+        const { data: existing } = await supabase
+          .from("licenses")
+          .select("id")
+          .eq("license_code", licenseCode)
+          .maybeSingle();
+        
+        if (!existing) break;
+        licenseCode = generateCode();
+        attempts++;
+      }
+
+      const { data: newLicense, error } = await supabase
+        .from("licenses")
+        .insert({
+          license_code: licenseCode,
+          email: email.trim().toLowerCase(),
+          plan_type: planType || 'start',
+          first_name: firstName || null,
+          last_name: lastName || null,
+          company_name: companyName || null,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Create license error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la création: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("License created successfully:", licenseCode);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'create_license', newLicense.id, { email, planType }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true, licenseCode, license: newLicense }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Delete license permanently
+    if (action === "delete-license") {
+      const { licenseId } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Deleting license:", licenseId, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("licenses")
+        .delete()
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Delete license error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la suppression: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("License deleted successfully:", licenseId);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'delete_license', licenseId, {}, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Update existing license (full edit)
+    if (action === "update-license") {
+      const { licenseId, email, planType, firstName, lastName, companyName, siren, address, city, postalCode } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Updating license:", licenseId, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const updateData: Record<string, any> = {};
+      if (email !== undefined) updateData.email = email.trim().toLowerCase();
+      if (planType !== undefined && ['start', 'pro', 'enterprise'].includes(planType)) updateData.plan_type = planType;
+      if (firstName !== undefined) updateData.first_name = firstName || null;
+      if (lastName !== undefined) updateData.last_name = lastName || null;
+      if (companyName !== undefined) updateData.company_name = companyName || null;
+      if (siren !== undefined) updateData.siren = siren || null;
+      if (address !== undefined) updateData.address = address || null;
+      if (city !== undefined) updateData.city = city || null;
+      if (postalCode !== undefined) updateData.postal_code = postalCode || null;
+
+      const { error } = await supabase
+        .from("licenses")
+        .update(updateData)
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Update license error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la mise à jour: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("License updated successfully:", licenseId);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_license', licenseId, updateData, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Update limits for a license
+    if (action === "update-limits") {
+      const { licenseId, maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Updating limits for license:", licenseId, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("licenses")
+        .update({
+          max_drivers: maxDrivers,
+          max_clients: maxClients,
+          max_daily_charges: maxDailyCharges,
+          max_monthly_charges: maxMonthlyCharges,
+          max_yearly_charges: maxYearlyCharges,
+        })
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Update limits error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la mise à jour des limites: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("Limits updated successfully:", licenseId);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_limits', licenseId, { maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Update features for a license
+    if (action === "update-features") {
+      const { licenseId, features } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Updating features for license:", licenseId, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Check if features already exist for this license
+      const { data: existingFeatures } = await supabase
+        .from("license_features")
+        .select("id")
+        .eq("license_id", licenseId)
+        .maybeSingle();
+
+      let error;
+      if (existingFeatures) {
+        // Update existing features
+        const { error: updateError } = await supabase
+          .from("license_features")
+          .update({
+            ...features,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("license_id", licenseId);
+        error = updateError;
+      } else {
+        // Insert new features
+        const { error: insertError } = await supabase
+          .from("license_features")
+          .insert({
+            license_id: licenseId,
+            ...features,
+          });
+        error = insertError;
+      }
+
+      if (error) {
+        console.error("Update features error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la mise à jour des fonctionnalités: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("Features updated successfully:", licenseId);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_features', licenseId, { features }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Update visibility settings for a license
+    if (action === "update-visibility") {
+      const { licenseId, showUserInfo, showCompanyInfo, showAddressInfo, showLicenseInfo } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Updating visibility for license:", licenseId, "by admin:", auth.email);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("licenses")
+        .update({
+          show_user_info: showUserInfo,
+          show_company_info: showCompanyInfo,
+          show_address_info: showAddressInfo,
+          show_license_info: showLicenseInfo,
+        })
+        .eq("id", licenseId);
+
+      if (error) {
+        console.error("Update visibility error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la mise à jour de la visibilité: " + error.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("Visibility updated successfully:", licenseId);
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_visibility', licenseId, { showUserInfo, showCompanyInfo, showAddressInfo, showLicenseInfo }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Get login history for a license
+    if (action === "get-login-history") {
+      const { licenseId } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: history, error } = await supabase
+        .from("login_history")
+        .select("*")
+        .eq("license_id", licenseId)
+        .order("login_at", { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error("Get login history error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la récupération de l'historique" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, history: history || [] }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Get user statistics (tours, vehicles, drivers, charges counts)
+    if (action === "get-user-stats") {
+      const { licenseId, userId } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId && !userId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence ou utilisateur requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get license email to find auth user
+      let userIdToQuery = userId;
+      if (licenseId && !userId) {
+        const { data: license } = await supabase
+          .from("licenses")
+          .select("email")
+          .eq("id", licenseId)
+          .maybeSingle();
+        
+        if (license?.email) {
+          // Find auth user by email
+          const { data: authUsers } = await supabase.auth.admin.listUsers();
+          const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === license.email.toLowerCase());
+          userIdToQuery = authUser?.id;
+        }
+      }
+
+      // Initialize stats
+      const stats = {
+        savedTours: 0,
+        trips: 0,
+        clients: 0,
+        quotes: 0,
+        vehicles: 0,
+        drivers: 0,
+        charges: 0,
+      };
+
+      if (userIdToQuery) {
+        // Count saved tours
+        const { count: toursCount } = await supabase
+          .from("saved_tours")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.savedTours = toursCount || 0;
+
+        // Count trips
+        const { count: tripsCount } = await supabase
+          .from("trips")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.trips = tripsCount || 0;
+
+        // Count clients
+        const { count: clientsCount } = await supabase
+          .from("clients")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.clients = clientsCount || 0;
+
+        // Count quotes
+        const { count: quotesCount } = await supabase
+          .from("quotes")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.quotes = quotesCount || 0;
+
+        // Count synced vehicles
+        const { count: vehiclesCount } = await supabase
+          .from("user_vehicles")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.vehicles = vehiclesCount || 0;
+
+        // Count synced drivers
+        const { count: driversCount } = await supabase
+          .from("user_drivers")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.drivers = driversCount || 0;
+
+        // Count synced charges
+        const { count: chargesCount } = await supabase
+          .from("user_charges")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userIdToQuery);
+        stats.charges = chargesCount || 0;
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, stats, userId: userIdToQuery || null }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Get detailed user data (vehicles, drivers, charges)
+    if (action === "get-user-details") {
+      const { licenseId, userId, type } = body; // type: 'vehicles' | 'drivers' | 'charges'
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId && !userId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence ou utilisateur requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get license email to find auth user
+      let userIdToQuery = userId;
+      if (licenseId && !userId) {
+        const { data: license } = await supabase
+          .from("licenses")
+          .select("email")
+          .eq("id", licenseId)
+          .maybeSingle();
+        
+        if (license?.email) {
+          // Find auth user by email
+          const { data: authUsers } = await supabase.auth.admin.listUsers();
+          const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === license.email.toLowerCase());
+          userIdToQuery = authUser?.id;
+        }
+      }
+
+      if (!userIdToQuery) {
+        return new Response(
+          JSON.stringify({ success: true, data: [], message: "Utilisateur non authentifié" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      let data: any[] = [];
+      
+      if (type === 'vehicles') {
+        const { data: vehicles } = await supabase
+          .from("user_vehicles")
+          .select("*")
+          .eq("user_id", userIdToQuery)
+          .order("name");
+        data = vehicles || [];
+      } else if (type === 'drivers') {
+        const { data: drivers } = await supabase
+          .from("user_drivers")
+          .select("*")
+          .eq("user_id", userIdToQuery)
+          .order("name");
+        data = drivers || [];
+      } else if (type === 'charges') {
+        const { data: charges } = await supabase
+          .from("user_charges")
+          .select("*")
+          .eq("user_id", userIdToQuery)
+          .order("name");
+        data = charges || [];
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data, userId: userIdToQuery }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // User: Get their active add-ons
+    if (action === "get-addons") {
+      const { licenseCode, email } = body;
+
+      if (!licenseCode || !email) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License code and email required" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get license
+      const { data: license } = await supabase
+        .from("licenses")
+        .select("id")
+        .eq("license_code", licenseCode.trim().toUpperCase())
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (!license) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License not found" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get active add-ons
+      const { data: addons } = await supabase
+        .from("license_addons")
+        .select("*")
+        .eq("license_id", license.id)
+        .eq("is_active", true);
+
+      return new Response(
+        JSON.stringify({ success: true, addons: addons || [] }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // User: Update their add-ons
+    if (action === "update-addons") {
+      const { licenseCode, email, addOns } = body;
+
+      if (!licenseCode || !email) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License code and email required" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get license
+      const { data: license } = await supabase
+        .from("licenses")
+        .select("id, plan_type")
+        .eq("license_code", licenseCode.trim().toUpperCase())
+        .eq("email", email.trim().toLowerCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!license) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License not found or inactive" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Deactivate all current add-ons
+      await supabase
+        .from("license_addons")
+        .update({ is_active: false, deactivated_at: new Date().toISOString() })
+        .eq("license_id", license.id);
+
+      // Activate selected add-ons
+      if (addOns && addOns.length > 0) {
+        const now = new Date().toISOString();
+        
+        for (const addonId of addOns) {
+          // Upsert each add-on
+          await supabase
+            .from("license_addons")
+            .upsert({
+              license_id: license.id,
+              addon_id: addonId,
+              addon_name: addonId, // Will be updated with proper name
+              is_active: true,
+              activated_at: now,
+              deactivated_at: null,
+            }, {
+              onConflict: 'license_id,addon_id',
+            });
+        }
+
+        // Calculate total add-on price
+        let totalMonthly = 0;
+        // This would need the ADD_ONS definition, but for now we'll set it to 0
+        // and rely on the frontend to display correct pricing
+        
+        await supabase
+          .from("licenses")
+          .update({ addons_monthly_total: totalMonthly })
+          .eq("id", license.id);
+      }
+
+      console.log(`[validate-license] Add-ons updated for license ${license.id}: ${addOns?.join(', ') || 'none'}`);
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Add-ons updated successfully" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Manage add-ons for any license
+    if (action === "admin-update-addons") {
+      const { licenseId, addOns } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License ID required" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Deactivate all current add-ons
+      await supabase
+        .from("license_addons")
+        .update({ is_active: false, deactivated_at: new Date().toISOString() })
+        .eq("license_id", licenseId);
+
+      // Activate selected add-ons
+      if (addOns && addOns.length > 0) {
+        const now = new Date().toISOString();
+        
+        for (const addonId of addOns) {
+          await supabase
+            .from("license_addons")
+            .upsert({
+              license_id: licenseId,
+              addon_id: addonId,
+              addon_name: addonId,
+              is_active: true,
+              activated_at: now,
+              deactivated_at: null,
+            }, {
+              onConflict: 'license_id,addon_id',
+            });
+        }
+      }
+
+      await logAdminAction(supabase, auth.email || 'admin', 'update_addons', licenseId, { addOns }, clientIp);
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Add-ons updated successfully" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Get add-ons for a license
+    if (action === "admin-get-addons") {
+      const { licenseId } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: addons } = await supabase
+        .from("license_addons")
+        .select("*")
+        .eq("license_id", licenseId)
+        .eq("is_active", true);
+
+      return new Response(
+        JSON.stringify({ success: true, addons: addons || [] }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Get audit logs for a specific license
+    if (action === "get-audit-logs") {
+      const { licenseId, limit = 50 } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License ID required" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: logs, error } = await supabase
+        .from("admin_audit_log")
+        .select("*")
+        .eq("target_id", licenseId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error("Error fetching audit logs:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Failed to fetch audit logs" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, logs: logs || [] }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (action === "check") {
+      // Check if stored license is still valid (used on app load)
+      const { licenseCode, email }: CheckLicenseRequest = body;
+
+      if (!licenseCode || !email) {
+        return new Response(
+          JSON.stringify({ valid: false, error: "Missing license code or email" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: license, error } = await supabase
+        .from("licenses")
+        .select("id, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
+        .eq("license_code", licenseCode.trim().toUpperCase())
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (error) {
+        console.error("License check error:", error);
+        return new Response(
+          JSON.stringify({ valid: false, error: "Database error" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!license || !license.is_active) {
+        return new Response(
+          JSON.stringify({ valid: false }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Fetch custom features for this license
+      const { data: features } = await supabase
+        .from("license_features")
+        .select("*")
+        .eq("license_id", license.id)
+        .maybeSingle();
+
+      // Update last_used_at
+      await supabase
+        .from("licenses")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("license_code", licenseCode.trim().toUpperCase());
+
+      return new Response(
+        JSON.stringify({
+          valid: true,
+          licenseData: {
+            firstName: license.first_name,
+            lastName: license.last_name,
+            companyName: license.company_name,
+            siren: license.siren,
+            companyStatus: license.company_status,
+            employeeCount: license.employee_count,
+            address: license.address,
+            city: license.city,
+            postalCode: license.postal_code,
+            activatedAt: license.activated_at,
+            planType: license.plan_type || 'start',
+            maxDrivers: license.max_drivers,
+            maxClients: license.max_clients,
+            maxDailyCharges: license.max_daily_charges,
+            maxMonthlyCharges: license.max_monthly_charges,
+            maxYearlyCharges: license.max_yearly_charges,
+            showUserInfo: license.show_user_info ?? true,
+            showCompanyInfo: license.show_company_info ?? true,
+            showAddressInfo: license.show_address_info ?? true,
+            showLicenseInfo: license.show_license_info ?? true,
+          },
+          customFeatures: features || null,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Default action: validate license (initial activation) with Supabase Auth
+    const { licenseCode, email }: ValidateLicenseRequest = body;
+
+    if (!licenseCode || !email) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Code de licence et email requis" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = licenseCode.trim().toUpperCase();
+
+    // Check if this is a demo license (bypass rate limiting for demo sessions)
+    const isDemoLicense = normalizedCode.startsWith('DEMO') || 
+                          normalizedEmail.includes('demo');
+    
+    // Rate limit license validation: 5 attempts per 15 minutes per IP (skip for demo)
+    if (!isDemoLicense) {
+      const rateCheck = await checkRateLimit(supabase, clientIp, 'license_validate', 5, 15);
+      if (!rateCheck.allowed) {
+        console.log(`[validate-license] Rate limit exceeded for IP: ${clientIp}`);
+        return new Response(
+          JSON.stringify({ success: false, error: "Trop de tentatives. Réessayez plus tard." }),
+          { 
+            status: 429, 
+            headers: { 
+              ...corsHeaders, 
+              "Content-Type": "application/json",
+              "Retry-After": String(rateCheck.retryAfter || 900)
+            } 
+          }
+        );
+      }
+    } else {
+      console.log(`[validate-license] Demo license detected, skipping rate limit`);
+    }
+
+    console.log("[validate-license] Validating license:", normalizedCode.substring(0, 4) + '...', "for email:", normalizedEmail);
+
+    // Verify license exists and is active
+    const { data: license, error } = await supabase
+      .from("licenses")
+      .select("id, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
+      .eq("license_code", normalizedCode)
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[validate-license] License validation error:", error);
+      return new Response(
+        JSON.stringify({ success: false, error: "Erreur base de données" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!license) {
+      console.log("[validate-license] License not found");
+      return new Response(
+        JSON.stringify({ success: false, error: "Licence non trouvée" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!license.is_active) {
+      console.log("[validate-license] License is inactive");
+      return new Response(
+        JSON.stringify({ success: false, error: "Licence désactivée" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Fetch custom features for this license
+    const { data: features } = await supabase
+      .from("license_features")
+      .select("*")
+      .eq("license_id", license.id)
+      .maybeSingle();
+
+    // --- Supabase Auth Integration ---
+    // Try to sign in or create a user using the license code as password
+    let authSession = null;
+    let authUserId = null;
+
+    try {
+      // First, try to sign in with existing credentials
+      console.log("[validate-license] Attempting to sign in user:", normalizedEmail);
+      
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: normalizedCode,
+      });
+
+      if (signInError) {
+        console.log("[validate-license] Sign-in failed, attempting to create user:", signInError.message);
+        
+        // User doesn't exist or wrong password - try creating new user
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+          email: normalizedEmail,
+          password: normalizedCode,
+          email_confirm: true, // Auto-confirm since we validate via license
+          user_metadata: {
+            license_id: license.id,
+            first_name: license.first_name,
+            last_name: license.last_name,
+            company_name: license.company_name,
+            plan_type: license.plan_type,
+          },
+        });
+
+        if (createError) {
+          // User might already exist with different password - update it
+          if (createError.message.includes('already been registered') || createError.message.includes('already exists')) {
+            console.log("[validate-license] User exists, attempting password update");
+            
+            // Get user by email
+            const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+            const existingUser = users?.find(u => u.email === normalizedEmail);
+            
+            if (existingUser) {
+              // Update password to match license code
+              const { error: updateError } = await supabase.auth.admin.updateUserById(existingUser.id, {
+                password: normalizedCode,
+                user_metadata: {
+                  license_id: license.id,
+                  first_name: license.first_name,
+                  last_name: license.last_name,
+                  company_name: license.company_name,
+                  plan_type: license.plan_type,
+                },
+              });
+
+              if (updateError) {
+                console.error("[validate-license] Failed to update user password:", updateError);
+              } else {
+                // Try signing in again with updated password
+                const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
+                  email: normalizedEmail,
+                  password: normalizedCode,
+                });
+
+                if (!retryError && retrySignIn.session) {
+                  authSession = retrySignIn.session;
+                  authUserId = retrySignIn.user?.id;
+                  console.log("[validate-license] User signed in after password update");
+                }
+              }
+            }
+          } else {
+            console.error("[validate-license] Failed to create user:", createError);
+          }
+        } else if (newUser?.user) {
+          console.log("[validate-license] User created, signing in");
+          // User created, now sign them in
+          const { data: newSignIn, error: newSignInError } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password: normalizedCode,
+          });
+
+          if (!newSignInError && newSignIn.session) {
+            authSession = newSignIn.session;
+            authUserId = newSignIn.user?.id;
+          }
+        }
+      } else if (signInData.session) {
+        authSession = signInData.session;
+        authUserId = signInData.user?.id;
+        console.log("[validate-license] User signed in successfully");
+
+        // Update user metadata if needed
+        await supabase.auth.admin.updateUserById(authUserId, {
+          user_metadata: {
+            license_id: license.id,
+            first_name: license.first_name,
+            last_name: license.last_name,
+            company_name: license.company_name,
+            plan_type: license.plan_type,
+          },
+        });
+      }
+    } catch (authError) {
+      console.error("[validate-license] Auth error (non-blocking):", authError);
+      // Continue without auth - license validation still works
+    }
+
+    // Update activation info
+    const now = new Date().toISOString();
+    await supabase
+      .from("licenses")
+      .update({ 
+        activated_at: license.activated_at || now,
+        last_used_at: now 
+      })
+      .eq("id", license.id);
+
+    // --- Ensure user is in company_users as owner ---
+    if (authUserId) {
+      try {
+        // Check if user is already in company_users for this license
+        const { data: existingMember } = await supabase
+          .from("company_users")
+          .select("id, role")
+          .eq("license_id", license.id)
+          .eq("user_id", authUserId)
+          .maybeSingle();
+
+        if (!existingMember) {
+          // Check if there's already an owner for this license
+          const { data: existingOwner } = await supabase
+            .from("company_users")
+            .select("id")
+            .eq("license_id", license.id)
+            .eq("role", "owner")
+            .maybeSingle();
+
+          // If no owner exists, add this user as owner; otherwise as member
+          const role = existingOwner ? 'member' : 'owner';
+          
+          const { error: insertError } = await supabase
+            .from("company_users")
+            .insert({
+              license_id: license.id,
+              user_id: authUserId,
+              email: normalizedEmail,
+              role: role,
+              display_name: [license.first_name, license.last_name].filter(Boolean).join(' ') || null,
+              accepted_at: now,
+              is_active: true,
+            });
+
+          if (insertError) {
+            console.error("[validate-license] Failed to add user to company_users:", insertError);
+          } else {
+            console.log(`[validate-license] User added to company_users as ${role}`);
+          }
+        } else {
+          console.log("[validate-license] User already in company_users with role:", existingMember.role);
+        }
+      } catch (cuError) {
+        console.error("[validate-license] company_users error (non-blocking):", cuError);
+      }
+    }
+
+    // Log login to history
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const deviceType = userAgent.includes('Mobile') ? 'mobile' : 
+                       userAgent.includes('Tablet') ? 'tablet' : 'desktop';
+    
+    await supabase
+      .from("login_history")
+      .insert({
+        license_id: license.id,
+        ip_address: clientIp,
+        user_agent: userAgent.substring(0, 500),
+        device_type: deviceType,
+        success: true,
+      });
+
+    console.log("[validate-license] License validated successfully for:", normalizedEmail, "with auth:", !!authSession);
+
+    // Build response with optional auth session
+    const responsePayload: Record<string, any> = {
+      success: true,
+      licenseData: {
+        code: normalizedCode,
+        email: normalizedEmail,
+        firstName: license.first_name,
+        lastName: license.last_name,
+        companyName: license.company_name,
+        siren: license.siren,
+        companyStatus: license.company_status,
+        employeeCount: license.employee_count,
+        address: license.address,
+        city: license.city,
+        postalCode: license.postal_code,
+        activatedAt: license.activated_at || now,
+        planType: license.plan_type || 'start',
+        maxDrivers: license.max_drivers,
+        maxClients: license.max_clients,
+        maxDailyCharges: license.max_daily_charges,
+        maxMonthlyCharges: license.max_monthly_charges,
+        maxYearlyCharges: license.max_yearly_charges,
+        showUserInfo: license.show_user_info ?? true,
+        showCompanyInfo: license.show_company_info ?? true,
+        showAddressInfo: license.show_address_info ?? true,
+        showLicenseInfo: license.show_license_info ?? true,
+      },
+      customFeatures: features || null,
+    };
+
+    // Include auth session if available
+    if (authSession) {
+      responsePayload.session = {
+        access_token: authSession.access_token,
+        refresh_token: authSession.refresh_token,
+        expires_in: authSession.expires_in,
+        expires_at: authSession.expires_at,
+        user: {
+          id: authSession.user?.id,
+          email: authSession.user?.email,
+        },
+      };
+    }
+
+    return new Response(
+      JSON.stringify(responsePayload),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+
+  } catch (error) {
+    console.error("Error in validate-license function:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: "Erreur serveur" }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+};
+
+serve(handler);
