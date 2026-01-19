@@ -49,6 +49,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
+import { useCompanyData } from '@/hooks/useCompanyData';
+import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -64,6 +66,7 @@ interface Client {
 export default function Tours() {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite } = useSavedTours();
   const { planType } = useLicense();
+  const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
   const [clients] = useLocalStorage<Client[]>('optiflow_clients', []);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -358,6 +361,7 @@ export default function Tours() {
             <TableRow>
               <TableHead className="w-10"></TableHead>
               <TableHead>Tournée</TableHead>
+              {isCompanyMember && <TableHead>Créé par</TableHead>}
               <TableHead>Client</TableHead>
               <TableHead>Distance</TableHead>
               <TableHead>Coût</TableHead>
@@ -405,6 +409,23 @@ export default function Tours() {
                       </p>
                     </div>
                   </TableCell>
+                  {isCompanyMember && (
+                    <TableCell>
+                      {(() => {
+                        const tourInfo = getTourInfo(tour.id);
+                        const isOwn = tourInfo ? isOwnData(tourInfo.userId) : true;
+                        return (
+                          <SharedDataBadge
+                            isShared={!!tourInfo}
+                            isOwn={isOwn}
+                            createdBy={tourInfo?.displayName}
+                            createdByEmail={tourInfo?.userEmail}
+                            compact
+                          />
+                        );
+                      })()}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant="outline">{getClientName(tour.client_id)}</Badge>
                   </TableCell>

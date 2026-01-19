@@ -103,7 +103,7 @@ export default function Vehicles() {
   const navigate = useNavigate();
   const { vehicle: vehicleParams, setCharges } = useApp();
   const { hasFeature, planType } = useLicense();
-  const { getVehicleInfo, isOwnData, isCompanyMember } = useCompanyData();
+  const { getVehicleInfo, getTrailerInfo, isOwnData, isCompanyMember } = useCompanyData();
   const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers, setTrailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -2135,7 +2135,25 @@ export default function Vehicles() {
                           <Container className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">{trailer.name}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">{trailer.name}</CardTitle>
+                            {isCompanyMember && (() => {
+                              const trailerInfo = getTrailerInfo(trailer.id);
+                              const isShared = !!trailerInfo;
+                              const isOwn = trailerInfo ? isOwnData(trailerInfo.userId) : true;
+                              return (
+                                <TooltipProvider>
+                                  <SharedDataBadge 
+                                    isShared={isShared}
+                                    isOwn={isOwn}
+                                    createdBy={trailerInfo?.displayName}
+                                    createdByEmail={trailerInfo?.userEmail}
+                                    compact
+                                  />
+                                </TooltipProvider>
+                              );
+                            })()}
+                          </div>
                           <p className="text-xs font-mono text-primary font-medium">
                             {trailer.licensePlate}
                           </p>

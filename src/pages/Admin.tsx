@@ -37,6 +37,7 @@ import { PWAUpdatesManager } from '@/components/admin/PWAUpdatesManager';
 import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { SchemaSyncManager } from '@/components/admin/SchemaSyncManager';
 import { CompanyUsersManager } from '@/components/admin/CompanyUsersManager';
+import { CompanyDataStats } from '@/components/admin/CompanyDataStats';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -212,7 +213,7 @@ export default function Admin() {
   // Feature editor
   const [selectedLicenseForFeatures, setSelectedLicenseForFeatures] = useState<License | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'features' | 'updates' | 'demo'>('licenses');
+  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'data' | 'features' | 'updates' | 'demo'>('licenses');
 
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
@@ -788,8 +789,8 @@ export default function Admin() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'features' | 'updates' | 'demo')}>
-        <TabsList className="grid w-full max-w-3xl grid-cols-5">
+      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'data' | 'features' | 'updates' | 'demo')}>
+        <TabsList className="grid w-full max-w-4xl grid-cols-6">
           <TabsTrigger value="licenses" className="gap-2">
             <Users className="w-4 h-4" />
             Licences
@@ -797,6 +798,10 @@ export default function Admin() {
           <TabsTrigger value="companies" className="gap-2">
             <Building2 className="w-4 h-4" />
             Sociétés
+          </TabsTrigger>
+          <TabsTrigger value="data" className="gap-2">
+            <FileText className="w-4 h-4" />
+            Données
           </TabsTrigger>
           <TabsTrigger value="features" className="gap-2">
             <Settings2 className="w-4 h-4" />
@@ -815,6 +820,11 @@ export default function Admin() {
         {/* Companies Tab */}
         <TabsContent value="companies" className="space-y-6 mt-6">
           <CompanyUsersManager getAdminToken={getAdminToken} />
+        </TabsContent>
+
+        {/* Data Tab - view company data */}
+        <TabsContent value="data" className="space-y-6 mt-6">
+          <CompanyDataStats getAdminToken={getAdminToken} />
         </TabsContent>
 
         {/* Licenses Tab */}
