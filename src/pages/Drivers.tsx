@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,10 @@ import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useCompanyData } from '@/hooks/useCompanyData';
+import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
+import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
@@ -29,11 +33,14 @@ export default function Drivers() {
   const { t } = useLanguage();
   const { drivers, setDrivers, selectedDriverIds } = useApp();
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
+  const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
   const [activeTab, setActiveTab] = useState<'cdi' | 'interim'>('cdi');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   
   // Store interim drivers separately
   const [interimDrivers, setInterimDrivers] = useLocalStorage<ExtendedDriver[]>('optiflow_interim_drivers', []);
@@ -441,46 +448,62 @@ export default function Drivers() {
     );
   };
 
-  const renderDriverCard = (driver: ExtendedDriver, index: number, isInterim: boolean) => (
-    <div
-      key={driver.id}
-      className={cn(
-        "glass-card p-6 opacity-0 animate-slide-up",
-        selectedDriverIds.includes(driver.id) && "ring-2 ring-primary/50"
-      )}
-      style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
-    >
-      {editingId === driver.id ? (
-        renderForm()
-      ) : (
-        <>
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center",
-                isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
-              )}>
-                {isInterim ? (
-                  <Users2 className="w-6 h-6 text-orange-400" />
-                ) : (
-                  <User className="w-6 h-6 text-purple-400" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-foreground">{driver.name}</h3>
-                  {driver.scheduleType === 'night' && (
-                    <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">Nuit</span>
-                  )}
-                  {driver.scheduleType === 'mixed' && (
-                    <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Mixte</span>
+  const renderDriverCard = (driver: ExtendedDriver, index: number, isInterim: boolean) => {
+    const driverInfo = getDriverInfo(driver.id);
+    const isShared = !!driverInfo?.licenseId;
+    const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
+    
+    return (
+      <div
+        key={driver.id}
+        className={cn(
+          "glass-card p-6 opacity-0 animate-slide-up",
+          selectedDriverIds.includes(driver.id) && "ring-2 ring-primary/50"
+        )}
+        style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+      >
+        {editingId === driver.id ? (
+          renderForm()
+        ) : (
+          <>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center",
+                  isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
+                )}>
+                  {isInterim ? (
+                    <Users2 className="w-6 h-6 text-orange-400" />
+                  ) : (
+                    <User className="w-6 h-6 text-purple-400" />
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {isInterim 
-                    ? `${driver.interimAgency || 'Intérim'} • ${formatCurrency(driver.interimHourlyRate || 0)}/h`
-                    : `${formatCurrency(driver.baseSalary)} brut/mois`
-                  }
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground">{driver.name}</h3>
+                    {driver.scheduleType === 'night' && (
+                      <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">Nuit</span>
+                    )}
+                    {driver.scheduleType === 'mixed' && (
+                      <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Mixte</span>
+                    )}
+                    {isCompanyMember && (
+                      <TooltipProvider>
+                        <SharedDataBadge 
+                          isShared={isShared}
+                          isOwn={isOwn}
+                          createdBy={driverInfo?.displayName}
+                          createdByEmail={driverInfo?.userEmail}
+                          compact
+                        />
+                      </TooltipProvider>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {isInterim 
+                      ? `${driver.interimAgency || 'Intérim'} • ${formatCurrency(driver.interimHourlyRate || 0)}/h`
+                      : `${formatCurrency(driver.baseSalary)} brut/mois`
+                    }
                 </p>
               </div>
             </div>
@@ -576,6 +599,54 @@ export default function Drivers() {
       )}
     </div>
   );
+  };
+
+  // Filter drivers based on search and ownership
+  const filteredCdiDrivers = useMemo(() => {
+    let result = (drivers as ExtendedDriver[]).filter(d => !d.isInterim);
+    
+    // Filter by search
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      result = result.filter(d => d.name.toLowerCase().includes(search));
+    }
+    
+    // Filter by ownership
+    if (ownershipFilter !== 'all' && isCompanyMember) {
+      result = result.filter(d => {
+        const driverInfo = getDriverInfo(d.id);
+        const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
+        if (ownershipFilter === 'mine') return isOwn;
+        if (ownershipFilter === 'team') return !isOwn;
+        return true;
+      });
+    }
+    
+    return result;
+  }, [drivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
+
+  const filteredInterimDrivers = useMemo(() => {
+    let result = interimDrivers;
+    
+    // Filter by search
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      result = result.filter(d => d.name.toLowerCase().includes(search));
+    }
+    
+    // Filter by ownership
+    if (ownershipFilter !== 'all' && isCompanyMember) {
+      result = result.filter(d => {
+        const driverInfo = getDriverInfo(d.id);
+        const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
+        if (ownershipFilter === 'mine') return isOwn;
+        if (ownershipFilter === 'team') return !isOwn;
+        return true;
+      });
+    }
+    
+    return result;
+  }, [interimDrivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
 
   const cdiDrivers = (drivers as ExtendedDriver[]).filter(d => !d.isInterim);
 
@@ -605,17 +676,36 @@ export default function Drivers() {
         </div>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un conducteur..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {isCompanyMember && (
+          <DataOwnershipFilter
+            value={ownershipFilter}
+            onChange={setOwnershipFilter}
+          />
+        )}
+      </div>
+
       {/* Tabs CDI / Intérim */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'interim')}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
               <User className="w-4 h-4" />
-              CDI ({cdiDrivers.length})
+              CDI ({filteredCdiDrivers.length})
             </TabsTrigger>
             <TabsTrigger value="interim" className="gap-2">
               <Users2 className="w-4 h-4" />
-              Intérimaires ({interimDrivers.length})
+              Intérimaires ({filteredInterimDrivers.length})
             </TabsTrigger>
           </TabsList>
           <Button 
@@ -633,7 +723,7 @@ export default function Drivers() {
 
           {/* CDI Drivers List */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {cdiDrivers.map((driver, index) => renderDriverCard(driver, index, false))}
+            {filteredCdiDrivers.map((driver, index) => renderDriverCard(driver, index, false))}
           </div>
 
           {cdiDrivers.length === 0 && !isAdding && (
@@ -657,7 +747,7 @@ export default function Drivers() {
 
           {/* Interim Drivers List */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {interimDrivers.map((driver, index) => renderDriverCard(driver, index, true))}
+            {filteredInterimDrivers.map((driver, index) => renderDriverCard(driver, index, true))}
           </div>
 
           {interimDrivers.length === 0 && !isAdding && (

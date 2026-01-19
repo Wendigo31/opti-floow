@@ -15,7 +15,8 @@ import {
   Truck,
   Route,
   PlayCircle,
-  StopCircle
+  StopCircle,
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,7 @@ const navItems: NavItemConfig[] = [
   { to: '/clients', icon: UserCircle, labelKey: 'clients' },
   
   // Settings & Subscription
+  { to: '/settings', icon: Settings, labelKey: 'settings' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
   { to: '/info', icon: Info, labelKey: 'info' },
 ];

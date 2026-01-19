@@ -33,6 +33,7 @@ import Admin from "./pages/Admin";
 import AIAnalysis from "./pages/AIAnalysis";
 import VehicleReports from "./pages/VehicleReports";
 import Tours from "./pages/Tours";
+import Settings from "./pages/Settings";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -123,6 +124,7 @@ function AppRoutes() {
               <Route path="/ai-analysis" element={<AIAnalysis />} />
               <Route path="/vehicle-reports" element={<VehicleReports />} />
               <Route path="/tours" element={<Tours />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
