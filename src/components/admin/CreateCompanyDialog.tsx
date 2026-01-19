@@ -96,18 +96,14 @@ export function CreateCompanyDialog({
       if (error) throw error;
 
       if (data?.license) {
-        // Create the owner as a company_user with phone and position
+        // Create the owner as a company_user (via RPC to bypass RLS)
         const displayName = [ownerFirstName, ownerLastName].filter(Boolean).join(' ') || null;
         const { error: userError } = await supabase
-          .from('company_users')
-          .insert({
-            license_id: data.license.id,
-            user_id: crypto.randomUUID(), // Will be updated on first login
-            email: ownerEmail.toLowerCase().trim(),
-            role: 'owner',
-            display_name: displayName,
-            is_active: true,
-            accepted_at: new Date().toISOString(),
+          .rpc('admin_add_company_user', {
+            p_license_id: data.license.id,
+            p_email: ownerEmail.toLowerCase().trim(),
+            p_role: 'owner',
+            p_display_name: displayName,
           });
 
         if (userError) {
