@@ -1588,29 +1588,39 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Fetch user-specific feature overrides if we have an auth session
     let userFeatureOverrides: { feature_key: string; enabled: boolean }[] = [];
+    console.log("[validate-license] Checking for user overrides. authSession.user.id:", authSession?.user?.id);
+    
     if (authSession?.user?.id) {
       try {
         // Find the company_user record for this user
-        const { data: companyUser } = await supabase
+        console.log("[validate-license] Looking for company_user with license_id:", license.id, "and user_id:", authSession.user.id);
+        const { data: companyUser, error: cuError } = await supabase
           .from("company_users")
           .select("id")
           .eq("license_id", license.id)
           .eq("user_id", authSession.user.id)
           .maybeSingle();
 
+        console.log("[validate-license] company_user lookup result:", companyUser, "error:", cuError);
+
         if (companyUser) {
           // Fetch user-specific overrides
-          const { data: overrides } = await supabase
+          const { data: overrides, error: ovError } = await supabase
             .from("user_feature_overrides")
             .select("feature_key, enabled")
             .eq("company_user_id", companyUser.id);
           
+          console.log("[validate-license] overrides lookup result:", overrides, "error:", ovError);
           userFeatureOverrides = overrides || [];
-          console.log("[validate-license] User feature overrides:", userFeatureOverrides.length);
+          console.log("[validate-license] User feature overrides count:", userFeatureOverrides.length);
+        } else {
+          console.log("[validate-license] No company_user found for this user");
         }
       } catch (e) {
         console.error("[validate-license] Error fetching user overrides:", e);
       }
+    } else {
+      console.log("[validate-license] No auth session user id, skipping overrides");
     }
 
     // Build response with optional auth session
