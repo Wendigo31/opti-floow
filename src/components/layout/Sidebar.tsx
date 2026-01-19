@@ -63,10 +63,13 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { planType, hasFeature } = useLicense();
+  const { planType, hasFeature, licenseData } = useLicense();
   const { t, language } = useLanguage();
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const currentDemoSession = getCurrentSession();
+
+  // Count restricted features (user-specific overrides that are disabled)
+  const restrictedFeaturesCount = licenseData?.userFeatureOverrides?.filter(o => !o.enabled).length || 0;
 
   // Check if plan meets requirement
   const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
@@ -175,6 +178,29 @@ export function Sidebar() {
               Quitter
             </button>
           )}
+        </div>
+      )}
+
+      {/* Restricted Features Indicator */}
+      {restrictedFeaturesCount > 0 && (
+        <div className={cn(
+          "mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30",
+          collapsed && "mx-2 p-2",
+          isDemoActive && "mt-2"
+        )}>
+          <div className="flex items-center gap-2">
+            <EyeOff className="w-4 h-4 text-destructive flex-shrink-0" />
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-destructive truncate">
+                  {restrictedFeaturesCount} restriction{restrictedFeaturesCount > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-destructive/70 truncate">
+                  {language === 'fr' ? 'Accès limité' : language === 'es' ? 'Acceso limitado' : 'Limited access'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
