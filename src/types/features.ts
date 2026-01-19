@@ -43,6 +43,15 @@ export interface LicenseFeatures {
   client_analysis: boolean;
   smart_quotes: boolean;
   
+  // Company/User management features
+  company_invite_members: boolean;
+  company_remove_members: boolean;
+  company_change_roles: boolean;
+  company_view_activity: boolean;
+  company_manage_settings: boolean;
+  company_data_sharing: boolean;
+  realtime_notifications: boolean;
+  
   // Limits
   max_drivers: number | null;
   max_clients: number | null;
@@ -51,6 +60,7 @@ export interface LicenseFeatures {
   max_monthly_charges: number | null;
   max_yearly_charges: number | null;
   max_saved_tours: number | null;
+  max_company_users: number | null;
 }
 
 // Active add-ons for a license
@@ -139,6 +149,14 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     unlimited_vehicles: false,
     client_analysis: false,
     smart_quotes: false,
+    // Company features - START: basic only
+    company_invite_members: false,
+    company_remove_members: false,
+    company_change_roles: false,
+    company_view_activity: false,
+    company_manage_settings: false,
+    company_data_sharing: false,
+    realtime_notifications: false,
     // Limites START
     max_drivers: 2,
     max_clients: 15,
@@ -147,6 +165,7 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     max_monthly_charges: 10,
     max_yearly_charges: 5,
     max_saved_tours: 0, // Add-on requis
+    max_company_users: 1,
   },
   pro: {
     // Pro - 79€/mois : Pour les PME
@@ -176,6 +195,14 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     unlimited_vehicles: false,
     client_analysis: false,
     smart_quotes: false,
+    // Company features - PRO: team features
+    company_invite_members: true,
+    company_remove_members: true,
+    company_change_roles: true,
+    company_view_activity: true,
+    company_manage_settings: true,
+    company_data_sharing: true,
+    realtime_notifications: true,
     // Limites PRO
     max_drivers: 15,
     max_clients: 100,
@@ -184,6 +211,7 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     max_monthly_charges: 50,
     max_yearly_charges: 25,
     max_saved_tours: 200,
+    max_company_users: 5,
   },
   enterprise: {
     // Enterprise - 199€/mois : Pour les grands comptes
@@ -213,6 +241,14 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     unlimited_vehicles: true,
     client_analysis: true,
     smart_quotes: true,
+    // Company features - ENTERPRISE: full features
+    company_invite_members: true,
+    company_remove_members: true,
+    company_change_roles: true,
+    company_view_activity: true,
+    company_manage_settings: true,
+    company_data_sharing: true,
+    realtime_notifications: true,
     // Tout illimité
     max_drivers: null,
     max_clients: null,
@@ -221,6 +257,7 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     max_monthly_charges: null,
     max_yearly_charges: null,
     max_saved_tours: null,
+    max_company_users: null,
   },
 };
 
