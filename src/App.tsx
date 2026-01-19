@@ -11,6 +11,7 @@ import { UpdateNotification } from "./components/layout/UpdateNotification";
 import { DataSyncProvider } from "./components/DataSyncProvider";
 import { useLicense } from "./hooks/useLicense";
 import { useSchemaSync } from "./hooks/useSchemaSync";
+import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
 import Calculator from "./pages/Calculator";
@@ -58,6 +59,12 @@ function GlobalShortcuts({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Composant wrapper pour les notifications temps réel
+function RealtimeNotificationsWrapper({ children }: { children: React.ReactNode }) {
+  useRealtimeNotifications();
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { isLicensed, isLoading } = useLicense();
   const location = useLocation();
@@ -98,26 +105,28 @@ function AppRoutes() {
   return (
     <AppProvider>
       <DataSyncProvider>
-        <MainLayout>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/calculator" element={<CalculatorWithHistory />} />
-            <Route path="/itinerary" element={<Itinerary />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/forecast" element={<Forecast />} />
-            <Route path="/history" element={<CalculatorWithHistory />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/vehicles" element={<Vehicles />} />
-            <Route path="/charges" element={<Charges />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/info" element={<Info />} />
-            <Route path="/ai-analysis" element={<AIAnalysis />} />
-            <Route path="/vehicle-reports" element={<VehicleReports />} />
-            <Route path="/tours" element={<Tours />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </MainLayout>
+        <RealtimeNotificationsWrapper>
+          <MainLayout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/calculator" element={<CalculatorWithHistory />} />
+              <Route path="/itinerary" element={<Itinerary />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/forecast" element={<Forecast />} />
+              <Route path="/history" element={<CalculatorWithHistory />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/drivers" element={<Drivers />} />
+              <Route path="/vehicles" element={<Vehicles />} />
+              <Route path="/charges" element={<Charges />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/info" element={<Info />} />
+              <Route path="/ai-analysis" element={<AIAnalysis />} />
+              <Route path="/vehicle-reports" element={<VehicleReports />} />
+              <Route path="/tours" element={<Tours />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </MainLayout>
+        </RealtimeNotificationsWrapper>
       </DataSyncProvider>
     </AppProvider>
   );

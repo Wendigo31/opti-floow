@@ -51,6 +51,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
+import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -72,6 +73,7 @@ export default function Tours() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterFavorite, setFilterFavorite] = useState<'all' | 'favorites'>('all');
+  const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [selectedTour, setSelectedTour] = useState<SavedTour | null>(null);
   const [exporting, setExporting] = useState(false);
   
@@ -93,7 +95,19 @@ export default function Tours() {
     const matchesClient = filterClient === 'all' || tour.client_id === filterClient;
     const matchesFavorite = filterFavorite === 'all' || tour.is_favorite;
 
-    return matchesSearch && matchesClient && matchesFavorite;
+    // Filter by ownership
+    let matchesOwnership = true;
+    if (ownershipFilter !== 'all' && isCompanyMember) {
+      const tourInfo = getTourInfo(tour.id);
+      const isOwn = tourInfo ? isOwnData(tourInfo.userId) : true;
+      if (ownershipFilter === 'mine') {
+        matchesOwnership = isOwn;
+      } else if (ownershipFilter === 'team') {
+        matchesOwnership = !isOwn;
+      }
+    }
+
+    return matchesSearch && matchesClient && matchesFavorite && matchesOwnership;
   });
 
   const stats = {
@@ -328,6 +342,12 @@ export default function Tours() {
                 className="pl-10"
               />
             </div>
+            {isCompanyMember && (
+              <DataOwnershipFilter
+                value={ownershipFilter}
+                onChange={setOwnershipFilter}
+              />
+            )}
             <Select value={filterClient} onValueChange={setFilterClient}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Tous les clients" />
