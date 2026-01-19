@@ -1,8 +1,8 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Truck, Route, Container, User } from 'lucide-react';
 import { getUserLicenseId } from '@/hooks/useDataSync';
+import type { NotificationPreferences } from '@/components/settings/NotificationSettings';
 
 interface RealtimePayload {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -10,23 +10,55 @@ interface RealtimePayload {
   old: Record<string, any>;
 }
 
+const getStoredPreferences = (): NotificationPreferences => {
+  try {
+    const stored = localStorage.getItem('optiflow_notification_prefs');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // ignore
+  }
+  return {
+    enabled: true,
+    vehicles: true,
+    trailers: true,
+    tours: true,
+    drivers: true,
+    showOwnActions: false,
+  };
+};
+
 export function useRealtimeNotifications() {
   const currentUserIdRef = useRef<string | null>(null);
   const licenseIdRef = useRef<string | null>(null);
   const isSubscribedRef = useRef(false);
 
   const showNotification = useCallback((
-    type: 'vehicle' | 'tour' | 'trailer',
+    type: 'vehicle' | 'tour' | 'trailer' | 'driver',
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
-    creatorEmail?: string
+    creatorEmail?: string,
+    isOwnAction?: boolean
   ) => {
-    const currentUserId = currentUserIdRef.current;
+    const prefs = getStoredPreferences();
     
-    // Don't show notification for own actions
-    if (!creatorEmail) return;
+    // Check if notifications are enabled
+    if (!prefs.enabled) return;
     
-    const creatorName = creatorEmail.split('@')[0];
+    // Check category preference
+    if (type === 'vehicle' && !prefs.vehicles) return;
+    if (type === 'trailer' && !prefs.trailers) return;
+    if (type === 'tour' && !prefs.tours) return;
+    if (type === 'driver' && !prefs.drivers) return;
+    
+    // Check own actions preference
+    if (isOwnAction && !prefs.showOwnActions) return;
+    
+    // Don't show notification if no creator email
+    if (!creatorEmail && !isOwnAction) return;
+    
+    const creatorName = isOwnAction ? 'Vous avez' : `${creatorEmail?.split('@')[0]} a`;
     
     const actionLabels = {
       INSERT: 'ajouté',
@@ -38,16 +70,18 @@ export function useRealtimeNotifications() {
       vehicle: 'véhicule',
       tour: 'tournée',
       trailer: 'remorque',
+      driver: 'conducteur',
     };
 
     const icons = {
       vehicle: '🚚',
       tour: '🗺️',
       trailer: '📦',
+      driver: '👤',
     };
 
     toast.info(
-      `${icons[type]} ${creatorName} a ${actionLabels[action]} ${typeLabels[type]}: ${itemName}`,
+      `${icons[type]} ${creatorName} ${actionLabels[action]} ${typeLabels[type]}: ${itemName}`,
       {
         duration: 5000,
         position: 'top-right',
@@ -96,12 +130,10 @@ export function useRealtimeNotifications() {
         (payload: RealtimePayload) => {
           const record = payload.new || payload.old;
           const userId = record.user_id;
-          
-          // Skip own changes
-          if (userId === currentUserIdRef.current) return;
+          const isOwnAction = userId === currentUserIdRef.current;
           
           const creatorEmail = memberMap.get(userId);
-          showNotification('vehicle', payload.eventType, record.name || 'Véhicule', creatorEmail);
+          showNotification('vehicle', payload.eventType, record.name || 'Véhicule', creatorEmail, isOwnAction);
         }
       )
       .subscribe();
@@ -120,11 +152,10 @@ export function useRealtimeNotifications() {
         (payload: RealtimePayload) => {
           const record = payload.new || payload.old;
           const userId = record.user_id;
-          
-          if (userId === currentUserIdRef.current) return;
+          const isOwnAction = userId === currentUserIdRef.current;
           
           const creatorEmail = memberMap.get(userId);
-          showNotification('trailer', payload.eventType, record.name || 'Remorque', creatorEmail);
+          showNotification('trailer', payload.eventType, record.name || 'Remorque', creatorEmail, isOwnAction);
         }
       )
       .subscribe();
@@ -143,12 +174,32 @@ export function useRealtimeNotifications() {
         (payload: RealtimePayload) => {
           const record = payload.new || payload.old;
           const userId = record.user_id;
-          
-          // For tours, user_id might be the license code, so we check differently
-          if (userId === currentUserIdRef.current) return;
+          const isOwnAction = userId === currentUserIdRef.current;
           
           const creatorEmail = memberMap.get(userId);
-          showNotification('tour', payload.eventType, record.name || 'Tournée', creatorEmail);
+          showNotification('tour', payload.eventType, record.name || 'Tournée', creatorEmail, isOwnAction);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to drivers changes
+    const driverChannel = supabase
+      .channel('company-drivers')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_drivers',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload: RealtimePayload) => {
+          const record = payload.new || payload.old;
+          const userId = record.user_id;
+          const isOwnAction = userId === currentUserIdRef.current;
+          
+          const creatorEmail = memberMap.get(userId);
+          showNotification('driver', payload.eventType, record.name || 'Conducteur', creatorEmail, isOwnAction);
         }
       )
       .subscribe();
@@ -160,6 +211,7 @@ export function useRealtimeNotifications() {
       supabase.removeChannel(vehicleChannel);
       supabase.removeChannel(trailerChannel);
       supabase.removeChannel(tourChannel);
+      supabase.removeChannel(driverChannel);
       isSubscribedRef.current = false;
     };
   }, [showNotification]);
