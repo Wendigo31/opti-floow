@@ -45,6 +45,7 @@ import { useApp } from '@/context/AppContext';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
+import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import type { 
@@ -117,6 +118,8 @@ export default function Vehicles() {
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [trailerSearch, setTrailerSearch] = useState('');
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState<string>('all');
+  const [vehicleOwnershipFilter, setVehicleOwnershipFilter] = useState<OwnershipFilter>('all');
+  const [trailerOwnershipFilter, setTrailerOwnershipFilter] = useState<OwnershipFilter>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user has fleet management (depreciation, maintenance, tires, consumption)
@@ -1520,19 +1523,47 @@ export default function Vehicles() {
       );
     }
     
+    // Filter by ownership
+    if (vehicleOwnershipFilter !== 'all' && isCompanyMember) {
+      result = result.filter(v => {
+        const vehicleInfo = getVehicleInfo(v.id);
+        const isOwn = vehicleInfo ? isOwnData(vehicleInfo.userId) : true;
+        if (vehicleOwnershipFilter === 'mine') return isOwn;
+        if (vehicleOwnershipFilter === 'team') return !isOwn;
+        return true;
+      });
+    }
+    
     return result;
-  }, [vehicles, vehicleSearch, vehicleTypeFilter]);
+  }, [vehicles, vehicleSearch, vehicleTypeFilter, vehicleOwnershipFilter, isCompanyMember, getVehicleInfo, isOwnData]);
 
   const filteredTrailers = useMemo(() => {
-    if (!trailerSearch.trim()) return trailers;
-    const search = trailerSearch.toLowerCase().trim();
-    return trailers.filter(t => 
-      t.licensePlate.toLowerCase().includes(search) ||
-      t.name.toLowerCase().includes(search) ||
-      t.brand?.toLowerCase().includes(search) ||
-      t.model?.toLowerCase().includes(search)
-    );
-  }, [trailers, trailerSearch]);
+    let result = trailers;
+    
+    // Filter by search
+    if (trailerSearch.trim()) {
+      const search = trailerSearch.toLowerCase().trim();
+      result = result.filter(t => 
+        t.licensePlate.toLowerCase().includes(search) ||
+        t.name.toLowerCase().includes(search) ||
+        t.brand?.toLowerCase().includes(search) ||
+        t.model?.toLowerCase().includes(search)
+      );
+    }
+    
+    // Filter by ownership
+    if (trailerOwnershipFilter !== 'all' && isCompanyMember) {
+      result = result.filter(t => {
+        const trailerInfo = getTrailerInfo(t.id);
+        const isOwn = trailerInfo ? isOwnData(trailerInfo.userId) : true;
+        if (trailerOwnershipFilter === 'mine') return isOwn;
+        if (trailerOwnershipFilter === 'team') return !isOwn;
+        return true;
+      });
+    }
+    
+    return result;
+  }, [trailers, trailerSearch, trailerOwnershipFilter, isCompanyMember, getTrailerInfo, isOwnData]);
 
   // Vehicle statistics
   const vehicleStats = useMemo(() => {
@@ -1997,6 +2028,12 @@ export default function Vehicles() {
                 className="pl-10"
               />
             </div>
+            {isCompanyMember && (
+              <DataOwnershipFilter
+                value={vehicleOwnershipFilter}
+                onChange={setVehicleOwnershipFilter}
+              />
+            )}
             <Select value={vehicleTypeFilter} onValueChange={setVehicleTypeFilter}>
               <SelectTrigger className="w-[160px]">
                 <Filter className="w-4 h-4 mr-2" />
@@ -2114,6 +2151,12 @@ export default function Vehicles() {
                 className="pl-10"
               />
             </div>
+            {isCompanyMember && (
+              <DataOwnershipFilter
+                value={trailerOwnershipFilter}
+                onChange={setTrailerOwnershipFilter}
+              />
+            )}
             <Button variant="outline" onClick={() => {
               setEditingTrailer(null);
               setTrailerDialogOpen(true);
