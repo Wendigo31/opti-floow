@@ -102,15 +102,16 @@ const FEATURE_CATEGORIES = FULL_FEATURE_CATEGORIES.map(cat => ({
   features: cat.features.filter(f => !f.isLimit), // Exclude limit features (they have isLimit: true)
 })).filter(c => c.features.length > 0);
 
-// Limit definitions for admin UI
+// Limit definitions for admin UI - ALL limits including company users
 const LIMIT_DEFINITIONS = [
-  { key: 'max_vehicles' as keyof LicenseFeatures, label: 'Véhicules max', category: 'fleet' },
-  { key: 'max_drivers' as keyof LicenseFeatures, label: 'Conducteurs max', category: 'personnel' },
-  { key: 'max_clients' as keyof LicenseFeatures, label: 'Clients max', category: 'clients' },
-  { key: 'max_saved_tours' as keyof LicenseFeatures, label: 'Tournées sauvegardées', category: 'tours' },
-  { key: 'max_daily_charges' as keyof LicenseFeatures, label: 'Charges journalières', category: 'charges' },
-  { key: 'max_monthly_charges' as keyof LicenseFeatures, label: 'Charges mensuelles', category: 'charges' },
-  { key: 'max_yearly_charges' as keyof LicenseFeatures, label: 'Charges annuelles', category: 'charges' },
+  { key: 'max_vehicles' as keyof LicenseFeatures, label: 'Véhicules max', category: 'fleet', icon: '🚛' },
+  { key: 'max_drivers' as keyof LicenseFeatures, label: 'Conducteurs max', category: 'personnel', icon: '👤' },
+  { key: 'max_clients' as keyof LicenseFeatures, label: 'Clients max', category: 'clients', icon: '🧑‍💼' },
+  { key: 'max_saved_tours' as keyof LicenseFeatures, label: 'Tournées sauvegardées', category: 'tours', icon: '📍' },
+  { key: 'max_daily_charges' as keyof LicenseFeatures, label: 'Charges journalières', category: 'charges', icon: '📅' },
+  { key: 'max_monthly_charges' as keyof LicenseFeatures, label: 'Charges mensuelles', category: 'charges', icon: '📆' },
+  { key: 'max_yearly_charges' as keyof LicenseFeatures, label: 'Charges annuelles', category: 'charges', icon: '📅' },
+  { key: 'max_company_users' as keyof LicenseFeatures, label: 'Utilisateurs société max', category: 'company', icon: '👥' },
 ];
 
 export function FeatureEditor({ 
@@ -506,7 +507,8 @@ export function FeatureEditor({
                       : "border-border/50 bg-muted/30"
                   )}>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={limit.key} className="text-sm font-medium">
+                      <Label htmlFor={limit.key} className="text-sm font-medium flex items-center gap-2">
+                        <span>{limit.icon}</span>
                         {limit.label}
                       </Label>
                       {isOverridden && (
