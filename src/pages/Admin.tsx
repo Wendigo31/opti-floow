@@ -38,6 +38,7 @@ import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { SchemaSyncManager } from '@/components/admin/SchemaSyncManager';
 import { CompanyUsersManager } from '@/components/admin/CompanyUsersManager';
 import { CompanyDataStats } from '@/components/admin/CompanyDataStats';
+import { CreateCompanyDialog } from '@/components/admin/CreateCompanyDialog';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -218,6 +219,9 @@ export default function Admin() {
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
   const [userDetailOpen, setUserDetailOpen] = useState(false);
+
+  // Create company dialog
+  const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
 
   // SIRENE lookup
   const { lookup: sireneLookup, loading: sireneLoading, error: sireneError } = useSireneLookup();
@@ -819,7 +823,19 @@ export default function Admin() {
 
         {/* Companies Tab */}
         <TabsContent value="companies" className="space-y-6 mt-6">
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => setCreateCompanyOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Créer une société
+            </Button>
+          </div>
           <CompanyUsersManager getAdminToken={getAdminToken} />
+          <CreateCompanyDialog 
+            open={createCompanyOpen}
+            onOpenChange={setCreateCompanyOpen}
+            getAdminToken={getAdminToken}
+            onCompanyCreated={fetchLicenses}
+          />
         </TabsContent>
 
         {/* Data Tab - view company data */}
