@@ -29,7 +29,8 @@ import {
   MapPin,
   Users,
   FileText,
-  Briefcase
+  Briefcase,
+  Phone
 } from 'lucide-react';
 import type { PlanType } from '@/hooks/useLicense';
 
@@ -52,6 +53,8 @@ export function CreateCompanyDialog({
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerFirstName, setOwnerFirstName] = useState('');
   const [ownerLastName, setOwnerLastName] = useState('');
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [ownerPosition, setOwnerPosition] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createdLicense, setCreatedLicense] = useState<{ code: string; email: string } | null>(null);
 
@@ -93,7 +96,8 @@ export function CreateCompanyDialog({
       if (error) throw error;
 
       if (data?.license) {
-        // Create the owner as a company_user
+        // Create the owner as a company_user with phone and position
+        const displayName = [ownerFirstName, ownerLastName].filter(Boolean).join(' ') || null;
         const { error: userError } = await supabase
           .from('company_users')
           .insert({
@@ -101,13 +105,31 @@ export function CreateCompanyDialog({
             user_id: crypto.randomUUID(), // Will be updated on first login
             email: ownerEmail.toLowerCase().trim(),
             role: 'owner',
-            display_name: [ownerFirstName, ownerLastName].filter(Boolean).join(' ') || null,
+            display_name: displayName,
             is_active: true,
             accepted_at: new Date().toISOString(),
           });
 
         if (userError) {
           console.error('Error creating owner user:', userError);
+        }
+
+        // Also create company_settings with owner contact info
+        const { error: settingsError } = await supabase
+          .from('company_settings')
+          .insert({
+            user_id: data.license.id, // Using license ID as a reference
+            company_name: company.companyName,
+            address: company.address,
+            city: company.city,
+            postal_code: company.postalCode,
+            email: ownerEmail.toLowerCase().trim(),
+            phone: ownerPhone.trim() || null,
+            siret: company.siret || company.siren,
+          });
+
+        if (settingsError) {
+          console.error('Error creating company settings:', settingsError);
         }
 
         setCreatedLicense({
@@ -131,6 +153,8 @@ export function CreateCompanyDialog({
     setOwnerEmail('');
     setOwnerFirstName('');
     setOwnerLastName('');
+    setOwnerPhone('');
+    setOwnerPosition('');
     setPlanType('start');
     setCreatedLicense(null);
     onOpenChange(false);
@@ -305,6 +329,28 @@ export function CreateCompanyDialog({
                   value={ownerEmail}
                   onChange={(e) => setOwnerEmail(e.target.value)}
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Téléphone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="06 12 34 56 78"
+                    value={ownerPhone}
+                    onChange={(e) => setOwnerPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Poste / Fonction</Label>
+                  <Input
+                    id="position"
+                    placeholder="Gérant, Directeur..."
+                    value={ownerPosition}
+                    onChange={(e) => setOwnerPosition(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

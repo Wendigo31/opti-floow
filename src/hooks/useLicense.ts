@@ -84,7 +84,15 @@ export type FeatureKey =
   | 'client_analysis_basic'
   | 'smart_quotes'
   | 'fleet_management'
-  | 'fleet_basic';
+  | 'fleet_basic'
+  // Company/User management features
+  | 'company_invite_members'
+  | 'company_remove_members'
+  | 'company_change_roles'
+  | 'company_view_activity'
+  | 'company_manage_settings'
+  | 'company_data_sharing'
+  | 'realtime_notifications';
 
 // SYNCHRONIZED WITH src/types/pricing.ts PRICING_PLANS.features
 // Update both files when changing features!
@@ -96,6 +104,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'cost_analysis_basic',
     'pdf_export_basic',
     'fleet_basic', // Gestion basique sans amortissement/entretien/pneus/conso
+    // No company management features in START
   ],
   pro: [
     // START features included
@@ -120,6 +129,14 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'monthly_tracking',
     'auto_pricing',
     'client_analysis_basic',
+    // Company management features - PRO
+    'company_invite_members',
+    'company_remove_members',
+    'company_change_roles',
+    'company_view_activity',
+    'company_manage_settings',
+    'company_data_sharing',
+    'realtime_notifications',
   ],
   enterprise: [
     // All PRO features
@@ -143,6 +160,14 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'monthly_tracking',
     'auto_pricing',
     'client_analysis_basic',
+    // Company management features
+    'company_invite_members',
+    'company_remove_members',
+    'company_change_roles',
+    'company_view_activity',
+    'company_manage_settings',
+    'company_data_sharing',
+    'realtime_notifications',
     // ENTERPRISE exclusive
     'ai_optimization',
     'ai_pdf_analysis',

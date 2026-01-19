@@ -48,6 +48,14 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   smart_quotes: 'Devis intelligent',
   fleet_basic: 'Gestion flotte basique',
   fleet_management: 'Gestion flotte avancée',
+  // Company/User management features
+  company_invite_members: 'Inviter des membres',
+  company_remove_members: 'Supprimer des membres',
+  company_change_roles: 'Modifier les rôles',
+  company_view_activity: 'Voir l\'activité',
+  company_manage_settings: 'Gérer les paramètres',
+  company_data_sharing: 'Partage de données',
+  realtime_notifications: 'Notifications temps réel',
 };
 
 const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
@@ -74,6 +82,14 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
   monthly_tracking: 'pro',
   auto_pricing: 'pro',
   client_analysis_basic: 'pro',
+  // Company/User management - PRO
+  company_invite_members: 'pro',
+  company_remove_members: 'pro',
+  company_change_roles: 'pro',
+  company_view_activity: 'pro',
+  company_manage_settings: 'pro',
+  company_data_sharing: 'pro',
+  realtime_notifications: 'pro',
   // ENTERPRISE features
   ai_optimization: 'enterprise',
   ai_pdf_analysis: 'enterprise',
