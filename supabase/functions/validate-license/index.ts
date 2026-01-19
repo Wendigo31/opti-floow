@@ -1268,28 +1268,60 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("[validate-license] Validating license:", normalizedCode.substring(0, 4) + '...', "for email:", normalizedEmail);
 
-    // Verify license exists and is active
-    const { data: license, error } = await supabase
+    // First, try to find license by code only (to support company members)
+    const { data: licenseByCode, error: codeError } = await supabase
       .from("licenses")
-      .select("id, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
+      .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
       .eq("license_code", normalizedCode)
-      .eq("email", normalizedEmail)
       .maybeSingle();
 
-    if (error) {
-      console.error("[validate-license] License validation error:", error);
+    if (codeError) {
+      console.error("[validate-license] License lookup error:", codeError);
       return new Response(
         JSON.stringify({ success: false, error: "Erreur base de données" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    if (!license) {
+    if (!licenseByCode) {
       console.log("[validate-license] License not found");
       return new Response(
         JSON.stringify({ success: false, error: "Licence non trouvée" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    // Check if this is the license owner OR a member of the company
+    let license = licenseByCode;
+    let isMemberLogin = false;
+    
+    if (licenseByCode.email !== normalizedEmail) {
+      // Check if user is a registered member of this company
+      const { data: memberRecord } = await supabase
+        .from("company_users")
+        .select("id, role, email, is_active")
+        .eq("license_id", licenseByCode.id)
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+        
+      if (!memberRecord) {
+        console.log("[validate-license] Email not registered as company member");
+        return new Response(
+          JSON.stringify({ success: false, error: "Email non autorisé pour cette licence. Contactez votre administrateur." }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      if (!memberRecord.is_active) {
+        console.log("[validate-license] Member account is inactive");
+        return new Response(
+          JSON.stringify({ success: false, error: "Compte désactivé. Contactez votre administrateur." }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      isMemberLogin = true;
+      console.log("[validate-license] Member login detected for:", normalizedEmail, "role:", memberRecord.role);
     }
 
     if (!license.is_active) {
@@ -1423,48 +1455,77 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", license.id);
 
-    // --- Ensure user is in company_users as owner ---
+    // --- Ensure user is in company_users ---
     if (authUserId) {
       try {
-        // Check if user is already in company_users for this license
-        const { data: existingMember } = await supabase
+        // Check if user is already in company_users for this license by user_id
+        const { data: existingMemberById } = await supabase
           .from("company_users")
-          .select("id, role")
+          .select("id, role, email")
           .eq("license_id", license.id)
           .eq("user_id", authUserId)
           .maybeSingle();
 
-        if (!existingMember) {
-          // Check if there's already an owner for this license
-          const { data: existingOwner } = await supabase
+        if (!existingMemberById) {
+          // Check if there's an entry by email that needs updating (member was pre-added by admin)
+          const { data: existingMemberByEmail } = await supabase
             .from("company_users")
-            .select("id")
+            .select("id, role, user_id")
             .eq("license_id", license.id)
-            .eq("role", "owner")
+            .eq("email", normalizedEmail)
             .maybeSingle();
-
-          // If no owner exists, add this user as owner; otherwise as member
-          const role = existingOwner ? 'member' : 'owner';
           
-          const { error: insertError } = await supabase
-            .from("company_users")
-            .insert({
-              license_id: license.id,
-              user_id: authUserId,
-              email: normalizedEmail,
-              role: role,
-              display_name: [license.first_name, license.last_name].filter(Boolean).join(' ') || null,
-              accepted_at: now,
-              is_active: true,
-            });
-
-          if (insertError) {
-            console.error("[validate-license] Failed to add user to company_users:", insertError);
+          if (existingMemberByEmail) {
+            // Update the existing record with the real Supabase user_id
+            const { error: updateError } = await supabase
+              .from("company_users")
+              .update({ 
+                user_id: authUserId,
+                accepted_at: now,
+                is_active: true,
+              })
+              .eq("id", existingMemberByEmail.id);
+              
+            if (updateError) {
+              console.error("[validate-license] Failed to update member user_id:", updateError);
+            } else {
+              console.log(`[validate-license] Updated company_users with real user_id for ${normalizedEmail}`);
+            }
           } else {
-            console.log(`[validate-license] User added to company_users as ${role}`);
+            // No existing entry - check if there's already an owner for this license
+            const { data: existingOwner } = await supabase
+              .from("company_users")
+              .select("id")
+              .eq("license_id", license.id)
+              .eq("role", "owner")
+              .maybeSingle();
+
+            // If no owner exists and this is the license owner email, add as owner; otherwise as member
+            const isLicenseOwnerEmail = license.email === normalizedEmail;
+            const role = (!existingOwner && isLicenseOwnerEmail) ? 'owner' : 'member';
+            
+            const { error: insertError } = await supabase
+              .from("company_users")
+              .insert({
+                license_id: license.id,
+                user_id: authUserId,
+                email: normalizedEmail,
+                role: role,
+                display_name: isLicenseOwnerEmail 
+                  ? ([license.first_name, license.last_name].filter(Boolean).join(' ') || null)
+                  : null,
+                accepted_at: now,
+                is_active: true,
+              });
+
+            if (insertError) {
+              console.error("[validate-license] Failed to add user to company_users:", insertError);
+            } else {
+              console.log(`[validate-license] User added to company_users as ${role}`);
+            }
           }
         } else {
-          console.log("[validate-license] User already in company_users with role:", existingMember.role);
+          console.log("[validate-license] User already in company_users with role:", existingMemberById.role);
         }
       } catch (cuError) {
         console.error("[validate-license] company_users error (non-blocking):", cuError);
