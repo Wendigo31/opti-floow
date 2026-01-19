@@ -271,7 +271,13 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="ai" className="mt-6">
-          <AIAnalysisPanel />
+          <FeatureGate 
+            feature="ai_optimization" 
+            mode="blur"
+            showUpgradePrompt={true}
+          >
+            <AIAnalysisPanel />
+          </FeatureGate>
         </TabsContent>
       </Tabs>
 
