@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { FeatureGate } from '@/components/license/FeatureGate';
+import { useLicense } from '@/hooks/useLicense';
 import { 
   Users, 
   UserPlus, 
@@ -342,14 +344,16 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <p className="text-xs text-muted-foreground">utilisateurs</p>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={() => setShowAddDialog(true)}
-                disabled={companyUsers.length >= selectedLicense.max_users && selectedLicense.max_users !== 999}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Ajouter un utilisateur
-              </Button>
+              <FeatureGate feature="company_invite_members" showLockedIndicator={false}>
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddDialog(true)}
+                  disabled={companyUsers.length >= selectedLicense.max_users && selectedLicense.max_users !== 999}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Ajouter un utilisateur
+                </Button>
+              </FeatureGate>
             </div>
           )}
 
@@ -392,26 +396,30 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                     </Badge>
                     {user.role !== 'owner' && (
                       <>
-                        <Select
-                          value={user.role}
-                          onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
-                        >
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="member">Membre</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setUserToRemove(user.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <FeatureGate feature="company_change_roles" showLockedIndicator={false}>
+                          <Select
+                            value={user.role}
+                            onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Membre</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FeatureGate>
+                        <FeatureGate feature="company_remove_members" showLockedIndicator={false}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setUserToRemove(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </FeatureGate>
                       </>
                     )}
                   </div>
