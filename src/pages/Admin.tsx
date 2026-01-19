@@ -104,6 +104,7 @@ interface License {
   max_daily_charges: number | null;
   max_monthly_charges: number | null;
   max_yearly_charges: number | null;
+  max_users: number | null;
   email: string;
   is_active: boolean;
   plan_type: string | null;
@@ -209,6 +210,7 @@ export default function Admin() {
     maxDailyCharges: null as number | null,
     maxMonthlyCharges: null as number | null,
     maxYearlyCharges: null as number | null,
+    maxUsers: null as number | null,
   });
 
   // Feature editor
@@ -297,6 +299,7 @@ export default function Admin() {
       maxDailyCharges: license.max_daily_charges,
       maxMonthlyCharges: license.max_monthly_charges,
       maxYearlyCharges: license.max_yearly_charges,
+      maxUsers: license.max_users,
     });
   };
   
@@ -314,6 +317,7 @@ export default function Admin() {
           maxDailyCharges: limitsForm.maxDailyCharges,
           maxMonthlyCharges: limitsForm.maxMonthlyCharges,
           maxYearlyCharges: limitsForm.maxYearlyCharges,
+          maxUsers: limitsForm.maxUsers,
         },
       });
 
@@ -327,6 +331,7 @@ export default function Admin() {
           max_daily_charges: limitsForm.maxDailyCharges,
           max_monthly_charges: limitsForm.maxMonthlyCharges,
           max_yearly_charges: limitsForm.maxYearlyCharges,
+          max_users: limitsForm.maxUsers,
         } : l)
       );
       setEditingLimitsId(null);
@@ -1624,6 +1629,30 @@ export default function Admin() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Users limit - highlighted */}
+            <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
+              <div className="space-y-2">
+                <Label htmlFor="maxUsers" className="flex items-center gap-2 text-primary font-medium">
+                  <Users className="w-4 h-4" />
+                  Licences utilisateur (société)
+                </Label>
+                <Input
+                  id="maxUsers"
+                  type="number"
+                  min="1"
+                  placeholder="Par défaut (selon forfait)"
+                  value={limitsForm.maxUsers ?? ''}
+                  onChange={(e) => setLimitsForm({ 
+                    ...limitsForm, 
+                    maxUsers: e.target.value ? parseInt(e.target.value) : null 
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Nombre maximum d'utilisateurs pouvant rejoindre cette société
+                </p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="maxDrivers">Max conducteurs</Label>
