@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { 
   Shield, 
   Users, 
@@ -1030,6 +1031,7 @@ export default function Admin() {
                                   const currentUsers = companyUserCounts[license.id] || 0;
                                   const maxUsers = license.max_users || 999;
                                   const isFull = currentUsers >= maxUsers && maxUsers !== 999;
+                                  const isNearFull = currentUsers >= maxUsers * 0.8 && maxUsers !== 999;
                                   
                                   return (
                                     <SelectItem 
@@ -1041,8 +1043,11 @@ export default function Admin() {
                                         <Building2 className="w-4 h-4 flex-shrink-0" />
                                         <span className="truncate">{license.company_name}</span>
                                         <Badge 
-                                          variant={isFull ? "destructive" : "secondary"} 
-                                          className="ml-auto text-xs flex-shrink-0"
+                                          variant={isFull ? "destructive" : isNearFull ? "secondary" : "outline"} 
+                                          className={cn(
+                                            "ml-auto text-xs flex-shrink-0",
+                                            isNearFull && !isFull && "bg-orange-500/20 text-orange-600 border-orange-500/30"
+                                          )}
                                         >
                                           {currentUsers}/{maxUsers === 999 ? '∞' : maxUsers}
                                         </Badge>
@@ -1055,6 +1060,46 @@ export default function Admin() {
                                 })}
                               </SelectContent>
                             </Select>
+                            
+                            {/* Quick edit limit button when company is selected and near/at capacity */}
+                            {formData.assignToCompanyId && (() => {
+                              const selectedCompany = licenses.find(l => l.id === formData.assignToCompanyId);
+                              const currentUsers = companyUserCounts[formData.assignToCompanyId] || 0;
+                              const maxUsers = selectedCompany?.max_users || 999;
+                              const isFull = currentUsers >= maxUsers && maxUsers !== 999;
+                              
+                              if (isFull || (currentUsers >= maxUsers * 0.8 && maxUsers !== 999)) {
+                                return (
+                                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                                    <span className="text-xs text-orange-600 flex-1">
+                                      {isFull ? 'Société pleine' : 'Capacité presque atteinte'} ({currentUsers}/{maxUsers})
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs"
+                                      onClick={() => {
+                                        setEditingLimitsId(formData.assignToCompanyId);
+                                        setLimitsForm({
+                                          maxDrivers: selectedCompany?.max_drivers || null,
+                                          maxClients: selectedCompany?.max_clients || null,
+                                          maxDailyCharges: selectedCompany?.max_daily_charges || null,
+                                          maxMonthlyCharges: selectedCompany?.max_monthly_charges || null,
+                                          maxYearlyCharges: selectedCompany?.max_yearly_charges || null,
+                                          maxUsers: (maxUsers || 1) + 5,
+                                        });
+                                      }}
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      +5 places
+                                    </Button>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                            
                             <p className="text-xs text-muted-foreground">
                               Sélectionnez une société pour ajouter cet utilisateur comme membre
                             </p>

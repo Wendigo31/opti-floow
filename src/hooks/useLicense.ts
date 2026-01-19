@@ -92,7 +92,34 @@ export type FeatureKey =
   | 'company_view_activity'
   | 'company_manage_settings'
   | 'company_data_sharing'
-  | 'realtime_notifications';
+  | 'realtime_notifications'
+  // Navigation/Pages features
+  | 'page_dashboard'
+  | 'page_calculator'
+  | 'page_itinerary'
+  | 'page_tours'
+  | 'page_clients'
+  | 'page_vehicles'
+  | 'page_drivers'
+  | 'page_charges'
+  | 'page_forecast'
+  | 'page_trip_history'
+  | 'page_ai_analysis'
+  | 'page_toxic_clients'
+  | 'page_vehicle_reports'
+  | 'page_team'
+  | 'page_settings'
+  // UI Component features
+  | 'btn_export_pdf'
+  | 'btn_export_excel'
+  | 'btn_save_tour'
+  | 'btn_load_tour'
+  | 'btn_ai_optimize'
+  | 'btn_map_preview'
+  | 'btn_contact_support'
+  | 'section_cost_breakdown'
+  | 'section_margin_alerts'
+  | 'section_charts';
 
 // SYNCHRONIZED WITH src/types/pricing.ts PRICING_PLANS.features
 // Update both files when changing features!
@@ -103,8 +130,19 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'dashboard_basic',
     'cost_analysis_basic',
     'pdf_export_basic',
-    'fleet_basic', // Gestion basique sans amortissement/entretien/pneus/conso
-    // No company management features in START
+    'fleet_basic',
+    // Navigation/Pages - START
+    'page_dashboard',
+    'page_calculator',
+    'page_clients',
+    'page_vehicles',
+    'page_drivers',
+    'page_charges',
+    'page_settings',
+    // UI Components - START
+    'btn_map_preview',
+    'btn_contact_support',
+    'section_cost_breakdown',
   ],
   pro: [
     // START features included
@@ -112,6 +150,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'dashboard_basic',
     'cost_analysis_basic',
     'pdf_export_basic',
+    'fleet_basic',
     // PRO features unlocked
     'itinerary_planning',
     'saved_tours',
@@ -137,6 +176,30 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'company_manage_settings',
     'company_data_sharing',
     'realtime_notifications',
+    // Navigation/Pages - PRO
+    'page_dashboard',
+    'page_calculator',
+    'page_itinerary',
+    'page_tours',
+    'page_clients',
+    'page_vehicles',
+    'page_drivers',
+    'page_charges',
+    'page_forecast',
+    'page_trip_history',
+    'page_vehicle_reports',
+    'page_team',
+    'page_settings',
+    // UI Components - PRO
+    'btn_export_pdf',
+    'btn_export_excel',
+    'btn_save_tour',
+    'btn_load_tour',
+    'btn_map_preview',
+    'btn_contact_support',
+    'section_cost_breakdown',
+    'section_margin_alerts',
+    'section_charts',
   ],
   enterprise: [
     // All PRO features
@@ -144,6 +207,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'dashboard_basic',
     'cost_analysis_basic',
     'pdf_export_basic',
+    'fleet_basic',
     'itinerary_planning',
     'saved_tours',
     'trip_history',
@@ -177,6 +241,33 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'unlimited_vehicles',
     'client_analysis',
     'smart_quotes',
+    // Navigation/Pages - ENTERPRISE (all)
+    'page_dashboard',
+    'page_calculator',
+    'page_itinerary',
+    'page_tours',
+    'page_clients',
+    'page_vehicles',
+    'page_drivers',
+    'page_charges',
+    'page_forecast',
+    'page_trip_history',
+    'page_ai_analysis',
+    'page_toxic_clients',
+    'page_vehicle_reports',
+    'page_team',
+    'page_settings',
+    // UI Components - ENTERPRISE (all)
+    'btn_export_pdf',
+    'btn_export_excel',
+    'btn_save_tour',
+    'btn_load_tour',
+    'btn_ai_optimize',
+    'btn_map_preview',
+    'btn_contact_support',
+    'section_cost_breakdown',
+    'section_margin_alerts',
+    'section_charts',
   ],
 };
 
