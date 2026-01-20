@@ -119,7 +119,7 @@ export type FeatureKey =
   | 'page_vehicle_reports'
   | 'page_team'
   | 'page_settings'
-  // UI Component features
+  // UI Component features - Buttons
   | 'btn_export_pdf'
   | 'btn_export_excel'
   | 'btn_save_tour'
@@ -127,9 +127,30 @@ export type FeatureKey =
   | 'btn_ai_optimize'
   | 'btn_map_preview'
   | 'btn_contact_support'
+  // UI Component features - Add/Create buttons
+  | 'btn_add_client'
+  | 'btn_add_vehicle'
+  | 'btn_add_driver'
+  | 'btn_add_charge'
+  | 'btn_add_trailer'
+  | 'btn_add_trip'
+  | 'btn_add_quote'
+  // UI Component features - Edit/Delete buttons
+  | 'btn_edit_client'
+  | 'btn_delete_client'
+  | 'btn_edit_vehicle'
+  | 'btn_delete_vehicle'
+  | 'btn_edit_driver'
+  | 'btn_delete_driver'
+  | 'btn_edit_charge'
+  | 'btn_delete_charge'
+  // UI Component features - Sections
   | 'section_cost_breakdown'
   | 'section_margin_alerts'
-  | 'section_charts';
+  | 'section_charts'
+  | 'section_client_stats'
+  | 'section_vehicle_stats'
+  | 'section_driver_stats';
 
 // SYNCHRONIZED WITH src/types/pricing.ts PRICING_PLANS.features
 // Update both files when changing features!

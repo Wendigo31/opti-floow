@@ -72,7 +72,7 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   page_vehicle_reports: 'Page Rapports véhicules',
   page_team: 'Page Équipe',
   page_settings: 'Page Paramètres',
-  // UI Component features
+  // UI Component features - Buttons
   btn_export_pdf: 'Bouton Export PDF',
   btn_export_excel: 'Bouton Export Excel',
   btn_save_tour: 'Bouton Sauvegarder tournée',
@@ -80,9 +80,30 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   btn_ai_optimize: 'Bouton Optimisation IA',
   btn_map_preview: 'Aperçu carte',
   btn_contact_support: 'Bouton Contact support',
+  // Add/Create buttons
+  btn_add_client: 'Bouton Ajouter client',
+  btn_add_vehicle: 'Bouton Ajouter véhicule',
+  btn_add_driver: 'Bouton Ajouter conducteur',
+  btn_add_charge: 'Bouton Ajouter charge',
+  btn_add_trailer: 'Bouton Ajouter remorque',
+  btn_add_trip: 'Bouton Ajouter trajet',
+  btn_add_quote: 'Bouton Ajouter devis',
+  // Edit/Delete buttons
+  btn_edit_client: 'Bouton Modifier client',
+  btn_delete_client: 'Bouton Supprimer client',
+  btn_edit_vehicle: 'Bouton Modifier véhicule',
+  btn_delete_vehicle: 'Bouton Supprimer véhicule',
+  btn_edit_driver: 'Bouton Modifier conducteur',
+  btn_delete_driver: 'Bouton Supprimer conducteur',
+  btn_edit_charge: 'Bouton Modifier charge',
+  btn_delete_charge: 'Bouton Supprimer charge',
+  // Sections
   section_cost_breakdown: 'Section Répartition des coûts',
   section_margin_alerts: 'Section Alertes marge',
   section_charts: 'Section Graphiques',
+  section_client_stats: 'Section Statistiques clients',
+  section_vehicle_stats: 'Section Statistiques véhicules',
+  section_driver_stats: 'Section Statistiques conducteurs',
 };
 
 const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
@@ -102,6 +123,23 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
   btn_map_preview: 'start',
   btn_contact_support: 'start',
   section_cost_breakdown: 'start',
+  // Add/Edit/Delete - basic CRUD for start
+  btn_add_client: 'start',
+  btn_add_vehicle: 'start',
+  btn_add_driver: 'start',
+  btn_add_charge: 'start',
+  btn_add_trailer: 'start',
+  btn_edit_client: 'start',
+  btn_delete_client: 'start',
+  btn_edit_vehicle: 'start',
+  btn_delete_vehicle: 'start',
+  btn_edit_driver: 'start',
+  btn_delete_driver: 'start',
+  btn_edit_charge: 'start',
+  btn_delete_charge: 'start',
+  section_client_stats: 'start',
+  section_vehicle_stats: 'start',
+  section_driver_stats: 'start',
   // PRO features
   itinerary_planning: 'pro',
   saved_tours: 'pro',
@@ -129,6 +167,8 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
   btn_export_excel: 'pro',
   btn_save_tour: 'pro',
   btn_load_tour: 'pro',
+  btn_add_trip: 'pro',
+  btn_add_quote: 'pro',
   section_margin_alerts: 'pro',
   section_charts: 'pro',
   // Company/User management - PRO

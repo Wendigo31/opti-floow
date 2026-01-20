@@ -77,9 +77,30 @@ export interface LicenseFeatures {
   btn_ai_optimize: boolean;
   btn_map_preview: boolean;
   btn_contact_support: boolean;
+  // Add/Create buttons
+  btn_add_client: boolean;
+  btn_add_vehicle: boolean;
+  btn_add_driver: boolean;
+  btn_add_charge: boolean;
+  btn_add_trailer: boolean;
+  btn_add_trip: boolean;
+  btn_add_quote: boolean;
+  // Edit/Delete buttons
+  btn_edit_client: boolean;
+  btn_delete_client: boolean;
+  btn_edit_vehicle: boolean;
+  btn_delete_vehicle: boolean;
+  btn_edit_driver: boolean;
+  btn_delete_driver: boolean;
+  btn_edit_charge: boolean;
+  btn_delete_charge: boolean;
+  // Sections
   section_cost_breakdown: boolean;
   section_margin_alerts: boolean;
   section_charts: boolean;
+  section_client_stats: boolean;
+  section_vehicle_stats: boolean;
+  section_driver_stats: boolean;
   
   // Limits
   max_drivers: number | null;
@@ -803,9 +824,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     ],
   },
   {
-    name: '🎛️ Boutons & Composants UI',
-    nameEn: '🎛️ Buttons & UI Components',
-    nameEs: '🎛️ Botones y Componentes UI',
+    name: '🎛️ Boutons Export',
+    nameEn: '🎛️ Export Buttons',
+    nameEs: '🎛️ Botones de Exportación',
     features: [
       {
         key: 'btn_export_pdf',
@@ -827,11 +848,189 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         descriptionEs: 'Habilitar exportación Excel',
         defaultPlan: 'pro',
       },
+    ],
+  },
+  {
+    name: '➕ Boutons Ajout',
+    nameEn: '➕ Add Buttons',
+    nameEs: '➕ Botones de Agregar',
+    features: [
+      {
+        key: 'btn_add_client',
+        label: 'Ajouter client',
+        labelEn: 'Add Client',
+        labelEs: 'Agregar cliente',
+        description: 'Permet d\'ajouter des clients',
+        descriptionEn: 'Enable adding clients',
+        descriptionEs: 'Habilitar agregar clientes',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_add_vehicle',
+        label: 'Ajouter véhicule',
+        labelEn: 'Add Vehicle',
+        labelEs: 'Agregar vehículo',
+        description: 'Permet d\'ajouter des véhicules',
+        descriptionEn: 'Enable adding vehicles',
+        descriptionEs: 'Habilitar agregar vehículos',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_add_driver',
+        label: 'Ajouter conducteur',
+        labelEn: 'Add Driver',
+        labelEs: 'Agregar conductor',
+        description: 'Permet d\'ajouter des conducteurs',
+        descriptionEn: 'Enable adding drivers',
+        descriptionEs: 'Habilitar agregar conductores',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_add_charge',
+        label: 'Ajouter charge',
+        labelEn: 'Add Charge',
+        labelEs: 'Agregar gasto',
+        description: 'Permet d\'ajouter des charges',
+        descriptionEn: 'Enable adding charges',
+        descriptionEs: 'Habilitar agregar gastos',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_add_trailer',
+        label: 'Ajouter remorque',
+        labelEn: 'Add Trailer',
+        labelEs: 'Agregar remolque',
+        description: 'Permet d\'ajouter des remorques',
+        descriptionEn: 'Enable adding trailers',
+        descriptionEs: 'Habilitar agregar remolques',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_add_trip',
+        label: 'Ajouter trajet',
+        labelEn: 'Add Trip',
+        labelEs: 'Agregar viaje',
+        description: 'Permet d\'ajouter des trajets',
+        descriptionEn: 'Enable adding trips',
+        descriptionEs: 'Habilitar agregar viajes',
+        defaultPlan: 'pro',
+      },
+      {
+        key: 'btn_add_quote',
+        label: 'Ajouter devis',
+        labelEn: 'Add Quote',
+        labelEs: 'Agregar presupuesto',
+        description: 'Permet de créer des devis',
+        descriptionEn: 'Enable creating quotes',
+        descriptionEs: 'Habilitar crear presupuestos',
+        defaultPlan: 'pro',
+      },
+    ],
+  },
+  {
+    name: '✏️ Boutons Modification',
+    nameEn: '✏️ Edit Buttons',
+    nameEs: '✏️ Botones de Edición',
+    features: [
+      {
+        key: 'btn_edit_client',
+        label: 'Modifier client',
+        labelEn: 'Edit Client',
+        labelEs: 'Editar cliente',
+        description: 'Permet de modifier les clients',
+        descriptionEn: 'Enable editing clients',
+        descriptionEs: 'Habilitar editar clientes',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_edit_vehicle',
+        label: 'Modifier véhicule',
+        labelEn: 'Edit Vehicle',
+        labelEs: 'Editar vehículo',
+        description: 'Permet de modifier les véhicules',
+        descriptionEn: 'Enable editing vehicles',
+        descriptionEs: 'Habilitar editar vehículos',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_edit_driver',
+        label: 'Modifier conducteur',
+        labelEn: 'Edit Driver',
+        labelEs: 'Editar conductor',
+        description: 'Permet de modifier les conducteurs',
+        descriptionEn: 'Enable editing drivers',
+        descriptionEs: 'Habilitar editar conductores',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_edit_charge',
+        label: 'Modifier charge',
+        labelEn: 'Edit Charge',
+        labelEs: 'Editar gasto',
+        description: 'Permet de modifier les charges',
+        descriptionEn: 'Enable editing charges',
+        descriptionEs: 'Habilitar editar gastos',
+        defaultPlan: 'start',
+      },
+    ],
+  },
+  {
+    name: '🗑️ Boutons Suppression',
+    nameEn: '🗑️ Delete Buttons',
+    nameEs: '🗑️ Botones de Eliminación',
+    features: [
+      {
+        key: 'btn_delete_client',
+        label: 'Supprimer client',
+        labelEn: 'Delete Client',
+        labelEs: 'Eliminar cliente',
+        description: 'Permet de supprimer les clients',
+        descriptionEn: 'Enable deleting clients',
+        descriptionEs: 'Habilitar eliminar clientes',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_delete_vehicle',
+        label: 'Supprimer véhicule',
+        labelEn: 'Delete Vehicle',
+        labelEs: 'Eliminar vehículo',
+        description: 'Permet de supprimer les véhicules',
+        descriptionEn: 'Enable deleting vehicles',
+        descriptionEs: 'Habilitar eliminar vehículos',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_delete_driver',
+        label: 'Supprimer conducteur',
+        labelEn: 'Delete Driver',
+        labelEs: 'Eliminar conductor',
+        description: 'Permet de supprimer les conducteurs',
+        descriptionEn: 'Enable deleting drivers',
+        descriptionEs: 'Habilitar eliminar conductores',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'btn_delete_charge',
+        label: 'Supprimer charge',
+        labelEn: 'Delete Charge',
+        labelEs: 'Eliminar gasto',
+        description: 'Permet de supprimer les charges',
+        descriptionEn: 'Enable deleting charges',
+        descriptionEs: 'Habilitar eliminar gastos',
+        defaultPlan: 'start',
+      },
+    ],
+  },
+  {
+    name: '🔘 Autres boutons',
+    nameEn: '🔘 Other Buttons',
+    nameEs: '🔘 Otros Botones',
+    features: [
       {
         key: 'btn_save_tour',
-        label: 'Bouton Sauvegarder tournée',
-        labelEn: 'Save Tour Button',
-        labelEs: 'Botón Guardar ruta',
+        label: 'Sauvegarder tournée',
+        labelEn: 'Save Tour',
+        labelEs: 'Guardar ruta',
         description: 'Permet de sauvegarder les tournées',
         descriptionEn: 'Enable tour saving',
         descriptionEs: 'Habilitar guardado de rutas',
@@ -839,9 +1038,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         key: 'btn_load_tour',
-        label: 'Bouton Charger tournée',
-        labelEn: 'Load Tour Button',
-        labelEs: 'Botón Cargar ruta',
+        label: 'Charger tournée',
+        labelEn: 'Load Tour',
+        labelEs: 'Cargar ruta',
         description: 'Permet de charger les tournées',
         descriptionEn: 'Enable tour loading',
         descriptionEs: 'Habilitar carga de rutas',
@@ -849,9 +1048,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         key: 'btn_ai_optimize',
-        label: 'Bouton Optimisation IA',
-        labelEn: 'AI Optimize Button',
-        labelEs: 'Botón Optimización IA',
+        label: 'Optimisation IA',
+        labelEn: 'AI Optimize',
+        labelEs: 'Optimización IA',
         description: 'Active l\'optimisation IA',
         descriptionEn: 'Enable AI optimization',
         descriptionEs: 'Habilitar optimización IA',
@@ -869,19 +1068,26 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         key: 'btn_contact_support',
-        label: 'Bouton Contact support',
-        labelEn: 'Contact Support Button',
-        labelEs: 'Botón Contactar soporte',
+        label: 'Contact support',
+        labelEn: 'Contact Support',
+        labelEs: 'Contactar soporte',
         description: 'Permet de contacter le support',
         descriptionEn: 'Enable support contact',
         descriptionEs: 'Habilitar contacto de soporte',
         defaultPlan: 'start',
       },
+    ],
+  },
+  {
+    name: '📊 Sections UI',
+    nameEn: '📊 UI Sections',
+    nameEs: '📊 Secciones UI',
+    features: [
       {
         key: 'section_cost_breakdown',
-        label: 'Section Répartition des coûts',
-        labelEn: 'Cost Breakdown Section',
-        labelEs: 'Sección Desglose de costos',
+        label: 'Répartition des coûts',
+        labelEn: 'Cost Breakdown',
+        labelEs: 'Desglose de costos',
         description: 'Affiche la répartition des coûts',
         descriptionEn: 'Show cost breakdown',
         descriptionEs: 'Mostrar desglose de costos',
@@ -889,9 +1095,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         key: 'section_margin_alerts',
-        label: 'Section Alertes marge',
-        labelEn: 'Margin Alerts Section',
-        labelEs: 'Sección Alertas de margen',
+        label: 'Alertes marge',
+        labelEn: 'Margin Alerts',
+        labelEs: 'Alertas de margen',
         description: 'Affiche les alertes de marge',
         descriptionEn: 'Show margin alerts',
         descriptionEs: 'Mostrar alertas de margen',
@@ -899,13 +1105,43 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         key: 'section_charts',
-        label: 'Section Graphiques',
-        labelEn: 'Charts Section',
-        labelEs: 'Sección Gráficos',
+        label: 'Graphiques',
+        labelEn: 'Charts',
+        labelEs: 'Gráficos',
         description: 'Affiche les graphiques',
         descriptionEn: 'Show charts',
         descriptionEs: 'Mostrar gráficos',
         defaultPlan: 'pro',
+      },
+      {
+        key: 'section_client_stats',
+        label: 'Statistiques clients',
+        labelEn: 'Client Statistics',
+        labelEs: 'Estadísticas de clientes',
+        description: 'Affiche les statistiques clients',
+        descriptionEn: 'Show client statistics',
+        descriptionEs: 'Mostrar estadísticas de clientes',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'section_vehicle_stats',
+        label: 'Statistiques véhicules',
+        labelEn: 'Vehicle Statistics',
+        labelEs: 'Estadísticas de vehículos',
+        description: 'Affiche les statistiques véhicules',
+        descriptionEn: 'Show vehicle statistics',
+        descriptionEs: 'Mostrar estadísticas de vehículos',
+        defaultPlan: 'start',
+      },
+      {
+        key: 'section_driver_stats',
+        label: 'Statistiques conducteurs',
+        labelEn: 'Driver Statistics',
+        labelEs: 'Estadísticas de conductores',
+        description: 'Affiche les statistiques conducteurs',
+        descriptionEn: 'Show driver statistics',
+        descriptionEs: 'Mostrar estadísticas de conductores',
+        defaultPlan: 'start',
       },
     ],
   },
