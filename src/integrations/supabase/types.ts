@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          admin_comment: string | null
+          company_user_id: string
+          created_at: string
+          id: string
+          license_id: string
+          message: string | null
+          processed_at: string | null
+          processed_by: string | null
+          requested_features: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_comment?: string | null
+          company_user_id: string
+          created_at?: string
+          id?: string
+          license_id: string
+          message?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_features: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_comment?: string | null
+          company_user_id?: string
+          created_at?: string
+          id?: string
+          license_id?: string
+          message?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_features?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_company_user_id_fkey"
+            columns: ["company_user_id"]
+            isOneToOne: false
+            referencedRelation: "company_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_audit_log: {
         Row: {
           action: string
@@ -292,6 +349,7 @@ export type Database = {
           invited_at: string | null
           invited_by: string | null
           is_active: boolean | null
+          last_activity_at: string | null
           license_id: string
           role: string
           updated_at: string | null
@@ -306,6 +364,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
+          last_activity_at?: string | null
           license_id: string
           role?: string
           updated_at?: string | null
@@ -320,6 +379,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
+          last_activity_at?: string | null
           license_id?: string
           role?: string
           updated_at?: string | null
@@ -1281,6 +1341,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      create_access_request: {
+        Args: { p_message?: string; p_requested_features: string[] }
+        Returns: string
+      }
       get_table_columns: {
         Args: { table_name: string }
         Returns: {
@@ -1308,6 +1372,16 @@ export type Database = {
         Args: { p_company_user_id: string; p_user_id: string }
         Returns: boolean
       }
+      process_access_request: {
+        Args: {
+          p_comment?: string
+          p_processed_by?: string
+          p_request_id: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      update_user_activity: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

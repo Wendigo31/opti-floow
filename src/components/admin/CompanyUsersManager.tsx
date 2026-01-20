@@ -20,8 +20,12 @@ import {
   Trash2, 
   Loader2,
   Building2,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Activity
 } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,12 +48,14 @@ import {
 interface CompanyUser {
   id: string;
   license_id: string;
-  user_id: string;
+  user_id: string | null;
   email: string;
   role: 'owner' | 'admin' | 'member';
   display_name?: string;
   is_active: boolean;
   created_at: string;
+  last_activity_at?: string | null;
+  accepted_at?: string | null;
 }
 
 interface License {
@@ -382,10 +388,33 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                       <p className="font-medium text-sm">
                         {user.display_name || user.email}
                       </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {user.email}
+                        </span>
+                        {user.last_activity_at ? (
+                          <span className="flex items-center gap-1 text-green-600">
+                            <Activity className="h-3 w-3" />
+                            Actif {formatDistanceToNow(new Date(user.last_activity_at), { addSuffix: true, locale: fr })}
+                          </span>
+                        ) : user.accepted_at ? (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Connecté {format(new Date(user.accepted_at), 'dd/MM/yyyy', { locale: fr })}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-amber-600">
+                            <Clock className="h-3 w-3" />
+                            Jamais connecté
+                          </span>
+                        )}
+                        {!user.user_id && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
+                            En attente
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
