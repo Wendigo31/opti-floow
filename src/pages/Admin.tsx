@@ -225,7 +225,7 @@ export default function Admin() {
   // Feature editor
   const [selectedLicenseForFeatures, setSelectedLicenseForFeatures] = useState<License | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'updates' | 'demo'>('licenses');
+  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'access' | 'updates' | 'demo'>('licenses');
 
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
@@ -865,8 +865,8 @@ export default function Admin() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'updates' | 'demo')}>
-        <TabsList className="grid w-full max-w-5xl grid-cols-7">
+      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'access' | 'updates' | 'demo')}>
+        <TabsList className="grid w-full max-w-6xl grid-cols-8">
           <TabsTrigger value="licenses" className="gap-2">
             <Users className="w-4 h-4" />
             Licences
@@ -886,6 +886,10 @@ export default function Admin() {
           <TabsTrigger value="features" className="gap-2">
             <Settings2 className="w-4 h-4" />
             Fonctionnalités
+          </TabsTrigger>
+          <TabsTrigger value="access" className="gap-2">
+            <Shield className="w-4 h-4" />
+            Accès
           </TabsTrigger>
           <TabsTrigger value="updates" className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -915,7 +919,6 @@ export default function Admin() {
           <CompanyDetailPanel getAdminToken={getAdminToken} />
           
           <CompanyUsersManager getAdminToken={getAdminToken} />
-          <UserFeatureOverrides getAdminToken={getAdminToken} />
           <CreateCompanyDialog 
             open={createCompanyOpen}
             onOpenChange={setCreateCompanyOpen}
@@ -1704,6 +1707,24 @@ export default function Admin() {
             <div className="mt-8">
               <SchemaSyncManager adminToken={getAdminToken() || undefined} />
             </div>
+          </div>
+        </TabsContent>
+
+        {/* Access Tab - User Feature Overrides */}
+        <TabsContent value="access" className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Gestion des accès par utilisateur</h2>
+                <p className="text-muted-foreground text-sm">
+                  Activez ou désactivez des fonctionnalités spécifiques pour chaque utilisateur
+                </p>
+              </div>
+            </div>
+            <UserFeatureOverrides getAdminToken={getAdminToken} />
           </div>
         </TabsContent>
 
