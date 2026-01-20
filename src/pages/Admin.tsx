@@ -41,6 +41,7 @@ import { CompanyUsersManager } from '@/components/admin/CompanyUsersManager';
 import { CompanyDataStats } from '@/components/admin/CompanyDataStats';
 import { CreateCompanyDialog } from '@/components/admin/CreateCompanyDialog';
 import { UserFeatureOverrides } from '@/components/admin/UserFeatureOverrides';
+import { AccessRequestsManager } from '@/components/admin/AccessRequestsManager';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -223,7 +224,7 @@ export default function Admin() {
   // Feature editor
   const [selectedLicenseForFeatures, setSelectedLicenseForFeatures] = useState<License | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'data' | 'features' | 'updates' | 'demo'>('licenses');
+  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'updates' | 'demo'>('licenses');
 
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
@@ -863,8 +864,8 @@ export default function Admin() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'data' | 'features' | 'updates' | 'demo')}>
-        <TabsList className="grid w-full max-w-4xl grid-cols-6">
+      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'updates' | 'demo')}>
+        <TabsList className="grid w-full max-w-5xl grid-cols-7">
           <TabsTrigger value="licenses" className="gap-2">
             <Users className="w-4 h-4" />
             Licences
@@ -872,6 +873,10 @@ export default function Admin() {
           <TabsTrigger value="companies" className="gap-2">
             <Building2 className="w-4 h-4" />
             Sociétés
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="gap-2">
+            <Bell className="w-4 h-4" />
+            Demandes
           </TabsTrigger>
           <TabsTrigger value="data" className="gap-2">
             <FileText className="w-4 h-4" />
@@ -882,7 +887,7 @@ export default function Admin() {
             Fonctionnalités
           </TabsTrigger>
           <TabsTrigger value="updates" className="gap-2">
-            <Bell className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" />
             Mises à jour
           </TabsTrigger>
           <TabsTrigger value="demo" className="gap-2">
@@ -890,6 +895,11 @@ export default function Admin() {
             Démo
           </TabsTrigger>
         </TabsList>
+
+        {/* Access Requests Tab */}
+        <TabsContent value="requests" className="space-y-6 mt-6">
+          <AccessRequestsManager getAdminToken={getAdminToken} />
+        </TabsContent>
 
         {/* Companies Tab */}
         <TabsContent value="companies" className="space-y-6 mt-6">

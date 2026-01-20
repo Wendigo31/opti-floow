@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   EyeOff, 
   Lock, 
@@ -100,22 +101,33 @@ export default function MyRestrictions() {
 
     setSending(true);
     
-    // Simulate sending request (in real app, this would call an edge function)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const { data, error } = await supabase.rpc('create_access_request', {
+        p_requested_features: selectedFeatures,
+        p_message: requestMessage || null,
+      });
+
+      if (error) throw error;
+
+      setSent(true);
+      toast.success('Demande envoyée', {
+        description: 'Votre administrateur a été notifié de votre demande.'
+      });
+
+      // Reset after success
+      setTimeout(() => {
+        setSent(false);
+        setSelectedFeatures([]);
+        setRequestMessage('');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error sending request:', err);
+      toast.error('Erreur', {
+        description: err.message || 'Impossible d\'envoyer la demande'
+      });
+    }
     
     setSending(false);
-    setSent(true);
-    
-    toast.success('Demande envoyée', {
-      description: 'Votre administrateur a été notifié de votre demande.'
-    });
-
-    // Reset after success
-    setTimeout(() => {
-      setSent(false);
-      setSelectedFeatures([]);
-      setRequestMessage('');
-    }, 3000);
   };
 
   const getTitle = () => {
