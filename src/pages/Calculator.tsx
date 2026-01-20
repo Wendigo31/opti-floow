@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Fuel, Route, Receipt, Truck, Users, Euro, Percent, Check, CalendarDays, AlertTriangle, Calculator as CalculatorIcon, Save, Folder, Container, Upload, TrendingUp, TrendingDown, RefreshCw, Loader2 } from 'lucide-react';
+import { Fuel, Route, Receipt, Truck, Users, Euro, Percent, Check, CalendarDays, AlertTriangle, Calculator as CalculatorIcon, Save, Folder, Container, Upload, TrendingUp, TrendingDown, RefreshCw, Loader2, Eye, EyeOff, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { useLicense } from '@/hooks/useLicense';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSavedTours } from '@/hooks/useSavedTours';
-import { useFuelPrice } from '@/hooks/useFuelPrice';
+import { useFuelPrice, FuelType, convertTTCtoHT, convertHTtoTTC } from '@/hooks/useFuelPrice';
 import type { Vehicle } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
 import type { LocalClient } from '@/types/local';
@@ -47,9 +47,16 @@ export default function Calculator() {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [loadedTour, setLoadedTour] = useState<SavedTour | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showHTPrice, setShowHTPrice] = useState(false);
   
   const { saveTour, updateTour } = useSavedTours();
-  const { fetchDieselPrice, fetchAdBluePrice, loadingDiesel, loadingAdBlue } = useFuelPrice();
+  const { 
+    fetchFuelPrice, 
+    fetchAdBluePrice, 
+    loading: fuelLoading, 
+    fuelTypeLabels,
+    referencePrices 
+  } = useFuelPrice();
   const [updating, setUpdating] = useState(false);
   
   // Handle loading a saved tour
@@ -228,6 +235,17 @@ export default function Calculator() {
     currency: 'EUR'
   }).format(value);
   
+  // Get current fuel type from selected vehicle
+  const currentFuelType: FuelType = useMemo(() => {
+    if (selectedVehicle) {
+      return selectedVehicle.fuelType || 'diesel';
+    }
+    return 'diesel';
+  }, [selectedVehicle]);
+
+  // Fuel unit based on type
+  const fuelUnit = currentFuelType === 'electric' ? '€/kWh' : currentFuelType === 'gnv' ? '€/kg' : '€/L';
+
   const handleVehicleSelect = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId === 'none' ? null : vehicleId);
     
@@ -242,6 +260,32 @@ export default function Calculator() {
       }
     }
   };
+
+  // Fetch current fuel price based on vehicle type
+  const handleFetchFuelPrice = async () => {
+    const priceTTC = await fetchFuelPrice(currentFuelType);
+    if (priceTTC) {
+      // Set as TTC and let user toggle
+      setVehicle(prev => ({ ...prev, fuelPriceHT: priceTTC, fuelPriceIsHT: false }));
+    }
+  };
+
+  // Calculate displayed prices
+  const displayedFuelPriceTTC = vehicle.fuelPriceIsHT 
+    ? convertHTtoTTC(vehicle.fuelPriceHT, settings.tvaRate) 
+    : vehicle.fuelPriceHT;
+  
+  const displayedFuelPriceHT = vehicle.fuelPriceIsHT 
+    ? vehicle.fuelPriceHT 
+    : convertTTCtoHT(vehicle.fuelPriceHT, settings.tvaRate);
+
+  const displayedAdBluePriceTTC = vehicle.adBluePriceIsHT 
+    ? convertHTtoTTC(vehicle.adBluePriceHT, settings.tvaRate) 
+    : vehicle.adBluePriceHT;
+  
+  const displayedAdBluePriceHT = vehicle.adBluePriceIsHT 
+    ? vehicle.adBluePriceHT 
+    : convertTTCtoHT(vehicle.adBluePriceHT, settings.tvaRate);
   
   const toggleDriver = (driverId: string) => {
     if (selectedDriverIds.includes(driverId)) {
@@ -668,20 +712,34 @@ export default function Calculator() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="fuelPrice" className="text-xs">Prix Gazole (€/L)</Label>
-                  <button
-                    type="button"
-                    onClick={() => setVehicle({ ...vehicle, fuelPriceIsHT: !vehicle.fuelPriceIsHT })}
-                    className={cn(
-                      "text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors",
-                      vehicle.fuelPriceIsHT 
-                        ? "bg-primary/20 text-primary" 
-                        : "bg-warning/20 text-warning"
-                    )}
-                    title="Cliquez pour basculer entre HT et TTC"
-                  >
-                    {vehicle.fuelPriceIsHT ? 'HT' : 'TTC'}
-                  </button>
+                  <Label htmlFor="fuelPrice" className="text-xs flex items-center gap-1">
+                    {currentFuelType === 'electric' && <Zap className="w-3 h-3" />}
+                    Prix {fuelTypeLabels[currentFuelType]} ({fuelUnit})
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowHTPrice(!showHTPrice)}
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-1"
+                      title={showHTPrice ? 'Masquer le prix HT' : 'Voir le prix HT'}
+                    >
+                      {showHTPrice ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      HT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVehicle({ ...vehicle, fuelPriceIsHT: !vehicle.fuelPriceIsHT })}
+                      className={cn(
+                        "text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors",
+                        vehicle.fuelPriceIsHT 
+                          ? "bg-primary/20 text-primary" 
+                          : "bg-warning/20 text-warning"
+                      )}
+                      title="Cliquez pour basculer entre HT et TTC"
+                    >
+                      {vehicle.fuelPriceIsHT ? 'HT' : 'TTC'}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Input 
@@ -696,58 +754,81 @@ export default function Calculator() {
                     size="icon"
                     variant="outline"
                     className="h-9 w-9"
-                    onClick={async () => {
-                      const price = await fetchDieselPrice();
-                      if (price) setVehicle({ ...vehicle, fuelPriceHT: price, fuelPriceIsHT: true });
-                    }}
-                    disabled={loadingDiesel}
-                    title="Actualiser prix CNR (HT)"
+                    onClick={handleFetchFuelPrice}
+                    disabled={fuelLoading[currentFuelType]}
+                    title={`Actualiser prix ${fuelTypeLabels[currentFuelType]} (TTC)`}
                   >
-                    {loadingDiesel ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    {fuelLoading[currentFuelType] ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   </Button>
                 </div>
+                {showHTPrice && (
+                  <div className="flex justify-between text-xs mt-1 p-1.5 rounded bg-muted/50">
+                    <span className="text-muted-foreground">Montant HT:</span>
+                    <span className="font-medium text-primary">{displayedFuelPriceHT.toFixed(3)} {fuelUnit}</span>
+                  </div>
+                )}
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="adBluePrice" className="text-xs">Prix AdBlue (€/L)</Label>
-                  <button
-                    type="button"
-                    onClick={() => setVehicle({ ...vehicle, adBluePriceIsHT: !vehicle.adBluePriceIsHT })}
-                    className={cn(
-                      "text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors",
-                      vehicle.adBluePriceIsHT 
-                        ? "bg-primary/20 text-primary" 
-                        : "bg-warning/20 text-warning"
-                    )}
-                    title="Cliquez pour basculer entre HT et TTC"
-                  >
-                    {vehicle.adBluePriceIsHT ? 'HT' : 'TTC'}
-                  </button>
+              {/* AdBlue - only show for non-electric vehicles */}
+              {currentFuelType !== 'electric' && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="adBluePrice" className="text-xs">Prix AdBlue (€/L)</Label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowHTPrice(!showHTPrice)}
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-1"
+                        title={showHTPrice ? 'Masquer le prix HT' : 'Voir le prix HT'}
+                      >
+                        {showHTPrice ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        HT
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVehicle({ ...vehicle, adBluePriceIsHT: !vehicle.adBluePriceIsHT })}
+                        className={cn(
+                          "text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors",
+                          vehicle.adBluePriceIsHT 
+                            ? "bg-primary/20 text-primary" 
+                            : "bg-warning/20 text-warning"
+                        )}
+                        title="Cliquez pour basculer entre HT et TTC"
+                      >
+                        {vehicle.adBluePriceIsHT ? 'HT' : 'TTC'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Input 
+                      id="adBluePrice" 
+                      type="number" 
+                      step="0.01" 
+                      value={vehicle.adBluePriceHT} 
+                      onChange={e => setVehicle({ ...vehicle, adBluePriceHT: parseFloat(e.target.value) || 0 })}
+                      className="h-9 flex-1"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9"
+                      onClick={async () => {
+                        const price = await fetchAdBluePrice();
+                        if (price) setVehicle({ ...vehicle, adBluePriceHT: price, adBluePriceIsHT: false });
+                      }}
+                      disabled={fuelLoading.adblue}
+                      title="Actualiser prix AdBlue (TTC)"
+                    >
+                      {fuelLoading.adblue ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {showHTPrice && (
+                    <div className="flex justify-between text-xs mt-1 p-1.5 rounded bg-muted/50">
+                      <span className="text-muted-foreground">Montant HT:</span>
+                      <span className="font-medium text-primary">{displayedAdBluePriceHT.toFixed(3)} €/L</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-1">
-                  <Input 
-                    id="adBluePrice" 
-                    type="number" 
-                    step="0.01" 
-                    value={vehicle.adBluePriceHT} 
-                    onChange={e => setVehicle({ ...vehicle, adBluePriceHT: parseFloat(e.target.value) || 0 })}
-                    className="h-9 flex-1"
-                  />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9"
-                    onClick={async () => {
-                      const price = await fetchAdBluePrice();
-                      if (price) setVehicle({ ...vehicle, adBluePriceHT: price, adBluePriceIsHT: true });
-                    }}
-                    disabled={loadingAdBlue}
-                    title="Actualiser prix CNR (HT)"
-                  >
-                    {loadingAdBlue ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
             
             {/* Pricing Mode */}
