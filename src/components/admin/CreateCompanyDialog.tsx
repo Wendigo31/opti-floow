@@ -110,23 +110,9 @@ export function CreateCompanyDialog({
           console.error('Error creating owner user:', userError);
         }
 
-        // Also create company_settings with owner contact info
-        const { error: settingsError } = await supabase
-          .from('company_settings')
-          .insert({
-            user_id: data.license.id, // Using license ID as a reference
-            company_name: company.companyName,
-            address: company.address,
-            city: company.city,
-            postal_code: company.postalCode,
-            email: ownerEmail.toLowerCase().trim(),
-            phone: ownerPhone.trim() || null,
-            siret: company.siret || company.siren,
-          });
-
-        if (settingsError) {
-          console.error('Error creating company settings:', settingsError);
-        }
+        // Note: company_settings will be created when the owner first logs in
+        // The license table already stores all SIREN data (siren, address, city, postal_code, company_status, employee_count)
+        // so no need to duplicate here
 
         setCreatedLicense({
           code: data.license.license_code,
