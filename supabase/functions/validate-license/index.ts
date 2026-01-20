@@ -543,6 +543,188 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Admin: Get company data (users, stats, login history)
+    if (action === "get-company-data") {
+      const { licenseId } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Getting company data for license:", licenseId);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!licenseId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "ID licence requis" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      try {
+        // Fetch company users
+        const { data: companyUsers, error: usersError } = await supabase
+          .from('company_users')
+          .select('*')
+          .eq('license_id', licenseId)
+          .order('role', { ascending: true })
+          .order('created_at', { ascending: true });
+
+        if (usersError) {
+          console.error("Error fetching company users:", usersError);
+          throw usersError;
+        }
+
+        // Fetch user stats for each user with a user_id
+        const userStats = await Promise.all(
+          (companyUsers || []).map(async (user: any) => {
+            if (!user.user_id) {
+              return {
+                company_user_id: user.id,
+                user_id: null,
+                email: user.email,
+                display_name: user.display_name,
+                role: user.role,
+                tours_count: 0,
+                trips_count: 0,
+                clients_count: 0,
+                quotes_count: 0,
+                vehicles_count: 0,
+                drivers_count: 0,
+                charges_count: 0,
+                total_revenue: 0,
+                total_distance: 0,
+                last_activity_at: user.last_activity_at,
+                accepted_at: user.accepted_at,
+              };
+            }
+
+            const userId = user.user_id;
+
+            const [
+              { count: toursCount },
+              { count: tripsCount },
+              { count: clientsCount },
+              { count: quotesCount },
+              { count: vehiclesCount },
+              { count: driversCount },
+              { count: chargesCount },
+              { data: tripsData },
+            ] = await Promise.all([
+              supabase.from('saved_tours').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('trips').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('user_vehicles').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('user_drivers').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('user_charges').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+              supabase.from('trips').select('revenue, distance_km').eq('user_id', userId),
+            ]);
+
+            const totalRevenue = (tripsData || []).reduce((sum: number, t: any) => sum + (t.revenue || 0), 0);
+            const totalDistance = (tripsData || []).reduce((sum: number, t: any) => sum + (t.distance_km || 0), 0);
+
+            return {
+              company_user_id: user.id,
+              user_id: userId,
+              email: user.email,
+              display_name: user.display_name,
+              role: user.role,
+              tours_count: toursCount || 0,
+              trips_count: tripsCount || 0,
+              clients_count: clientsCount || 0,
+              quotes_count: quotesCount || 0,
+              vehicles_count: vehiclesCount || 0,
+              drivers_count: driversCount || 0,
+              charges_count: chargesCount || 0,
+              total_revenue: totalRevenue,
+              total_distance: totalDistance,
+              last_activity_at: user.last_activity_at,
+              accepted_at: user.accepted_at,
+            };
+          })
+        );
+
+        // Fetch company totals
+        const [
+          { count: toursCount },
+          { count: tripsCount },
+          { count: clientsCount },
+          { count: quotesCount },
+          { count: vehiclesCount },
+          { count: driversCount },
+          { count: chargesCount },
+          { data: toursRevenue },
+          { data: tripsRevenue },
+        ] = await Promise.all([
+          supabase.from('saved_tours').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('trips').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('clients').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('user_vehicles').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('user_drivers').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('user_charges').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('saved_tours').select('revenue, distance_km').eq('license_id', licenseId),
+          supabase.from('trips').select('revenue, distance_km').eq('license_id', licenseId),
+        ]);
+
+        const tourRevenue = (toursRevenue || []).reduce((sum: number, t: any) => sum + (t.revenue || 0), 0);
+        const tourDistance = (toursRevenue || []).reduce((sum: number, t: any) => sum + (t.distance_km || 0), 0);
+        const tripRevenue = (tripsRevenue || []).reduce((sum: number, t: any) => sum + (t.revenue || 0), 0);
+        const tripDistance = (tripsRevenue || []).reduce((sum: number, t: any) => sum + (t.distance_km || 0), 0);
+
+        const companyTotals = {
+          tours: toursCount || 0,
+          trips: tripsCount || 0,
+          clients: clientsCount || 0,
+          quotes: quotesCount || 0,
+          vehicles: vehiclesCount || 0,
+          drivers: driversCount || 0,
+          charges: chargesCount || 0,
+          revenue: tourRevenue + tripRevenue,
+          distance: tourDistance + tripDistance,
+        };
+
+        // Fetch login history
+        const { data: loginHistory, error: loginError } = await supabase
+          .from('login_history')
+          .select('*')
+          .eq('license_id', licenseId)
+          .order('login_at', { ascending: false })
+          .limit(50);
+
+        if (loginError) {
+          console.error("Error fetching login history:", loginError);
+        }
+
+        console.log("Company data fetched successfully:", {
+          usersCount: companyUsers?.length || 0,
+          totals: companyTotals,
+          loginsCount: loginHistory?.length || 0,
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            companyUsers: companyUsers || [],
+            userStats,
+            companyTotals,
+            loginHistory: loginHistory || [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      } catch (error) {
+        console.error("Get company data error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la récupération des données" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
     // Admin: Update limits for a license
     if (action === "update-limits") {
       const { licenseId, maxDrivers, maxClients, maxDailyCharges, maxMonthlyCharges, maxYearlyCharges, maxUsers } = body;

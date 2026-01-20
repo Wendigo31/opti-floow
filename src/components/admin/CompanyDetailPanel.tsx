@@ -72,7 +72,8 @@ interface CompanyUser {
 }
 
 interface UserStats {
-  user_id: string;
+  company_user_id?: string;
+  user_id: string | null;
   email: string;
   display_name?: string;
   role: string;
@@ -159,166 +160,65 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
   const fetchCompanyData = async () => {
     if (!selectedLicenseId) return;
     
+    const token = getAdminToken();
+    if (!token) return;
+    
     setIsLoading(true);
+    setIsLoadingStats(true);
+    setIsLoadingLogins(true);
     
     try {
-      // Fetch company users
-      const { data: usersData, error: usersError } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('license_id', selectedLicenseId)
-        .order('role', { ascending: true })
-        .order('created_at', { ascending: true });
+      // Use edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: { 
+          action: 'get-company-data', 
+          licenseId: selectedLicenseId,
+          adminToken: token 
+        },
+      });
 
-      if (usersError) throw usersError;
+      if (error) throw error;
       
-      const users = (usersData || []).map(u => ({
-        ...u,
-        role: u.role as 'owner' | 'admin' | 'member',
-      }));
-      setCompanyUsers(users);
-      
-      // Fetch stats for each user
-      await fetchUserStats(users);
-      
-      // Fetch login history
-      await fetchLoginHistory();
-      
-      // Fetch company totals
-      await fetchCompanyTotals();
+      if (data?.success) {
+        // Map company users
+        const users = (data.companyUsers || []).map((u: any) => ({
+          ...u,
+          role: u.role as 'owner' | 'admin' | 'member',
+        }));
+        setCompanyUsers(users);
+        
+        // Map user stats
+        const stats = (data.userStats || []).map((s: any) => ({
+          user_id: s.user_id || s.company_user_id,
+          email: s.email,
+          display_name: s.display_name,
+          role: s.role,
+          tours_count: s.tours_count || 0,
+          trips_count: s.trips_count || 0,
+          clients_count: s.clients_count || 0,
+          quotes_count: s.quotes_count || 0,
+          vehicles_count: s.vehicles_count || 0,
+          drivers_count: s.drivers_count || 0,
+          charges_count: s.charges_count || 0,
+          total_revenue: s.total_revenue || 0,
+          total_distance: s.total_distance || 0,
+          last_activity_at: s.last_activity_at,
+          accepted_at: s.accepted_at,
+        }));
+        setUserStats(stats);
+        
+        // Set company totals
+        setCompanyTotals(data.companyTotals || null);
+        
+        // Set login history
+        setLoginHistory(data.loginHistory || []);
+      }
     } catch (error) {
       console.error('Error fetching company data:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchUserStats = async (users: CompanyUser[]) => {
-    if (!selectedLicenseId) return;
-    
-    setIsLoadingStats(true);
-    
-    try {
-      const statsPromises = users.filter(u => u.user_id).map(async (user) => {
-        const userId = user.user_id!;
-        
-        const [
-          { count: toursCount },
-          { count: tripsCount },
-          { count: clientsCount },
-          { count: quotesCount },
-          { count: vehiclesCount },
-          { count: driversCount },
-          { count: chargesCount },
-          { data: tripsData },
-        ] = await Promise.all([
-          supabase.from('saved_tours').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('trips').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('user_vehicles').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('user_drivers').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('user_charges').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-          supabase.from('trips').select('revenue, distance_km').eq('user_id', userId),
-        ]);
-        
-        const totalRevenue = (tripsData || []).reduce((sum, t) => sum + (t.revenue || 0), 0);
-        const totalDistance = (tripsData || []).reduce((sum, t) => sum + (t.distance_km || 0), 0);
-        
-        return {
-          user_id: userId,
-          email: user.email,
-          display_name: user.display_name,
-          role: user.role,
-          tours_count: toursCount || 0,
-          trips_count: tripsCount || 0,
-          clients_count: clientsCount || 0,
-          quotes_count: quotesCount || 0,
-          vehicles_count: vehiclesCount || 0,
-          drivers_count: driversCount || 0,
-          charges_count: chargesCount || 0,
-          total_revenue: totalRevenue,
-          total_distance: totalDistance,
-          last_activity_at: user.last_activity_at,
-          accepted_at: user.accepted_at,
-        } as UserStats;
-      });
-      
-      const stats = await Promise.all(statsPromises);
-      setUserStats(stats);
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-    } finally {
       setIsLoadingStats(false);
-    }
-  };
-
-  const fetchLoginHistory = async () => {
-    if (!selectedLicenseId) return;
-    
-    setIsLoadingLogins(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('login_history')
-        .select('*')
-        .eq('license_id', selectedLicenseId)
-        .order('login_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setLoginHistory(data || []);
-    } catch (error) {
-      console.error('Error fetching login history:', error);
-    } finally {
       setIsLoadingLogins(false);
-    }
-  };
-
-  const fetchCompanyTotals = async () => {
-    if (!selectedLicenseId) return;
-    
-    try {
-      const [
-        { count: toursCount },
-        { count: tripsCount },
-        { count: clientsCount },
-        { count: quotesCount },
-        { count: vehiclesCount },
-        { count: driversCount },
-        { count: chargesCount },
-        { data: toursRevenue },
-        { data: tripsRevenue },
-      ] = await Promise.all([
-        supabase.from('saved_tours').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('trips').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('user_vehicles').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('user_drivers').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('user_charges').select('*', { count: 'exact', head: true }).eq('license_id', selectedLicenseId),
-        supabase.from('saved_tours').select('revenue, distance_km').eq('license_id', selectedLicenseId),
-        supabase.from('trips').select('revenue, distance_km').eq('license_id', selectedLicenseId),
-      ]);
-      
-      const tourRevenue = (toursRevenue || []).reduce((sum, t) => sum + (t.revenue || 0), 0);
-      const tourDistance = (toursRevenue || []).reduce((sum, t) => sum + (t.distance_km || 0), 0);
-      const tripRevenue = (tripsRevenue || []).reduce((sum, t) => sum + (t.revenue || 0), 0);
-      const tripDistance = (tripsRevenue || []).reduce((sum, t) => sum + (t.distance_km || 0), 0);
-      
-      setCompanyTotals({
-        tours: toursCount || 0,
-        trips: tripsCount || 0,
-        clients: clientsCount || 0,
-        quotes: quotesCount || 0,
-        vehicles: vehiclesCount || 0,
-        drivers: driversCount || 0,
-        charges: chargesCount || 0,
-        revenue: tourRevenue + tripRevenue,
-        distance: tourDistance + tripDistance,
-      });
-    } catch (error) {
-      console.error('Error fetching company totals:', error);
     }
   };
 
@@ -479,7 +379,11 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
                 ) : (
                   <div className="space-y-4">
                     {companyUsers.map(user => {
-                      const stats = userStats.find(s => s.user_id === user.user_id);
+                      // Find stats by user_id if available, otherwise by email
+                      const stats = userStats.find(s => 
+                        (user.user_id && s.user_id === user.user_id) || 
+                        s.email === user.email
+                      );
                       
                       return (
                         <Card key={user.id} className="p-4">
