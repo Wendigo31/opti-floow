@@ -202,6 +202,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          license_id: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -218,6 +219,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_id?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -234,6 +236,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_id?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -242,7 +245,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_invitations: {
         Row: {
@@ -726,6 +737,7 @@ export type Database = {
           destination_address: string
           distance_km: number
           id: string
+          license_id: string | null
           margin_percent: number | null
           notes: string | null
           origin_address: string
@@ -746,6 +758,7 @@ export type Database = {
           destination_address: string
           distance_km: number
           id?: string
+          license_id?: string | null
           margin_percent?: number | null
           notes?: string | null
           origin_address: string
@@ -766,6 +779,7 @@ export type Database = {
           destination_address?: string
           distance_km?: number
           id?: string
+          license_id?: string | null
           margin_percent?: number | null
           notes?: string | null
           origin_address?: string
@@ -786,6 +800,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
             referencedColumns: ["id"]
           },
         ]
@@ -956,6 +977,7 @@ export type Database = {
           duration_minutes: number | null
           fuel_cost: number | null
           id: string
+          license_id: string | null
           notes: string | null
           origin_address: string
           origin_lat: number | null
@@ -986,6 +1008,7 @@ export type Database = {
           duration_minutes?: number | null
           fuel_cost?: number | null
           id?: string
+          license_id?: string | null
           notes?: string | null
           origin_address: string
           origin_lat?: number | null
@@ -1016,6 +1039,7 @@ export type Database = {
           duration_minutes?: number | null
           fuel_cost?: number | null
           id?: string
+          license_id?: string | null
           notes?: string | null
           origin_address?: string
           origin_lat?: number | null
@@ -1039,6 +1063,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
             referencedColumns: ["id"]
           },
         ]
