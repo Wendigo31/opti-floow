@@ -91,7 +91,7 @@ export function UserFeatureOverrides({ getAdminToken }: Props) {
     fetchLicenses();
   }, [getAdminToken]);
 
-  // Fetch company users when license is selected
+  // Fetch company users when license is selected (via edge function to bypass RLS)
   useEffect(() => {
     if (!selectedLicenseId) {
       setCompanyUsers([]);
@@ -101,26 +101,44 @@ export function UserFeatureOverrides({ getAdminToken }: Props) {
 
     const fetchCompanyUsers = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('license_id', selectedLicenseId)
-        .order('role')
-        .order('created_at');
+      const token = getAdminToken();
+      
+      if (!token) {
+        console.error('No admin token available');
+        setIsLoading(false);
+        return;
+      }
 
-      if (error) {
-        console.error('Error fetching company users:', error);
-      } else {
-        setCompanyUsers((data || []).map(u => ({
-          ...u,
-          role: u.role as 'owner' | 'admin' | 'member',
-        })));
+      try {
+        const { data, error } = await supabase.functions.invoke('validate-license', {
+          body: { 
+            action: 'get-company-data', 
+            adminToken: token,
+            licenseId: selectedLicenseId 
+          },
+        });
+
+        if (error) {
+          console.error('Error fetching company users:', error);
+        } else if (data?.companyUsers) {
+          setCompanyUsers(data.companyUsers.map((u: any) => ({
+            id: u.id,
+            license_id: u.license_id,
+            user_id: u.user_id,
+            email: u.email,
+            role: u.role as 'owner' | 'admin' | 'member',
+            display_name: u.display_name,
+            is_active: u.is_active ?? true,
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching company users:', err);
       }
       setIsLoading(false);
     };
 
     fetchCompanyUsers();
-  }, [selectedLicenseId]);
+  }, [selectedLicenseId, getAdminToken]);
 
   // Fetch overrides when user is selected
   useEffect(() => {

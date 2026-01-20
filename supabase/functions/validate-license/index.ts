@@ -565,6 +565,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       try {
+        // Fetch license info with SIREN data
+        const { data: licenseInfo, error: licenseError } = await supabase
+          .from('licenses')
+          .select('id, email, company_name, siren, address, city, postal_code, company_status, employee_count, plan_type, max_users, is_active')
+          .eq('id', licenseId)
+          .maybeSingle();
+
+        if (licenseError) {
+          console.error("Error fetching license info:", licenseError);
+        }
+
         // Fetch company users
         const { data: companyUsers, error: usersError } = await supabase
           .from('company_users')
@@ -709,6 +720,7 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response(
           JSON.stringify({
             success: true,
+            licenseInfo: licenseInfo || null,
             companyUsers: companyUsers || [],
             userStats,
             companyTotals,
