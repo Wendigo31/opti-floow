@@ -30,7 +30,11 @@ import {
   LogOut,
   PlayCircle,
   StopCircle,
-  Loader2
+  Loader2,
+  Eye,
+  ChevronRight,
+  Database,
+  Lock
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FeatureEditor } from '@/components/admin/FeatureEditor';
@@ -48,6 +52,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Table, 
   TableBody, 
@@ -91,12 +97,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-// Admin authentication is validated server-side via the admin-auth backend function.
-// (Do not store the secret in the frontend bundle.)
 const ADMIN_AUTH_FUNCTION = 'admin-auth';
-
-// Persist admin session locally (JWT token) to avoid re-login on refresh.
-// Keep this short-lived.
 const ADMIN_AUTH_STORAGE_KEY = 'optiflow_admin_auth_v1';
 const ADMIN_TOKEN_STORAGE_KEY = 'optiflow_admin_token_v1';
 
@@ -139,7 +140,7 @@ interface LicenseFormData {
   address: string;
   city: string;
   postalCode: string;
-  assignToCompanyId: string | null; // ID of an existing company/license to assign this user to
+  assignToCompanyId: string | null;
   userRole: 'owner' | 'admin' | 'member';
 }
 
@@ -157,61 +158,44 @@ const emptyFormData: LicenseFormData = {
   userRole: 'member',
 };
 
+// Sidebar navigation items
+const ADMIN_NAV = [
+  { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer les licences' },
+  { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Gérer les sociétés' },
+  { id: 'access', label: 'Accès', icon: Lock, description: 'Permissions utilisateurs' },
+  { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les features' },
+  { id: 'requests', label: 'Demandes', icon: Bell, description: 'Demandes d\'accès' },
+  { id: 'data', label: 'Données', icon: Database, description: 'Statistiques' },
+  { id: 'updates', label: 'Mises à jour', icon: RefreshCw, description: 'Versions PWA' },
+  { id: 'demo', label: 'Démo', icon: PlayCircle, description: 'Mode démonstration' },
+] as const;
+
+type AdminTab = typeof ADMIN_NAV[number]['id'];
+
 export default function Admin() {
   const navigate = useNavigate();
   const { isLicensed, isLoading, licenseData } = useLicense();
   const { isActive: isDemoActive, currentSessionId, availableSessions, activateDemo, deactivateDemo, getCurrentSession } = useDemoMode();
+  
+  // Core state
   const [licenses, setLicenses] = useState<License[]>([]);
   const [companyUserCounts, setCompanyUserCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterPlan, setFilterPlan] = useState<'all' | PlanType>('all');
-  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<PlanType>('start');
   
-  // Create/Edit license dialog
+  // Dialog state
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [createdLicense, setCreatedLicense] = useState<{ code: string; email: string } | null>(null);
   const [editingLicenseId, setEditingLicenseId] = useState<string | null>(null);
   const [formData, setFormData] = useState<LicenseFormData>(emptyFormData);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPlan, setEditingPlan] = useState<PlanType>('start');
 
-  // Admin login state (code secret seulement)
-  const [adminCode, setAdminCode] = useState('');
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminLoginError, setAdminLoginError] = useState('');
-  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
-
-  // Restore prior admin session (short-lived) so the UI doesn't "bounce" back to login on refresh.
-  // IMPORTANT: we require BOTH the session marker and the JWT token.
-  useEffect(() => {
-    try {
-      const rawSession = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-      const token = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
-
-      // If one is missing, clear both to avoid a "half-authenticated" state (token=null => 403).
-      if (!rawSession || !token) {
-        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-        return;
-      }
-
-      const parsed = JSON.parse(rawSession) as { expiresAt?: number };
-      if (parsed?.expiresAt && Date.now() < parsed.expiresAt) {
-        setIsAdminAuthenticated(true);
-      } else {
-        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-      }
-    } catch {
-      localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-      localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-    }
-  }, []);
-  
-  // Editing limits
+  // Limits editor
   const [editingLimitsId, setEditingLimitsId] = useState<string | null>(null);
   const [limitsForm, setLimitsForm] = useState({
     maxDrivers: null as number | null,
@@ -225,7 +209,7 @@ export default function Admin() {
   // Feature editor
   const [selectedLicenseForFeatures, setSelectedLicenseForFeatures] = useState<License | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'access' | 'updates' | 'demo'>('licenses');
+  const [adminActiveTab, setAdminActiveTab] = useState<AdminTab>('licenses');
 
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
@@ -237,12 +221,36 @@ export default function Admin() {
   // SIRENE lookup
   const { lookup: sireneLookup, loading: sireneLoading, error: sireneError } = useSireneLookup();
 
-  // L'utilisateur est admin via code secret
+  // Admin auth
+  const [adminCode, setAdminCode] = useState('');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+
+  // Restore admin session
+  useEffect(() => {
+    try {
+      const rawSession = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+      const token = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+      if (!rawSession || !token) {
+        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        return;
+      }
+      const session = JSON.parse(rawSession);
+      if (session.expiresAt && Date.now() < session.expiresAt) {
+        setIsAdminAuthenticated(true);
+      } else {
+        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      }
+    } catch { }
+  }, []);
+
   const isAdmin = isAdminAuthenticated;
 
   const handleAdminLogin = async () => {
     if (!adminCode.trim() || adminLoginLoading) return;
-
     setAdminLoginError('');
     setAdminLoginLoading(true);
 
@@ -251,27 +259,13 @@ export default function Admin() {
         body: { code: adminCode },
       });
 
-      // supabase-js surfaces non-2xx as `error` (and sometimes throws).
-      // Make sure we surface the server error message instead of a generic 401 message.
       if (error) {
-        try {
-          const resp = (error as any)?.context?.response;
-          if (resp && typeof resp.json === 'function') {
-            const body = await resp.json().catch(() => null);
-            setAdminLoginError(body?.error || 'Code secret incorrect');
-            return;
-          }
-        } catch {
-          // ignore parsing issues
-        }
-
         setAdminLoginError('Code secret incorrect');
         return;
       }
 
       if (data?.ok && data?.token) {
         setIsAdminAuthenticated(true);
-        // Store JWT token and expiry
         localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.token);
         localStorage.setItem(
           ADMIN_AUTH_STORAGE_KEY,
@@ -283,23 +277,97 @@ export default function Admin() {
 
       setAdminLoginError(data?.error || 'Code secret incorrect');
     } catch (error: any) {
-      console.error('Admin login error:', error);
-      if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
-        setAdminLoginError("Impossible de joindre le serveur. Vérifiez votre connexion internet.");
-      } else {
-        // If we still get a FunctionsHttpError, show a friendly message.
-        setAdminLoginError('Code secret incorrect');
-      }
+      setAdminLoginError('Code secret incorrect');
     } finally {
       setAdminLoginLoading(false);
     }
   };
 
-  // Get admin token for API calls
   const getAdminToken = (): string | null => {
     return localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
   };
-  
+
+  // Fetch licenses
+  const fetchLicenses = async () => {
+    setLoading(true);
+    try {
+      const token = getAdminToken();
+      if (!token) return;
+
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: { action: 'list-all', adminToken: token },
+      });
+
+      if (error) throw error;
+      if (data?.licenses) {
+        setLicenses(data.licenses);
+        
+        // Fetch user counts
+        const counts: Record<string, number> = {};
+        for (const license of data.licenses) {
+          const { count } = await supabase
+            .from('company_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('license_id', license.id);
+          counts[license.id] = count || 0;
+        }
+        setCompanyUserCounts(counts);
+      }
+    } catch (error) {
+      console.error('Error fetching licenses:', error);
+      toast.error('Erreur lors du chargement des licences');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchLicenses();
+    }
+  }, [isAdmin]);
+
+  // License operations
+  const toggleLicenseStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase.functions.invoke('validate-license', {
+        body: { action: 'toggle-status', licenseId: id, adminToken: getAdminToken() },
+      });
+      if (error) throw error;
+      setLicenses(prev => prev.map(l => l.id === id ? { ...l, is_active: !currentStatus } : l));
+      toast.success(`Licence ${!currentStatus ? 'activée' : 'désactivée'}`);
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const updatePlanType = async (id: string, newPlan: PlanType) => {
+    try {
+      const { error } = await supabase.functions.invoke('validate-license', {
+        body: { action: 'update-plan', licenseId: id, planType: newPlan, adminToken: getAdminToken() },
+      });
+      if (error) throw error;
+      setLicenses(prev => prev.map(l => l.id === id ? { ...l, plan_type: newPlan } : l));
+      setEditingPlanId(null);
+      toast.success('Forfait mis à jour');
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const deleteLicense = async (id: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('validate-license', {
+        body: { action: 'delete-license', licenseId: id, adminToken: getAdminToken() },
+      });
+      if (error) throw error;
+      setLicenses(prev => prev.filter(l => l.id !== id));
+      toast.success('Licence supprimée');
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const openLimitsEditor = (license: License) => {
     setEditingLimitsId(license.id);
     setLimitsForm({
@@ -311,49 +379,37 @@ export default function Admin() {
       maxUsers: license.max_users,
     });
   };
-  
+
   const saveLimits = async () => {
     if (!editingLimitsId) return;
-    
     try {
       const { error } = await supabase.functions.invoke('validate-license', {
         body: { 
           action: 'update-limits', 
           licenseId: editingLimitsId,
           adminToken: getAdminToken(),
-          maxDrivers: limitsForm.maxDrivers,
-          maxClients: limitsForm.maxClients,
-          maxDailyCharges: limitsForm.maxDailyCharges,
-          maxMonthlyCharges: limitsForm.maxMonthlyCharges,
-          maxYearlyCharges: limitsForm.maxYearlyCharges,
-          maxUsers: limitsForm.maxUsers,
+          ...limitsForm,
         },
       });
-
       if (error) throw error;
-      
-      setLicenses(prev => 
-        prev.map(l => l.id === editingLimitsId ? { 
-          ...l, 
-          max_drivers: limitsForm.maxDrivers,
-          max_clients: limitsForm.maxClients,
-          max_daily_charges: limitsForm.maxDailyCharges,
-          max_monthly_charges: limitsForm.maxMonthlyCharges,
-          max_yearly_charges: limitsForm.maxYearlyCharges,
-          max_users: limitsForm.maxUsers,
-        } : l)
-      );
+      setLicenses(prev => prev.map(l => l.id === editingLimitsId ? { 
+        ...l, 
+        max_drivers: limitsForm.maxDrivers,
+        max_clients: limitsForm.maxClients,
+        max_daily_charges: limitsForm.maxDailyCharges,
+        max_monthly_charges: limitsForm.maxMonthlyCharges,
+        max_yearly_charges: limitsForm.maxYearlyCharges,
+        max_users: limitsForm.maxUsers,
+      } : l));
       setEditingLimitsId(null);
       toast.success('Limites mises à jour');
     } catch (error) {
-      console.error('Error updating limits:', error);
-      toast.error('Erreur lors de la mise à jour des limites');
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
   const handleSaveFeatures = async (features: Partial<LicenseFeatures>) => {
     if (!selectedLicenseForFeatures) return;
-    
     setSavingFeatures(true);
     try {
       const { error } = await supabase.functions.invoke('validate-license', {
@@ -364,132 +420,16 @@ export default function Admin() {
           features,
         },
       });
-
       if (error) throw error;
-      
-      setLicenses(prev => 
-        prev.map(l => l.id === selectedLicenseForFeatures.id ? { 
-          ...l, 
-          features: features as Partial<LicenseFeatures>,
-        } : l)
-      );
+      setLicenses(prev => prev.map(l => 
+        l.id === selectedLicenseForFeatures.id ? { ...l, features } : l
+      ));
+      setSelectedLicenseForFeatures(prev => prev ? { ...prev, features } : null);
       toast.success('Fonctionnalités mises à jour');
     } catch (error) {
-      console.error('Error updating features:', error);
-      toast.error('Erreur lors de la mise à jour des fonctionnalités');
+      toast.error('Erreur lors de la mise à jour');
     } finally {
       setSavingFeatures(false);
-    }
-  };
-
-  useEffect(() => {
-    // Attendre que le chargement soit terminé
-    if (isLoading) return;
-
-    // Si déjà admin (via licence ou login) ET qu'on a un token valide, charger les données
-    if (isAdmin && getAdminToken()) {
-      fetchLicenses();
-    }
-  }, [isLicensed, isLoading, isAdmin]);
-
-  const handleAuthError = () => {
-    // Clear admin session and force re-login
-    localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-    localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-    setIsAdminAuthenticated(false);
-    toast.error('Session expirée. Veuillez vous reconnecter.');
-  };
-
-  const fetchLicenses = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-license', {
-        body: { action: 'list-all', adminToken: getAdminToken() },
-      });
-
-      // Check for 403 auth error in data response
-      if (data?.error === 'Accès non autorisé' || data?.success === false) {
-        handleAuthError();
-        return;
-      }
-
-      if (error) throw error;
-      if (data?.licenses) {
-        setLicenses(data.licenses);
-        
-        // Fetch user counts for each company
-        const licenseIds = data.licenses.map((l: License) => l.id);
-        if (licenseIds.length > 0) {
-          const { data: usersData } = await supabase
-            .from('company_users')
-            .select('license_id')
-            .in('license_id', licenseIds);
-          
-          // Count users per license
-          const counts: Record<string, number> = {};
-          (usersData || []).forEach((u: { license_id: string }) => {
-            counts[u.license_id] = (counts[u.license_id] || 0) + 1;
-          });
-          setCompanyUserCounts(counts);
-        }
-      }
-    } catch (error: any) {
-      console.error('Error fetching licenses:', error);
-      // Check if it's a 403 error
-      if (error?.status === 403 || error?.message?.includes('403')) {
-        handleAuthError();
-        return;
-      }
-      toast.error('Erreur lors du chargement des licences');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleLicenseStatus = async (licenseId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase.functions.invoke('validate-license', {
-        body: { 
-          action: 'toggle-status', 
-          licenseId, 
-          isActive: !currentStatus,
-          adminToken: getAdminToken() 
-        },
-      });
-
-      if (error) throw error;
-      
-      setLicenses(prev => 
-        prev.map(l => l.id === licenseId ? { ...l, is_active: !currentStatus } : l)
-      );
-      toast.success(`Licence ${!currentStatus ? 'activée' : 'désactivée'}`);
-    } catch (error) {
-      console.error('Error toggling license:', error);
-      toast.error('Erreur lors de la modification');
-    }
-  };
-
-  const updatePlanType = async (licenseId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('validate-license', {
-        body: { 
-          action: 'update-plan', 
-          licenseId, 
-          planType: editingPlan,
-          adminToken: getAdminToken() 
-        },
-      });
-
-      if (error) throw error;
-      
-      setLicenses(prev => 
-        prev.map(l => l.id === licenseId ? { ...l, plan_type: editingPlan } : l)
-      );
-      setEditingPlanId(null);
-      toast.success('Forfait mis à jour');
-    } catch (error) {
-      console.error('Error updating plan:', error);
-      toast.error('Erreur lors de la mise à jour');
     }
   };
 
@@ -503,6 +443,7 @@ export default function Admin() {
 
   const openEditDialog = (license: License) => {
     setDialogMode('edit');
+    setEditingLicenseId(license.id);
     setFormData({
       email: license.email,
       planType: (license.plan_type as PlanType) || 'start',
@@ -516,7 +457,6 @@ export default function Admin() {
       assignToCompanyId: null,
       userRole: 'member',
     });
-    setEditingLicenseId(license.id);
     setCreatedLicense(null);
     setDialogOpen(true);
   };
@@ -526,219 +466,99 @@ export default function Admin() {
       toast.error('Email requis');
       return;
     }
-
     setSaving(true);
     try {
-      if (dialogMode === 'create') {
-        // If assigning to existing company, just add user to company_users
-        if (formData.assignToCompanyId) {
-          const selectedCompany = licenses.find(l => l.id === formData.assignToCompanyId);
-          
-          // Check max users limit
-          const { data: existingUsers } = await supabase
-            .from('company_users')
-            .select('id')
-            .eq('license_id', formData.assignToCompanyId);
-          
-          const currentCount = existingUsers?.length || 0;
-          const maxUsers = selectedCompany?.max_users || 999;
-          
-          if (currentCount >= maxUsers) {
-            toast.error(`Cette société est limitée à ${maxUsers} utilisateur(s)`);
-            setSaving(false);
-            return;
-          }
-
-          // Add user to company via RPC (bypass RLS)
-          const displayName = formData.firstName && formData.lastName 
-            ? `${formData.firstName} ${formData.lastName}`.trim() 
-            : formData.firstName || formData.lastName || null;
-
-          const { error: userError } = await supabase
-            .rpc('admin_add_company_user', {
-              p_license_id: formData.assignToCompanyId,
-              p_email: formData.email.toLowerCase().trim(),
-              p_role: formData.userRole,
-              p_display_name: displayName,
-            });
-
-          if (userError) throw userError;
-
-          toast.success(`Utilisateur ajouté à ${selectedCompany?.company_name || 'la société'}`);
-          setDialogOpen(false);
-          setFormData(emptyFormData);
-        } else {
-          // Create new license (standalone)
-          const { data, error } = await supabase.functions.invoke('validate-license', {
-            body: { 
-              action: 'create-license',
-              adminToken: getAdminToken(),
-              email: formData.email,
-              planType: formData.planType,
-              firstName: formData.firstName || null,
-              lastName: formData.lastName || null,
-              companyName: formData.companyName || null,
-              siren: formData.siren || null,
-              address: formData.address || null,
-              city: formData.city || null,
-              postalCode: formData.postalCode || null,
-            },
-          });
-
-          if (error) throw error;
-          
-          if (data?.success) {
-            setCreatedLicense({
-              code: data.licenseCode,
-              email: formData.email,
-            });
-            toast.success('Licence créée avec succès');
-            fetchLicenses();
-          } else {
-            throw new Error(data?.error || 'Erreur lors de la création');
-          }
-        }
-      } else {
-        // Edit existing license
-        const { error } = await supabase.functions.invoke('validate-license', {
-          body: { 
-            action: 'update-license',
-            adminToken: getAdminToken(),
-            licenseId: editingLicenseId,
-            email: formData.email,
-            planType: formData.planType,
-            firstName: formData.firstName || null,
-            lastName: formData.lastName || null,
-            companyName: formData.companyName || null,
-            siren: formData.siren || null,
-            address: formData.address || null,
-            city: formData.city || null,
-            postalCode: formData.postalCode || null,
-          },
-        });
-
-        if (error) throw error;
-        
-        toast.success('Licence mise à jour');
-        fetchLicenses();
-        setDialogOpen(false);
+      const action = dialogMode === 'create' ? 'create-license' : 'update-license';
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: { 
+          action,
+          adminToken: getAdminToken(),
+          licenseId: editingLicenseId,
+          email: formData.email,
+          planType: formData.planType,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          companyName: formData.companyName,
+          siren: formData.siren,
+          address: formData.address,
+          city: formData.city,
+          postalCode: formData.postalCode,
+          assignToCompanyId: formData.assignToCompanyId,
+          userRole: formData.userRole,
+        },
+      });
+      if (error) throw error;
+      
+      if (dialogMode === 'create' && data?.license_code) {
+        setCreatedLicense({ code: data.license_code, email: formData.email });
       }
-    } catch (error: any) {
-      console.error('Error saving license:', error);
-      toast.error(error.message || 'Erreur lors de la sauvegarde');
+      
+      fetchLicenses();
+      if (dialogMode === 'edit') {
+        setDialogOpen(false);
+        toast.success('Licence mise à jour');
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
   };
 
+  const resetDialog = () => {
+    setDialogOpen(false);
+    setCreatedLicense(null);
+    setFormData(emptyFormData);
+    setEditingLicenseId(null);
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copié dans le presse-papier');
+    toast.success('Copié !');
   };
 
-  const deleteLicense = async (licenseId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('validate-license', {
-        body: { 
-          action: 'delete-license', 
-          licenseId,
-          adminToken: getAdminToken() 
-        },
-      });
-
-      if (error) throw error;
-      
-      setLicenses(prev => prev.filter(l => l.id !== licenseId));
-      toast.success('Licence supprimée définitivement');
-    } catch (error) {
-      console.error('Error deleting license:', error);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  // Login as user (impersonation from admin)
   const loginAsUser = async (license: License) => {
-    if (!license.is_active) {
-      toast.error('Impossible de se connecter : licence inactive');
-      return;
-    }
-    
     try {
-      // Normalize email and license code to match server-side validation
-      const normalizedEmail = license.email.trim().toLowerCase();
-      const normalizedCode = license.license_code.trim().toUpperCase();
-      
-      // We directly set the license data in localStorage to impersonate
-      const licenseDataToStore = {
-        code: normalizedCode,
-        email: normalizedEmail,
-        activatedAt: license.activated_at || new Date().toISOString(),
-        planType: (license.plan_type as PlanType) || 'start',
-        firstName: license.first_name || undefined,
-        lastName: license.last_name || undefined,
-        companyName: license.company_name || undefined,
-        siren: license.siren || undefined,
-        address: license.address || undefined,
-        city: license.city || undefined,
-        postalCode: license.postal_code || undefined,
-        maxDrivers: license.max_drivers ?? null,
-        maxClients: license.max_clients ?? null,
-        maxDailyCharges: license.max_daily_charges ?? null,
-        maxMonthlyCharges: license.max_monthly_charges ?? null,
-        maxYearlyCharges: license.max_yearly_charges ?? null,
-        customFeatures: license.features || null,
-      };
-      
-      localStorage.setItem('optiflow-license', JSON.stringify(licenseDataToStore));
-      
-      // Also update the cache for offline support
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const newCache = {
-        data: licenseDataToStore,
-        lastValidated: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-      };
-      localStorage.setItem('optiflow-license-cache', JSON.stringify(newCache));
-      
-      toast.success(`Connecté en tant que ${normalizedEmail}`);
-      
-      // Navigate to home and refresh to apply the new license
+      localStorage.setItem('optiflow_license', JSON.stringify({
+        code: license.license_code,
+        email: license.email,
+        validatedAt: new Date().toISOString(),
+        planType: license.plan_type || 'start',
+        firstName: license.first_name,
+        lastName: license.last_name,
+        companyName: license.company_name,
+        siren: license.siren,
+        address: license.address,
+        city: license.city,
+        postalCode: license.postal_code,
+        maxDrivers: license.max_drivers,
+        maxClients: license.max_clients,
+        maxDailyCharges: license.max_daily_charges,
+        maxMonthlyCharges: license.max_monthly_charges,
+        maxYearlyCharges: license.max_yearly_charges,
+        customFeatures: license.features,
+      }));
+      toast.success(`Connexion en tant que ${license.email}`);
       navigate('/');
-      window.location.reload();
     } catch (error) {
-      console.error('Error logging in as user:', error);
-      toast.error('Erreur lors de la connexion');
+      toast.error('Erreur de connexion');
     }
   };
 
-  const resetDialog = () => {
-    setFormData(emptyFormData);
-    setCreatedLicense(null);
-    setEditingLicenseId(null);
-    setDialogOpen(false);
-  };
-
+  // Filters
   const filteredLicenses = licenses.filter(license => {
     const matchesSearch = 
       license.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       license.license_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      license.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      license.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      license.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = 
-      filterStatus === 'all' || 
-      (filterStatus === 'active' && license.is_active) ||
+      (license.company_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || 
+      (filterStatus === 'active' && license.is_active) || 
       (filterStatus === 'inactive' && !license.is_active);
-
-    const matchesPlan = 
-      filterPlan === 'all' || 
-      license.plan_type === filterPlan;
-
+    const matchesPlan = filterPlan === 'all' || license.plan_type === filterPlan;
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
+  // Stats
   const stats = {
     total: licenses.length,
     active: licenses.filter(l => l.is_active).length,
@@ -749,43 +569,42 @@ export default function Admin() {
 
   const getPlanIcon = (plan: string | null) => {
     switch (plan) {
-      case 'enterprise': return <Crown className="w-4 h-4" />;
-      case 'pro': return <Star className="w-4 h-4" />;
-      default: return <Sparkles className="w-4 h-4" />;
+      case 'enterprise': return <Crown className="w-4 h-4 text-amber-500" />;
+      case 'pro': return <Star className="w-4 h-4 text-blue-500" />;
+      default: return <Sparkles className="w-4 h-4 text-emerald-500" />;
     }
   };
 
-  const getPlanBadgeVariant = (plan: string | null) => {
+  const getPlanBadgeClass = (plan: string | null) => {
     switch (plan) {
-      case 'enterprise': return 'default';
-      case 'pro': return 'secondary';
-      default: return 'outline';
+      case 'enterprise': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+      case 'pro': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      default: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
     }
   };
 
-  // Afficher un écran de chargement pendant la vérification
+  // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // Formulaire de connexion admin si pas authentifié
+  // Admin login
   if (!isAdmin) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-full max-w-md space-y-6 p-8 bg-card border border-border rounded-xl shadow-lg">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 mx-auto rounded-xl bg-primary/20 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
               <Shield className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Administration</h1>
-            <p className="text-muted-foreground">Entrez le code secret pour accéder</p>
-          </div>
-          
-          <div className="space-y-4">
+            <CardTitle>Administration</CardTitle>
+            <CardDescription>Entrez le code secret pour accéder</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="admin-code">Code secret</Label>
               <Input
@@ -798,63 +617,69 @@ export default function Admin() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
               />
             </div>
-
             {adminLoginError && (
               <p className="text-sm text-destructive">{adminLoginError}</p>
             )}
-
-            <Button
-              className="w-full"
-              onClick={handleAdminLogin}
-              disabled={adminLoginLoading || !adminCode.trim()}
-            >
-              {adminLoginLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Vérification...
-                </>
-              ) : (
-                'Accéder'
-              )}
+            <Button className="w-full" onClick={handleAdminLogin} disabled={adminLoginLoading || !adminCode.trim()}>
+              {adminLoginLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Accéder
             </Button>
-            
-            <Button 
-              variant="outline"
-              className="w-full" 
-              onClick={() => navigate('/')}
-            >
-              <X className="w-4 h-4 mr-2" />
-              Retour à l'application
+            <Button variant="ghost" className="w-full" onClick={() => navigate('/')}>
+              Retour
             </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Administration</h1>
-            <p className="text-muted-foreground">Gestion complète des licences et fonctionnalités</p>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 border-r bg-card flex flex-col">
+        <div className="p-6 border-b">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-semibold">Admin</h1>
+              <p className="text-xs text-muted-foreground">Panneau de contrôle</p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <ScrollArea className="flex-1 p-3">
+          <nav className="space-y-1">
+            {ADMIN_NAV.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setAdminActiveTab(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
+                  adminActiveTab === item.id 
+                    ? "bg-primary text-primary-foreground" 
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.label}</p>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </ScrollArea>
+
+        <div className="p-3 border-t">
           <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            variant="ghost"
+            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => {
               setIsAdminAuthenticated(false);
-              setAdminCode('');
               localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
               localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-              toast.success('Déconnexion admin réussie');
+              toast.success('Déconnexion réussie');
               navigate('/');
             }}
           >
@@ -862,1113 +687,593 @@ export default function Admin() {
             Déconnexion
           </Button>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Tabs */}
-      <Tabs value={adminActiveTab} onValueChange={(v) => setAdminActiveTab(v as 'licenses' | 'companies' | 'requests' | 'data' | 'features' | 'access' | 'updates' | 'demo')}>
-        <TabsList className="grid w-full max-w-6xl grid-cols-8">
-          <TabsTrigger value="licenses" className="gap-2">
-            <Users className="w-4 h-4" />
-            Licences
-          </TabsTrigger>
-          <TabsTrigger value="companies" className="gap-2">
-            <Building2 className="w-4 h-4" />
-            Sociétés
-          </TabsTrigger>
-          <TabsTrigger value="requests" className="gap-2">
-            <Bell className="w-4 h-4" />
-            Demandes
-          </TabsTrigger>
-          <TabsTrigger value="data" className="gap-2">
-            <FileText className="w-4 h-4" />
-            Données
-          </TabsTrigger>
-          <TabsTrigger value="features" className="gap-2">
-            <Settings2 className="w-4 h-4" />
-            Fonctionnalités
-          </TabsTrigger>
-          <TabsTrigger value="access" className="gap-2">
-            <Shield className="w-4 h-4" />
-            Accès
-          </TabsTrigger>
-          <TabsTrigger value="updates" className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Mises à jour
-          </TabsTrigger>
-          <TabsTrigger value="demo" className="gap-2">
-            <PlayCircle className="w-4 h-4" />
-            Démo
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Access Requests Tab */}
-        <TabsContent value="requests" className="space-y-6 mt-6">
-          <AccessRequestsManager getAdminToken={getAdminToken} />
-        </TabsContent>
-
-        {/* Companies Tab */}
-        <TabsContent value="companies" className="space-y-6 mt-6">
-          <div className="flex justify-end mb-4">
-            <Button onClick={() => setCreateCompanyOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Créer une société
-            </Button>
-          </div>
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">
+        <div className="p-6 max-w-7xl mx-auto space-y-6">
           
-          {/* Panneau détaillé par société */}
-          <CompanyDetailPanel getAdminToken={getAdminToken} />
-          
-          <CompanyUsersManager getAdminToken={getAdminToken} />
-          <CreateCompanyDialog 
-            open={createCompanyOpen}
-            onOpenChange={setCreateCompanyOpen}
-            getAdminToken={getAdminToken}
-            onCompanyCreated={fetchLicenses}
-          />
-        </TabsContent>
+          {/* Licenses Tab */}
+          {adminActiveTab === 'licenses' && (
+            <>
+              {/* Stats */}
+              <div className="grid grid-cols-5 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">{stats.total}</div>
+                    <p className="text-xs text-muted-foreground">Total licences</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+                    <p className="text-xs text-muted-foreground">Actives</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-emerald-500/20">
+                  <CardContent className="pt-4 flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                    <div>
+                      <div className="text-xl font-bold">{stats.start}</div>
+                      <p className="text-xs text-muted-foreground">Start</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-blue-500/20">
+                  <CardContent className="pt-4 flex items-center gap-3">
+                    <Star className="w-5 h-5 text-blue-500" />
+                    <div>
+                      <div className="text-xl font-bold">{stats.pro}</div>
+                      <p className="text-xs text-muted-foreground">Pro</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-amber-500/20">
+                  <CardContent className="pt-4 flex items-center gap-3">
+                    <Crown className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <div className="text-xl font-bold">{stats.enterprise}</div>
+                      <p className="text-xs text-muted-foreground">Enterprise</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-        {/* Data Tab - view company data */}
-        <TabsContent value="data" className="space-y-6 mt-6">
-          <CompanyDataStats getAdminToken={getAdminToken} />
-        </TabsContent>
-
-        {/* Licenses Tab */}
-        <TabsContent value="licenses" className="space-y-6 mt-6">
-          {/* Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={fetchLicenses} disabled={loading}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Actualiser
-              </Button>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open) resetDialog();
-              else if (!dialogOpen) openCreateDialog();
-            }}>
-              <DialogTrigger asChild>
+              {/* Filters & Actions */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="active">Actifs</SelectItem>
+                    <SelectItem value="inactive">Inactifs</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterPlan} onValueChange={(v) => setFilterPlan(v as any)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="start">Start</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={fetchLicenses} disabled={loading}>
+                  <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                </Button>
                 <Button onClick={openCreateDialog}>
                   <Plus className="w-4 h-4 mr-2" />
                   Nouvelle licence
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                {createdLicense ? (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2 text-green-600">
-                        <CheckCircle className="w-5 h-5" />
-                        Licence créée avec succès
-                      </DialogTitle>
-                      <DialogDescription>
-                        Voici les informations de la nouvelle licence
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Code de licence</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <code className="flex-1 text-lg font-mono bg-background px-3 py-2 rounded border">
-                              {createdLicense.code}
-                            </code>
-                            <Button 
-                              size="icon" 
-                              variant="outline"
-                              onClick={() => copyToClipboard(createdLicense.code)}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Email associé</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <code className="flex-1 text-sm font-mono bg-background px-3 py-2 rounded border">
-                              {createdLicense.email}
-                            </code>
-                            <Button 
-                              size="icon" 
-                              variant="outline"
-                              onClick={() => copyToClipboard(createdLicense.email)}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        L'utilisateur pourra activer son compte avec ce code et cet email.
-                      </p>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={resetDialog}>
-                        Fermer
-                      </Button>
-                    </DialogFooter>
-                  </>
-                ) : (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>
-                        {dialogMode === 'create' ? 'Créer une nouvelle licence' : 'Modifier la licence'}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {dialogMode === 'create' 
-                          ? 'Un code de licence unique sera généré automatiquement' 
-                          : 'Modifiez les informations de la licence'}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      {/* Assign to existing company (only in create mode) */}
-                      {dialogMode === 'create' && (
-                        <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-primary font-medium">
-                              <Building2 className="w-4 h-4" />
-                              Assigner à une société existante
-                            </Label>
-                            <Select 
-                              value={formData.assignToCompanyId || 'none'} 
-                              onValueChange={(v) => setFormData(prev => ({ 
-                                ...prev, 
-                                assignToCompanyId: v === 'none' ? null : v 
-                              }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Créer une nouvelle licence" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">
-                                  <div className="flex items-center gap-2">
-                                    <Plus className="w-4 h-4" />
-                                    Créer une nouvelle licence
-                                  </div>
-                                </SelectItem>
-                                {licenses.filter(l => l.company_name).map(license => {
-                                  const currentUsers = companyUserCounts[license.id] || 0;
-                                  const maxUsers = license.max_users || 999;
-                                  const isFull = currentUsers >= maxUsers && maxUsers !== 999;
-                                  const isNearFull = currentUsers >= maxUsers * 0.8 && maxUsers !== 999;
-                                  
-                                  return (
-                                    <SelectItem 
-                                      key={license.id} 
-                                      value={license.id}
-                                      disabled={isFull}
-                                    >
-                                      <div className="flex items-center gap-2 w-full">
-                                        <Building2 className="w-4 h-4 flex-shrink-0" />
-                                        <span className="truncate">{license.company_name}</span>
-                                        <Badge 
-                                          variant={isFull ? "destructive" : isNearFull ? "secondary" : "outline"} 
-                                          className={cn(
-                                            "ml-auto text-xs flex-shrink-0",
-                                            isNearFull && !isFull && "bg-orange-500/20 text-orange-600 border-orange-500/30"
-                                          )}
-                                        >
-                                          {currentUsers}/{maxUsers === 999 ? '∞' : maxUsers}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-xs flex-shrink-0">
-                                          {license.plan_type?.toUpperCase()}
-                                        </Badge>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                            
-                            {/* Quick edit limit button when company is selected and near/at capacity */}
-                            {formData.assignToCompanyId && (() => {
-                              const selectedCompany = licenses.find(l => l.id === formData.assignToCompanyId);
-                              const currentUsers = companyUserCounts[formData.assignToCompanyId] || 0;
-                              const maxUsers = selectedCompany?.max_users || 999;
-                              const isFull = currentUsers >= maxUsers && maxUsers !== 999;
-                              
-                              if (isFull || (currentUsers >= maxUsers * 0.8 && maxUsers !== 999)) {
-                                return (
-                                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/30">
-                                    <span className="text-xs text-orange-600 flex-1">
-                                      {isFull ? 'Société pleine' : 'Capacité presque atteinte'} ({currentUsers}/{maxUsers})
-                                    </span>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs"
-                                      onClick={() => {
-                                        setEditingLimitsId(formData.assignToCompanyId);
-                                        setLimitsForm({
-                                          maxDrivers: selectedCompany?.max_drivers || null,
-                                          maxClients: selectedCompany?.max_clients || null,
-                                          maxDailyCharges: selectedCompany?.max_daily_charges || null,
-                                          maxMonthlyCharges: selectedCompany?.max_monthly_charges || null,
-                                          maxYearlyCharges: selectedCompany?.max_yearly_charges || null,
-                                          maxUsers: (maxUsers || 1) + 5,
-                                        });
-                                      }}
-                                    >
-                                      <Plus className="w-3 h-3 mr-1" />
-                                      +5 places
-                                    </Button>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-                            
-                            <p className="text-xs text-muted-foreground">
-                              Sélectionnez une société pour ajouter cet utilisateur comme membre
-                            </p>
-                          </div>
-                          
-                          {/* Role selector (only when assigning to company) */}
-                          {formData.assignToCompanyId && (
-                            <div className="space-y-2">
-                              <Label>Rôle dans la société</Label>
-                              <Select 
-                                value={formData.userRole} 
-                                onValueChange={(v: 'owner' | 'admin' | 'member') => setFormData(prev => ({ ...prev, userRole: v }))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="member">Membre</SelectItem>
-                                  <SelectItem value="admin">Administrateur</SelectItem>
-                                  <SelectItem value="owner">Propriétaire</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Email */}
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="utilisateur@exemple.com"
-                            value={formData.email}
-                            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                            className="pl-10"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Plan Type - hidden when assigning to company */}
-                      {!formData.assignToCompanyId && (
-                        <div className="space-y-2">
-                          <Label htmlFor="planType">Forfait</Label>
-                          <Select 
-                            value={formData.planType} 
-                            onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="start">
-                                <div className="flex items-center gap-2">
-                                  <Sparkles className="w-4 h-4" />
-                                  Start
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="pro">
-                                <div className="flex items-center gap-2">
-                                  <Star className="w-4 h-4" />
-                                  Pro
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="enterprise">
-                                <div className="flex items-center gap-2">
-                                  <Crown className="w-4 h-4" />
-                                  Enterprise
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {/* Name */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">Prénom</Label>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                              id="firstName"
-                              placeholder="Prénom"
-                              value={formData.firstName}
-                              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                              className="pl-10"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Nom</Label>
-                          <Input
-                            id="lastName"
-                            placeholder="Nom"
-                            value={formData.lastName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Company fields - hidden when assigning to existing company */}
-                      {!formData.assignToCompanyId && (
-                        <>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="companyName">Entreprise</Label>
-                              <div className="relative">
-                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                  id="companyName"
-                                  placeholder="Nom de l'entreprise"
-                                  value={formData.companyName}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                                  className="pl-10"
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="siren">SIREN / SIRET</Label>
-                              <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                  <Input
-                                    id="siren"
-                                    placeholder="123456789 ou 12345678901234"
-                                    value={formData.siren}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, siren: e.target.value }))}
-                                    className="pl-10"
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  disabled={sireneLoading || !formData.siren?.trim()}
-                                  onClick={async () => {
-                                    const company = await sireneLookup(formData.siren);
-                                    if (company) {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        companyName: company.companyName,
-                                        address: company.address,
-                                        city: company.city,
-                                        postalCode: company.postalCode,
-                                        siren: company.siren,
-                                      }));
-                                      toast.success(`Entreprise trouvée: ${company.companyName}`);
-                                    }
-                                  }}
-                                >
-                                  {sireneLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                                </Button>
-                              </div>
-                              {sireneError && <p className="text-xs text-destructive">{sireneError}</p>}
-                            </div>
-                          </div>
-
-                          {/* Address */}
-                          <div className="space-y-2">
-                            <Label htmlFor="address">Adresse</Label>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input
-                                id="address"
-                                placeholder="Adresse complète"
-                                value={formData.address}
-                                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                                className="pl-10"
-                              />
-                            </div>
-                          </div>
-
-                          {/* City & Postal Code */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="city">Ville</Label>
-                              <Input
-                                id="city"
-                                placeholder="Ville"
-                                value={formData.city}
-                                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="postalCode">Code postal</Label>
-                              <Input
-                                id="postalCode"
-                                placeholder="31000"
-                                value={formData.postalCode}
-                                onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                        Annuler
-                      </Button>
-                      <Button variant="gradient" onClick={handleSave} disabled={saving || !formData.email}>
-                        {saving ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            {dialogMode === 'create' ? 'Création...' : 'Enregistrement...'}
-                          </>
-                        ) : (
-                          <>
-                            {dialogMode === 'create' ? (
-                              <>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Créer la licence
-                              </>
-                            ) : (
-                              <>
-                                <Save className="w-4 h-4 mr-2" />
-                                Enregistrer
-                              </>
-                            )}
-                          </>
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Users className="w-4 h-4" />
-                <span className="text-sm">Total</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-            </div>
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-green-500 mb-1">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm">Actives</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.active}</p>
-            </div>
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-sm">Start</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.start}</p>
-            </div>
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-primary mb-1">
-                <Star className="w-4 h-4" />
-                <span className="text-sm">Pro</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.pro}</p>
-            </div>
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-amber-500 mb-1">
-                <Crown className="w-4 h-4" />
-                <span className="text-sm">Enterprise</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.enterprise}</p>
-            </div>
-          </div>
 
-          {/* Filters */}
-          <div className="glass-card p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher par email, code, entreprise..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={filterStatus} onValueChange={(v: 'all' | 'active' | 'inactive') => setFilterStatus(v)}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="active">Actives</SelectItem>
-                  <SelectItem value="inactive">Inactives</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterPlan} onValueChange={(v: 'all' | PlanType) => setFilterPlan(v)}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Forfait" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="start">Start</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-      {/* Licenses Table */}
-      <div className="glass-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Utilisateur</TableHead>
-              <TableHead>Code Licence</TableHead>
-              <TableHead>Entreprise</TableHead>
-              <TableHead>Forfait</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Dernière activité</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Chargement...
-                </TableCell>
-              </TableRow>
-            ) : filteredLicenses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Aucune licence trouvée
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredLicenses.map((license) => (
-                <TableRow key={license.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Mail className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {license.first_name || license.last_name 
-                            ? `${license.first_name || ''} ${license.last_name || ''}`.trim()
-                            : 'Non renseigné'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{license.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                        {license.license_code}
-                      </code>
-                      {(license.license_code.startsWith('DEMO') || license.email.includes('demo')) && (
-                        <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/30 text-[10px] px-1.5 py-0">
-                          DÉMO
-                        </Badge>
-                      )}
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-6 w-6"
-                        onClick={() => copyToClipboard(license.license_code)}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {license.company_name || 'Non renseigné'}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {editingPlanId === license.id ? (
-                      <div className="flex items-center gap-2">
-                        <Select value={editingPlan} onValueChange={(v: PlanType) => setEditingPlan(v)}>
-                          <SelectTrigger className="w-[120px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="start">Start</SelectItem>
-                            <SelectItem value="pro">Pro</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updatePlanType(license.id)}>
-                          <Save className="w-4 h-4 text-green-500" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingPlanId(null)}>
-                          <X className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
+              {/* Table */}
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Licence</TableHead>
+                      <TableHead>Société</TableHead>
+                      <TableHead>Forfait</TableHead>
+                      <TableHead>Utilisateurs</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredLicenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          Aucune licence trouvée
+                        </TableCell>
+                      </TableRow>
                     ) : (
-                      <Badge 
-                        variant={getPlanBadgeVariant(license.plan_type)} 
-                        className="gap-1 cursor-pointer hover:opacity-80"
-                        onClick={() => {
-                          setEditingPlanId(license.id);
-                          setEditingPlan((license.plan_type as PlanType) || 'start');
-                        }}
-                      >
-                        {getPlanIcon(license.plan_type)}
-                        {license.plan_type?.toUpperCase() || 'START'}
-                        <Edit className="w-3 h-3 ml-1" />
-                      </Badge>
+                      filteredLicenses.map((license) => (
+                        <TableRow key={license.id}>
+                          <TableCell>
+                            <div>
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{license.license_code}</code>
+                              <p className="text-xs text-muted-foreground mt-1">{license.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium">{license.company_name || '-'}</p>
+                            {license.city && <p className="text-xs text-muted-foreground">{license.city}</p>}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("gap-1", getPlanBadgeClass(license.plan_type))}>
+                              {getPlanIcon(license.plan_type)}
+                              {(license.plan_type || 'start').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">
+                              {companyUserCounts[license.id] || 0}/{license.max_users || '∞'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={license.is_active ? "default" : "secondary"}>
+                              {license.is_active ? 'Actif' : 'Inactif'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedLicenseForDetail(license); setUserDetailOpen(true); }}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => loginAsUser(license)}>
+                                <LogIn className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openLimitsEditor(license)}>
+                                <Settings className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(license)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleLicenseStatus(license.id, license.is_active)}>
+                                {license.is_active ? <XCircle className="w-4 h-4 text-orange-500" /> : <CheckCircle className="w-4 h-4 text-green-500" />}
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Supprimer la licence ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Cette action est irréversible. La licence <strong>{license.license_code}</strong> sera supprimée.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteLicense(license.id)} className="bg-destructive text-destructive-foreground">
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-                  </TableCell>
-                  <TableCell>
-                    {license.is_active ? (
-                      <Badge variant="default" className="bg-green-500/20 text-green-500 border-green-500/30 gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive" className="gap-1">
-                        <XCircle className="w-3 h-3" />
-                        Inactive
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      {license.last_used_at 
-                        ? format(new Date(license.last_used_at), 'dd MMM yyyy', { locale: fr })
-                        : 'Jamais'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedLicenseForDetail(license);
-                          setUserDetailOpen(true);
-                        }}
-                        title="Voir les détails et l'historique"
-                      >
-                        <User className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => loginAsUser(license)}
-                        title="Se connecter en tant que cet utilisateur"
-                        className="text-primary hover:text-primary"
-                        disabled={!license.is_active}
-                      >
-                        <LogIn className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openLimitsEditor(license)}
-                        title="Modifier les limites"
-                      >
-                        <Settings className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(license)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant={license.is_active ? 'destructive' : 'default'}
-                        size="sm"
-                        onClick={() => toggleLicenseStatus(license.id, license.is_active)}
-                      >
-                        {license.is_active ? 'Désactiver' : 'Activer'}
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer définitivement ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action est irréversible. La licence <strong>{license.license_code}</strong> sera 
-                              définitivement supprimée de la base de données.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteLicense(license.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-        </TabsContent>
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
+          )}
 
-        {/* Features Tab */}
-        <TabsContent value="features" className="space-y-6 mt-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Gestion des fonctionnalités par licence</h2>
-                <p className="text-muted-foreground text-sm">
-                  Sélectionnez une licence pour personnaliser ses fonctionnalités
-                </p>
+          {/* Companies Tab */}
+          {adminActiveTab === 'companies' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Gestion des Sociétés</h2>
+                  <p className="text-sm text-muted-foreground">Créez et gérez les sociétés et leurs utilisateurs</p>
+                </div>
+                <Button onClick={() => setCreateCompanyOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer une société
+                </Button>
               </div>
-            </div>
-
-            {/* License Selection */}
-            <div className="glass-card p-4">
-              <Label className="text-sm font-medium mb-2 block">Sélectionner une licence</Label>
-              <Select 
-                value={selectedLicenseForFeatures?.id || ''} 
-                onValueChange={(id) => {
-                  const license = licenses.find(l => l.id === id);
-                  setSelectedLicenseForFeatures(license || null);
-                }}
-              >
-                <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder="Choisir une licence..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {licenses.map(license => (
-                    <SelectItem key={license.id} value={license.id}>
-                      <div className="flex items-center gap-2">
-                        {license.plan_type === 'enterprise' ? (
-                          <Crown className="w-4 h-4 text-amber-500" />
-                        ) : license.plan_type === 'pro' ? (
-                          <Star className="w-4 h-4 text-orange-500" />
-                        ) : (
-                          <Sparkles className="w-4 h-4 text-blue-500" />
-                        )}
-                        <span>{license.email}</span>
-                        {license.company_name && (
-                          <span className="text-muted-foreground text-xs">({license.company_name})</span>
-                        )}
-                        <Badge variant="outline" className="ml-2">
-                          {license.plan_type?.toUpperCase() || 'START'}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Feature Editor */}
-            {selectedLicenseForFeatures ? (
-              <FeatureEditor
-                planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
-                currentFeatures={selectedLicenseForFeatures.features || null}
-                onSave={handleSaveFeatures}
-                saving={savingFeatures}
+              <CompanyDetailPanel getAdminToken={getAdminToken} />
+              <CompanyUsersManager getAdminToken={getAdminToken} />
+              <CreateCompanyDialog 
+                open={createCompanyOpen}
+                onOpenChange={setCreateCompanyOpen}
+                getAdminToken={getAdminToken}
+                onCompanyCreated={fetchLicenses}
               />
-            ) : (
-              <div className="glass-card p-12 text-center">
-                <Settings2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Aucune licence sélectionnée</h3>
-                <p className="text-muted-foreground">
-                  Sélectionnez une licence ci-dessus pour personnaliser ses fonctionnalités
-                </p>
-              </div>
-            )}
+            </div>
+          )}
 
-            {/* Schema Sync Manager */}
-            <div className="mt-8">
+          {/* Access Tab */}
+          {adminActiveTab === 'access' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Gestion des Accès</h2>
+                <p className="text-sm text-muted-foreground">Activez ou désactivez des fonctionnalités pour chaque utilisateur</p>
+              </div>
+              <UserFeatureOverrides getAdminToken={getAdminToken} />
+            </div>
+          )}
+
+          {/* Features Tab */}
+          {adminActiveTab === 'features' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Fonctionnalités par licence</h2>
+                <p className="text-sm text-muted-foreground">Personnalisez les fonctionnalités disponibles pour chaque licence</p>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Sélectionner une licence</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select 
+                    value={selectedLicenseForFeatures?.id || ''} 
+                    onValueChange={(id) => setSelectedLicenseForFeatures(licenses.find(l => l.id === id) || null)}
+                  >
+                    <SelectTrigger className="max-w-md">
+                      <SelectValue placeholder="Choisir une licence..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {licenses.map(license => (
+                        <SelectItem key={license.id} value={license.id}>
+                          <div className="flex items-center gap-2">
+                            {getPlanIcon(license.plan_type)}
+                            <span>{license.company_name || license.email}</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {(license.plan_type || 'start').toUpperCase()}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              {selectedLicenseForFeatures ? (
+                <FeatureEditor
+                  planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
+                  currentFeatures={selectedLicenseForFeatures.features || null}
+                  onSave={handleSaveFeatures}
+                  saving={savingFeatures}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Settings2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Sélectionnez une licence pour personnaliser ses fonctionnalités</p>
+                  </CardContent>
+                </Card>
+              )}
+
               <SchemaSyncManager adminToken={getAdminToken() || undefined} />
             </div>
-          </div>
-        </TabsContent>
+          )}
 
-        {/* Access Tab - User Feature Overrides */}
-        <TabsContent value="access" className="space-y-6 mt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
+          {/* Requests Tab */}
+          {adminActiveTab === 'requests' && (
+            <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold">Gestion des accès par utilisateur</h2>
-                <p className="text-muted-foreground text-sm">
-                  Activez ou désactivez des fonctionnalités spécifiques pour chaque utilisateur
-                </p>
+                <h2 className="text-xl font-semibold">Demandes d'accès</h2>
+                <p className="text-sm text-muted-foreground">Gérez les demandes d'accès des utilisateurs</p>
+              </div>
+              <AccessRequestsManager getAdminToken={getAdminToken} />
+            </div>
+          )}
+
+          {/* Data Tab */}
+          {adminActiveTab === 'data' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Statistiques des Données</h2>
+                <p className="text-sm text-muted-foreground">Visualisez les données de chaque société</p>
+              </div>
+              <CompanyDataStats getAdminToken={getAdminToken} />
+            </div>
+          )}
+
+          {/* Updates Tab */}
+          {adminActiveTab === 'updates' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Mises à jour PWA</h2>
+                <p className="text-sm text-muted-foreground">Gérez les versions et mises à jour de l'application</p>
+              </div>
+              <PWAUpdatesManager />
+            </div>
+          )}
+
+          {/* Demo Tab */}
+          {adminActiveTab === 'demo' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Mode Démonstration</h2>
+                <p className="text-sm text-muted-foreground">Activez une session de démo pour vos présentations</p>
+              </div>
+
+              {isDemoActive && getCurrentSession() && (
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                  <CardContent className="flex items-center justify-between py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                      <div>
+                        <p className="font-medium">Mode démo actif : {getCurrentSession()?.name}</p>
+                        <p className="text-sm text-muted-foreground">{getCurrentSession()?.description}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" onClick={() => { deactivateDemo(); navigate('/'); }}>
+                      <StopCircle className="w-4 h-4 mr-2" />
+                      Quitter
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {availableSessions.map((session) => (
+                  <Card key={session.id} className={cn(
+                    "transition-all",
+                    currentSessionId === session.id && "ring-2 ring-amber-500"
+                  )}>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        {session.planType === 'enterprise' && <Crown className="w-5 h-5 text-amber-500" />}
+                        {session.planType === 'pro' && <Star className="w-5 h-5 text-blue-500" />}
+                        {session.planType === 'start' && <Sparkles className="w-5 h-5 text-emerald-500" />}
+                        <CardTitle className="text-base">{session.name}</CardTitle>
+                      </div>
+                      <CardDescription>{session.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1 text-xs text-muted-foreground mb-4">
+                        <p>• {session.drivers.length} conducteur(s)</p>
+                        <p>• {session.clients.length} client(s)</p>
+                        <p>• {session.trips.length} trajet(s)</p>
+                      </div>
+                      <Button
+                        className="w-full"
+                        variant={currentSessionId === session.id ? "outline" : "default"}
+                        onClick={() => {
+                          if (currentSessionId === session.id) {
+                            deactivateDemo();
+                          } else {
+                            activateDemo(session.planType);
+                            navigate('/');
+                          }
+                        }}
+                      >
+                        {currentSessionId === session.id ? 'Désactiver' : 'Activer'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
-            <UserFeatureOverrides getAdminToken={getAdminToken} />
-          </div>
-        </TabsContent>
+          )}
+        </div>
+      </main>
 
-        {/* Updates Tab */}
-        <TabsContent value="updates" className="space-y-6 mt-6">
-          <PWAUpdatesManager />
-        </TabsContent>
-
-        {/* Demo Tab */}
-        <TabsContent value="demo" className="space-y-6 mt-6">
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <PlayCircle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Mode Démonstration</h2>
-                <p className="text-sm text-muted-foreground">
-                  Activez une session de démo pré-remplie pour vos présentations clients
-                </p>
-              </div>
-            </div>
-
-            {/* Current Demo Status */}
-            {isDemoActive && getCurrentSession() && (
-              <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
-                    <div>
-                      <p className="font-medium text-amber-700 dark:text-amber-400">
-                        Mode démo actif : {getCurrentSession()?.name}
-                      </p>
-                      <p className="text-sm text-amber-600/80">
-                        {getCurrentSession()?.description}
-                      </p>
+      {/* Dialogs */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && resetDialog()}>
+        <DialogContent className="sm:max-w-[500px]">
+          {createdLicense ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="w-5 h-5" />
+                  Licence créée
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="p-4 bg-green-500/10 rounded-lg space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Code</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="flex-1 bg-background px-3 py-2 rounded border font-mono">{createdLicense.code}</code>
+                      <Button size="icon" variant="outline" onClick={() => copyToClipboard(createdLicense.code)}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      deactivateDemo();
-                      navigate('/');
-                    }}
-                    className="border-amber-500/30 text-amber-700 hover:bg-amber-500/10"
-                  >
-                    <StopCircle className="w-4 h-4 mr-2" />
-                    Quitter la démo
-                  </Button>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="flex-1 bg-background px-3 py-2 rounded border text-sm">{createdLicense.email}</code>
+                      <Button size="icon" variant="outline" onClick={() => copyToClipboard(createdLicense.email)}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-
-            {/* Demo Sessions */}
-            <div className="grid gap-4 md:grid-cols-3">
-              {availableSessions.map((session) => (
-                <div 
-                  key={session.id}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    currentSessionId === session.id 
-                      ? 'border-amber-500 bg-amber-500/5' 
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {session.planType === 'enterprise' && <Crown className="w-5 h-5 text-amber-500" />}
-                    {session.planType === 'pro' && <Star className="w-5 h-5 text-blue-500" />}
-                    {session.planType === 'start' && <Sparkles className="w-5 h-5 text-green-500" />}
-                    <h3 className="font-semibold">{session.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{session.description}</p>
-                  
-                  <div className="space-y-1 text-xs text-muted-foreground mb-4">
-                    <p>• {session.drivers.length} conducteur(s)</p>
-                    <p>• {session.clients.length} client(s)</p>
-                    <p>• {session.trips.length} trajet(s)</p>
-                    <p>• {session.charges.length} charge(s) fixe(s)</p>
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    variant={currentSessionId === session.id ? "outline" : "default"}
-                    onClick={() => {
-                      if (currentSessionId === session.id) {
-                        deactivateDemo();
-                      } else {
-                        activateDemo(session.planType);
-                        navigate('/');
-                      }
-                    }}
-                  >
-                    {currentSessionId === session.id ? (
-                      <>
-                        <StopCircle className="w-4 h-4 mr-2" />
-                        Désactiver
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Activer cette démo
-                      </>
+              <DialogFooter>
+                <Button onClick={resetDialog}>Fermer</Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>{dialogMode === 'create' ? 'Nouvelle licence' : 'Modifier licence'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {dialogMode === 'create' && (
+                  <div className="p-3 rounded-lg border bg-muted/50 space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      Assigner à une société
+                    </Label>
+                    <Select 
+                      value={formData.assignToCompanyId || 'none'} 
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, assignToCompanyId: v === 'none' ? null : v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nouvelle licence" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nouvelle licence</SelectItem>
+                        {licenses.filter(l => l.company_name).map(license => (
+                          <SelectItem key={license.id} value={license.id}>
+                            {license.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.assignToCompanyId && (
+                      <Select 
+                        value={formData.userRole} 
+                        onValueChange={(v: any) => setFormData(prev => ({ ...prev, userRole: v }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">Membre</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="owner">Propriétaire</SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
-                  </Button>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    placeholder="email@exemple.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
                 </div>
-              ))}
-            </div>
+                {!formData.assignToCompanyId && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Forfait</Label>
+                      <Select value={formData.planType} onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="start">Start</SelectItem>
+                          <SelectItem value="pro">Pro</SelectItem>
+                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Prénom</Label>
+                        <Input value={formData.firstName} onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nom</Label>
+                        <Input value={formData.lastName} onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Société</Label>
+                      <Input value={formData.companyName} onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))} />
+                    </div>
+                  </>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={resetDialog}>Annuler</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {dialogMode === 'create' ? 'Créer' : 'Enregistrer'}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
-            {/* Info */}
-            <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                À propos du mode démo
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Les données de démo remplacent temporairement vos données actuelles</li>
-                <li>• Vos données originales sont sauvegardées et restaurées à la désactivation</li>
-                <li>• Idéal pour les présentations clients sans risquer vos données réelles</li>
-                <li>• Le badge "Mode Démo" s'affiche dans la barre latérale pendant la session</li>
-              </ul>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-      
-      {/* Limits Editor Dialog */}
+      {/* Limits Dialog */}
       <Dialog open={!!editingLimitsId} onOpenChange={(open) => !open && setEditingLimitsId(null)}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Modifier les limites
-            </DialogTitle>
-            <DialogDescription>
-              Définissez des limites personnalisées pour cette licence. Laissez vide pour utiliser les limites par défaut du forfait.
-            </DialogDescription>
+            <DialogTitle>Modifier les limites</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Users limit - highlighted */}
-            <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
-              <div className="space-y-2">
-                <Label htmlFor="maxUsers" className="flex items-center gap-2 text-primary font-medium">
-                  <Users className="w-4 h-4" />
-                  Licences utilisateur (société)
-                </Label>
-                <Input
-                  id="maxUsers"
-                  type="number"
-                  min="1"
-                  placeholder="Par défaut (selon forfait)"
-                  value={limitsForm.maxUsers ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxUsers: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nombre maximum d'utilisateurs pouvant rejoindre cette société
-                </p>
-              </div>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="col-span-2 p-3 rounded-lg border bg-primary/5">
+              <Label className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4" />
+                Utilisateurs
+              </Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="Illimité"
+                value={limitsForm.maxUsers ?? ''}
+                onChange={(e) => setLimitsForm(prev => ({ ...prev, maxUsers: e.target.value ? parseInt(e.target.value) : null }))}
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxDrivers">Max conducteurs</Label>
-                <Input
-                  id="maxDrivers"
-                  type="number"
-                  min="0"
-                  placeholder="Par défaut"
-                  value={limitsForm.maxDrivers ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxDrivers: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxClients">Max clients</Label>
-                <Input
-                  id="maxClients"
-                  type="number"
-                  min="0"
-                  placeholder="Par défaut"
-                  value={limitsForm.maxClients ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxClients: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Conducteurs</Label>
+              <Input
+                type="number"
+                placeholder="Défaut"
+                value={limitsForm.maxDrivers ?? ''}
+                onChange={(e) => setLimitsForm(prev => ({ ...prev, maxDrivers: e.target.value ? parseInt(e.target.value) : null }))}
+              />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxDailyCharges">Charges jour</Label>
-                <Input
-                  id="maxDailyCharges"
-                  type="number"
-                  min="0"
-                  placeholder="Par défaut"
-                  value={limitsForm.maxDailyCharges ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxDailyCharges: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxMonthlyCharges">Charges mois</Label>
-                <Input
-                  id="maxMonthlyCharges"
-                  type="number"
-                  min="0"
-                  placeholder="Par défaut"
-                  value={limitsForm.maxMonthlyCharges ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxMonthlyCharges: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxYearlyCharges">Charges an</Label>
-                <Input
-                  id="maxYearlyCharges"
-                  type="number"
-                  min="0"
-                  placeholder="Par défaut"
-                  value={limitsForm.maxYearlyCharges ?? ''}
-                  onChange={(e) => setLimitsForm({ 
-                    ...limitsForm, 
-                    maxYearlyCharges: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Clients</Label>
+              <Input
+                type="number"
+                placeholder="Défaut"
+                value={limitsForm.maxClients ?? ''}
+                onChange={(e) => setLimitsForm(prev => ({ ...prev, maxClients: e.target.value ? parseInt(e.target.value) : null }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Charges/jour</Label>
+              <Input
+                type="number"
+                placeholder="Défaut"
+                value={limitsForm.maxDailyCharges ?? ''}
+                onChange={(e) => setLimitsForm(prev => ({ ...prev, maxDailyCharges: e.target.value ? parseInt(e.target.value) : null }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Charges/mois</Label>
+              <Input
+                type="number"
+                placeholder="Défaut"
+                value={limitsForm.maxMonthlyCharges ?? ''}
+                onChange={(e) => setLimitsForm(prev => ({ ...prev, maxMonthlyCharges: e.target.value ? parseInt(e.target.value) : null }))}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingLimitsId(null)}>
-              Annuler
-            </Button>
-            <Button onClick={saveLimits}>
-              <Save className="w-4 h-4 mr-2" />
-              Enregistrer
-            </Button>
+            <Button variant="outline" onClick={() => setEditingLimitsId(null)}>Annuler</Button>
+            <Button onClick={saveLimits}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
