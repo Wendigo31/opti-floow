@@ -42,6 +42,7 @@ import { CompanyDataStats } from '@/components/admin/CompanyDataStats';
 import { CreateCompanyDialog } from '@/components/admin/CreateCompanyDialog';
 import { UserFeatureOverrides } from '@/components/admin/UserFeatureOverrides';
 import { AccessRequestsManager } from '@/components/admin/AccessRequestsManager';
+import { CompanyDetailPanel } from '@/components/admin/CompanyDetailPanel';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -909,6 +910,10 @@ export default function Admin() {
               Créer une société
             </Button>
           </div>
+          
+          {/* Panneau détaillé par société */}
+          <CompanyDetailPanel getAdminToken={getAdminToken} />
+          
           <CompanyUsersManager getAdminToken={getAdminToken} />
           <UserFeatureOverrides getAdminToken={getAdminToken} />
           <CreateCompanyDialog 
