@@ -113,29 +113,39 @@ export function AccessRequestsManager({ getAdminToken }: Props) {
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      // Fetch requests with joined data
-      const { data, error } = await supabase
+      // Fetch requests
+      const { data: requestsData, error: requestsError } = await supabase
         .from('access_requests')
-        .select(`
-          *,
-          company_users!access_requests_company_user_id_fkey (
-            email,
-            display_name
-          ),
-          licenses!access_requests_license_id_fkey (
-            company_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (requestsError) throw requestsError;
 
-      const formattedRequests: AccessRequest[] = (data || []).map((r: any) => ({
-        ...r,
-        user_email: r.company_users?.email,
-        user_display_name: r.company_users?.display_name,
-        company_name: r.licenses?.company_name,
-      }));
+      // Fetch user and license info separately to avoid join issues
+      const formattedRequests: AccessRequest[] = await Promise.all(
+        (requestsData || []).map(async (r: any) => {
+          // Get user info
+          const { data: userData } = await supabase
+            .from('company_users')
+            .select('email, display_name')
+            .eq('id', r.company_user_id)
+            .maybeSingle();
+
+          // Get license info
+          const { data: licenseData } = await supabase
+            .from('licenses')
+            .select('company_name')
+            .eq('id', r.license_id)
+            .maybeSingle();
+
+          return {
+            ...r,
+            user_email: userData?.email,
+            user_display_name: userData?.display_name,
+            company_name: licenseData?.company_name,
+          };
+        })
+      );
 
       setRequests(formattedRequests);
     } catch (err) {

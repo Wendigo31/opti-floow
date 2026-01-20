@@ -8,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { FeatureGate } from '@/components/license/FeatureGate';
-import { useLicense } from '@/hooks/useLicense';
 import { 
   Users, 
   UserPlus, 
@@ -296,17 +294,43 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
   const selectedLicense = licenses.find(l => l.id === selectedLicenseId);
 
+  const refreshCompanyUsers = async () => {
+    if (!selectedLicenseId) return;
+    setIsLoading(true);
+    const { data } = await supabase
+      .from('company_users')
+      .select('*')
+      .eq('license_id', selectedLicenseId)
+      .order('role', { ascending: true })
+      .order('created_at', { ascending: true });
+    setCompanyUsers((data || []).map(u => ({
+      ...u,
+      role: u.role as 'owner' | 'admin' | 'member',
+    })));
+    setIsLoading(false);
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Gestion des Sociétés
-          </CardTitle>
-          <CardDescription>
-            Ajoutez des utilisateurs aux sociétés pour partager les données
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Gestion des Sociétés
+              </CardTitle>
+              <CardDescription>
+                Ajoutez des utilisateurs aux sociétés pour partager les données
+              </CardDescription>
+            </div>
+            {selectedLicenseId && (
+              <Button variant="outline" size="sm" onClick={refreshCompanyUsers}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Actualiser
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* License selector */}
@@ -325,7 +349,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                     <div className="flex items-center gap-2">
                       <span>{license.company_name || license.email}</span>
                       <Badge variant="outline" className="ml-2">
-                        {license.plan_type.toUpperCase()}
+                        {license.plan_type?.toUpperCase() || 'N/A'}
                       </Badge>
                     </div>
                   </SelectItem>
@@ -336,7 +360,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
           {/* Selected license info */}
           {selectedLicense && (
-            <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{selectedLicense.company_name || 'Sans nom'}</p>
@@ -349,16 +373,15 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <p className="text-xs text-muted-foreground">utilisateurs</p>
                 </div>
               </div>
-              <FeatureGate feature="company_invite_members" showLockedIndicator={false}>
-                <Button
-                  size="sm"
-                  onClick={() => setShowAddDialog(true)}
-                  disabled={companyUsers.length >= selectedLicense.max_users && selectedLicense.max_users !== 999}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Ajouter un utilisateur
-                </Button>
-              </FeatureGate>
+              {/* Admin panel - no feature gates needed */}
+              <Button
+                size="sm"
+                onClick={() => setShowAddDialog(true)}
+                disabled={companyUsers.length >= selectedLicense.max_users && selectedLicense.max_users !== 999}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Ajouter un utilisateur
+              </Button>
             </div>
           )}
 
@@ -424,30 +447,27 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                     </Badge>
                     {user.role !== 'owner' && (
                       <>
-                        <FeatureGate feature="company_change_roles" showLockedIndicator={false}>
-                          <Select
-                            value={user.role}
-                            onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
-                          >
-                            <SelectTrigger className="w-24 h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="member">Membre</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FeatureGate>
-                        <FeatureGate feature="company_remove_members" showLockedIndicator={false}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setUserToRemove(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </FeatureGate>
+                        {/* Admin panel - no feature gates needed */}
+                        <Select
+                          value={user.role}
+                          onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
+                        >
+                          <SelectTrigger className="w-24 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="member">Membre</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setUserToRemove(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </>
                     )}
                   </div>
