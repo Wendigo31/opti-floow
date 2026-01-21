@@ -143,72 +143,30 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* VISIBLE SYNC BUTTON - Always visible */}
-            <Button
-              variant={syncErrors.length > 0 ? "destructive" : isSyncing ? "secondary" : "default"}
-              size="sm"
-              onClick={() => void forceSync()}
-              disabled={isSyncing}
-              className="gap-2 min-w-[100px]"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">
-                {isSyncing 
-                  ? (language === 'en' ? 'Syncing...' : language === 'es' ? 'Sincronizando...' : 'Synchro...')
-                  : syncErrors.length > 0 
-                    ? (language === 'en' ? 'Retry Sync' : language === 'es' ? 'Reintentar' : 'Réessayer')
-                    : (language === 'en' ? 'Sync' : language === 'es' ? 'Sincronizar' : 'Synchroniser')}
-              </span>
-              {lastSyncAt && !isSyncing && syncErrors.length === 0 && (
-                <Check className="w-3 h-3 text-green-200" />
-              )}
-            </Button>
-
-            {/* Plan Badge */}
-            <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
-              <PlanIcon className="w-3.5 h-3.5" />
-              <span className="font-medium">{t.plans[planType as keyof typeof t.plans] || plan.label}</span>
-            </Badge>
-
-            {/* Date */}
-            <div className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-              <Calendar className="w-3.5 h-3.5" />
-              <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: dateLocale })}</span>
-            </div>
-
-            {/* Contact button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setContactOpen(true)}
-              className="hidden lg:flex gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="hidden xl:inline">{t.support.title}</span>
-            </Button>
-
-            {/* Sync status with popover */}
+            {/* SINGLE SYNC BUTTON with Popover */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant={syncErrors.length > 0 ? "destructive" : "outline"}
                   size="sm"
-                  className="hidden md:flex gap-2"
+                  className="gap-2"
                   title={language === 'en' ? 'Sync status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
                 >
                   {isSyncing ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : syncErrors.length > 0 ? (
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <AlertTriangle className="w-4 h-4" />
                   ) : lastSyncAt ? (
                     <Check className="w-4 h-4 text-green-500" />
                   ) : (
-                    <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                    <RefreshCw className="w-4 h-4" />
                   )}
-                  <span className="hidden lg:inline">
+                  <span className="hidden sm:inline">
                     {isSyncing 
                       ? (language === 'en' ? 'Syncing...' : language === 'es' ? 'Sincronizando...' : 'Synchro...')
-                      : 'Sync'}
+                      : syncErrors.length > 0 
+                        ? (language === 'en' ? 'Errors' : language === 'es' ? 'Errores' : 'Erreurs')
+                        : 'Sync'}
                   </span>
                 </Button>
               </PopoverTrigger>
@@ -303,52 +261,34 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     disabled={isSyncing}
                   >
                     <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                    {language === 'en' ? 'Force sync now' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
+                    {language === 'en' ? 'Force full sync' : language === 'es' ? 'Forzar sincronización completa' : 'Forcer la synchronisation complète'}
                   </Button>
                 </div>
               </PopoverContent>
             </Popover>
 
-            {/* Force sync (mobile icon) */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="md:hidden rounded-full"
-                  title={language === 'en' ? 'Sync status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
-                >
-                  {isSyncing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-                  ) : syncErrors.length > 0 ? (
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                  ) : (
-                    <Check className="h-4 w-4 text-green-500" />
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72" align="end">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">Sync</span>
-                    <Button size="sm" onClick={() => void forceSync()} disabled={isSyncing}>
-                      <RefreshCw className={isSyncing ? 'w-3 h-3 animate-spin mr-1' : 'w-3 h-3 mr-1'} />
-                      Sync
-                    </Button>
-                  </div>
-                  {lastSyncAt && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: dateLocale })}
-                    </p>
-                  )}
-                  {syncErrors.length > 0 && (
-                    <div className="text-xs text-destructive">
-                      {syncErrors.length} erreur{syncErrors.length > 1 ? 's' : ''}
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Plan Badge */}
+            <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
+              <PlanIcon className="w-3.5 h-3.5" />
+              <span className="font-medium">{t.plans[planType as keyof typeof t.plans] || plan.label}</span>
+            </Badge>
+
+            {/* Date */}
+            <div className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: dateLocale })}</span>
+            </div>
+
+            {/* Contact button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setContactOpen(true)}
+              className="hidden lg:flex gap-2"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="hidden xl:inline">{t.support.title}</span>
+            </Button>
 
             {/* Theme toggle */}
             <Button
