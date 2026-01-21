@@ -26,6 +26,8 @@ const getStoredPreferences = (): NotificationPreferences => {
     tours: true,
     drivers: true,
     clients: true,
+    quotes: true,
+    trips: true,
     showOwnActions: false,
   };
 };
@@ -36,7 +38,7 @@ export function useRealtimeNotifications() {
   const isSubscribedRef = useRef(false);
 
   const showNotification = useCallback((
-    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client',
+    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client' | 'quote' | 'trip',
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
     creatorEmail?: string,
@@ -54,6 +56,8 @@ export function useRealtimeNotifications() {
     if (type === 'tour' && !prefs.tours) return;
     if (type === 'driver' && !prefs.drivers) return;
     if (type === 'client' && !prefs.clients) return;
+    if (type === 'quote' && !prefs.quotes) return;
+    if (type === 'trip' && !prefs.trips) return;
     
     // Check own actions preference
     if (isOwnAction && !prefs.showOwnActions) return;
@@ -83,6 +87,8 @@ export function useRealtimeNotifications() {
       trailer: 'remorque',
       driver: 'conducteur',
       client: 'client',
+      quote: 'devis',
+      trip: 'trajet',
     };
 
     const icons = {
@@ -91,6 +97,8 @@ export function useRealtimeNotifications() {
       trailer: '📦',
       driver: '👤',
       client: '🏢',
+      quote: '📋',
+      trip: '📍',
     };
 
     toast.info(
@@ -243,6 +251,52 @@ export function useRealtimeNotifications() {
       )
       .subscribe();
 
+    // Subscribe to quotes changes
+    const quoteChannel = supabase
+      .channel('company-quotes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quotes',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload: RealtimePayload) => {
+          const record = payload.new || payload.old;
+          const userId = record.user_id;
+          const isOwnAction = userId === currentUserIdRef.current;
+          
+          const memberInfo = memberMap.get(userId);
+          const quoteName = record.quote_number || `${record.origin_address?.substring(0, 15)}... → ${record.destination_address?.substring(0, 15)}...`;
+          showNotification('quote', payload.eventType, quoteName, memberInfo?.email, isOwnAction, memberInfo?.displayName);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to trips changes
+    const tripChannel = supabase
+      .channel('company-trips')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trips',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload: RealtimePayload) => {
+          const record = payload.new || payload.old;
+          const userId = record.user_id;
+          const isOwnAction = userId === currentUserIdRef.current;
+          
+          const memberInfo = memberMap.get(userId);
+          const tripName = `${record.origin_address?.substring(0, 15)}... → ${record.destination_address?.substring(0, 15)}...`;
+          showNotification('trip', payload.eventType, tripName, memberInfo?.email, isOwnAction, memberInfo?.displayName);
+        }
+      )
+      .subscribe();
+
     console.log('[Realtime] Subscribed to company data changes');
 
     // Return cleanup function
@@ -252,6 +306,8 @@ export function useRealtimeNotifications() {
       supabase.removeChannel(tourChannel);
       supabase.removeChannel(driverChannel);
       supabase.removeChannel(clientChannel);
+      supabase.removeChannel(quoteChannel);
+      supabase.removeChannel(tripChannel);
       isSubscribedRef.current = false;
     };
   }, [showNotification]);
