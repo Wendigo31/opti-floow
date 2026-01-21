@@ -208,7 +208,7 @@ export default function Dashboard() {
           </TabsTrigger>
           <TabsTrigger value="ai" className="gap-2">
             <Sparkles className="w-4 h-4" />
-            IA Enterprise
+            Analyse par IA
           </TabsTrigger>
         </TabsList>
 

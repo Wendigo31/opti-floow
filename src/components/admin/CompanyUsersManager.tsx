@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,8 @@ import {
   UserX,
   UserCheck,
   Power,
-  PowerOff
+  PowerOff,
+  LogIn
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -75,6 +77,7 @@ interface Props {
 
 export function CompanyUsersManager({ getAdminToken }: Props) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
   const [selectedLicenseId, setSelectedLicenseId] = useState<string | null>(null);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
@@ -89,6 +92,49 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'owner' | 'admin' | 'member'>('member');
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
+
+  // Login as a specific company user
+  const loginAsUser = useCallback(async (user: CompanyUser) => {
+    if (!selectedLicenseId) return;
+    
+    const license = licenses.find(l => l.id === selectedLicenseId);
+    if (!license) {
+      toast({
+        title: 'Erreur',
+        description: 'Licence non trouvée',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Store the license data with this user's info
+      localStorage.setItem('optiflow_license', JSON.stringify({
+        code: license.license_code,
+        email: user.email, // Use the user's email
+        validatedAt: new Date().toISOString(),
+        planType: license.plan_type || 'start',
+        companyName: license.company_name,
+        companyUserId: user.id, // Store the company user ID
+      }));
+      
+      toast({
+        title: 'Connexion réussie',
+        description: `Connecté en tant que ${user.display_name || user.email}`,
+      });
+      
+      // Navigate to home and reload to apply the session
+      navigate('/');
+      window.location.reload();
+    } catch (error) {
+      console.error('Login as user error:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de se connecter en tant que cet utilisateur',
+        variant: 'destructive',
+      });
+    }
+  }, [selectedLicenseId, licenses, toast, navigate]);
 
   // Fetch licenses
   useEffect(() => {
@@ -547,6 +593,19 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                       {getRoleIcon(user.role)}
                       {user.role === 'owner' ? 'Propriétaire' : user.role === 'admin' ? 'Admin' : 'Membre'}
                     </Badge>
+                    
+                    {/* Login as this user button - available for all users */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                      onClick={() => loginAsUser(user)}
+                      title={`Se connecter en tant que ${user.display_name || user.email}`}
+                      disabled={!user.is_active}
+                    >
+                      <LogIn className="h-4 w-4" />
+                    </Button>
+                    
                     {user.role !== 'owner' && (
                       <>
                         {/* Role selector */}

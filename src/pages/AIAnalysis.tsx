@@ -523,7 +523,7 @@ export default function AIAnalysis() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Analyse IA Avancée</h1>
+              <h1 className="text-3xl font-bold text-foreground">Analyse par IA</h1>
               <p className="text-muted-foreground">Optimisation relais, horaires & coûts</p>
             </div>
           </div>
