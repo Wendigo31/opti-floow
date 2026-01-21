@@ -35,7 +35,7 @@ import {
 interface CompanyUser {
   id: string;
   license_id: string;
-  user_id: string;
+  user_id: string | null;
   email: string;
   role: 'owner' | 'admin' | 'member';
   display_name?: string;
