@@ -25,6 +25,7 @@ const getStoredPreferences = (): NotificationPreferences => {
     trailers: true,
     tours: true,
     drivers: true,
+    clients: true,
     showOwnActions: false,
   };
 };
@@ -35,7 +36,7 @@ export function useRealtimeNotifications() {
   const isSubscribedRef = useRef(false);
 
   const showNotification = useCallback((
-    type: 'vehicle' | 'tour' | 'trailer' | 'driver',
+    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client',
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
     creatorEmail?: string,
@@ -52,6 +53,7 @@ export function useRealtimeNotifications() {
     if (type === 'trailer' && !prefs.trailers) return;
     if (type === 'tour' && !prefs.tours) return;
     if (type === 'driver' && !prefs.drivers) return;
+    if (type === 'client' && !prefs.clients) return;
     
     // Check own actions preference
     if (isOwnAction && !prefs.showOwnActions) return;
@@ -80,6 +82,7 @@ export function useRealtimeNotifications() {
       tour: 'tournée',
       trailer: 'remorque',
       driver: 'conducteur',
+      client: 'client',
     };
 
     const icons = {
@@ -87,6 +90,7 @@ export function useRealtimeNotifications() {
       tour: '🗺️',
       trailer: '📦',
       driver: '👤',
+      client: '🏢',
     };
 
     toast.info(
@@ -217,6 +221,28 @@ export function useRealtimeNotifications() {
       )
       .subscribe();
 
+    // Subscribe to clients changes
+    const clientChannel = supabase
+      .channel('company-clients')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clients',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload: RealtimePayload) => {
+          const record = payload.new || payload.old;
+          const userId = record.user_id;
+          const isOwnAction = userId === currentUserIdRef.current;
+          
+          const memberInfo = memberMap.get(userId);
+          showNotification('client', payload.eventType, record.name || record.company || 'Client', memberInfo?.email, isOwnAction, memberInfo?.displayName);
+        }
+      )
+      .subscribe();
+
     console.log('[Realtime] Subscribed to company data changes');
 
     // Return cleanup function
@@ -225,6 +251,7 @@ export function useRealtimeNotifications() {
       supabase.removeChannel(trailerChannel);
       supabase.removeChannel(tourChannel);
       supabase.removeChannel(driverChannel);
+      supabase.removeChannel(clientChannel);
       isSubscribedRef.current = false;
     };
   }, [showNotification]);

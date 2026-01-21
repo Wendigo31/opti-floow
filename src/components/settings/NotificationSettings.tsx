@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, Truck, Route, Container, Users } from 'lucide-react';
+import { Bell, BellOff, Truck, Route, Container, Users, Building2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ export interface NotificationPreferences {
   trailers: boolean;
   tours: boolean;
   drivers: boolean;
+  clients: boolean;
   showOwnActions: boolean;
 }
 
@@ -20,6 +21,7 @@ const defaultPreferences: NotificationPreferences = {
   trailers: true,
   tours: true,
   drivers: true,
+  clients: true,
   showOwnActions: false,
 };
 
@@ -124,6 +126,18 @@ export function NotificationSettings() {
                 id="notif-drivers"
                 checked={preferences.drivers}
                 onCheckedChange={(checked) => updatePreference('drivers', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <Label htmlFor="notif-clients">Clients</Label>
+              </div>
+              <Switch
+                id="notif-clients"
+                checked={preferences.clients}
+                onCheckedChange={(checked) => updatePreference('clients', checked)}
               />
             </div>
           </div>
