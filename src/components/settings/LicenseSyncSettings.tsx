@@ -26,7 +26,9 @@ import {
   Wallet,
   Star,
   Sparkles,
-  Lock
+  Lock,
+  Send,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +37,16 @@ import { useLicense, FeatureKey } from '@/hooks/useLicense';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 // Feature categories with their features
 const FEATURE_CATEGORIES = [
@@ -128,6 +140,12 @@ export function LicenseSyncSettings() {
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['Calculs & Itinéraires']);
+  
+  // Access request state
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [selectedFeatureForRequest, setSelectedFeatureForRequest] = useState<{ key: string; label: string } | null>(null);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [sendingRequest, setSendingRequest] = useState(false);
 
   const handleSyncLicense = async () => {
     if (isOffline) {
@@ -212,6 +230,44 @@ export function LicenseSyncSettings() {
         ? prev.filter(c => c !== categoryName)
         : [...prev, categoryName]
     );
+  };
+
+  const handleOpenRequestDialog = (featureKey: string, featureLabel: string) => {
+    setSelectedFeatureForRequest({ key: featureKey, label: featureLabel });
+    setRequestMessage('');
+    setRequestDialogOpen(true);
+  };
+
+  const handleSendAccessRequest = async () => {
+    if (!selectedFeatureForRequest) return;
+    
+    setSendingRequest(true);
+    try {
+      const { data, error } = await supabase.rpc('create_access_request', {
+        p_requested_features: [selectedFeatureForRequest.key],
+        p_message: requestMessage || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Demande envoyée",
+        description: "Votre administrateur a été notifié de votre demande.",
+      });
+      
+      setRequestDialogOpen(false);
+      setSelectedFeatureForRequest(null);
+      setRequestMessage('');
+    } catch (err: any) {
+      console.error('Error sending request:', err);
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible d'envoyer la demande",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingRequest(false);
+    }
   };
 
   const getPlanBadge = () => {
@@ -425,15 +481,27 @@ export function LicenseSyncSettings() {
                               </p>
                             </div>
                             
-                            <div className="ml-3">
+                            <div className="ml-3 flex items-center gap-2">
                               {status === 'enabled' && (
                                 <div className="flex items-center gap-1 text-success">
                                   <Check className="w-4 h-4" />
                                 </div>
                               )}
                               {status === 'disabled-by-admin' && (
-                                <div className="flex items-center gap-1 text-amber-500">
-                                  <Lock className="w-4 h-4" />
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenRequestDialog(feature.key, feature.label);
+                                    }}
+                                  >
+                                    <Send className="w-3 h-3" />
+                                    Demander
+                                  </Button>
+                                  <Lock className="w-4 h-4 text-amber-500" />
                                 </div>
                               )}
                               {status === 'not-in-plan' && (
@@ -453,6 +521,72 @@ export function LicenseSyncSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Access Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Demander l'accès
+            </DialogTitle>
+            <DialogDescription>
+              Envoyez une demande à votre administrateur pour activer cette fonctionnalité.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {selectedFeatureForRequest && (
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm font-medium text-primary">
+                  Fonctionnalité demandée
+                </p>
+                <p className="text-sm text-foreground mt-1">
+                  {selectedFeatureForRequest.label}
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="request-message">Message (optionnel)</Label>
+              <Textarea
+                id="request-message"
+                placeholder="Expliquez pourquoi vous avez besoin de cette fonctionnalité..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRequestDialogOpen(false)}
+              disabled={sendingRequest}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSendAccessRequest}
+              disabled={sendingRequest}
+              className="gap-2"
+            >
+              {sendingRequest ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Envoyer la demande
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
