@@ -29,7 +29,9 @@ import {
   Heart,
   PanelLeftOpen,
   PanelLeftClose,
-  Settings2
+  Settings2,
+  Folder,
+  Upload
 } from 'lucide-react';
 import {
   DndContext,
@@ -76,6 +78,9 @@ import type { Vehicle } from '@/types/vehicle';
 import { calculateVehicleCosts, formatCostPerKm } from '@/hooks/useVehicleCost';
 import { AddressSelectorDialog } from '@/components/itinerary/AddressSelectorDialog';
 import { useFavoriteAddresses } from '@/hooks/useFavoriteAddresses';
+import { SaveItineraryDialog } from '@/components/itinerary/SaveItineraryDialog';
+import { LoadItineraryDialog } from '@/components/itinerary/LoadItineraryDialog';
+import type { SavedTour } from '@/types/savedTour';
 
 interface RouteResult {
   distance: number;
@@ -252,12 +257,70 @@ export default function Itinerary() {
     revenue: 0,
   });
   
+  // Save/Load itinerary dialogs
+  const [saveItineraryOpen, setSaveItineraryOpen] = useState(false);
+  const [loadItineraryOpen, setLoadItineraryOpen] = useState(false);
+  const [routeForSave, setRouteForSave] = useState<RouteResult | null>(null);
+  
   // Get selected drivers for calculations
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Handle loading a saved tour into the itinerary
+  const handleLoadSavedTour = (tour: SavedTour) => {
+    // Set origin
+    setOriginAddress(tour.origin_address);
+    setOriginPosition(null); // Will be re-geocoded on search
+    
+    // Set destination
+    setDestinationAddress(tour.destination_address);
+    setDestinationPosition(null);
+    
+    // Set stops
+    const loadedStops: Waypoint[] = tour.stops.map((stop, idx) => ({
+      id: crypto.randomUUID(),
+      address: stop.address,
+      position: stop.lat && stop.lng ? { lat: stop.lat, lon: stop.lng } : null,
+    }));
+    setStops(loadedStops);
+    
+    // Set vehicle if available
+    if (tour.vehicle_id) {
+      const vehicleExists = vehicles.find(v => v.id === tour.vehicle_id);
+      if (vehicleExists) {
+        setSelectedVehicleId(tour.vehicle_id);
+        setVehicle(prev => ({
+          ...prev,
+          fuelConsumption: vehicleExists.fuelConsumption,
+          adBlueConsumption: vehicleExists.adBlueConsumption,
+        }));
+      }
+    }
+    
+    // Apply toll and fuel costs to trip
+    setTrip(prev => ({
+      ...prev,
+      distance: tour.distance_km,
+      tollCost: tour.toll_cost,
+    }));
+    
+    // Clear any previous route results - user needs to recalculate
+    clearResults();
+    
+    toast({
+      title: "Tournée chargée",
+      description: `"${tour.name}" - Cliquez sur Calculer pour recalculer l'itinéraire`,
+    });
+  };
+  
+  // Open save dialog with current route
+  const handleOpenSaveItinerary = (route: RouteResult) => {
+    setRouteForSave(route);
+    setSaveItineraryOpen(true);
+  };
   
   // Handle address selection from dialog
   const handleAddressSelect = (address: string, position: { lat: number; lon: number }) => {
@@ -831,9 +894,19 @@ export default function Itinerary() {
                 <h1 className="text-2xl font-bold text-foreground">Itinéraire</h1>
                 <p className="text-sm text-muted-foreground">Calculez vos trajets poids lourd</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsPanelOpen(false)}>
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLoadItineraryOpen(true)}
+                  title="Charger une tournée"
+                >
+                  <Folder className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsPanelOpen(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
             
             {/* Addresses Section */}
@@ -1182,7 +1255,16 @@ export default function Itinerary() {
                       {formatCurrency(highwayRoute.tollCost + highwayRoute.fuelCost)}
                     </span>
                   </div>
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); handleOpenSaveItinerary(highwayRoute); }}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Sauvegarder
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1257,7 +1339,16 @@ export default function Itinerary() {
                       {formatCurrency(nationalRoute.tollCost + nationalRoute.fuelCost)}
                     </span>
                   </div>
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); handleOpenSaveItinerary(nationalRoute); }}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Sauvegarder
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1491,6 +1582,24 @@ export default function Itinerary() {
         open={addressSelectorOpen}
         onOpenChange={setAddressSelectorOpen}
         onSelect={handleAddressSelect}
+      />
+
+      {/* Save Itinerary Dialog */}
+      <SaveItineraryDialog
+        open={saveItineraryOpen}
+        onOpenChange={setSaveItineraryOpen}
+        route={routeForSave}
+        originAddress={originAddress}
+        destinationAddress={destinationAddress}
+        stops={stops}
+        selectedVehicleId={selectedVehicleId}
+      />
+
+      {/* Load Itinerary Dialog */}
+      <LoadItineraryDialog
+        open={loadItineraryOpen}
+        onOpenChange={setLoadItineraryOpen}
+        onLoadTour={handleLoadSavedTour}
       />
     </div>
   );
