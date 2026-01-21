@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-type TableName = 'saved_tours' | 'trips' | 'clients' | 'quotes';
+type TableName = 'saved_tours' | 'trips' | 'clients' | 'quotes' | 'user_charges' | 'user_vehicles' | 'user_drivers' | 'user_trailers';
 
 interface UseRealtimeSyncOptions {
   table: TableName;
@@ -90,6 +90,89 @@ export function useRealtimeSync({
       }
     };
   }, [table, licenseId, enabled, onInsert, onUpdate, onDelete]);
+
+  return channelRef.current;
+}
+
+/**
+ * Hook to subscribe to multiple company tables at once for full company sync
+ */
+export function useCompanyRealtimeSync({
+  licenseId,
+  onDataChange,
+  enabled = true,
+}: {
+  licenseId: string | null;
+  onDataChange: (table: TableName, eventType: 'INSERT' | 'UPDATE' | 'DELETE', payload: any) => void;
+  enabled?: boolean;
+}) {
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    if (!licenseId || !enabled) {
+      return;
+    }
+
+    const channelName = `company_sync_${licenseId}`;
+    const tables: TableName[] = ['user_charges', 'user_vehicles', 'user_drivers', 'user_trailers', 'saved_tours', 'trips', 'clients', 'quotes'];
+
+    let channel = supabase.channel(channelName);
+
+    // Subscribe to all tables
+    for (const table of tables) {
+      channel = channel
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table,
+            filter: `license_id=eq.${licenseId}`,
+          },
+          (payload) => {
+            console.log(`[CompanySync] ${table} INSERT:`, payload);
+            onDataChange(table, 'INSERT', payload);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table,
+            filter: `license_id=eq.${licenseId}`,
+          },
+          (payload) => {
+            console.log(`[CompanySync] ${table} UPDATE:`, payload);
+            onDataChange(table, 'UPDATE', payload);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table,
+            filter: `license_id=eq.${licenseId}`,
+          },
+          (payload) => {
+            console.log(`[CompanySync] ${table} DELETE:`, payload);
+            onDataChange(table, 'DELETE', payload);
+          }
+        );
+    }
+
+    channelRef.current = channel.subscribe((status) => {
+      console.log(`[CompanySync] Subscription status:`, status);
+    });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [licenseId, enabled, onDataChange]);
 
   return channelRef.current;
 }
