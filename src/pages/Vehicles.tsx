@@ -1026,6 +1026,7 @@ export default function Vehicles() {
                         <SharedDataBadge 
                           isShared={isShared}
                           isOwn={isOwn}
+                          isFormerMember={vehicleInfo?.isFormerMember}
                           createdBy={vehicleInfo?.displayName}
                           createdByEmail={vehicleInfo?.userEmail}
                           compact

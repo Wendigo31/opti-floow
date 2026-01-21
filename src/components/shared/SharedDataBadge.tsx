@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Users, User, Cloud } from 'lucide-react';
+import { Users, User, Cloud, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SharedDataBadgeProps {
@@ -8,6 +8,7 @@ interface SharedDataBadgeProps {
   createdBy?: string;
   createdByEmail?: string;
   isOwn?: boolean;
+  isFormerMember?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -20,6 +21,7 @@ export function SharedDataBadge({
   createdBy, 
   createdByEmail,
   isOwn = false,
+  isFormerMember = false,
   compact = false,
   className 
 }: SharedDataBadgeProps) {
@@ -66,6 +68,39 @@ export function SharedDataBadge({
         </TooltipTrigger>
         <TooltipContent>
           <p>Créé par vous et partagé avec l'équipe</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // Shared data created by a former member
+  if (isFormerMember) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge 
+            variant="secondary" 
+            className={cn(
+              "gap-1 text-xs font-normal cursor-help bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+              compact && "px-1.5 py-0",
+              className
+            )}
+          >
+            <UserX className="h-3 w-3" />
+            {!compact && (createdBy ? createdBy.split(' ')[0] : "Ancien")}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="font-medium">Créé par un ancien membre</p>
+          {createdByEmail && (
+            <p className="text-xs text-muted-foreground">{createdByEmail}</p>
+          )}
+          {createdBy && !createdByEmail && (
+            <p className="text-xs text-muted-foreground">{createdBy}</p>
+          )}
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            Cet utilisateur ne fait plus partie de la société
+          </p>
         </TooltipContent>
       </Tooltip>
     );

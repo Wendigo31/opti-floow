@@ -439,6 +439,7 @@ export default function Tours() {
                           <SharedDataBadge
                             isShared={!!tourInfo}
                             isOwn={isOwn}
+                            isFormerMember={tourInfo?.isFormerMember}
                             createdBy={tourInfo?.displayName}
                             createdByEmail={tourInfo?.userEmail}
                             compact
