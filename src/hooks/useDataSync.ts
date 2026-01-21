@@ -40,10 +40,8 @@ export function useDataSync() {
     if (!userId) return 0;
 
     try {
-      // For company sync, we use license_id + local_id as the unique key
-      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
-      
       // Upsert each vehicle with license_id for company sharing
+      // Always use user_id,local_id as the unique constraint key
       for (const vehicle of vehicles) {
         const { error } = await supabase
           .from('user_vehicles')
@@ -64,7 +62,7 @@ export function useDataSync() {
             vehicle_data: vehicle as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: onConflictKey,
+            onConflict: 'user_id,local_id',
             ignoreDuplicates: false,
           });
         
@@ -105,10 +103,8 @@ export function useDataSync() {
     if (!userId) return 0;
 
     try {
-      // For company sync, we use license_id + local_id as the unique key
-      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
-      
       // Upsert each trailer with license_id for company sharing
+      // Always use user_id,local_id as the unique constraint key
       for (const trailer of trailers) {
         const { error } = await supabase
           .from('user_trailers')
@@ -127,7 +123,7 @@ export function useDataSync() {
             trailer_data: trailer as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: onConflictKey,
+            onConflict: 'user_id,local_id',
             ignoreDuplicates: false,
           });
         
@@ -172,10 +168,8 @@ export function useDataSync() {
     ];
 
     try {
-      // For company sync, we use license_id + local_id as the unique key
-      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
-      
       // Upsert each driver with license_id for company sharing
+      // Always use user_id,local_id as the unique constraint key
       for (const driver of allDrivers) {
         const { error } = await supabase
           .from('user_drivers')
@@ -190,7 +184,7 @@ export function useDataSync() {
             driver_data: driver as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: onConflictKey,
+            onConflict: 'user_id,local_id',
             ignoreDuplicates: false,
           });
         
@@ -230,11 +224,8 @@ export function useDataSync() {
     if (!userId) return 0;
 
     try {
-      // For company sync, we use license_id + local_id as the unique key
-      // For personal sync (no license_id), we use user_id + local_id
-      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
-      
       // Upsert each charge with license_id for company sharing
+      // Always use user_id,local_id as the unique constraint key
       for (const charge of charges) {
         const { error } = await supabase
           .from('user_charges')
@@ -250,7 +241,7 @@ export function useDataSync() {
             charge_data: charge as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: onConflictKey,
+            onConflict: 'user_id,local_id',
             ignoreDuplicates: false,
           });
         
