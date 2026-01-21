@@ -13,7 +13,8 @@ import {
   Folder,
   RotateCcw,
   Save,
-  Target
+  Target,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -232,6 +233,21 @@ export default function AIAnalysisPanel() {
   };
 
   if (!canUseAIOptimization) {
+    const handleSyncLicense = async () => {
+      try {
+        // Trigger license sync via BroadcastChannel
+        const channel = new BroadcastChannel('optiflow-license-sync');
+        channel.postMessage({ type: 'sync-request' });
+        channel.close();
+        
+        // Reload the page to refresh all caches
+        window.location.reload();
+      } catch (error) {
+        console.error('Erreur lors de la synchronisation:', error);
+        window.location.reload();
+      }
+    };
+
     return (
       <div className="text-center py-12">
         <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -239,9 +255,15 @@ export default function AIAnalysisPanel() {
         <p className="text-muted-foreground mb-4">
           Cette fonctionnalité n'est pas activée pour votre compte.
         </p>
-        <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
-          Voir les forfaits
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button variant="outline" onClick={handleSyncLicense} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Synchroniser ma licence
+          </Button>
+          <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
+            Voir les forfaits
+          </Button>
+        </div>
       </div>
     );
   }
