@@ -307,6 +307,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          license_id: string | null
           logo_url: string | null
           phone: string | null
           postal_code: string | null
@@ -323,6 +324,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_id?: string | null
           logo_url?: string | null
           phone?: string | null
           postal_code?: string | null
@@ -339,6 +341,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          license_id?: string | null
           logo_url?: string | null
           phone?: string | null
           postal_code?: string | null
@@ -348,7 +351,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_users: {
         Row: {
