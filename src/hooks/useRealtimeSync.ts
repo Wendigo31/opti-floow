@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-type TableName = 'saved_tours' | 'trips' | 'clients' | 'quotes' | 'user_charges' | 'user_vehicles' | 'user_drivers' | 'user_trailers';
+type TableName = 'saved_tours' | 'trips' | 'clients' | 'quotes' | 'user_charges' | 'user_vehicles' | 'user_drivers' | 'user_trailers' | 'company_settings';
 
 interface UseRealtimeSyncOptions {
   table: TableName;
@@ -114,7 +114,7 @@ export function useCompanyRealtimeSync({
     }
 
     const channelName = `company_sync_${licenseId}`;
-    const tables: TableName[] = ['user_charges', 'user_vehicles', 'user_drivers', 'user_trailers', 'saved_tours', 'trips', 'clients', 'quotes'];
+    const tables: TableName[] = ['user_charges', 'user_vehicles', 'user_drivers', 'user_trailers', 'saved_tours', 'trips', 'clients', 'quotes', 'company_settings'];
 
     let channel = supabase.channel(channelName);
 

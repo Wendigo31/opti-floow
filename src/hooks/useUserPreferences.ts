@@ -1,0 +1,197 @@
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  selected_driver_ids: string[];
+  selected_vehicle_id: string | null;
+  selected_trailer_id: string | null;
+  sidebar_collapsed: boolean;
+  theme: 'light' | 'dark' | 'system';
+  language: 'fr' | 'en' | 'es';
+  default_pricing_mode: string;
+  default_target_margin: number;
+  default_price_per_km: number;
+  default_chart_type: string;
+  show_ai_panel: boolean;
+  custom_working_days: Record<number, number>;
+  created_at: string;
+  updated_at: string;
+}
+
+const DEFAULT_PREFERENCES: Omit<UserPreferences, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
+  selected_driver_ids: [],
+  selected_vehicle_id: null,
+  selected_trailer_id: null,
+  sidebar_collapsed: false,
+  theme: 'system',
+  language: 'fr',
+  default_pricing_mode: 'km',
+  default_target_margin: 15,
+  default_price_per_km: 1.70,
+  default_chart_type: 'bar',
+  show_ai_panel: true,
+  custom_working_days: {},
+};
+
+// Helper to bypass TypeScript until types are regenerated
+const getPreferencesTable = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).from('user_preferences');
+};
+
+export function useUserPreferences() {
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch preferences on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!isMounted) return;
+
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      setUserId(user.id);
+
+      try {
+        const { data, error } = await getPreferencesTable()
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setPreferences(data as UserPreferences);
+        } else {
+          // Create default preferences
+          const { data: newPrefs, error: createError } = await getPreferencesTable()
+            .insert({
+              user_id: user.id,
+              ...DEFAULT_PREFERENCES,
+            })
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          setPreferences(newPrefs as UserPreferences);
+        }
+      } catch (error) {
+        console.error('[useUserPreferences] Error:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    void init();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Setup realtime subscription for cross-device sync
+  useEffect(() => {
+    if (!userId) return;
+
+    channelRef.current = supabase
+      .channel(`user_preferences_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_preferences',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('[UserPreferences] Realtime update:', payload);
+          setPreferences(payload.new as UserPreferences);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [userId]);
+
+  // Debounced save to avoid too many writes
+  const updatePreferences = useCallback(async (updates: Partial<UserPreferences>) => {
+    if (!userId || !preferences) return;
+
+    // Optimistic update
+    setPreferences(prev => prev ? { ...prev, ...updates } : null);
+
+    // Debounce the actual save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { error } = await getPreferencesTable()
+          .update(updates)
+          .eq('user_id', userId);
+
+        if (error) throw error;
+        console.log('[UserPreferences] Saved:', Object.keys(updates));
+      } catch (error) {
+        console.error('[UserPreferences] Save error:', error);
+        toast.error('Erreur de sauvegarde des préférences');
+      }
+    }, 1000);
+  }, [userId, preferences]);
+
+  // Specific update helpers
+  const setSelectedDriverIds = useCallback((ids: string[]) => {
+    updatePreferences({ selected_driver_ids: ids });
+  }, [updatePreferences]);
+
+  const setSelectedVehicleId = useCallback((id: string | null) => {
+    updatePreferences({ selected_vehicle_id: id });
+  }, [updatePreferences]);
+
+  const setSelectedTrailerId = useCallback((id: string | null) => {
+    updatePreferences({ selected_trailer_id: id });
+  }, [updatePreferences]);
+
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
+    updatePreferences({ sidebar_collapsed: collapsed });
+  }, [updatePreferences]);
+
+  const setTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
+    updatePreferences({ theme });
+  }, [updatePreferences]);
+
+  const setLanguage = useCallback((language: 'fr' | 'en' | 'es') => {
+    updatePreferences({ language });
+  }, [updatePreferences]);
+
+  return {
+    preferences,
+    loading,
+    updatePreferences,
+    setSelectedDriverIds,
+    setSelectedVehicleId,
+    setSelectedTrailerId,
+    setSidebarCollapsed,
+    setTheme,
+    setLanguage,
+  };
+}
