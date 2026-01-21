@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, Truck, Route, Container, Users, Building2 } from 'lucide-react';
+import { Bell, BellOff, Truck, Route, Container, Users, Building2, FileText, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ export interface NotificationPreferences {
   tours: boolean;
   drivers: boolean;
   clients: boolean;
+  quotes: boolean;
+  trips: boolean;
   showOwnActions: boolean;
 }
 
@@ -22,6 +24,8 @@ const defaultPreferences: NotificationPreferences = {
   tours: true,
   drivers: true,
   clients: true,
+  quotes: true,
+  trips: true,
   showOwnActions: false,
 };
 
@@ -138,6 +142,30 @@ export function NotificationSettings() {
                 id="notif-clients"
                 checked={preferences.clients}
                 onCheckedChange={(checked) => updatePreference('clients', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <Label htmlFor="notif-quotes">Devis</Label>
+              </div>
+              <Switch
+                id="notif-quotes"
+                checked={preferences.quotes}
+                onCheckedChange={(checked) => updatePreference('quotes', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <Label htmlFor="notif-trips">Trajets</Label>
+              </div>
+              <Switch
+                id="notif-trips"
+                checked={preferences.trips}
+                onCheckedChange={(checked) => updatePreference('trips', checked)}
               />
             </div>
           </div>
