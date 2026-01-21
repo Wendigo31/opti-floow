@@ -57,7 +57,7 @@ interface UseLicenseReturn {
   planType: PlanType;
   validateLicense: (code: string, email: string) => Promise<{ success: boolean; error?: string }>;
   clearLicense: () => void;
-  refreshLicense: () => Promise<void>;
+  refreshLicense: () => Promise<{ success: boolean; error?: string }>;
   hasFeature: (feature: FeatureKey) => boolean;
   getFeatureValue: <K extends keyof LicenseFeatures>(key: K) => LicenseFeatures[K] | undefined;
   isOffline: boolean;
@@ -612,21 +612,27 @@ export function useLicense(): UseLicenseReturn {
   }, []);
 
   // Force refresh license data from server
-  const refreshLicense = useCallback(async () => {
+  const refreshLicense = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
-    if (!stored) return;
+    if (!stored) {
+      return { success: false, error: 'Aucune licence stockée' };
+    }
 
     try {
       const data: LicenseData = JSON.parse(stored);
+      
+      console.log('[refreshLicense] Calling validate-license with:', { code: data.code, email: data.email });
       
       const { data: checkResponse, error: checkError } = await supabase.functions.invoke('validate-license', {
         body: { licenseCode: data.code, email: data.email, action: 'check' },
       });
 
       if (checkError) {
-        console.error('License refresh error:', checkError);
-        return;
+        console.error('[refreshLicense] License refresh error:', checkError);
+        return { success: false, error: checkError.message || 'Erreur de connexion au serveur' };
       }
+
+      console.log('[refreshLicense] Response:', checkResponse);
 
       if (checkResponse?.valid) {
         const updatedData: LicenseData = {
@@ -652,6 +658,7 @@ export function useLicense(): UseLicenseReturn {
           showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
           showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
           showLicenseInfo: checkResponse.licenseData?.showLicenseInfo ?? true,
+          companyUserId: checkResponse.companyUserId || null,
         };
         
         localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedData));
@@ -667,14 +674,20 @@ export function useLicense(): UseLicenseReturn {
         
         setLicenseData(updatedData);
         setIsLicensed(true);
+        
+        console.log('[refreshLicense] License refreshed successfully, planType:', updatedData.planType);
+        return { success: true };
       } else {
         // License deactivated
+        console.log('[refreshLicense] License invalid or deactivated');
         localStorage.removeItem(LICENSE_STORAGE_KEY);
         localStorage.removeItem(LICENSE_CACHE_KEY);
         setIsLicensed(false);
+        return { success: false, error: 'Licence désactivée ou invalide' };
       }
     } catch (e) {
-      console.error('Error refreshing license:', e);
+      console.error('[refreshLicense] Error refreshing license:', e);
+      return { success: false, error: 'Erreur lors de la synchronisation' };
     }
   }, []);
 

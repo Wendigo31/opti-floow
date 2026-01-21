@@ -41,9 +41,14 @@ export default function Settings() {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      await refreshLicense();
-      toast.success('Licence synchronisée avec succès');
+      const result = await refreshLicense();
+      if (result.success) {
+        toast.success('Licence synchronisée avec succès');
+      } else {
+        toast.error(result.error || 'Erreur lors de la synchronisation');
+      }
     } catch (error) {
+      console.error('Sync error:', error);
       toast.error('Erreur lors de la synchronisation');
     } finally {
       setIsSyncing(false);
