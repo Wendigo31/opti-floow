@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -108,11 +108,20 @@ export function useCompanyRealtimeSync({
 }) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   // Use ref to store callback to avoid re-subscription on callback changes
-  const onDataChangeRef = useRef(onDataChange);
-  onDataChangeRef.current = onDataChange;
+  const onDataChangeRef = useRef<typeof onDataChange>(onDataChange);
+  
+  // Update ref in useEffect to ensure consistent hook count
+  useEffect(() => {
+    onDataChangeRef.current = onDataChange;
+  });
 
   useEffect(() => {
     if (!licenseId || !enabled) {
+      // Cleanup any existing channel when disabled
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       return;
     }
 
@@ -188,7 +197,7 @@ export function useCompanyRealtimeSync({
         channelRef.current = null;
       }
     };
-  }, [licenseId, enabled]); // Removed onDataChange from deps - using ref instead
+  }, [licenseId, enabled]);
 
   return channelRef.current;
 }
