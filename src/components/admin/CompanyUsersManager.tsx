@@ -590,15 +590,19 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
       <AlertDialog open={!!userToRemove} onOpenChange={() => setUserToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              L'utilisateur perdra l'accès aux données partagées de la société.
+            <AlertDialogTitle>Retirer cet utilisateur de la société ?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>L'utilisateur perdra l'accès aux données partagées de la société.</p>
+              <p className="text-sm font-medium text-foreground">
+                ✓ Les données créées par cet utilisateur (trajets, tournées, clients, véhicules, etc.) 
+                resteront associées à la société et visibles par les autres membres.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemoveUser} className="bg-destructive hover:bg-destructive/90">
-              Supprimer
+              Retirer l'utilisateur
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
