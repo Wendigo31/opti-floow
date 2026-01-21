@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Sparkles, Upload, Download } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Upload, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { toast } from 'sonner';
 import { FeatureGate } from '@/components/license/FeatureGate';
-
+import { ChargePresetsDialog } from '@/components/charges/ChargePresetsDialog';
 const categoryIcons = {
   insurance: Shield,
   leasing: Car,
@@ -47,7 +47,7 @@ export default function Charges() {
   const [addingPeriodicity, setAddingPeriodicity] = useState<'daily' | 'monthly' | 'yearly' | null>(null);
   const [formData, setFormData] = useState<Partial<FixedCharge>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-
+  const [presetsDialogOpen, setPresetsDialogOpen] = useState(false);
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
@@ -362,21 +362,31 @@ export default function Charges() {
             {t.charges.subtitle}
           </p>
         </div>
-        <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
-            <Upload className="w-4 h-4" />
-            Importer Excel
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPresetsDialogOpen(true)} className="gap-2">
+            <Package className="w-4 h-4" />
+            Presets
           </Button>
-        </FeatureGate>
+          <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
+              <Upload className="w-4 h-4" />
+              Importer Excel
+            </Button>
+          </FeatureGate>
+        </div>
       </div>
       
+      <ChargePresetsDialog
+        open={presetsDialogOpen}
+        onOpenChange={setPresetsDialogOpen}
+      />
+
       <ExcelImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         type="charges"
         onImport={handleImportCharges}
       />
-
       {/* Summary Card */}
       <div className="glass-card p-6 opacity-0 animate-slide-up" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
         <div className="flex items-center justify-between">
