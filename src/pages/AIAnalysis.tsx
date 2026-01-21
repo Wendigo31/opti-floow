@@ -384,6 +384,16 @@ export default function AIAnalysis() {
     setStops(stops.map(s => s.id === id ? { ...s, address, position } : s));
   };
 
+  // Swap origin and destination
+  const swapOriginDestination = () => {
+    const tempOrigin = origin;
+    const tempOriginPosition = originPosition;
+    setOrigin(destination);
+    setOriginPosition(destinationPosition);
+    setDestination(tempOrigin);
+    setDestinationPosition(tempOriginPosition);
+  };
+
   // Get stops as string array for API
   const getStopsForAPI = () => stops.map(s => s.address).filter(Boolean);
 
@@ -673,6 +683,20 @@ export default function AIAnalysis() {
                   placeholder="Ex: 15 rue de la Paix, 75002 Paris"
                   icon="start"
                 />
+
+                {/* Swap button */}
+                <div className="flex justify-center py-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={swapOriginDestination}
+                    className="text-muted-foreground hover:text-primary h-8 w-8 p-0"
+                    title="Intervertir origine et destination"
+                    disabled={!origin && !destination}
+                  >
+                    <ArrowRightLeft className="w-4 h-4 rotate-90" />
+                  </Button>
+                </div>
                 
                 {/* Stops */}
                 {stops.length > 0 && (
