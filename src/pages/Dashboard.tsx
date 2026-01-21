@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, PiggyBank, Sparkles, Filter, X } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CostChart } from '@/components/dashboard/CostChart';
+import { TourComparisonChart } from '@/components/dashboard/TourComparisonChart';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useClients } from '@/hooks/useClients';
@@ -475,7 +476,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Cost Details */}
+          {/* Comparative Chart - only show when multiple tours selected */}
+          {selectedTours.length > 1 && (
+            <TourComparisonChart tours={selectedTours} />
+          )}
           <div className="glass-card p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Détail des Coûts (HT)</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
