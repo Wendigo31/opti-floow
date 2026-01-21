@@ -37,17 +37,23 @@ function getDemoTours(): SavedTour[] {
 }
 
 // Get user's license_id for company-level sync
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
+async function getUserLicenseId(userId?: string): Promise<string | null> {
+  const uid = userId || (await supabase.auth.getUser()).data.user?.id;
+  if (!uid) return null;
+
+  const { data, error } = await supabase
     .from('company_users')
     .select('license_id')
-    .eq('user_id', user.id)
+    .eq('user_id', uid)
     .eq('is_active', true)
     .maybeSingle();
-  
+
+  if (error) {
+    // Don't throw: company membership is optional and RLS/network hiccups shouldn't break tours loading.
+    console.warn('[useSavedTours] Failed to fetch license_id from company_users:', error);
+    return null;
+  }
+
   return data?.license_id || null;
 }
 
@@ -57,6 +63,8 @@ export function useSavedTours() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const lastToastAtRef = useRef<number>(0);
 
   const isDemo = isDemoModeActive();
 
@@ -70,7 +78,7 @@ export function useSavedTours() {
       setAuthUserId(user?.id || null);
 
       if (user) {
-        const lid = await getUserLicenseId();
+        const lid = await getUserLicenseId(user.id);
         if (!isMounted) return;
         setLicenseId(lid);
       } else {
@@ -84,7 +92,7 @@ export function useSavedTours() {
       const user = session?.user || null;
       setAuthUserId(user?.id || null);
       if (user) {
-        const lid = await getUserLicenseId();
+        const lid = await getUserLicenseId(user.id);
         setLicenseId(lid);
       } else {
         setLicenseId(null);
@@ -98,8 +106,12 @@ export function useSavedTours() {
     };
   }, []);
 
-  const fetchTours = useCallback(async () => {
-    setLoading(true);
+  const fetchTours = useCallback(async (): Promise<void> => {
+    // De-duplicate calls across pages/components to avoid spam during navigation.
+    if (inFlightRef.current) return inFlightRef.current;
+
+    const run = (async () => {
+      setLoading(true);
     
     // In demo mode, use localStorage data
     if (isDemo) {
@@ -109,44 +121,57 @@ export function useSavedTours() {
       return;
     }
     
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
       // Not authenticated yet → don't spam error toast
-      console.log('[useSavedTours] No user, skipping fetch');
-      setLoading(false);
-      return;
-    }
+      if (!authUserId) {
+        console.log('[useSavedTours] No authUserId yet, skipping fetch');
+        setLoading(false);
+        return;
+      }
     
-    try {
-      // Check if user is part of a company for company-level access
-      const fetchedLicenseId = await getUserLicenseId();
-      console.log('[useSavedTours] Fetching tours for user:', user.id, 'licenseId:', fetchedLicenseId);
-      setLicenseId(fetchedLicenseId);
+      try {
+        // Check if user is part of a company for company-level access
+        const fetchedLicenseId = await getUserLicenseId(authUserId);
+        console.log('[useSavedTours] Fetching tours for user:', authUserId, 'licenseId:', fetchedLicenseId);
+        setLicenseId(fetchedLicenseId);
 
       // Scope query to company when possible (keeps fast + avoids loading noise)
       let query = supabase
         .from('saved_tours')
         .select('*');
 
-      if (fetchedLicenseId) {
-        // Company tours + personal tours
-        query = query.or(`license_id.eq.${fetchedLicenseId},user_id.eq.${user.id}`);
-      } else {
-        // Personal only
-        query = query.eq('user_id', user.id);
-      }
+        if (fetchedLicenseId) {
+          // Company tours + personal tours
+          query = query.or(`license_id.eq.${fetchedLicenseId},user_id.eq.${authUserId}`);
+        } else {
+          // Personal only
+          query = query.eq('user_id', authUserId);
+        }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      console.log('[useSavedTours] Fetched', data?.length || 0, 'tours');
-      setTours((data || []).map(mapDbToSavedTour));
-    } catch (error) {
-      console.error('Error fetching tours:', error);
-      toast.error('Erreur lors du chargement des tournées');
+        console.log('[useSavedTours] Fetched', data?.length || 0, 'tours');
+        setTours((data || []).map(mapDbToSavedTour));
+      } catch (error) {
+        console.error('Error fetching tours:', error);
+
+        // Prevent toast spam during navigation: max 1 toast / 10s.
+        const now = Date.now();
+        if (now - lastToastAtRef.current > 10_000) {
+          lastToastAtRef.current = now;
+          toast.error('Erreur lors du chargement des tournées');
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    inFlightRef.current = run;
+    try {
+      await run;
     } finally {
-      setLoading(false);
+      inFlightRef.current = null;
     }
   }, [isDemo, authUserId]);
 
