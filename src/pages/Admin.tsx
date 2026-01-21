@@ -160,15 +160,11 @@ const emptyFormData: LicenseFormData = {
   userRole: 'member',
 };
 
-// Sidebar navigation items
+// Sidebar navigation items - Simplified and logical
 const ADMIN_NAV = [
-  { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer les licences' },
-  { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Gérer les sociétés' },
-  { id: 'merge', label: 'Fusion', icon: GitMerge, description: 'Déduplication SIREN' },
-  { id: 'access', label: 'Accès', icon: Lock, description: 'Permissions utilisateurs' },
-  { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les features' },
-  { id: 'requests', label: 'Demandes', icon: Bell, description: 'Demandes d\'accès' },
-  { id: 'data', label: 'Données', icon: Database, description: 'Statistiques' },
+  { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer toutes les licences' },
+  { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Utilisateurs & données' },
+  { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les accès' },
   { id: 'updates', label: 'Mises à jour', icon: RefreshCw, description: 'Versions PWA' },
   { id: 'demo', label: 'Démo', icon: PlayCircle, description: 'Mode démonstration' },
 ] as const;
@@ -523,10 +519,11 @@ export default function Admin() {
 
   const loginAsUser = async (license: License) => {
     try {
-      localStorage.setItem('optiflow_license', JSON.stringify({
+      // Use correct storage key that matches useLicense hook
+      const licenseData = {
         code: license.license_code,
         email: license.email,
-        validatedAt: new Date().toISOString(),
+        activatedAt: new Date().toISOString(),
         planType: license.plan_type || 'start',
         firstName: license.first_name,
         lastName: license.last_name,
@@ -541,10 +538,29 @@ export default function Admin() {
         maxMonthlyCharges: license.max_monthly_charges,
         maxYearlyCharges: license.max_yearly_charges,
         customFeatures: license.features,
+      };
+      
+      // Clear any existing auth state
+      await supabase.auth.signOut();
+      
+      // Set the license data with the correct key
+      localStorage.setItem('optiflow-license', JSON.stringify(licenseData));
+      
+      // Also update cache for offline support
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      localStorage.setItem('optiflow-license-cache', JSON.stringify({
+        data: licenseData,
+        lastValidated: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
       }));
+      
       toast.success(`Connexion en tant que ${license.email}`);
-      navigate('/');
+      
+      // Force full reload to apply new license
+      window.location.href = '/';
     } catch (error) {
+      console.error('Login as user error:', error);
       toast.error('Erreur de connexion');
     }
   };
@@ -888,21 +904,45 @@ export default function Admin() {
             </>
           )}
 
-          {/* Companies Tab */}
+          {/* Companies Tab - Consolidated view */}
           {adminActiveTab === 'companies' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-semibold">Gestion des Sociétés</h2>
-                  <p className="text-sm text-muted-foreground">Créez et gérez les sociétés et leurs utilisateurs</p>
+                  <p className="text-sm text-muted-foreground">Utilisateurs, données et permissions</p>
                 </div>
                 <Button onClick={() => setCreateCompanyOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Créer une société
                 </Button>
               </div>
-              <CompanyDetailPanel getAdminToken={getAdminToken} />
-              <CompanyUsersManager getAdminToken={getAdminToken} />
+              
+              <Tabs defaultValue="users" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+                  <TabsTrigger value="details">Détails</TabsTrigger>
+                  <TabsTrigger value="data">Statistiques</TabsTrigger>
+                  <TabsTrigger value="access">Accès</TabsTrigger>
+                  <TabsTrigger value="merge">Fusion</TabsTrigger>
+                </TabsList>
+                <TabsContent value="users" className="mt-4">
+                  <CompanyUsersManager getAdminToken={getAdminToken} />
+                </TabsContent>
+                <TabsContent value="details" className="mt-4">
+                  <CompanyDetailPanel getAdminToken={getAdminToken} />
+                </TabsContent>
+                <TabsContent value="data" className="mt-4">
+                  <CompanyDataStats getAdminToken={getAdminToken} />
+                </TabsContent>
+                <TabsContent value="access" className="mt-4">
+                  <UserFeatureOverrides getAdminToken={getAdminToken} />
+                </TabsContent>
+                <TabsContent value="merge" className="mt-4">
+                  <CompanyMergeManager getAdminToken={getAdminToken} />
+                </TabsContent>
+              </Tabs>
+              
               <CreateCompanyDialog 
                 open={createCompanyOpen}
                 onOpenChange={setCreateCompanyOpen}
@@ -912,104 +952,73 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Merge Tab */}
-          {adminActiveTab === 'merge' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Fusion / Déduplication</h2>
-                <p className="text-sm text-muted-foreground">Détectez et fusionnez les sociétés en double (même SIREN)</p>
-              </div>
-              <CompanyMergeManager getAdminToken={getAdminToken} />
-            </div>
-          )}
-
-          {/* Access Tab */}
-          {adminActiveTab === 'access' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Gestion des Accès</h2>
-                <p className="text-sm text-muted-foreground">Activez ou désactivez des fonctionnalités pour chaque utilisateur</p>
-              </div>
-              <UserFeatureOverrides getAdminToken={getAdminToken} />
-            </div>
-          )}
-
-          {/* Features Tab */}
+          {/* Features Tab - Consolidated with requests */}
           {adminActiveTab === 'features' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold">Fonctionnalités par licence</h2>
-                <p className="text-sm text-muted-foreground">Personnalisez les fonctionnalités disponibles pour chaque licence</p>
+                <h2 className="text-xl font-semibold">Fonctionnalités & Demandes</h2>
+                <p className="text-sm text-muted-foreground">Configurez les fonctionnalités et gérez les demandes</p>
               </div>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Sélectionner une licence</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select 
-                    value={selectedLicenseForFeatures?.id || ''} 
-                    onValueChange={(id) => setSelectedLicenseForFeatures(licenses.find(l => l.id === id) || null)}
-                  >
-                    <SelectTrigger className="max-w-md">
-                      <SelectValue placeholder="Choisir une licence..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {licenses.map(license => (
-                        <SelectItem key={license.id} value={license.id}>
-                          <div className="flex items-center gap-2">
-                            {getPlanIcon(license.plan_type)}
-                            <span>{license.company_name || license.email}</span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {(license.plan_type || 'start').toUpperCase()}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
+              <Tabs defaultValue="license-features" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="license-features">Par licence</TabsTrigger>
+                  <TabsTrigger value="requests">Demandes d'accès</TabsTrigger>
+                  <TabsTrigger value="schema">Schéma</TabsTrigger>
+                </TabsList>
+                <TabsContent value="license-features" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Sélectionner une licence</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Select 
+                        value={selectedLicenseForFeatures?.id || ''} 
+                        onValueChange={(id) => setSelectedLicenseForFeatures(licenses.find(l => l.id === id) || null)}
+                      >
+                        <SelectTrigger className="max-w-md">
+                          <SelectValue placeholder="Choisir une licence..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {licenses.map(license => (
+                            <SelectItem key={license.id} value={license.id}>
+                              <div className="flex items-center gap-2">
+                                {getPlanIcon(license.plan_type)}
+                                <span>{license.company_name || license.email}</span>
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {(license.plan_type || 'start').toUpperCase()}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </CardContent>
+                  </Card>
 
-              {selectedLicenseForFeatures ? (
-                <FeatureEditor
-                  planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
-                  currentFeatures={selectedLicenseForFeatures.features || null}
-                  onSave={handleSaveFeatures}
-                  saving={savingFeatures}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Settings2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Sélectionnez une licence pour personnaliser ses fonctionnalités</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              <SchemaSyncManager adminToken={getAdminToken() || undefined} />
-            </div>
-          )}
-
-          {/* Requests Tab */}
-          {adminActiveTab === 'requests' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Demandes d'accès</h2>
-                <p className="text-sm text-muted-foreground">Gérez les demandes d'accès des utilisateurs</p>
-              </div>
-              <AccessRequestsManager getAdminToken={getAdminToken} />
-            </div>
-          )}
-
-          {/* Data Tab */}
-          {adminActiveTab === 'data' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Statistiques des Données</h2>
-                <p className="text-sm text-muted-foreground">Visualisez les données de chaque société</p>
-              </div>
-              <CompanyDataStats getAdminToken={getAdminToken} />
+                  {selectedLicenseForFeatures ? (
+                    <FeatureEditor
+                      planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
+                      currentFeatures={selectedLicenseForFeatures.features || null}
+                      onSave={handleSaveFeatures}
+                      saving={savingFeatures}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Settings2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">Sélectionnez une licence pour personnaliser ses fonctionnalités</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+                <TabsContent value="requests" className="mt-4">
+                  <AccessRequestsManager getAdminToken={getAdminToken} />
+                </TabsContent>
+                <TabsContent value="schema" className="mt-4">
+                  <SchemaSyncManager adminToken={getAdminToken() || undefined} />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
