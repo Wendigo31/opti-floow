@@ -43,7 +43,7 @@ export default function Dashboard() {
   
   // Filter state
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   
   // Get filtered tours based on selected client
   const filteredTours = useMemo(() => {
@@ -51,52 +51,94 @@ export default function Dashboard() {
     return tours.filter(tour => tour.client_id === selectedClientId);
   }, [tours, selectedClientId]);
   
-  // Get selected tour data
-  const selectedTour = useMemo(() => {
-    if (!selectedTourId) return null;
-    return tours.find(t => t.id === selectedTourId) || null;
-  }, [tours, selectedTourId]);
+  // Get selected tours data
+  const selectedTours = useMemo(() => {
+    if (selectedTourIds.length === 0) return [];
+    return tours.filter(t => selectedTourIds.includes(t.id));
+  }, [tours, selectedTourIds]);
   
-  // Use tour data if selected, otherwise use current trip data
+  // Aggregate tour data when multiple tours are selected
   const analysisData = useMemo(() => {
-    if (selectedTour) {
-      const distance = Number(selectedTour.distance_km) || 0;
-      const totalCost = Number(selectedTour.total_cost) || 0;
-      const targetMargin = Number(selectedTour.target_margin) || 15;
-      const suggestedPrice = totalCost * (1 + targetMargin / 100);
-      
+    if (selectedTours.length === 0) return null;
+    
+    // Aggregate all selected tours
+    const aggregated = selectedTours.reduce((acc, tour) => {
       return {
-        distance,
-        tollCost: Number(selectedTour.toll_cost) || 0,
-        fuel: Number(selectedTour.fuel_cost) || 0,
-        adBlue: Number(selectedTour.adblue_cost) || 0,
-        driverCost: Number(selectedTour.driver_cost) || 0,
-        structureCost: Number(selectedTour.structure_cost) || 0,
-        vehicleCost: Number(selectedTour.vehicle_cost) || 0,
-        totalCost,
-        revenue: Number(selectedTour.revenue) || 0,
-        profit: Number(selectedTour.profit) || 0,
-        profitMargin: Number(selectedTour.profit_margin) || 0,
-        costPerKm: distance > 0 ? totalCost / distance : 0,
-        suggestedPrice,
-        suggestedPricePerKm: distance > 0 ? suggestedPrice / distance : 0,
-        tolls: Number(selectedTour.toll_cost) || 0,
-        pricingMode: selectedTour.pricing_mode || 'km',
-        targetMargin,
+        distance: acc.distance + (Number(tour.distance_km) || 0),
+        tollCost: acc.tollCost + (Number(tour.toll_cost) || 0),
+        fuel: acc.fuel + (Number(tour.fuel_cost) || 0),
+        adBlue: acc.adBlue + (Number(tour.adblue_cost) || 0),
+        driverCost: acc.driverCost + (Number(tour.driver_cost) || 0),
+        structureCost: acc.structureCost + (Number(tour.structure_cost) || 0),
+        vehicleCost: acc.vehicleCost + (Number(tour.vehicle_cost) || 0),
+        totalCost: acc.totalCost + (Number(tour.total_cost) || 0),
+        revenue: acc.revenue + (Number(tour.revenue) || 0),
+        profit: acc.profit + (Number(tour.profit) || 0),
       };
-    }
-    return null;
-  }, [selectedTour]);
+    }, {
+      distance: 0,
+      tollCost: 0,
+      fuel: 0,
+      adBlue: 0,
+      driverCost: 0,
+      structureCost: 0,
+      vehicleCost: 0,
+      totalCost: 0,
+      revenue: 0,
+      profit: 0,
+    });
+    
+    const profitMargin = aggregated.revenue > 0 
+      ? (aggregated.profit / aggregated.revenue) * 100 
+      : 0;
+    const costPerKm = aggregated.distance > 0 
+      ? aggregated.totalCost / aggregated.distance 
+      : 0;
+    const suggestedPrice = aggregated.totalCost * 1.15; // Default 15% margin
+    
+    return {
+      ...aggregated,
+      profitMargin,
+      costPerKm,
+      suggestedPrice,
+      suggestedPricePerKm: aggregated.distance > 0 ? suggestedPrice / aggregated.distance : 0,
+      tolls: aggregated.tollCost,
+      pricingMode: 'aggregated',
+      targetMargin: 15,
+      tourCount: selectedTours.length,
+    };
+  }, [selectedTours]);
   
   // Reset tour selection when client changes
   useEffect(() => {
-    if (selectedClientId && selectedTourId) {
-      const tourExists = filteredTours.some(t => t.id === selectedTourId);
-      if (!tourExists) {
-        setSelectedTourId(null);
+    if (selectedClientId && selectedTourIds.length > 0) {
+      const validTourIds = selectedTourIds.filter(id => 
+        filteredTours.some(t => t.id === id)
+      );
+      if (validTourIds.length !== selectedTourIds.length) {
+        setSelectedTourIds(validTourIds);
       }
     }
-  }, [selectedClientId, selectedTourId, filteredTours]);
+  }, [selectedClientId, selectedTourIds, filteredTours]);
+  
+  // Toggle tour selection
+  const toggleTourSelection = (tourId: string) => {
+    setSelectedTourIds(prev => 
+      prev.includes(tourId) 
+        ? prev.filter(id => id !== tourId)
+        : [...prev, tourId]
+    );
+  };
+  
+  // Select all tours
+  const selectAllTours = () => {
+    setSelectedTourIds(filteredTours.map(t => t.id));
+  };
+  
+  // Deselect all tours
+  const deselectAllTours = () => {
+    setSelectedTourIds([]);
+  };
   
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
@@ -235,10 +277,10 @@ export default function Dashboard() {
   // Clear filters
   const clearFilters = () => {
     setSelectedClientId(null);
-    setSelectedTourId(null);
+    setSelectedTourIds([]);
   };
   
-  const hasActiveFilters = selectedClientId || selectedTourId;
+  const hasActiveFilters = selectedClientId || selectedTourIds.length > 0;
 
   return (
     <div className="space-y-6" id="dashboard-content">
@@ -300,23 +342,50 @@ export default function Dashboard() {
             </Select>
           </div>
           
-          {/* Tour Filter */}
-          <div className="flex-1 min-w-[200px] max-w-[300px]">
-            <Select
-              value={selectedTourId || ""}
-              onValueChange={(value) => setSelectedTourId(value || null)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sélectionner une tournée" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredTours.map((tour) => (
-                  <SelectItem key={tour.id} value={tour.id}>
-                    {tour.name} ({Number(tour.distance_km).toFixed(0)} km)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Tour Filter - Multi-select with checkboxes */}
+          <div className="flex-1 min-w-[200px] max-w-[400px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Tournées:</span>
+              {selectedTourIds.length > 0 ? (
+                <Badge variant="secondary" className="gap-1">
+                  {selectedTourIds.length} sélectionnée{selectedTourIds.length > 1 ? 's' : ''}
+                  <X 
+                    className="w-3 h-3 cursor-pointer hover:text-destructive" 
+                    onClick={deselectAllTours}
+                  />
+                </Badge>
+              ) : (
+                <span className="text-sm text-muted-foreground italic">Aucune</span>
+              )}
+              {filteredTours.length > 0 && selectedTourIds.length < filteredTours.length && (
+                <Button variant="ghost" size="sm" onClick={selectAllTours} className="text-xs h-6 px-2">
+                  Tout sélectionner
+                </Button>
+              )}
+            </div>
+            <div className="mt-2 max-h-[200px] overflow-y-auto space-y-1 border border-border/50 rounded-md p-2">
+              {filteredTours.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-2">Aucune tournée disponible</p>
+              ) : (
+                filteredTours.map((tour) => (
+                  <label 
+                    key={tour.id} 
+                    className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTourIds.includes(tour.id)}
+                      onChange={() => toggleTourSelection(tour.id)}
+                      className="rounded border-border"
+                    />
+                    <span className="text-sm flex-1 truncate">{tour.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {Number(tour.distance_km).toFixed(0)} km
+                    </Badge>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
           
           {/* Active filters badges + clear */}
@@ -331,15 +400,6 @@ export default function Dashboard() {
                   />
                 </Badge>
               )}
-              {selectedTourId && (
-                <Badge variant="secondary" className="gap-1">
-                  Tournée: {tours.find(t => t.id === selectedTourId)?.name}
-                  <X 
-                    className="w-3 h-3 cursor-pointer hover:text-destructive" 
-                    onClick={() => setSelectedTourId(null)}
-                  />
-                </Badge>
-              )}
               <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-destructive">
                 Effacer tout
               </Button>
@@ -347,21 +407,18 @@ export default function Dashboard() {
           )}
         </div>
         
-        {/* Tour info when selected */}
-        {selectedTour && (
+        {/* Aggregated stats when multiple tours selected */}
+        {selectedTours.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex flex-wrap items-center gap-4 text-sm">
-              <span className="text-muted-foreground">
-                <strong className="text-foreground">{selectedTour.origin_address}</strong>
-                {' → '}
-                <strong className="text-foreground">{selectedTour.destination_address}</strong>
-              </span>
-              <Badge variant="outline">{Number(selectedTour.distance_km).toFixed(0)} km</Badge>
-              {selectedTour.client_id && (
-                <Badge variant="outline">
-                  Client: {clients.find(c => c.id === selectedTour.client_id)?.company || clients.find(c => c.id === selectedTour.client_id)?.name}
-                </Badge>
-              )}
+              <Badge variant="default" className="bg-primary">
+                {selectedTours.length} tournée{selectedTours.length > 1 ? 's' : ''} sélectionnée{selectedTours.length > 1 ? 's' : ''}
+              </Badge>
+              <Badge variant="outline">{analysisData?.distance.toFixed(0)} km au total</Badge>
+              <Badge variant="outline">CA: {formatCurrency(analysisData?.revenue || 0)}</Badge>
+              <Badge variant={analysisData && analysisData.profit >= 0 ? "default" : "destructive"} className={analysisData && analysisData.profit >= 0 ? "bg-success" : ""}>
+                Bénéfice: {formatCurrency(analysisData?.profit || 0)}
+              </Badge>
             </div>
           </div>
         )}
@@ -383,10 +440,10 @@ export default function Dashboard() {
         <TabsContent value="analysis" className="space-y-6 mt-6">
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <StatCard title="Coût Total HT" value={formatCurrency(displayCosts.totalCost)} subtitle="Coût de revient" icon={<Euro className="w-6 h-6" />} variant="default" delay={100} />
-            <StatCard title="Chiffre d'Affaires" value={formatCurrency(displayCosts.revenue)} subtitle={selectedTour ? selectedTour.pricing_mode || 'Prix au km' : (trip.pricingMode === 'auto' ? 'Marge auto' : trip.pricingMode === 'km' ? 'Prix au km' : 'Forfait')} icon={<Banknote className="w-6 h-6" />} variant="default" delay={200} />
+            <StatCard title="Coût Total HT" value={formatCurrency(displayCosts.totalCost)} subtitle={selectedTours.length > 1 ? `${selectedTours.length} tournées` : "Coût de revient"} icon={<Euro className="w-6 h-6" />} variant="default" delay={100} />
+            <StatCard title="Chiffre d'Affaires" value={formatCurrency(displayCosts.revenue)} subtitle={selectedTours.length > 0 ? (selectedTours.length > 1 ? 'Agrégé' : selectedTours[0]?.pricing_mode || 'Prix au km') : (trip.pricingMode === 'auto' ? 'Marge auto' : trip.pricingMode === 'km' ? 'Prix au km' : 'Forfait')} icon={<Banknote className="w-6 h-6" />} variant="default" delay={200} />
             <StatCard title="Bénéfice" value={formatCurrency(displayCosts.profit)} subtitle={`${displayCosts.profitMargin.toFixed(1)}% de marge`} icon={<PiggyBank className="w-6 h-6" />} variant={displayCosts.profit >= 0 ? 'success' : 'danger'} trend={displayCosts.profit >= 0 ? 'up' : 'down'} trendValue={`${displayCosts.profit >= 0 ? '+' : ''}${displayCosts.profitMargin.toFixed(1)}%`} delay={300} />
-            <StatCard title="Coût au Kilomètre" value={`${displayCosts.costPerKm.toFixed(3)} €`} subtitle={`Pour ${selectedTour ? Number(selectedTour.distance_km).toFixed(0) : trip.distance} km`} icon={<Gauge className="w-6 h-6" />} variant="default" delay={400} />
+            <StatCard title="Coût au Kilomètre" value={`${displayCosts.costPerKm.toFixed(3)} €`} subtitle={`Pour ${analysisData ? analysisData.distance.toFixed(0) : trip.distance} km`} icon={<Gauge className="w-6 h-6" />} variant="default" delay={400} />
           </div>
 
           {/* Charts */}
@@ -411,7 +468,7 @@ export default function Dashboard() {
                   <span className={cn("text-xl font-bold", displayCosts.profit >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(displayCosts.profit)}</span>
                 </div>
                 <div className="flex justify-between items-center py-3">
-                  <span className="text-muted-foreground">Prix suggéré (marge {selectedTour ? Number(selectedTour.target_margin) : trip.targetMargin}%)</span>
+                  <span className="text-muted-foreground">Prix suggéré (marge {analysisData ? analysisData.targetMargin : trip.targetMargin}%)</span>
                   <span className="text-lg font-medium text-success">{formatCurrency(displayCosts.suggestedPrice)}</span>
                 </div>
               </div>
