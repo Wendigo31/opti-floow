@@ -57,7 +57,7 @@ interface AIResponse {
 export default function AIAnalysisPanel() {
   const { toast } = useToast();
   const { vehicle, drivers } = useApp();
-  const { planType } = useLicense();
+  const { hasFeature } = useLicense();
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const { saveTour } = useSavedTours();
   
@@ -81,7 +81,7 @@ export default function AIAnalysisPanel() {
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
   const selectedDriversData = drivers.filter(d => selectedDriverIds.includes(d.id));
-  const isEnterprise = planType === 'enterprise';
+  const canUseAIOptimization = hasFeature('ai_optimization');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('fr-FR', {
     style: 'currency',
@@ -231,13 +231,13 @@ export default function AIAnalysisPanel() {
     setExpandedSection(prev => prev === section ? null : section);
   };
 
-  if (!isEnterprise) {
+  if (!canUseAIOptimization) {
     return (
       <div className="text-center py-12">
         <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Analyse IA Enterprise</h3>
+        <h3 className="text-lg font-semibold mb-2">Optimisation IA</h3>
         <p className="text-muted-foreground mb-4">
-          Cette fonctionnalité est réservée au forfait Enterprise.
+          Cette fonctionnalité n'est pas activée pour votre compte.
         </p>
         <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
           Voir les forfaits
