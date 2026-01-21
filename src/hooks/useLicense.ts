@@ -518,11 +518,21 @@ export function useLicense(): UseLicenseReturn {
 
       if (error) {
         console.error('License validation error:', error);
+        // Try to extract error message from the response body
+        // The edge function returns JSON with error field even on non-2xx responses
+        try {
+          const errorBody = error.context ? await error.context.json() : null;
+          if (errorBody?.error) {
+            return { success: false, error: errorBody.error };
+          }
+        } catch {
+          // Ignore parsing errors
+        }
         return { success: false, error: 'Erreur de connexion au serveur' };
       }
 
-      if (!response.success) {
-        return { success: false, error: response.error || 'Erreur de validation' };
+      if (!response?.success) {
+        return { success: false, error: response?.error || 'Erreur de validation' };
       }
 
       // If we received an auth session, set it in Supabase client
