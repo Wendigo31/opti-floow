@@ -290,42 +290,7 @@ export function FeatureGate({
     );
   }
 
-  // Mode: hide - show locked indicator or nothing
-  if (showLockedIndicator) {
-    return (
-      <div className={cn(
-        "relative glass-card p-6 border-dashed border-2 border-border/50",
-        className
-      )}>
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <Lock className="w-6 h-6 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{featureLabel}</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Cette fonctionnalité nécessite le forfait <span className="font-medium text-primary">{planLabel}</span>
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/pricing')}
-            className="gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            Voir les forfaits
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // If no indicator and no prompt, hide completely
-  if (!showUpgradePrompt) {
-    return null;
-  }
-
+  // Mode: hide - always hide completely, never show locked indicator or redirect to pricing
   if (fallback) {
     return <>{fallback}</>;
   }
@@ -341,32 +306,15 @@ interface LockedOverlayProps {
 
 export function LockedOverlay({ feature, children, className }: LockedOverlayProps) {
   const { hasFeature } = useLicense();
-  const navigate = useNavigate();
 
-  const isLocked = !hasFeature(feature);
-  const requiredPlan = REQUIRED_PLAN[feature];
-  const planLabel = PLAN_LABELS[requiredPlan];
+  // If feature is locked, hide completely instead of showing overlay
+  if (!hasFeature(feature)) {
+    return null;
+  }
 
   return (
     <div className={cn("relative", className)}>
       {children}
-      {isLocked && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
-          <div className="text-center space-y-3 p-4">
-            <Lock className="w-8 h-8 text-muted-foreground mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              Forfait <span className="font-medium text-primary">{planLabel}</span> requis
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/pricing')}
-            >
-              Mettre à niveau
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -390,33 +338,10 @@ export function LockedButton({
   className 
 }: LockedButtonProps) {
   const { hasFeature } = useLicense();
-  const navigate = useNavigate();
 
-  const isLocked = !hasFeature(feature);
-  const requiredPlan = REQUIRED_PLAN[feature];
-  const planLabel = PLAN_LABELS[requiredPlan];
-
-  if (isLocked) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant={variant} 
-              size={size} 
-              className={cn("gap-2 opacity-60", className)}
-              onClick={() => navigate('/pricing')}
-            >
-              <Lock className="w-4 h-4" />
-              {children}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Forfait {planLabel} requis</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+  // If feature is locked, hide the button completely
+  if (!hasFeature(feature)) {
+    return null;
   }
 
   return (
