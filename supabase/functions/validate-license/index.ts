@@ -680,9 +680,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Admin: Update existing license (full edit)
+    // Admin: Update existing license (full edit) - includes SIREN sync
     if (action === "update-license") {
-      const { licenseId, email, planType, firstName, lastName, companyName, siren, address, city, postalCode } = body;
+      const { licenseId, email, planType, firstName, lastName, companyName, siren, address, city, postalCode, employeeCount, companyStatus } = body;
       const auth = await verifyAdminAuth(body, authHeader);
       
       console.log("Updating license:", licenseId, "by admin:", auth.email);
@@ -711,6 +711,8 @@ const handler = async (req: Request): Promise<Response> => {
       if (address !== undefined) updateData.address = address || null;
       if (city !== undefined) updateData.city = city || null;
       if (postalCode !== undefined) updateData.postal_code = postalCode || null;
+      if (employeeCount !== undefined) updateData.employee_count = employeeCount || null;
+      if (companyStatus !== undefined) updateData.company_status = companyStatus || null;
 
       const { error } = await supabase
         .from("licenses")

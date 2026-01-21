@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,7 @@ import {
   Users,
   FileText,
   Briefcase,
-  Phone
+  RefreshCw
 } from 'lucide-react';
 import type { PlanType } from '@/hooks/useLicense';
 
@@ -39,15 +39,30 @@ interface CreateCompanyDialogProps {
   onOpenChange: (open: boolean) => void;
   getAdminToken: () => string | null;
   onCompanyCreated: () => void;
+  // Optional: for editing/syncing SIREN on existing license
+  editLicenseId?: string;
+  editLicenseData?: {
+    companyName?: string;
+    siren?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    companyStatus?: string;
+    employeeCount?: number;
+    email?: string;
+    planType?: PlanType;
+  };
 }
 
 export function CreateCompanyDialog({ 
   open, 
   onOpenChange, 
   getAdminToken,
-  onCompanyCreated 
+  onCompanyCreated,
+  editLicenseId,
+  editLicenseData 
 }: CreateCompanyDialogProps) {
-  const { lookup, loading: sireneLoading, error: sireneError, company } = useSireneLookup();
+  const { lookup, loading: sireneLoading, error: sireneError, company, reset: resetSiren } = useSireneLookup();
   const [sirenInput, setSirenInput] = useState('');
   const [planType, setPlanType] = useState<PlanType>('start');
   const [ownerEmail, setOwnerEmail] = useState('');
@@ -57,10 +72,61 @@ export function CreateCompanyDialog({
   const [ownerPosition, setOwnerPosition] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createdLicense, setCreatedLicense] = useState<{ code: string; email: string } | null>(null);
+  
+  // Is this in edit mode (syncing SIREN to existing license)?
+  const isEditMode = !!editLicenseId;
+
+  // Prefill form when editing existing license
+  useEffect(() => {
+    if (open && editLicenseData) {
+      setSirenInput(editLicenseData.siren || '');
+      setPlanType(editLicenseData.planType || 'start');
+      setOwnerEmail(editLicenseData.email || '');
+    }
+  }, [open, editLicenseData]);
 
   const handleSirenLookup = async () => {
     if (!sirenInput.trim()) return;
     await lookup(sirenInput);
+  };
+
+  // Handle sync SIREN to existing license (edit mode)
+  const handleSyncSiren = async () => {
+    if (!company) {
+      toast.error('Veuillez d\'abord rechercher une entreprise via SIREN');
+      return;
+    }
+    if (!editLicenseId) return;
+
+    setIsCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: {
+          action: 'update-license',
+          adminToken: getAdminToken(),
+          licenseId: editLicenseId,
+          companyName: company.companyName,
+          siren: company.siren,
+          address: company.address,
+          city: company.city,
+          postalCode: company.postalCode,
+          employeeCount: company.employeeCount,
+          companyStatus: company.legalStatus,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erreur lors de la mise à jour');
+
+      toast.success('Informations SIREN synchronisées avec succès');
+      onCompanyCreated();
+      handleClose();
+    } catch (err: any) {
+      console.error('Error syncing SIREN:', err);
+      toast.error(err.message || 'Erreur lors de la synchronisation');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -110,10 +176,6 @@ export function CreateCompanyDialog({
           console.error('Error creating owner user:', userError);
         }
 
-        // Note: company_settings will be created when the owner first logs in
-        // The license table already stores all SIREN data (siren, address, city, postal_code, company_status, employee_count)
-        // so no need to duplicate here
-
         setCreatedLicense({
           code: data.license.license_code,
           email: ownerEmail,
@@ -139,6 +201,7 @@ export function CreateCompanyDialog({
     setOwnerPosition('');
     setPlanType('start');
     setCreatedLicense(null);
+    resetSiren();
     onOpenChange(false);
   };
 
@@ -154,11 +217,23 @@ export function CreateCompanyDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Créer une société
+            {isEditMode ? (
+              <>
+                <RefreshCw className="h-5 w-5" />
+                Synchroniser les infos SIREN
+              </>
+            ) : (
+              <>
+                <Building2 className="h-5 w-5" />
+                Créer une société
+              </>
+            )}
           </DialogTitle>
           <DialogDescription>
-            Recherchez l'entreprise via son numéro SIREN/SIRET pour pré-remplir les informations
+            {isEditMode 
+              ? 'Mettez à jour les informations de l\'entreprise via une nouvelle recherche SIREN'
+              : 'Recherchez l\'entreprise via son numéro SIREN/SIRET pour pré-remplir les informations'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -277,92 +352,105 @@ export function CreateCompanyDialog({
               )}
             </div>
 
-            {/* Owner Information */}
-            <div className="space-y-4 pt-2">
-              <h4 className="font-medium">Propriétaire de la société</h4>
-              
-              <div className="grid grid-cols-2 gap-4">
+            {/* Owner Information - Only show in create mode */}
+            {!isEditMode && (
+              <div className="space-y-4 pt-2">
+                <h4 className="font-medium">Propriétaire de la société</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Prénom</Label>
+                    <Input
+                      id="firstName"
+                      placeholder="Jean"
+                      value={ownerFirstName}
+                      onChange={(e) => setOwnerFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Nom</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Dupont"
+                      value={ownerLastName}
+                      onChange={(e) => setOwnerLastName(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Prénom</Label>
+                  <Label htmlFor="email">Email du propriétaire *</Label>
                   <Input
-                    id="firstName"
-                    placeholder="Jean"
-                    value={ownerFirstName}
-                    onChange={(e) => setOwnerFirstName(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="contact@entreprise.fr"
+                    value={ownerEmail}
+                    onChange={(e) => setOwnerEmail(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Nom</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Dupont"
-                    value={ownerLastName}
-                    onChange={(e) => setOwnerLastName(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email du propriétaire *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="contact@entreprise.fr"
-                  value={ownerEmail}
-                  onChange={(e) => setOwnerEmail(e.target.value)}
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="06 12 34 56 78"
-                    value={ownerPhone}
-                    onChange={(e) => setOwnerPhone(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Téléphone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="06 12 34 56 78"
+                      value={ownerPhone}
+                      onChange={(e) => setOwnerPhone(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="position">Poste / Fonction</Label>
+                    <Input
+                      id="position"
+                      placeholder="Gérant, Directeur..."
+                      value={ownerPosition}
+                      onChange={(e) => setOwnerPosition(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">Poste / Fonction</Label>
-                  <Input
-                    id="position"
-                    placeholder="Gérant, Directeur..."
-                    value={ownerPosition}
-                    onChange={(e) => setOwnerPosition(e.target.value)}
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Forfait</Label>
-                <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="start">Start</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="expert">Expert</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label>Forfait</Label>
+                  <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="start">Start</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="expert">Expert</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 Annuler
               </Button>
-              <Button 
-                onClick={handleCreate} 
-                disabled={isCreating || !company || !ownerEmail.trim()}
-              >
-                {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                <Building2 className="h-4 w-4 mr-2" />
-                Créer la société
-              </Button>
+              {isEditMode ? (
+                <Button 
+                  onClick={handleSyncSiren} 
+                  disabled={isCreating || !company}
+                >
+                  {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Synchroniser les infos
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleCreate} 
+                  disabled={isCreating || !company || !ownerEmail.trim()}
+                >
+                  {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Créer la société
+                </Button>
+              )}
             </DialogFooter>
           </>
         )}
