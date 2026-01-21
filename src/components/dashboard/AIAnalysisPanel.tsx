@@ -58,7 +58,7 @@ interface AIResponse {
 export default function AIAnalysisPanel() {
   const { toast } = useToast();
   const { vehicle, drivers } = useApp();
-  const { hasFeature } = useLicense();
+  const { hasFeature, refreshLicense } = useLicense();
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const { saveTour } = useSavedTours();
   
@@ -235,16 +235,31 @@ export default function AIAnalysisPanel() {
   if (!canUseAIOptimization) {
     const handleSyncLicense = async () => {
       try {
-        // Trigger license sync via BroadcastChannel
+        // Call the real refreshLicense function from the hook
+        await refreshLicense();
+        
+        // Also trigger sync via BroadcastChannel for other tabs
         const channel = new BroadcastChannel('optiflow-license-sync');
-        channel.postMessage({ type: 'sync-request' });
+        channel.postMessage({ type: 'sync-complete' });
         channel.close();
         
-        // Reload the page to refresh all caches
-        window.location.reload();
+        toast({
+          title: "Licence synchronisée",
+          description: "Vos fonctionnalités ont été mises à jour",
+        });
+        
+        // Give the state a moment to update before reloading if needed
+        setTimeout(() => {
+          // Force reload to ensure UI reflects new state
+          window.location.reload();
+        }, 500);
       } catch (error) {
         console.error('Erreur lors de la synchronisation:', error);
-        window.location.reload();
+        toast({
+          title: "Erreur",
+          description: "Impossible de synchroniser la licence",
+          variant: "destructive",
+        });
       }
     };
 

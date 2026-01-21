@@ -1606,6 +1606,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (action === "check") {
       // Check if stored license is still valid (used on app load)
+      // Supports both license owners and company members
       const { licenseCode, email }: CheckLicenseRequest = body;
 
       if (!licenseCode || !email) {
@@ -1615,22 +1616,57 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const { data: license, error } = await supabase
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedCode = licenseCode.trim().toUpperCase();
+
+      // First, find license by code only (to support company members)
+      const { data: licenseByCode, error: codeError } = await supabase
         .from("licenses")
-        .select("id, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
-        .eq("license_code", licenseCode.trim().toUpperCase())
-        .eq("email", email.trim().toLowerCase())
+        .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
+        .eq("license_code", normalizedCode)
         .maybeSingle();
 
-      if (error) {
-        console.error("License check error:", error);
+      if (codeError) {
+        console.error("License check error:", codeError);
         return new Response(
           JSON.stringify({ valid: false, error: "Database error" }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      if (!license || !license.is_active) {
+      if (!licenseByCode) {
+        console.log("[check] License not found for code:", normalizedCode.substring(0, 4) + '...');
+        return new Response(
+          JSON.stringify({ valid: false }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Check if this is the license owner OR a member of the company
+      let license = licenseByCode;
+      
+      if (licenseByCode.email !== normalizedEmail) {
+        // Check if user is a registered member of this company
+        const { data: memberRecord } = await supabase
+          .from("company_users")
+          .select("id, role, email, is_active")
+          .eq("license_id", licenseByCode.id)
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+          
+        if (!memberRecord || !memberRecord.is_active) {
+          console.log("[check] Email not a valid company member:", normalizedEmail);
+          return new Response(
+            JSON.stringify({ valid: false }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+        
+        console.log("[check] Valid company member found:", normalizedEmail, "role:", memberRecord.role);
+      }
+
+      if (!license.is_active) {
+        console.log("[check] License is inactive");
         return new Response(
           JSON.stringify({ valid: false }),
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
