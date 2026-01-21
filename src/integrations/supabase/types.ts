@@ -1383,6 +1383,16 @@ export type Database = {
         Args: { p_message?: string; p_requested_features: string[] }
         Returns: string
       }
+      get_company_members_safe: {
+        Args: never
+        Returns: {
+          display_name: string
+          id: string
+          is_active: boolean
+          is_current_user: boolean
+          role: string
+        }[]
+      }
       get_table_columns: {
         Args: { table_name: string }
         Returns: {
