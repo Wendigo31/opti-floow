@@ -28,7 +28,10 @@ import {
   Award,
   Target,
   Shield,
-  Navigation
+  Navigation,
+  Plus,
+  X,
+  Edit3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,8 +49,20 @@ import { VisualSchedule } from '@/components/ai/VisualSchedule';
 import { AIRouteMap } from '@/components/ai/AIRouteMap';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { validateAIRequest } from '@/utils/aiValidation';
+import { AddressInput } from '@/components/route/AddressInput';
 import type { Vehicle } from '@/types/vehicle';
 import type { SavedTour } from '@/types/savedTour';
+
+interface Position {
+  lat: number;
+  lon: number;
+}
+
+interface StopWaypoint {
+  id: string;
+  address: string;
+  position: Position | null;
+}
 
 // Import itinerary state to get current search
 const ITINERARY_STORAGE_KEY = 'optiflow_itinerary_state';
@@ -173,9 +188,14 @@ export default function AIAnalysis() {
   const [loadTourOpen, setLoadTourOpen] = useState(false);
   const [loadedTour, setLoadedTour] = useState<SavedTour | null>(null);
   
+  // Address inputs with autocomplete
   const [origin, setOrigin] = useState('');
+  const [originPosition, setOriginPosition] = useState<Position | null>(null);
   const [destination, setDestination] = useState('');
-  const [stops, setStops] = useState<string[]>([]);
+  const [destinationPosition, setDestinationPosition] = useState<Position | null>(null);
+  const [stops, setStops] = useState<StopWaypoint[]>([]);
+  const [inputMode, setInputMode] = useState<'manual' | 'itinerary' | 'tour'>('manual');
+  
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   
@@ -282,8 +302,19 @@ export default function AIAnalysis() {
     }
     
     setOrigin(itineraryState.originAddress);
+    setOriginPosition(itineraryState.originPosition || null);
     setDestination(itineraryState.destinationAddress);
-    setStops(itineraryState.stops?.map((s: any) => s.address).filter(Boolean) || []);
+    setDestinationPosition(itineraryState.destinationPosition || null);
+    
+    // Convert stops from itinerary format to StopWaypoint format
+    const itineraryStops = itineraryState.stops || [];
+    setStops(itineraryStops.map((s: any) => ({
+      id: s.id || crypto.randomUUID(),
+      address: s.address || '',
+      position: s.position || null,
+    })));
+    
+    setInputMode('itinerary');
     
     // Load vehicle if selected
     if (itineraryState.selectedVehicleId) {
@@ -311,8 +342,18 @@ export default function AIAnalysis() {
   const handleLoadTour = (tour: SavedTour) => {
     setLoadedTour(tour);
     setOrigin(tour.origin_address);
+    setOriginPosition(null); // Tours don't store positions
     setDestination(tour.destination_address);
-    setStops(tour.stops?.map(s => s.address) || []);
+    setDestinationPosition(null);
+    
+    // Convert tour stops to StopWaypoint format
+    setStops(tour.stops?.map(s => ({
+      id: crypto.randomUUID(),
+      address: s.address,
+      position: null,
+    })) || []);
+    
+    setInputMode('tour');
     setResult(null);
     setAnalysisMode('optimize_route');
     toast({ title: "Tournée chargée", description: `"${tour.name}" prête pour l'analyse` });
@@ -321,11 +362,30 @@ export default function AIAnalysis() {
   const handleClearTour = () => {
     setLoadedTour(null);
     setOrigin('');
+    setOriginPosition(null);
     setDestination('');
+    setDestinationPosition(null);
     setStops([]);
+    setInputMode('manual');
     setResult(null);
     setAnalysisMode('full_optimization');
   };
+
+  // Stops management for manual input
+  const addStop = () => {
+    setStops([...stops, { id: crypto.randomUUID(), address: '', position: null }]);
+  };
+
+  const removeStop = (id: string) => {
+    setStops(stops.filter(s => s.id !== id));
+  };
+
+  const updateStop = (id: string, address: string, position: Position | null) => {
+    setStops(stops.map(s => s.id === id ? { ...s, address, position } : s));
+  };
+
+  // Get stops as string array for API
+  const getStopsForAPI = () => stops.map(s => s.address).filter(Boolean);
 
   const handleAnalyze = async () => {
     // Comprehensive validation using the utility
@@ -386,7 +446,7 @@ export default function AIAnalysis() {
       };
 
       if (loadedTour && validation.sanitizedCosts) {
-        requestBody.stops = stops;
+        requestBody.stops = getStopsForAPI();
         requestBody.currentCosts = validation.sanitizedCosts;
         requestBody.currentDistance = loadedTour.distance_km;
         requestBody.currentDuration = loadedTour.duration_minutes;
@@ -458,14 +518,12 @@ export default function AIAnalysis() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleLoadFromItinerary} variant="outline" className="gap-2">
-              <Navigation className="w-4 h-4" />
-              Reprendre l'itinéraire
-            </Button>
-            <Button onClick={() => setLoadTourOpen(true)} variant="outline" className="gap-2">
-              <Upload className="w-4 h-4" />
-              Charger une tournée
-            </Button>
+            {(origin || destination || stops.length > 0) && (
+              <Button onClick={handleClearTour} variant="ghost" className="gap-2 text-muted-foreground">
+                <RotateCcw className="w-4 h-4" />
+                Réinitialiser
+              </Button>
+            )}
           </div>
         </div>
 
@@ -551,31 +609,121 @@ export default function AIAnalysis() {
               </div>
             )}
 
-            {/* Route */}
+            {/* Input Mode Selector */}
             <div className="glass-card p-5 opacity-0 animate-slide-up" style={{ animationDelay: '50ms', animationFillMode: 'forwards' }}>
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">Trajet</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">Trajet</h2>
+                </div>
+                {inputMode !== 'manual' && (
+                  <Badge variant="secondary" className="text-xs">
+                    {inputMode === 'itinerary' ? 'Depuis itinéraire' : 'Depuis tournée'}
+                  </Badge>
+                )}
               </div>
+              
+              {/* Quick actions */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <button
+                  onClick={() => {
+                    handleClearTour();
+                    setInputMode('manual');
+                  }}
+                  className={cn(
+                    "p-2 rounded-lg border text-center text-xs transition-all",
+                    inputMode === 'manual' ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/50"
+                  )}
+                >
+                  <Edit3 className="w-4 h-4 mx-auto mb-1 text-primary" />
+                  <span>Saisie libre</span>
+                </button>
+                <button
+                  onClick={handleLoadFromItinerary}
+                  className={cn(
+                    "p-2 rounded-lg border text-center text-xs transition-all",
+                    inputMode === 'itinerary' ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/50"
+                  )}
+                >
+                  <Navigation className="w-4 h-4 mx-auto mb-1 text-primary" />
+                  <span>Itinéraire</span>
+                </button>
+                <button
+                  onClick={() => setLoadTourOpen(true)}
+                  className={cn(
+                    "p-2 rounded-lg border text-center text-xs transition-all",
+                    inputMode === 'tour' ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/50"
+                  )}
+                >
+                  <Folder className="w-4 h-4 mx-auto mb-1 text-primary" />
+                  <span>Tournée</span>
+                </button>
+              </div>
+
+              {/* Address inputs with autocomplete */}
               <div className="space-y-3">
-                <div>
-                  <Label className="text-xs">Origine</Label>
-                  <Input
-                    value={origin}
-                    onChange={(e) => setOrigin(e.target.value)}
-                    placeholder="Ex: Paris, 75001"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Destination</Label>
-                  <Input
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    placeholder="Ex: Marseille, 13001"
-                    className="mt-1"
-                  />
-                </div>
+                <AddressInput
+                  value={origin}
+                  onChange={setOrigin}
+                  onSelect={(address, position) => {
+                    setOrigin(address);
+                    setOriginPosition({ lat: position.lat, lon: position.lon });
+                  }}
+                  label="Origine"
+                  placeholder="Ex: 15 rue de la Paix, 75002 Paris"
+                  icon="start"
+                />
+                
+                {/* Stops */}
+                {stops.length > 0 && (
+                  <div className="space-y-2">
+                    {stops.map((stop, index) => (
+                      <div key={stop.id} className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <AddressInput
+                            value={stop.address}
+                            onChange={(value) => updateStop(stop.id, value, null)}
+                            onSelect={(address, position) => updateStop(stop.id, address, { lat: position.lat, lon: position.lon })}
+                            label={`Arrêt ${index + 1}`}
+                            placeholder="Adresse de l'arrêt..."
+                            icon="start"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mt-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeStop(stop.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Add stop button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addStop}
+                  className="w-full border-dashed"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter un arrêt
+                </Button>
+                
+                <AddressInput
+                  value={destination}
+                  onChange={setDestination}
+                  onSelect={(address, position) => {
+                    setDestination(address);
+                    setDestinationPosition({ lat: position.lat, lon: position.lon });
+                  }}
+                  label="Destination"
+                  placeholder="Ex: 25 avenue des Champs-Élysées, 75008 Paris"
+                  icon="end"
+                />
               </div>
             </div>
 
@@ -904,7 +1052,7 @@ export default function AIAnalysis() {
                   <AIRouteMap
                     origin={origin}
                     destination={destination}
-                    stops={stops}
+                    stops={getStopsForAPI()}
                     relayPoints={result.relayPlan?.relayPoints || []}
                     segments={result.routeDetails?.segments || []}
                   />
