@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -107,14 +107,24 @@ export function useCompanyRealtimeSync({
   enabled?: boolean;
 }) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Use ref to store callback to avoid re-subscription on callback changes
+  const onDataChangeRef = useRef(onDataChange);
+  onDataChangeRef.current = onDataChange;
 
   useEffect(() => {
     if (!licenseId || !enabled) {
       return;
     }
 
+    // Don't re-subscribe if we already have a channel for this license
+    if (channelRef.current) {
+      return;
+    }
+
     const channelName = `company_sync_${licenseId}`;
     const tables: TableName[] = ['user_charges', 'user_vehicles', 'user_drivers', 'user_trailers', 'saved_tours', 'trips', 'clients', 'quotes', 'company_settings'];
+
+    console.log(`[CompanySync] Setting up realtime subscription for license: ${licenseId}`);
 
     let channel = supabase.channel(channelName);
 
@@ -131,7 +141,7 @@ export function useCompanyRealtimeSync({
           },
           (payload) => {
             console.log(`[CompanySync] ${table} INSERT:`, payload);
-            onDataChange(table, 'INSERT', payload);
+            onDataChangeRef.current(table, 'INSERT', payload);
           }
         )
         .on(
@@ -144,7 +154,7 @@ export function useCompanyRealtimeSync({
           },
           (payload) => {
             console.log(`[CompanySync] ${table} UPDATE:`, payload);
-            onDataChange(table, 'UPDATE', payload);
+            onDataChangeRef.current(table, 'UPDATE', payload);
           }
         )
         .on(
@@ -157,22 +167,28 @@ export function useCompanyRealtimeSync({
           },
           (payload) => {
             console.log(`[CompanySync] ${table} DELETE:`, payload);
-            onDataChange(table, 'DELETE', payload);
+            onDataChangeRef.current(table, 'DELETE', payload);
           }
         );
     }
 
     channelRef.current = channel.subscribe((status) => {
-      console.log(`[CompanySync] Subscription status:`, status);
+      console.log(`[CompanySync] Subscription status for ${licenseId}:`, status);
+      if (status === 'SUBSCRIBED') {
+        console.log(`[CompanySync] ✅ Successfully subscribed to realtime updates`);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error(`[CompanySync] ❌ Channel error - check if tables have REPLICA IDENTITY FULL`);
+      }
     });
 
     return () => {
       if (channelRef.current) {
+        console.log(`[CompanySync] Cleaning up subscription for ${licenseId}`);
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [licenseId, enabled, onDataChange]);
+  }, [licenseId, enabled]); // Removed onDataChange from deps - using ref instead
 
   return channelRef.current;
 }
