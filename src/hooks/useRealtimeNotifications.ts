@@ -39,7 +39,8 @@ export function useRealtimeNotifications() {
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
     creatorEmail?: string,
-    isOwnAction?: boolean
+    isOwnAction?: boolean,
+    creatorDisplayName?: string
   ) => {
     const prefs = getStoredPreferences();
     
@@ -55,10 +56,18 @@ export function useRealtimeNotifications() {
     // Check own actions preference
     if (isOwnAction && !prefs.showOwnActions) return;
     
-    // Don't show notification if no creator email
+    // Don't show notification if no creator info
     if (!creatorEmail && !isOwnAction) return;
-    
-    const creatorName = isOwnAction ? 'Vous avez' : `${creatorEmail?.split('@')[0]} a`;
+
+    // Use display name if available, otherwise extract from email
+    let creatorName: string;
+    if (isOwnAction) {
+      creatorName = 'Vous avez';
+    } else if (creatorDisplayName) {
+      creatorName = `${creatorDisplayName} a`;
+    } else {
+      creatorName = `${creatorEmail?.split('@')[0]} a`;
+    }
     
     const actionLabels = {
       INSERT: 'ajouté',
@@ -106,15 +115,19 @@ export function useRealtimeNotifications() {
     licenseIdRef.current = licenseId;
     isSubscribedRef.current = true;
 
-    // Fetch company members for email lookup
+    // Fetch company members for email and display_name lookup
     const { data: members } = await supabase
       .from('company_users')
-      .select('user_id, email')
+      .select('user_id, email, display_name')
       .eq('license_id', licenseId)
       .eq('is_active', true);
 
-    const memberMap = new Map<string, string>();
-    members?.forEach(m => memberMap.set(m.user_id, m.email));
+    const memberMap = new Map<string, { email: string; displayName?: string }>();
+    members?.forEach(m => {
+      if (m.user_id) {
+        memberMap.set(m.user_id, { email: m.email, displayName: m.display_name || undefined });
+      }
+    });
 
     // Subscribe to vehicles changes
     const vehicleChannel = supabase
@@ -132,8 +145,8 @@ export function useRealtimeNotifications() {
           const userId = record.user_id;
           const isOwnAction = userId === currentUserIdRef.current;
           
-          const creatorEmail = memberMap.get(userId);
-          showNotification('vehicle', payload.eventType, record.name || 'Véhicule', creatorEmail, isOwnAction);
+          const memberInfo = memberMap.get(userId);
+          showNotification('vehicle', payload.eventType, record.name || 'Véhicule', memberInfo?.email, isOwnAction, memberInfo?.displayName);
         }
       )
       .subscribe();
@@ -154,8 +167,8 @@ export function useRealtimeNotifications() {
           const userId = record.user_id;
           const isOwnAction = userId === currentUserIdRef.current;
           
-          const creatorEmail = memberMap.get(userId);
-          showNotification('trailer', payload.eventType, record.name || 'Remorque', creatorEmail, isOwnAction);
+          const memberInfo = memberMap.get(userId);
+          showNotification('trailer', payload.eventType, record.name || 'Remorque', memberInfo?.email, isOwnAction, memberInfo?.displayName);
         }
       )
       .subscribe();
@@ -176,8 +189,8 @@ export function useRealtimeNotifications() {
           const userId = record.user_id;
           const isOwnAction = userId === currentUserIdRef.current;
           
-          const creatorEmail = memberMap.get(userId);
-          showNotification('tour', payload.eventType, record.name || 'Tournée', creatorEmail, isOwnAction);
+          const memberInfo = memberMap.get(userId);
+          showNotification('tour', payload.eventType, record.name || 'Tournée', memberInfo?.email, isOwnAction, memberInfo?.displayName);
         }
       )
       .subscribe();
@@ -198,8 +211,8 @@ export function useRealtimeNotifications() {
           const userId = record.user_id;
           const isOwnAction = userId === currentUserIdRef.current;
           
-          const creatorEmail = memberMap.get(userId);
-          showNotification('driver', payload.eventType, record.name || 'Conducteur', creatorEmail, isOwnAction);
+          const memberInfo = memberMap.get(userId);
+          showNotification('driver', payload.eventType, record.name || 'Conducteur', memberInfo?.email, isOwnAction, memberInfo?.displayName);
         }
       )
       .subscribe();
