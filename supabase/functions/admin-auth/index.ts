@@ -13,7 +13,7 @@ type AdminAuthRequest = {
 };
 
 // Async JWT creation with proper crypto
-const createJWTAsync = async (payload: object, secret: string, expiresInHours: number = 12): Promise<string> => {
+const createJWTAsync = async (payload: object, secret: string, expiresInHours: number = 2): Promise<string> => {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const exp = now + (expiresInHours * 3600);
@@ -307,7 +307,7 @@ Deno.serve(async (req) => {
     // Get first admin email for the token (or use a generic admin identifier)
     const adminEmail = adminEmails[0] || 'admin@optiflow.app';
     
-    // Generate JWT token (12 hour expiry)
+    // Generate JWT token (2 hour expiry for better security)
     const jwtSecret = expected; // Use the admin code as JWT secret
     const token = await createJWTAsync(
       { 
@@ -316,12 +316,12 @@ Deno.serve(async (req) => {
         ip: clientIp 
       }, 
       jwtSecret, 
-      12
+      2
     );
 
     await logAdminAction(supabase, adminEmail, 'login_success', { ip: clientIp }, clientIp);
 
-    return new Response(JSON.stringify({ ok: true, token, expiresIn: 12 * 3600 }), {
+    return new Response(JSON.stringify({ ok: true, token, expiresIn: 2 * 3600 }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

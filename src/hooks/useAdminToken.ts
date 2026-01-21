@@ -1,9 +1,9 @@
-// Use the same key as Admin.tsx for consistency
-const ADMIN_TOKEN_KEY = 'optiflow_admin_token_v1';
+// Use sessionStorage for better security (cleared on tab close)
+const ADMIN_TOKEN_KEY = 'optiflow_admin_token_v2';
 
 export function getAdminToken(): string | null {
   try {
-    return localStorage.getItem(ADMIN_TOKEN_KEY);
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY);
   } catch {
     return null;
   }
@@ -11,7 +11,7 @@ export function getAdminToken(): string | null {
 
 export function setAdminToken(token: string): void {
   try {
-    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
   } catch {
     console.error('Failed to store admin token');
   }
@@ -19,7 +19,9 @@ export function setAdminToken(token: string): void {
 
 export function clearAdminToken(): void {
   try {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    // Also clear legacy localStorage key if exists
+    localStorage.removeItem('optiflow_admin_token_v1');
   } catch {
     console.error('Failed to clear admin token');
   }
