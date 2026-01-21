@@ -8,7 +8,6 @@ import {
   Navigation,
   BarChart3,
   UserCircle,
-  Info,
   CreditCard,
   Lock,
   TrendingUp,
@@ -86,7 +85,6 @@ const navItems: NavItemConfig[] = [
   // Settings & Subscription
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
-  { to: '/info', icon: Info, labelKey: 'info' },
 ];
 
 export function Sidebar() {

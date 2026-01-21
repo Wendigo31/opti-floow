@@ -26,7 +26,7 @@ import Dashboard from "./pages/Dashboard";
 import Forecast from "./pages/Forecast";
 import Activation from "./pages/Activation";
 import NotFound from "./pages/NotFound";
-// Info page merged into Settings
+
 import Pricing from "./pages/Pricing";
 
 import Admin from "./pages/Admin";
@@ -121,7 +121,7 @@ function AppRoutes() {
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/charges" element={<Charges />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/info" element={<Settings />} />
+              
               <Route path="/ai-analysis" element={<AIAnalysis />} />
               <Route path="/vehicle-reports" element={<VehicleReports />} />
               <Route path="/tours" element={<Tours />} />
