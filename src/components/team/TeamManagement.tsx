@@ -58,6 +58,7 @@ export function TeamManagement() {
   } = useTeam();
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteDisplayName, setInviteDisplayName] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamRole>('member');
   const [isInviting, setIsInviting] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
@@ -95,16 +96,26 @@ export function TeamManagement() {
       return;
     }
 
+    if (!inviteDisplayName.trim()) {
+      toast({
+        title: 'Nom requis',
+        description: 'Veuillez entrer le nom et prénom de l\'utilisateur',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsInviting(true);
-    const result = await inviteMember(inviteEmail.trim(), inviteRole);
+    const result = await inviteMember(inviteEmail.trim(), inviteRole, inviteDisplayName.trim());
     setIsInviting(false);
 
     if (result.success) {
       toast({
         title: 'Invitation envoyée',
-        description: `Une invitation a été créée pour ${inviteEmail}`,
+        description: `Une invitation a été créée pour ${inviteDisplayName || inviteEmail}`,
       });
       setInviteEmail('');
+      setInviteDisplayName('');
       setInviteRole('member');
     } else {
       toast({
@@ -256,9 +267,20 @@ export function TeamManagement() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="invite-email">Adresse email</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="invite-name">Prénom et Nom *</Label>
+                  <Input
+                    id="invite-name"
+                    type="text"
+                    placeholder="Jean Dupont"
+                    value={inviteDisplayName}
+                    onChange={(e) => setInviteDisplayName(e.target.value)}
+                    disabled={!canAddMore || isInviting}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="invite-email">Adresse email *</Label>
                   <Input
                     id="invite-email"
                     type="email"
@@ -268,7 +290,7 @@ export function TeamManagement() {
                     disabled={!canAddMore || isInviting}
                   />
                 </div>
-                <div className="w-full sm:w-40">
+                <div>
                   <Label>Rôle</Label>
                   <Select
                     value={inviteRole}
@@ -287,7 +309,8 @@ export function TeamManagement() {
                 <div className="flex items-end">
                   <Button
                     onClick={handleInvite}
-                    disabled={!canAddMore || isInviting || !inviteEmail.trim()}
+                    disabled={!canAddMore || isInviting || !inviteEmail.trim() || !inviteDisplayName.trim()}
+                    className="w-full"
                   >
                     {isInviting ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />

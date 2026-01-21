@@ -16,7 +16,7 @@ interface UseTeamReturn {
   canAddMore: boolean;
   isLoading: boolean;
   error: string | null;
-  inviteMember: (email: string, role: TeamRole) => Promise<{ success: boolean; error?: string }>;
+  inviteMember: (email: string, role: TeamRole, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   updateMemberRole: (memberId: string, role: TeamRole) => Promise<{ success: boolean; error?: string }>;
   removeMember: (memberId: string) => Promise<{ success: boolean; error?: string }>;
   cancelInvitation: (invitationId: string) => Promise<{ success: boolean; error?: string }>;
@@ -122,7 +122,7 @@ export function useTeam(): UseTeamReturn {
     fetchTeam();
   }, [fetchTeam]);
 
-  const inviteMember = useCallback(async (email: string, role: TeamRole): Promise<{ success: boolean; error?: string }> => {
+  const inviteMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
     if (!canManageTeam) {
       return { success: false, error: 'Vous n\'avez pas les permissions pour inviter des membres' };
     }
@@ -176,7 +176,7 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Une invitation est déjà en attente pour cet email' };
       }
 
-      // Create invitation
+      // Create invitation and add user to company_users with display_name
       const { error: insertError } = await supabase
         .from('company_invitations')
         .insert({
@@ -189,6 +189,23 @@ export function useTeam(): UseTeamReturn {
       if (insertError) {
         console.error('Error creating invitation:', insertError);
         return { success: false, error: 'Erreur lors de la création de l\'invitation' };
+      }
+
+      // Also create company_users entry with display_name so user gets name from start
+      const { error: userError } = await supabase
+        .from('company_users')
+        .insert({
+          license_id: license.id,
+          email: email.toLowerCase(),
+          role,
+          display_name: displayName?.trim() || null,
+          invited_by: user.id,
+          is_active: true,
+        });
+
+      if (userError) {
+        console.error('Error creating company user:', userError);
+        // Don't fail - invitation was created successfully
       }
 
       await fetchTeam();
