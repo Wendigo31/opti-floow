@@ -1367,6 +1367,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      admin_toggle_company_user_active: {
+        Args: { p_is_active: boolean; p_user_id: string }
+        Returns: boolean
+      }
       admin_update_company_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: boolean

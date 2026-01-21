@@ -20,7 +20,11 @@ import {
   Building2,
   RefreshCw,
   Clock,
-  Activity
+  Activity,
+  UserX,
+  UserCheck,
+  Power,
+  PowerOff
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -78,6 +82,8 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [userToRemove, setUserToRemove] = useState<string | null>(null);
+  const [userToToggle, setUserToToggle] = useState<{ id: string; isActive: boolean } | null>(null);
+  const [isTogglingUser, setIsTogglingUser] = useState(false);
 
   // Add user form
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -297,6 +303,50 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     }
   };
 
+  const handleToggleUserActive = async () => {
+    if (!userToToggle) return;
+
+    setIsTogglingUser(true);
+    try {
+      const newStatus = !userToToggle.isActive;
+      
+      // Use RPC function to toggle user status
+      const { error } = await supabase
+        .rpc('admin_toggle_company_user_active', {
+          p_user_id: userToToggle.id,
+          p_is_active: newStatus,
+        });
+
+      if (error) {
+        console.error('Error toggling user:', error);
+        toast({
+          title: 'Erreur',
+          description: error.message || 'Impossible de modifier le statut',
+          variant: 'destructive',
+        });
+      } else {
+        setCompanyUsers(prev => prev.map(u => 
+          u.id === userToToggle.id ? { ...u, is_active: newStatus } : u
+        ));
+        toast({
+          title: newStatus ? 'Utilisateur réactivé' : 'Utilisateur désactivé',
+          description: newStatus 
+            ? 'L\'utilisateur peut à nouveau accéder à la société' 
+            : 'L\'utilisateur ne peut plus accéder à la société',
+        });
+      }
+    } catch (e) {
+      console.error('Error:', e);
+      toast({
+        title: 'Erreur',
+        description: 'Une erreur inattendue s\'est produite',
+        variant: 'destructive',
+      });
+    }
+    setIsTogglingUser(false);
+    setUserToToggle(null);
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner': return <Crown className="h-4 w-4 text-amber-500" />;
@@ -443,18 +493,26 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
               {companyUsers.map(user => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
+                  className={`flex items-center justify-between p-3 rounded-lg border ${!user.is_active ? 'opacity-60 bg-muted/30' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className={`h-8 w-8 ${!user.is_active ? 'grayscale' : ''}`}>
                       <AvatarFallback className="text-xs">
                         {user.display_name?.[0] || user.email[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium text-sm">
-                        {user.display_name || user.email}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">
+                          {user.display_name || user.email}
+                        </p>
+                        {!user.is_active && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            <PowerOff className="h-2.5 w-2.5 mr-1" />
+                            Désactivé
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
@@ -491,10 +549,11 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                     </Badge>
                     {user.role !== 'owner' && (
                       <>
-                        {/* Admin panel - no feature gates needed */}
+                        {/* Role selector */}
                         <Select
                           value={user.role}
                           onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
+                          disabled={!user.is_active}
                         >
                           <SelectTrigger className="w-24 h-8">
                             <SelectValue />
@@ -504,11 +563,23 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                        {/* Toggle active/inactive button */}
+                        <Button
+                          variant={user.is_active ? "outline" : "default"}
+                          size="icon"
+                          className={`h-8 w-8 ${user.is_active ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                          onClick={() => setUserToToggle({ id: user.id, isActive: user.is_active })}
+                          title={user.is_active ? 'Désactiver l\'utilisateur' : 'Réactiver l\'utilisateur'}
+                        >
+                          {user.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                        </Button>
+                        {/* Delete button */}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => setUserToRemove(user.id)}
+                          title="Supprimer définitivement"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -603,6 +674,42 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemoveUser} className="bg-destructive hover:bg-destructive/90">
               Retirer l'utilisateur
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm toggle active dialog */}
+      <AlertDialog open={!!userToToggle} onOpenChange={() => setUserToToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {userToToggle?.isActive 
+                ? 'Désactiver cet utilisateur ?' 
+                : 'Réactiver cet utilisateur ?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              {userToToggle?.isActive ? (
+                <>
+                  <p>L'utilisateur ne pourra plus se connecter ni accéder aux données de la société.</p>
+                  <p className="text-sm font-medium text-foreground">
+                    ✓ Ses données resteront intactes et il pourra être réactivé à tout moment.
+                  </p>
+                </>
+              ) : (
+                <p>L'utilisateur pourra à nouveau se connecter et accéder aux données partagées de la société.</p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTogglingUser}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleToggleUserActive} 
+              disabled={isTogglingUser}
+              className={userToToggle?.isActive ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
+            >
+              {isTogglingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {userToToggle?.isActive ? 'Désactiver' : 'Réactiver'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
