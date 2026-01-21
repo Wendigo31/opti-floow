@@ -1,6 +1,137 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Plan defaults - features enabled by default based on plan type
+const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | null>> = {
+  start: {
+    basic_calculator: true,
+    itinerary_planning: false,
+    dashboard_basic: true,
+    dashboard_analytics: false,
+    forecast: false,
+    trip_history: false,
+    multi_drivers: false,
+    cost_analysis: false,
+    cost_analysis_basic: true,
+    margin_alerts: false,
+    dynamic_charts: false,
+    pdf_export_pro: false,
+    excel_export: false,
+    monthly_tracking: false,
+    auto_pricing: false,
+    auto_pricing_basic: false,
+    saved_tours: false,
+    client_analysis_basic: false,
+    ai_optimization: false,
+    ai_pdf_analysis: false,
+    multi_agency: false,
+    tms_erp_integration: false,
+    multi_users: false,
+    unlimited_vehicles: false,
+    client_analysis: false,
+    smart_quotes: false,
+    max_drivers: 2,
+    max_clients: 15,
+    max_vehicles: 2,
+    max_daily_charges: 10,
+    max_monthly_charges: 10,
+    max_yearly_charges: 5,
+    max_saved_tours: 0,
+    max_company_users: 1,
+  },
+  pro: {
+    basic_calculator: true,
+    itinerary_planning: true,
+    dashboard_basic: true,
+    dashboard_analytics: true,
+    forecast: true,
+    trip_history: true,
+    multi_drivers: true,
+    cost_analysis: true,
+    cost_analysis_basic: true,
+    margin_alerts: true,
+    dynamic_charts: true,
+    pdf_export_pro: true,
+    excel_export: true,
+    monthly_tracking: true,
+    auto_pricing: true,
+    auto_pricing_basic: true,
+    saved_tours: true,
+    client_analysis_basic: true,
+    ai_optimization: false,
+    ai_pdf_analysis: false,
+    multi_agency: false,
+    tms_erp_integration: false,
+    multi_users: false,
+    unlimited_vehicles: false,
+    client_analysis: false,
+    smart_quotes: false,
+    max_drivers: 15,
+    max_clients: 100,
+    max_vehicles: 50,
+    max_daily_charges: 50,
+    max_monthly_charges: 50,
+    max_yearly_charges: 25,
+    max_saved_tours: 200,
+    max_company_users: 5,
+  },
+  enterprise: {
+    basic_calculator: true,
+    itinerary_planning: true,
+    dashboard_basic: true,
+    dashboard_analytics: true,
+    forecast: true,
+    trip_history: true,
+    multi_drivers: true,
+    cost_analysis: true,
+    cost_analysis_basic: true,
+    margin_alerts: true,
+    dynamic_charts: true,
+    pdf_export_pro: true,
+    excel_export: true,
+    monthly_tracking: true,
+    auto_pricing: true,
+    auto_pricing_basic: true,
+    saved_tours: true,
+    client_analysis_basic: true,
+    ai_optimization: true,
+    ai_pdf_analysis: true,
+    multi_agency: true,
+    tms_erp_integration: true,
+    multi_users: true,
+    unlimited_vehicles: true,
+    client_analysis: true,
+    smart_quotes: true,
+    max_drivers: null,
+    max_clients: null,
+    max_vehicles: null,
+    max_daily_charges: null,
+    max_monthly_charges: null,
+    max_yearly_charges: null,
+    max_saved_tours: null,
+    max_company_users: null,
+  },
+};
+
+// Get effective features: merge plan defaults with custom features from DB
+function getEffectiveFeatures(planType: string, customFeatures: Record<string, any> | null): Record<string, any> {
+  const defaults = PLAN_DEFAULTS[planType] || PLAN_DEFAULTS['start'];
+  
+  if (!customFeatures) {
+    return { ...defaults };
+  }
+  
+  // Merge: custom features override plan defaults
+  const merged: Record<string, any> = { ...defaults };
+  for (const [key, value] of Object.entries(customFeatures)) {
+    if (value !== null && value !== undefined) {
+      merged[key] = value;
+    }
+  }
+  
+  return merged;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -1797,6 +1928,10 @@ const handler = async (req: Request): Promise<Response> => {
         .update({ last_used_at: new Date().toISOString() })
         .eq("license_code", licenseCode.trim().toUpperCase());
 
+      // Build effective features from plan defaults + custom overrides
+      const planType = license.plan_type || 'start';
+      const effectiveFeatures = getEffectiveFeatures(planType, features);
+
       return new Response(
         JSON.stringify({
           valid: true,
@@ -1811,7 +1946,7 @@ const handler = async (req: Request): Promise<Response> => {
             city: license.city,
             postalCode: license.postal_code,
             activatedAt: license.activated_at,
-            planType: license.plan_type || 'start',
+            planType: planType,
             maxDrivers: license.max_drivers,
             maxClients: license.max_clients,
             maxDailyCharges: license.max_daily_charges,
@@ -1822,7 +1957,7 @@ const handler = async (req: Request): Promise<Response> => {
             showAddressInfo: license.show_address_info ?? true,
             showLicenseInfo: license.show_license_info ?? true,
           },
-          customFeatures: features || null,
+          customFeatures: effectiveFeatures,
           userFeatureOverrides: userFeatureOverrides.length > 0 ? userFeatureOverrides : null,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -2208,6 +2343,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("[validate-license] No auth session user id, skipping overrides");
     }
 
+    // Build effective features from plan defaults + custom overrides
+    const planType = license.plan_type || 'start';
+    const effectiveFeatures = getEffectiveFeatures(planType, features);
+
     // Build response with optional auth session
     const responsePayload: Record<string, any> = {
       success: true,
@@ -2224,7 +2363,7 @@ const handler = async (req: Request): Promise<Response> => {
         city: license.city,
         postalCode: license.postal_code,
         activatedAt: license.activated_at || now,
-        planType: license.plan_type || 'start',
+        planType: planType,
         maxDrivers: license.max_drivers,
         maxClients: license.max_clients,
         maxDailyCharges: license.max_daily_charges,
@@ -2235,7 +2374,7 @@ const handler = async (req: Request): Promise<Response> => {
         showAddressInfo: license.show_address_info ?? true,
         showLicenseInfo: license.show_license_info ?? true,
       },
-      customFeatures: features || null,
+      customFeatures: effectiveFeatures,
       userFeatureOverrides: userFeatureOverrides.length > 0 ? userFeatureOverrides : null,
     };
 
