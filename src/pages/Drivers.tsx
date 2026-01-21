@@ -492,6 +492,7 @@ export default function Drivers() {
                         <SharedDataBadge 
                           isShared={isShared}
                           isOwn={isOwn}
+                          isFormerMember={driverInfo?.isFormerMember}
                           createdBy={driverInfo?.displayName}
                           createdByEmail={driverInfo?.userEmail}
                           compact

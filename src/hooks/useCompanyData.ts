@@ -10,6 +10,7 @@ interface SyncedDataInfo {
   licenseId?: string;
   syncedAt?: string;
   createdAt?: string;
+  isFormerMember?: boolean; // User who created this is no longer active in the company
 }
 
 interface CompanyDataInfo {
@@ -66,18 +67,18 @@ export function useCompanyData() {
         return;
       }
 
-      // Fetch all company members for display names
+      // Fetch all company members (active and inactive) for display names
       const { data: members } = await supabase
         .from('company_users')
-        .select('user_id, email, display_name')
-        .eq('license_id', companyUser.license_id)
-        .eq('is_active', true);
+        .select('user_id, email, display_name, is_active')
+        .eq('license_id', companyUser.license_id);
 
-      const memberMap = new Map<string, { email: string; displayName?: string }>();
+      const memberMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
       members?.forEach(m => {
         memberMap.set(m.user_id, { 
           email: m.email, 
-          displayName: m.display_name || undefined 
+          displayName: m.display_name || undefined,
+          isActive: m.is_active ?? true
         });
       });
 
@@ -97,6 +98,7 @@ export function useCompanyData() {
           displayName: member?.displayName,
           licenseId: v.license_id,
           syncedAt: v.synced_at,
+          isFormerMember: member ? !member.isActive : false,
         });
       });
 
@@ -116,6 +118,7 @@ export function useCompanyData() {
           displayName: member?.displayName,
           licenseId: d.license_id,
           syncedAt: d.synced_at,
+          isFormerMember: member ? !member.isActive : false,
         });
       });
 
@@ -135,6 +138,7 @@ export function useCompanyData() {
           displayName: member?.displayName,
           licenseId: c.license_id,
           syncedAt: c.synced_at,
+          isFormerMember: member ? !member.isActive : false,
         });
       });
 
@@ -154,6 +158,7 @@ export function useCompanyData() {
           displayName: member?.displayName,
           licenseId: t.license_id,
           syncedAt: t.synced_at,
+          isFormerMember: member ? !member.isActive : false,
         });
       });
 
