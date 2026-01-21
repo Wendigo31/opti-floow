@@ -82,6 +82,45 @@ import { SaveItineraryDialog } from '@/components/itinerary/SaveItineraryDialog'
 import { LoadItineraryDialog } from '@/components/itinerary/LoadItineraryDialog';
 import type { SavedTour } from '@/types/savedTour';
 
+// Decode Google polyline encoding
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+
+  return points;
+}
+
 interface RouteResult {
   distance: number;
   duration: number;
@@ -512,81 +551,99 @@ export default function Itinerary() {
     avoidHighways: boolean
   ): Promise<RouteResult | null> => {
     try {
-      const waypointsString = buildWaypointsString();
+      // Build waypoints for Google Directions API
+      const waypoints: { lat: number; lon: number }[] = [];
       
-      // Build params for the edge function
-      const params: Record<string, string> = {
-        traffic: 'true',
-        travelMode: 'truck',
-        routeType: avoidHighways ? 'shortest' : 'fastest',
-        routeRepresentation: 'polyline',
-        computeTravelTimeFor: 'all',
-      };
-      
-      if (avoidHighways) {
-        params.avoid = 'motorways';
+      if (originPosition) {
+        waypoints.push({ lat: originPosition.lat, lon: originPosition.lon });
       }
       
-      // Semi-trailer specifications - always use full specs for accurate routing
-      params.vehicleLength = String(SEMI_TRAILER_SPECS.length);
-      params.vehicleWidth = String(SEMI_TRAILER_SPECS.width);
+      stops.forEach(stop => {
+        if (stop.position) {
+          waypoints.push({ lat: stop.position.lat, lon: stop.position.lon });
+        }
+      });
       
-      // Weight restrictions based on toggle
-      if (avoidWeightRestrictions) {
-        params.vehicleWeight = String(SEMI_TRAILER_SPECS.weight);
-        params.vehicleAxleWeight = String(SEMI_TRAILER_SPECS.axleWeight);
-      } else {
-        params.vehicleWeight = '7500';
-        params.vehicleAxleWeight = '3500';
+      if (destinationPosition) {
+        waypoints.push({ lat: destinationPosition.lat, lon: destinationPosition.lon });
       }
-      
-      // Height restrictions based on toggle
-      if (avoidLowBridges) {
-        params.vehicleHeight = String(SEMI_TRAILER_SPECS.height);
-      } else {
-        params.vehicleHeight = '3.0';
-      }
-      
-      // Commercial vehicle restrictions
-      params.vehicleCommercial = String(avoidTruckForbidden);
 
-      // Call edge function for route calculation
-      const { data, error } = await supabase.functions.invoke('tomtom-route', {
-        body: { waypoints: waypointsString, params }
+      if (waypoints.length < 2) {
+        throw new Error('Au moins 2 points sont nécessaires');
+      }
+
+      const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
+      const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
+      const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
+
+      // Call Google Directions API via edge function
+      const { data, error } = await supabase.functions.invoke('google-directions', {
+        body: {
+          origin,
+          destination,
+          waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
+          avoidHighways,
+        }
       });
       
       if (error) {
-        console.error('TomTom Route API error:', error);
+        console.error('Google Directions API error:', error);
         throw new Error(`Erreur de calcul de route`);
       }
       
       if (!data.routes || data.routes.length === 0) {
-        throw new Error('Aucun itinéraire trouvé pour un poids lourd');
+        throw new Error('Aucun itinéraire trouvé');
       }
 
       const route = data.routes[0];
-      const summary = route.summary;
-      const distanceKm = summary.lengthInMeters / 1000;
-
-      const coordinates: [number, number][] = [];
-      if (route.legs) {
-        for (const leg of route.legs) {
-          if (leg.points) {
-            for (const point of leg.points) {
-              coordinates.push([point.latitude, point.longitude]);
-            }
-          }
-        }
+      
+      // Calculate total distance and duration from all legs
+      let totalDistanceMeters = 0;
+      let totalDurationSeconds = 0;
+      
+      for (const leg of route.legs) {
+        totalDistanceMeters += leg.distance.value;
+        totalDurationSeconds += leg.duration.value;
       }
 
-      // Calculate toll cost using accurate French toll rates for Class 4 trucks
+      const distanceKm = totalDistanceMeters / 1000;
+
+      // Decode polyline to get coordinates
+      const coordinates: [number, number][] = [];
+      if (route.overview_polyline?.points) {
+        const decoded = decodePolyline(route.overview_polyline.points);
+        coordinates.push(...decoded);
+      }
+
+      // Calculate toll cost using TomTom API for accurate truck toll estimation
       let tollCost = 0;
       if (!avoidHighways) {
-        // Use average toll rate for 44T semi-trailers (Class 4)
-        // ~85% of fastest route is typically tolled highway
-        const estimatedHighwayRatio = 0.85;
-        const tollableDistance = distanceKm * estimatedHighwayRatio;
-        tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
+        try {
+          const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
+            body: {
+              waypoints,
+              distanceKm,
+              vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
+              vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500,
+              avoidHighways,
+            }
+          });
+          
+          if (tollData?.tollCost) {
+            tollCost = tollData.tollCost;
+            console.log('TomTom toll cost:', tollCost, 'source:', tollData.source);
+          } else {
+            // Fallback to estimation
+            const estimatedHighwayRatio = 0.85;
+            const tollableDistance = distanceKm * estimatedHighwayRatio;
+            tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
+          }
+        } catch (tollError) {
+          console.warn('TomTom toll calculation failed, using estimation:', tollError);
+          const estimatedHighwayRatio = 0.85;
+          const tollableDistance = distanceKm * estimatedHighwayRatio;
+          tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
+        }
       } else {
         // National roads: minimal tolls (bridges, tunnels)
         tollCost = distanceKm * FRENCH_TOLL_RATES.NATIONAL;
@@ -596,7 +653,7 @@ export default function Itinerary() {
 
       return {
         distance: Math.round(distanceKm),
-        duration: Math.round(summary.travelTimeInSeconds / 3600 * 10) / 10,
+        duration: Math.round(totalDurationSeconds / 3600 * 10) / 10,
         tollCost: Math.round(tollCost * 100) / 100,
         fuelCost: Math.round(fuelCost * 100) / 100,
         coordinates,
