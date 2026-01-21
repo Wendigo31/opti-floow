@@ -2283,6 +2283,12 @@ const handler = async (req: Request): Promise<Response> => {
           }
         } else {
           console.log("[validate-license] User already in company_users with role:", existingMemberById.role);
+          // Update last_activity_at for existing user
+          await supabase
+            .from("company_users")
+            .update({ last_activity_at: now })
+            .eq("id", existingMemberById.id);
+          console.log("[validate-license] Updated last_activity_at for existing user");
         }
       } catch (cuError) {
         console.error("[validate-license] company_users error (non-blocking):", cuError);
