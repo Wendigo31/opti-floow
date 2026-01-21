@@ -143,14 +143,35 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-3">
+            {/* VISIBLE SYNC BUTTON - Always visible */}
+            <Button
+              variant={syncErrors.length > 0 ? "destructive" : isSyncing ? "secondary" : "default"}
+              size="sm"
+              onClick={() => void forceSync()}
+              disabled={isSyncing}
+              className="gap-2 min-w-[100px]"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isSyncing 
+                  ? (language === 'en' ? 'Syncing...' : language === 'es' ? 'Sincronizando...' : 'Synchro...')
+                  : syncErrors.length > 0 
+                    ? (language === 'en' ? 'Retry Sync' : language === 'es' ? 'Reintentar' : 'Réessayer')
+                    : (language === 'en' ? 'Sync' : language === 'es' ? 'Sincronizar' : 'Synchroniser')}
+              </span>
+              {lastSyncAt && !isSyncing && syncErrors.length === 0 && (
+                <Check className="w-3 h-3 text-green-200" />
+              )}
+            </Button>
+
             {/* Plan Badge */}
-            <Badge variant="outline" className={`flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
+            <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
               <PlanIcon className="w-3.5 h-3.5" />
               <span className="font-medium">{t.plans[planType as keyof typeof t.plans] || plan.label}</span>
             </Badge>
 
             {/* Date */}
-            <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+            <div className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
               <Calendar className="w-3.5 h-3.5" />
               <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: dateLocale })}</span>
             </div>
@@ -160,10 +181,10 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               variant="outline"
               size="sm"
               onClick={() => setContactOpen(true)}
-              className="hidden md:flex gap-2"
+              className="hidden lg:flex gap-2"
             >
               <Mail className="w-4 h-4" />
-              <span className="hidden lg:inline">{t.support.title}</span>
+              <span className="hidden xl:inline">{t.support.title}</span>
             </Button>
 
             {/* Sync status with popover */}
