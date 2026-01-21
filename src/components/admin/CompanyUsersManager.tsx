@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,7 +76,6 @@ interface Props {
 
 export function CompanyUsersManager({ getAdminToken }: Props) {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
   const [selectedLicenseId, setSelectedLicenseId] = useState<string | null>(null);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
@@ -108,14 +106,30 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     }
 
     try {
-      // Store the license data with this user's info
-      localStorage.setItem('optiflow_license', JSON.stringify({
+      // Clear any existing Supabase auth state
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.auth.signOut();
+      
+      // Use correct storage key that matches useLicense hook
+      const licenseData = {
         code: license.license_code,
         email: user.email, // Use the user's email
-        validatedAt: new Date().toISOString(),
+        activatedAt: new Date().toISOString(),
         planType: license.plan_type || 'start',
         companyName: license.company_name,
         companyUserId: user.id, // Store the company user ID
+      };
+      
+      // Set the license data with the correct key (optiflow-license with hyphen)
+      localStorage.setItem('optiflow-license', JSON.stringify(licenseData));
+      
+      // Also update cache for offline support
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      localStorage.setItem('optiflow-license-cache', JSON.stringify({
+        data: licenseData,
+        lastValidated: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
       }));
       
       toast({
@@ -123,9 +137,8 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         description: `Connecté en tant que ${user.display_name || user.email}`,
       });
       
-      // Navigate to home and reload to apply the session
-      navigate('/');
-      window.location.reload();
+      // Force full page reload to apply new license
+      window.location.href = '/';
     } catch (error) {
       console.error('Login as user error:', error);
       toast({
@@ -134,7 +147,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         variant: 'destructive',
       });
     }
-  }, [selectedLicenseId, licenses, toast, navigate]);
+  }, [selectedLicenseId, licenses, toast]);
 
   // Fetch licenses
   useEffect(() => {
