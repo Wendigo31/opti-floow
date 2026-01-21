@@ -25,12 +25,22 @@ interface TripRequest {
   drivers: DriverInfo[];
   constraints?: {
     maxDrivingHours?: number;
+    maxConsecutiveDrivingHours?: number;
     preferNightDriving?: boolean;
     avoidWeekends?: boolean;
     allowRelay?: boolean;
     departureDate?: string;
     departureTime?: string;
     urgency?: 'standard' | 'express' | 'flexible';
+    // Enhanced truck driver constraints
+    respectRSE?: boolean;
+    includeRestBreaks?: boolean;
+    includeMealBreaks?: boolean;
+    requireOvernightRest?: boolean;
+    avoidLowBridges?: boolean;
+    avoidWeightRestrictions?: boolean;
+    vehicleHeight?: number;
+    vehicleWeight?: number;
   };
   mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization';
   stops?: string[];
@@ -65,26 +75,43 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `Tu es un expert senior en optimisation logistique pour le transport routier de marchandises en France. 
-Tu maîtrises parfaitement la réglementation RSE (Règlement Social Européen) et tu optimises les coûts de manière agressive.
+    const systemPrompt = `Tu es un expert senior en optimisation logistique pour le transport routier de marchandises en France et en Europe. 
+Tu maîtrises parfaitement la réglementation RSE (Règlement Social Européen) et tu optimises les coûts de manière agressive tout en garantissant la sécurité.
 
-RÈGLES DE CONDUITE (RSE):
-- Conduite max: 4h30 avant pause obligatoire de 45min (ou 15min + 30min)
-- Conduite max/jour: 9h (extensible à 10h deux fois par semaine)
+RÉGLEMENTATION RSE (RÈGLEMENT SOCIAL EUROPÉEN) - STRICTE:
+- Conduite continue max: 4h30 avant pause OBLIGATOIRE de 45min (ou fractionné: 15min + 30min)
+- Conduite max/jour: 9h (extensible à 10h MAX 2 fois par semaine)
 - Conduite max/semaine: 56h
-- Amplitude max: 13h (15h en équipage)
-- Repos journalier: 11h consécutives (ou 9h + 3h fractionnées)
+- Conduite max/2 semaines: 90h
+- Amplitude journalière max: 13h (15h en équipage double)
+- Repos journalier: 11h consécutives minimum (repos réduit: 9h max 3 fois entre 2 repos hebdo)
+- Repos hebdomadaire: 45h consécutives (repos réduit: 24h avec compensation)
+- Temps de travail hors conduite: chargement/déchargement, manutention, formalités
+
+CONTRAINTES SPÉCIFIQUES POIDS LOURDS:
+- Hauteur véhicule: vérifier passages sous ponts, tunnels, portiques
+- PTAC (Poids Total Autorisé en Charge): respecter limitations routes
+- Interdictions de circulation: dimanches et jours fériés (dérogations possibles)
+- Zones urbaines: restrictions ZFE (Zones à Faibles Émissions)
+- Vitesse max: 90 km/h route, 80 km/h nationales
+- Aires de repos poids lourds: capacités limitées la nuit
+
+PAUSES ET REPOS OBLIGATOIRES:
+- Pause 45min après 4h30 de conduite (peut être fractionnée: 15min puis 30min)
+- Pause repas: 30-45min recommandé (indemnité repas applicable)
+- Repos journalier 11h: obligatoire entre 2 journées de travail
+- En cas de découcher: indemnité découcher applicable
 
 STRATÉGIES D'OPTIMISATION:
-1. RELAIS CONDUCTEURS: Identifier les points de relais stratégiques (aires d'autoroute, dépôts partenaires) pour changer de conducteur et maintenir le véhicule en mouvement
-2. CONDUITE DE NUIT: Moins de trafic, péages parfois réduits (-30% entre 22h-6h sur certains tronçons), mais prime de nuit conducteur
-3. ÉVITEMENT PÉAGES: Routes nationales alternatives si le gain temps/péage le justifie
-4. HORAIRES OPTIMAUX: Éviter heures de pointe (7h-9h, 17h-19h) pour réduire consommation carburant (+15-20% en embouteillages)
-5. AIRES ÉCONOMIQUES: Carburant moins cher hors autoroute (économie ~15cts/L)
+1. RELAIS CONDUCTEURS: Points stratégiques pour maintenir le véhicule en mouvement 24h/24
+2. CONDUITE DE NUIT: Moins de trafic, péages réduits (-30% entre 22h-6h), mais prime nuit
+3. HORAIRES OPTIMAUX: Éviter heures de pointe (7h-9h, 17h-19h) = -15-20% consommation
+4. AIRES ÉCONOMIQUES: Carburant hors autoroute = économie ~15cts/L
+5. ITINÉRAIRES PL: Routes adaptées gabarit (hauteur, poids)
 
-POINTS DE RELAIS CONNUS EN FRANCE:
+POINTS DE RELAIS STRATÉGIQUES FRANCE:
 - Aire de Beaune (A6) - Carrefour Nord/Sud
-- Aire de Montélimar (A7) - Vallée du Rhône
+- Aire de Montélimar (A7) - Vallée du Rhône  
 - Aire d'Ambrussum (A9) - Méditerranée
 - Aire de Tours (A10) - Axe Paris-Bordeaux
 - Aire de Poitiers (A10) - Centre-Ouest
@@ -92,6 +119,7 @@ POINTS DE RELAIS CONNUS EN FRANCE:
 - Aire de Metz (A4/A31) - Est
 - Aire de Reims (A4) - Nord-Est
 - Aire de Lille (A1) - Nord
+- Aire d'Orange (A7) - Provence
 
 Réponds TOUJOURS en JSON structuré avec ce format enrichi:
 {
@@ -202,8 +230,21 @@ Réponds TOUJOURS en JSON structuré avec ce format enrichi:
     }).join('\n') || 'Aucun conducteur défini';
 
     const constraintsDetail = `
-CONTRAINTES:
+CONTRAINTES RÉGLEMENTAIRES ET OPÉRATIONNELLES:
 - Heures de conduite max/jour: ${tripRequest.constraints?.maxDrivingHours || 9}h
+- Pause obligatoire après: ${tripRequest.constraints?.maxConsecutiveDrivingHours || 4.5}h de conduite
+- Respect RSE strict: ${tripRequest.constraints?.respectRSE !== false ? 'OUI (obligatoire)' : 'Non spécifié'}
+- Inclure pauses repos 45min: ${tripRequest.constraints?.includeRestBreaks !== false ? 'OUI' : 'NON'}
+- Inclure pauses repas: ${tripRequest.constraints?.includeMealBreaks !== false ? 'OUI' : 'NON'}
+- Repos nuit 11h obligatoire: ${tripRequest.constraints?.requireOvernightRest !== false ? 'OUI' : 'NON'}
+
+RESTRICTIONS VÉHICULE:
+- Éviter ponts bas: ${tripRequest.constraints?.avoidLowBridges !== false ? 'OUI' : 'NON'}
+- Éviter limitations tonnage: ${tripRequest.constraints?.avoidWeightRestrictions !== false ? 'OUI' : 'NON'}
+- Hauteur véhicule: ${tripRequest.constraints?.vehicleHeight || 4.0}m
+- PTAC: ${tripRequest.constraints?.vehicleWeight || 44}t
+
+PRÉFÉRENCES:
 - Préférence conduite de nuit: ${tripRequest.constraints?.preferNightDriving ? 'OUI (réduire coûts)' : 'NON'}
 - Éviter weekends: ${tripRequest.constraints?.avoidWeekends ? 'OUI' : 'NON'}
 - Autoriser relais: ${tripRequest.constraints?.allowRelay !== false ? 'OUI' : 'NON'}
