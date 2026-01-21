@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, createContext, useContext } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDataSync, getUserLicenseId } from '@/hooks/useDataSync';
@@ -11,12 +11,26 @@ import { supabase } from '@/integrations/supabase/client';
 // Debounce interval in ms - reduced for faster sync (5 seconds)
 const SYNC_DEBOUNCE = 5000;
 
+type DataSyncActions = {
+  forceSync: () => Promise<void>;
+  isSyncing: boolean;
+  lastSyncAt: Date | null;
+};
+
+const DataSyncActionsContext = createContext<DataSyncActions | undefined>(undefined);
+
+export function useDataSyncActions() {
+  const ctx = useContext(DataSyncActionsContext);
+  if (!ctx) throw new Error('useDataSyncActions must be used within DataSyncProvider');
+  return ctx;
+}
+
 export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const { drivers, charges, setDrivers, setCharges } = useApp();
   const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers, setTrailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
   const [interimDrivers, setInterimDrivers] = useLocalStorage<Driver[]>('optiflow_interim_drivers', []);
-  const { syncAllData, loadCompanyData } = useDataSync();
+  const { syncAllData, loadCompanyData, manualSync, syncStatus } = useDataSync();
   const [licenseId, setLicenseId] = useState<string | null>(null);
   
   const lastSyncRef = useRef<number>(0);
@@ -205,6 +219,58 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     loadSharedData();
   }, [loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
+  const applyCompanyData = useCallback((companyData: any) => {
+    if (!companyData) return;
+
+    if (companyData.vehicles?.length > 0) {
+      const cloudVehicles = companyData.vehicles
+        .map((v: any) => v.vehicle_data as Vehicle)
+        .filter(Boolean);
+      if (cloudVehicles.length > 0) setVehicles(cloudVehicles);
+    }
+
+    if (companyData.trailers?.length > 0) {
+      const cloudTrailers = companyData.trailers
+        .map((t: any) => t.trailer_data as Trailer)
+        .filter(Boolean);
+      if (cloudTrailers.length > 0) setTrailers(cloudTrailers);
+    }
+
+    if (companyData.drivers?.length > 0) {
+      const cdiDrivers = companyData.drivers
+        .filter((d: any) => d.driver_type === 'cdi')
+        .map((d: any) => d.driver_data as Driver)
+        .filter(Boolean);
+      const interimDriversCloud = companyData.drivers
+        .filter((d: any) => d.driver_type === 'interim')
+        .map((d: any) => d.driver_data as Driver)
+        .filter(Boolean);
+
+      if (cdiDrivers.length > 0) setDrivers(cdiDrivers);
+      if (interimDriversCloud.length > 0) setInterimDrivers(interimDriversCloud);
+    }
+
+    if (companyData.charges?.length > 0) {
+      const cloudCharges = companyData.charges
+        .map((c: any) => c.charge_data as FixedCharge)
+        .filter(Boolean);
+      if (cloudCharges.length > 0) setCharges(cloudCharges);
+    }
+  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+
+  const forceSync = useCallback(async () => {
+    // 1) Push local changes
+    await manualSync(vehicles, drivers, interimDrivers, charges, trailers);
+
+    // 2) Pull back company data (truth source) so all sessions converge
+    hasLoadedCompanyData.current = false;
+    const companyData = await loadCompanyData();
+    if (companyData) {
+      hasLoadedCompanyData.current = true;
+      applyCompanyData(companyData);
+    }
+  }, [manualSync, vehicles, drivers, interimDrivers, charges, trailers, loadCompanyData, applyCompanyData]);
+
   useEffect(() => {
     const scheduleSync = async () => {
       // Check if user is authenticated
@@ -263,5 +329,13 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     };
   }, [vehicles, drivers, interimDrivers, charges, trailers, syncAllData]);
 
-  return <>{children}</>;
+  return (
+    <DataSyncActionsContext.Provider value={{
+      forceSync,
+      isSyncing: syncStatus.isSyncing,
+      lastSyncAt: syncStatus.lastSyncAt,
+    }}>
+      {children}
+    </DataSyncActionsContext.Provider>
+  );
 }
