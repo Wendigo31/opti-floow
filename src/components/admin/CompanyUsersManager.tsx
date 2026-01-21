@@ -111,31 +111,52 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
     const fetchCompanyUsers = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('license_id', selectedLicenseId)
-        .order('role', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching company users:', error);
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les utilisateurs',
-          variant: 'destructive',
+      const token = getAdminToken();
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // Use edge function to bypass RLS
+        const { data, error } = await supabase.functions.invoke('validate-license', {
+          body: { 
+            action: 'get-company-data', 
+            adminToken: token,
+            licenseId: selectedLicenseId 
+          },
         });
-      } else {
-        setCompanyUsers((data || []).map(u => ({
-          ...u,
-          role: u.role as 'owner' | 'admin' | 'member',
-        })));
+
+        if (error) {
+          console.error('Error fetching company users:', error);
+          toast({
+            title: 'Erreur',
+            description: 'Impossible de charger les utilisateurs',
+            variant: 'destructive',
+          });
+        } else if (data?.companyUsers) {
+          setCompanyUsers(data.companyUsers.map((u: any) => ({
+            id: u.id,
+            license_id: u.license_id,
+            user_id: u.user_id,
+            email: u.email,
+            role: u.role as 'owner' | 'admin' | 'member',
+            display_name: u.display_name,
+            is_active: u.is_active ?? true,
+            created_at: u.created_at,
+            last_activity_at: u.last_activity_at,
+            accepted_at: u.accepted_at,
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching company users:', err);
       }
       setIsLoading(false);
     };
 
     fetchCompanyUsers();
-  }, [selectedLicenseId, toast]);
+  }, [selectedLicenseId, getAdminToken, toast]);
 
   const handleAddUser = async () => {
     if (!selectedLicenseId || !newUserEmail.trim()) return;
@@ -297,16 +318,39 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const refreshCompanyUsers = async () => {
     if (!selectedLicenseId) return;
     setIsLoading(true);
-    const { data } = await supabase
-      .from('company_users')
-      .select('*')
-      .eq('license_id', selectedLicenseId)
-      .order('role', { ascending: true })
-      .order('created_at', { ascending: true });
-    setCompanyUsers((data || []).map(u => ({
-      ...u,
-      role: u.role as 'owner' | 'admin' | 'member',
-    })));
+    const token = getAdminToken();
+    
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const { data } = await supabase.functions.invoke('validate-license', {
+        body: { 
+          action: 'get-company-data', 
+          adminToken: token,
+          licenseId: selectedLicenseId 
+        },
+      });
+      
+      if (data?.companyUsers) {
+        setCompanyUsers(data.companyUsers.map((u: any) => ({
+          id: u.id,
+          license_id: u.license_id,
+          user_id: u.user_id,
+          email: u.email,
+          role: u.role as 'owner' | 'admin' | 'member',
+          display_name: u.display_name,
+          is_active: u.is_active ?? true,
+          created_at: u.created_at,
+          last_activity_at: u.last_activity_at,
+          accepted_at: u.accepted_at,
+        })));
+      }
+    } catch (err) {
+      console.error('Error refreshing:', err);
+    }
     setIsLoading(false);
   };
 

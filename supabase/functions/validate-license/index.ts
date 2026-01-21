@@ -243,7 +243,7 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json();
     const action = body.action || "validate";
 
-    // Admin: List all licenses with features
+    // Admin: List all licenses with features and user counts
     if (action === "list-all") {
       const auth = await verifyAdminAuth(body, authHeader);
       
@@ -267,25 +267,159 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Fetch features for each license
-      const licensesWithFeatures = await Promise.all(
+      // Fetch features and user counts for each license
+      const licensesWithDetails = await Promise.all(
         (licenses || []).map(async (license: any) => {
-          const { data: features } = await supabase
-            .from("license_features")
-            .select("*")
-            .eq("license_id", license.id)
-            .maybeSingle();
+          const [{ data: features }, { count: userCount }] = await Promise.all([
+            supabase
+              .from("license_features")
+              .select("*")
+              .eq("license_id", license.id)
+              .maybeSingle(),
+            supabase
+              .from("company_users")
+              .select("*", { count: "exact", head: true })
+              .eq("license_id", license.id),
+          ]);
           
-          return { ...license, features: features || null };
+          return { ...license, features: features || null, user_count: userCount || 0 };
         })
       );
 
       await logAdminAction(supabase, auth.email || 'admin', 'list_licenses', null, { count: licenses?.length || 0 }, clientIp);
 
       return new Response(
-        JSON.stringify({ success: true, licenses: licensesWithFeatures }),
+        JSON.stringify({ success: true, licenses: licensesWithDetails }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    // Admin: Detect duplicate companies (same SIREN)
+    if (action === "detect-duplicates") {
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get all licenses with SIREN
+      const { data: licenses, error } = await supabase
+        .from("licenses")
+        .select("id, license_code, email, company_name, siren, address, city, postal_code, plan_type, is_active, created_at")
+        .not("siren", "is", null)
+        .neq("siren", "")
+        .order("siren")
+        .order("created_at");
+
+      if (error) {
+        console.error("Detect duplicates error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur base de données" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Group by SIREN and find duplicates
+      const sirenGroups: Record<string, any[]> = {};
+      for (const license of (licenses || [])) {
+        const siren = license.siren?.replace(/\s/g, '');
+        if (siren) {
+          if (!sirenGroups[siren]) sirenGroups[siren] = [];
+          sirenGroups[siren].push(license);
+        }
+      }
+
+      // Only keep groups with more than one license
+      const duplicates: { siren: string; licenses: any[] }[] = [];
+      for (const [siren, group] of Object.entries(sirenGroups)) {
+        if (group.length > 1) {
+          // Get user counts for each license
+          const licensesWithCounts = await Promise.all(
+            group.map(async (license) => {
+              const { count } = await supabase
+                .from("company_users")
+                .select("*", { count: "exact", head: true })
+                .eq("license_id", license.id);
+              return { ...license, user_count: count || 0 };
+            })
+          );
+          duplicates.push({ siren, licenses: licensesWithCounts });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, duplicates }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Admin: Merge companies (move users and data to target, keep old codes as alias)
+    if (action === "merge-companies") {
+      const { targetLicenseId, sourceLicenseIds } = body;
+      const auth = await verifyAdminAuth(body, authHeader);
+      
+      console.log("Merging companies:", sourceLicenseIds, "into:", targetLicenseId);
+      
+      if (!auth.authorized) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Accès non autorisé" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!targetLicenseId || !sourceLicenseIds || !Array.isArray(sourceLicenseIds)) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Paramètres manquants" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      try {
+        // For each source license, move users and data to target
+        for (const sourceId of sourceLicenseIds) {
+          // 1. Move company_users to target (change license_id)
+          await supabase
+            .from("company_users")
+            .update({ license_id: targetLicenseId })
+            .eq("license_id", sourceId);
+
+          // 2. Move data tables to target license
+          const dataTables = ['saved_tours', 'trips', 'clients', 'quotes', 'user_vehicles', 'user_drivers', 'user_charges', 'user_trailers'];
+          for (const table of dataTables) {
+            await supabase
+              .from(table)
+              .update({ license_id: targetLicenseId })
+              .eq("license_id", sourceId);
+          }
+
+          // 3. Mark source license as inactive (but keep it for alias/redirect purposes)
+          await supabase
+            .from("licenses")
+            .update({ 
+              is_active: false, 
+              notes: `Fusionnée vers ${targetLicenseId} le ${new Date().toISOString()}` 
+            })
+            .eq("id", sourceId);
+        }
+
+        console.log("Merge completed successfully");
+
+        await logAdminAction(supabase, auth.email || 'admin', 'merge_companies', targetLicenseId, { sourceLicenseIds }, clientIp);
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      } catch (err: any) {
+        console.error("Merge companies error:", err);
+        return new Response(
+          JSON.stringify({ success: false, error: "Erreur lors de la fusion: " + (err.message || 'Erreur inconnue') }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     // Admin: Toggle license status
@@ -361,12 +495,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Admin: Create new license
+    // Admin: Create new license OR add user to existing company
     if (action === "create-license") {
-      const { email, planType, firstName, lastName, companyName } = body;
+      const { email, planType, firstName, lastName, companyName, assignToCompanyId, userRole, siren, address, city, postalCode, employeeCount, companyStatus } = body;
       const auth = await verifyAdminAuth(body, authHeader);
       
-      console.log("Creating license for:", email, "by admin:", auth.email);
+      console.log("Creating license for:", email, "by admin:", auth.email, "assignToCompanyId:", assignToCompanyId);
       
       if (!auth.authorized) {
         return new Response(
@@ -379,6 +513,58 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response(
           JSON.stringify({ success: false, error: "Email requis" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // If assigning to existing company, just add user to company_users
+      if (assignToCompanyId) {
+        console.log("Assigning user to existing company:", assignToCompanyId);
+        
+        // Check if user already exists in this company
+        const { data: existingUser } = await supabase
+          .from("company_users")
+          .select("id")
+          .eq("license_id", assignToCompanyId)
+          .eq("email", email.trim().toLowerCase())
+          .maybeSingle();
+
+        if (existingUser) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Cet email est déjà dans cette société" }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
+        // Add user to company_users
+        const displayName = [firstName, lastName].filter(Boolean).join(' ') || null;
+        const { data: newCompanyUser, error: cuError } = await supabase
+          .from("company_users")
+          .insert({
+            license_id: assignToCompanyId,
+            email: email.trim().toLowerCase(),
+            role: userRole || 'member',
+            display_name: displayName,
+            is_active: true,
+            invited_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (cuError) {
+          console.error("Add company user error:", cuError);
+          return new Response(
+            JSON.stringify({ success: false, error: "Erreur lors de l'ajout de l'utilisateur: " + cuError.message }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
+        console.log("User added to company successfully:", email);
+
+        await logAdminAction(supabase, auth.email || 'admin', 'add_user_to_company', assignToCompanyId, { email, userRole }, clientIp);
+
+        return new Response(
+          JSON.stringify({ success: true, companyUser: newCompanyUser, assignedToCompany: true }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
@@ -421,6 +607,12 @@ const handler = async (req: Request): Promise<Response> => {
           first_name: firstName || null,
           last_name: lastName || null,
           company_name: companyName || null,
+          siren: siren || null,
+          address: address || null,
+          city: city || null,
+          postal_code: postalCode || null,
+          employee_count: employeeCount || null,
+          company_status: companyStatus || null,
           is_active: true,
         })
         .select()
@@ -439,7 +631,7 @@ const handler = async (req: Request): Promise<Response> => {
       await logAdminAction(supabase, auth.email || 'admin', 'create_license', newLicense.id, { email, planType }, clientIp);
 
       return new Response(
-        JSON.stringify({ success: true, licenseCode, license: newLicense }),
+        JSON.stringify({ success: true, licenseCode, license_code: licenseCode, license: newLicense }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
