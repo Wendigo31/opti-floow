@@ -1482,6 +1482,10 @@ export type Database = {
         Args: { p_role: string; p_user_id: string }
         Returns: boolean
       }
+      can_view_company_members: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       create_access_request: {
         Args: { p_message?: string; p_requested_features: string[] }
