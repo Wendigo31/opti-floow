@@ -21,6 +21,7 @@ interface UseSireneLookupReturn {
   loading: boolean;
   error: string | null;
   company: CompanyInfo | null;
+  reset: () => void;
 }
 
 export function useSireneLookup(): UseSireneLookupReturn {
@@ -77,5 +78,11 @@ export function useSireneLookup(): UseSireneLookupReturn {
     }
   };
 
-  return { lookup, loading, error, company };
+  const reset = () => {
+    setCompany(null);
+    setError(null);
+    setLoading(false);
+  };
+
+  return { lookup, loading, error, company, reset };
 }

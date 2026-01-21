@@ -60,6 +60,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ADD_ONS, AddOn, getAddOnsForPlan } from '@/types/pricing';
+import { CreateCompanyDialog } from './CreateCompanyDialog';
+import type { PlanType } from '@/hooks/useLicense';
 
 interface LoginHistoryEntry {
   id: string;
@@ -197,6 +199,9 @@ export function UserDetailDialog({
   const [showCompanyInfo, setShowCompanyInfo] = useState(true);
   const [showAddressInfo, setShowAddressInfo] = useState(true);
   const [showLicenseInfo, setShowLicenseInfo] = useState(true);
+  
+  // SIREN sync dialog
+  const [sirenSyncOpen, setSirenSyncOpen] = useState(false);
 
   useEffect(() => {
     if (license && open) {
@@ -495,6 +500,15 @@ export function UserDetailDialog({
 
           {/* Company/SIREN Info Tab */}
           <TabsContent value="company" className="mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-muted-foreground">
+                Informations de l'entreprise récupérées depuis le SIREN
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setSirenSyncOpen(true)}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Mettre à jour via SIREN
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Société */}
               <Card>
@@ -1335,6 +1349,29 @@ export function UserDetailDialog({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* SIREN Sync Dialog */}
+        <CreateCompanyDialog
+          open={sirenSyncOpen}
+          onOpenChange={setSirenSyncOpen}
+          getAdminToken={() => adminToken}
+          onCompanyCreated={() => {
+            setSirenSyncOpen(false);
+            onUpdate?.();
+          }}
+          editLicenseId={license.id}
+          editLicenseData={{
+            companyName: license.company_name || undefined,
+            siren: license.siren || undefined,
+            address: license.address || undefined,
+            city: license.city || undefined,
+            postalCode: license.postal_code || undefined,
+            companyStatus: license.company_status || undefined,
+            employeeCount: license.employee_count || undefined,
+            email: license.email,
+            planType: (license.plan_type || 'start') as PlanType,
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
