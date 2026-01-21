@@ -1271,6 +1271,63 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          created_at: string
+          custom_working_days: Json | null
+          default_chart_type: string | null
+          default_price_per_km: number | null
+          default_pricing_mode: string | null
+          default_target_margin: number | null
+          id: string
+          language: string | null
+          selected_driver_ids: string[] | null
+          selected_trailer_id: string | null
+          selected_vehicle_id: string | null
+          show_ai_panel: boolean | null
+          sidebar_collapsed: boolean | null
+          theme: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_working_days?: Json | null
+          default_chart_type?: string | null
+          default_price_per_km?: number | null
+          default_pricing_mode?: string | null
+          default_target_margin?: number | null
+          id?: string
+          language?: string | null
+          selected_driver_ids?: string[] | null
+          selected_trailer_id?: string | null
+          selected_vehicle_id?: string | null
+          show_ai_panel?: boolean | null
+          sidebar_collapsed?: boolean | null
+          theme?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_working_days?: Json | null
+          default_chart_type?: string | null
+          default_price_per_km?: number | null
+          default_pricing_mode?: string | null
+          default_target_margin?: number | null
+          id?: string
+          language?: string | null
+          selected_driver_ids?: string[] | null
+          selected_trailer_id?: string | null
+          selected_vehicle_id?: string | null
+          show_ai_panel?: boolean | null
+          sidebar_collapsed?: boolean | null
+          theme?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_trailers: {
         Row: {
           brand: string | null
