@@ -8,8 +8,8 @@ import type { Trailer } from '@/types/trailer';
 import type { Driver, FixedCharge } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
-// Debounce interval in ms (sync every 30 seconds max, not on every change)
-const SYNC_DEBOUNCE = 30000;
+// Debounce interval in ms - reduced for faster sync (5 seconds)
+const SYNC_DEBOUNCE = 5000;
 
 export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const { drivers, charges, setDrivers, setCharges } = useApp();

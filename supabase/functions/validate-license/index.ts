@@ -1210,7 +1210,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Initialize stats
+      // Initialize stats - count by license_id for company-wide data
       const stats = {
         savedTours: 0,
         trips: 0,
@@ -1221,54 +1221,59 @@ const handler = async (req: Request): Promise<Response> => {
         charges: 0,
       };
 
-      if (userIdToQuery) {
-        // Count saved tours
-        const { count: toursCount } = await supabase
-          .from("saved_tours")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
+      // For company-wide stats, query by license_id
+      if (licenseId) {
+        const [
+          { count: toursCount },
+          { count: tripsCount },
+          { count: clientsCount },
+          { count: quotesCount },
+          { count: vehiclesCount },
+          { count: driversCount },
+          { count: chargesCount },
+        ] = await Promise.all([
+          supabase.from("saved_tours").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("trips").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("clients").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("quotes").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("user_vehicles").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("user_drivers").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+          supabase.from("user_charges").select("*", { count: "exact", head: true }).eq("license_id", licenseId),
+        ]);
+
         stats.savedTours = toursCount || 0;
-
-        // Count trips
-        const { count: tripsCount } = await supabase
-          .from("trips")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
         stats.trips = tripsCount || 0;
-
-        // Count clients
-        const { count: clientsCount } = await supabase
-          .from("clients")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
         stats.clients = clientsCount || 0;
-
-        // Count quotes
-        const { count: quotesCount } = await supabase
-          .from("quotes")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
         stats.quotes = quotesCount || 0;
-
-        // Count synced vehicles
-        const { count: vehiclesCount } = await supabase
-          .from("user_vehicles")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
         stats.vehicles = vehiclesCount || 0;
-
-        // Count synced drivers
-        const { count: driversCount } = await supabase
-          .from("user_drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
         stats.drivers = driversCount || 0;
+        stats.charges = chargesCount || 0;
+      } else if (userIdToQuery) {
+        // Fallback to user_id if no license_id
+        const [
+          { count: toursCount },
+          { count: tripsCount },
+          { count: clientsCount },
+          { count: quotesCount },
+          { count: vehiclesCount },
+          { count: driversCount },
+          { count: chargesCount },
+        ] = await Promise.all([
+          supabase.from("saved_tours").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("trips").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("clients").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("quotes").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("user_vehicles").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("user_drivers").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+          supabase.from("user_charges").select("*", { count: "exact", head: true }).eq("user_id", userIdToQuery),
+        ]);
 
-        // Count synced charges
-        const { count: chargesCount } = await supabase
-          .from("user_charges")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userIdToQuery);
+        stats.savedTours = toursCount || 0;
+        stats.trips = tripsCount || 0;
+        stats.clients = clientsCount || 0;
+        stats.quotes = quotesCount || 0;
+        stats.vehicles = vehiclesCount || 0;
+        stats.drivers = driversCount || 0;
         stats.charges = chargesCount || 0;
       }
 
@@ -1559,10 +1564,11 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
+      // Query audit logs - target_id is stored as text (uuid::text)
       const { data: logs, error } = await supabase
         .from("admin_audit_log")
         .select("*")
-        .eq("target_id", licenseId)
+        .or(`target_id.eq.${licenseId},target_id.ilike.%${licenseId}%`)
         .order("created_at", { ascending: false })
         .limit(limit);
 
