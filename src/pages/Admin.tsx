@@ -36,6 +36,7 @@ import {
   Database,
   Lock
 } from 'lucide-react';
+import { GitMerge } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FeatureEditor } from '@/components/admin/FeatureEditor';
 import { PWAUpdatesManager } from '@/components/admin/PWAUpdatesManager';
@@ -47,6 +48,7 @@ import { CreateCompanyDialog } from '@/components/admin/CreateCompanyDialog';
 import { UserFeatureOverrides } from '@/components/admin/UserFeatureOverrides';
 import { AccessRequestsManager } from '@/components/admin/AccessRequestsManager';
 import { CompanyDetailPanel } from '@/components/admin/CompanyDetailPanel';
+import { CompanyMergeManager } from '@/components/admin/CompanyMergeManager';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -162,6 +164,7 @@ const emptyFormData: LicenseFormData = {
 const ADMIN_NAV = [
   { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer les licences' },
   { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Gérer les sociétés' },
+  { id: 'merge', label: 'Fusion', icon: GitMerge, description: 'Déduplication SIREN' },
   { id: 'access', label: 'Accès', icon: Lock, description: 'Permissions utilisateurs' },
   { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les features' },
   { id: 'requests', label: 'Demandes', icon: Bell, description: 'Demandes d\'accès' },
@@ -302,14 +305,10 @@ export default function Admin() {
       if (data?.licenses) {
         setLicenses(data.licenses);
         
-        // Fetch user counts
+        // Build user counts from API response
         const counts: Record<string, number> = {};
         for (const license of data.licenses) {
-          const { count } = await supabase
-            .from('company_users')
-            .select('*', { count: 'exact', head: true })
-            .eq('license_id', license.id);
-          counts[license.id] = count || 0;
+          counts[license.id] = license.user_count || 0;
         }
         setCompanyUserCounts(counts);
       }
@@ -468,6 +467,7 @@ export default function Admin() {
     }
     setSaving(true);
     try {
+      // If assigning to existing company, the backend handles adding as company_user
       const action = dialogMode === 'create' ? 'create-license' : 'update-license';
       const { data, error } = await supabase.functions.invoke('validate-license', {
         body: { 
@@ -489,17 +489,21 @@ export default function Admin() {
       });
       if (error) throw error;
       
-      if (dialogMode === 'create' && data?.license_code) {
+      // Check if user was added to existing company
+      if (dialogMode === 'create' && data?.assignedToCompany) {
+        toast.success(`Utilisateur ${formData.email} ajouté à la société`);
+        setDialogOpen(false);
+        fetchLicenses();
+      } else if (dialogMode === 'create' && data?.license_code) {
         setCreatedLicense({ code: data.license_code, email: formData.email });
-      }
-      
-      fetchLicenses();
-      if (dialogMode === 'edit') {
+        fetchLicenses();
+      } else if (dialogMode === 'edit') {
         setDialogOpen(false);
         toast.success('Licence mise à jour');
+        fetchLicenses();
       }
-    } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -905,6 +909,17 @@ export default function Admin() {
                 getAdminToken={getAdminToken}
                 onCompanyCreated={fetchLicenses}
               />
+            </div>
+          )}
+
+          {/* Merge Tab */}
+          {adminActiveTab === 'merge' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Fusion / Déduplication</h2>
+                <p className="text-sm text-muted-foreground">Détectez et fusionnez les sociétés en double (même SIREN)</p>
+              </div>
+              <CompanyMergeManager getAdminToken={getAdminToken} />
             </div>
           )}
 

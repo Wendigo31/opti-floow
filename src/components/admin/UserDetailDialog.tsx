@@ -52,7 +52,10 @@ import {
   Settings,
   UserCog,
   Trash2,
-  Power
+  Power,
+  Building2,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -142,6 +145,13 @@ interface License {
   show_company_info?: boolean;
   show_address_info?: boolean;
   show_license_info?: boolean;
+  // SIREN data
+  siren?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  company_status?: string | null;
+  employee_count?: number | null;
 }
 
 interface UserDetailDialogProps {
@@ -447,8 +457,12 @@ export function UserDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+        <Tabs defaultValue="company" className="w-full">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="company" className="flex items-center gap-1 text-xs">
+              <Building2 className="w-3 h-3" />
+              Société
+            </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-1 text-xs">
               <BarChart3 className="w-3 h-3" />
               Stats
@@ -478,6 +492,90 @@ export function UserDetailDialog({
               Visibilité
             </TabsTrigger>
           </TabsList>
+
+          {/* Company/SIREN Info Tab */}
+          <TabsContent value="company" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Société */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Informations société</CardTitle>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Raison sociale</span>
+                    <span className="font-medium">{license.company_name || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">SIREN</span>
+                    <span className="font-mono">{license.siren || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Forme juridique</span>
+                    <span>{license.company_status || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Effectif</span>
+                    <span>{license.employee_count ?? '-'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Adresse */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Adresse</CardTitle>
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Adresse</span>
+                    <span className="text-right max-w-[200px]">{license.address || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Code postal</span>
+                    <span>{license.postal_code || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Ville</span>
+                    <span>{license.city || '-'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Forfait */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Forfait</CardTitle>
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold uppercase">{license.plan_type || 'start'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Contact principal</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Nom</span>
+                    <span>{[license.first_name, license.last_name].filter(Boolean).join(' ') || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground text-sm">Email</span>
+                    <span className="text-sm">{license.email}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Stats Tab */}
           <TabsContent value="stats" className="mt-4">
