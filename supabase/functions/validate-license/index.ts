@@ -1545,6 +1545,65 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Sync company - notify all company users to refresh their license
+    if (action === "sync-company") {
+      const { licenseCode, email } = body;
+
+      if (!licenseCode || !email) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Missing license code or email" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Find the license
+      const { data: license, error: licenseError } = await supabase
+        .from("licenses")
+        .select("id, company_name, plan_type")
+        .eq("license_code", licenseCode.trim().toUpperCase())
+        .maybeSingle();
+
+      if (licenseError || !license) {
+        return new Response(
+          JSON.stringify({ success: false, error: "License not found" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Get all company users
+      const { data: companyUsers, error: usersError } = await supabase
+        .from("company_users")
+        .select("id, email, display_name, is_active")
+        .eq("license_id", license.id)
+        .eq("is_active", true);
+
+      if (usersError) {
+        console.error("Error fetching company users:", usersError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Database error" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Update license last_used_at to trigger cache invalidation
+      await supabase
+        .from("licenses")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("id", license.id);
+
+      console.log(`[sync-company] Synced ${companyUsers?.length || 0} users for company ${license.company_name}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          syncedCount: companyUsers?.length || 0,
+          companyName: license.company_name,
+          planType: license.plan_type,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     if (action === "check") {
       // Check if stored license is still valid (used on app load)
       const { licenseCode, email }: CheckLicenseRequest = body;
