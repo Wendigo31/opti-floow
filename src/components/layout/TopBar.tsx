@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
+import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { fr, enUS, es } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 import { useLicense, PlanType } from '@/hooks/useLicense';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -42,7 +47,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { language, t } = useLanguage();
-  const { forceSync, isSyncing } = useDataSyncActions();
+  const { forceSync, isSyncing, lastSyncAt, syncErrors, clearErrors, stats } = useDataSyncActions();
 
   // Update time every minute
   useEffect(() => {
@@ -161,30 +166,168 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               <span className="hidden lg:inline">{t.support.title}</span>
             </Button>
 
-            {/* Force sync (company-wide) */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void forceSync()}
-              className="hidden md:flex gap-2"
-              disabled={isSyncing}
-              title={language === 'en' ? 'Force sync' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
-            >
-              <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-              <span className="hidden lg:inline">{language === 'en' ? 'Sync' : language === 'es' ? 'Sync' : 'Sync'}</span>
-            </Button>
+            {/* Sync status with popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden md:flex gap-2"
+                  title={language === 'en' ? 'Sync status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
+                >
+                  {isSyncing ? (
+                    <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                  ) : syncErrors.length > 0 ? (
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                  ) : lastSyncAt ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  <span className="hidden lg:inline">
+                    {isSyncing 
+                      ? (language === 'en' ? 'Syncing...' : language === 'es' ? 'Sincronizando...' : 'Synchro...')
+                      : 'Sync'}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">
+                      {language === 'en' ? 'Sync Status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
+                    </h4>
+                    {isSyncing ? (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        {language === 'en' ? 'In progress' : language === 'es' ? 'En progreso' : 'En cours'}
+                      </Badge>
+                    ) : syncErrors.length > 0 ? (
+                      <Badge variant="destructive" className="text-xs gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {language === 'en' ? 'Errors' : language === 'es' ? 'Errores' : 'Erreurs'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
+                        <Check className="w-3 h-3" />
+                        OK
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Last sync */}
+                  {lastSyncAt && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {language === 'en' ? 'Last sync: ' : language === 'es' ? 'Última sincr.: ' : 'Dernière synchro : '}
+                        {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: dateLocale })}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                      <Truck className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{stats.vehicleCount} véhicule{stats.vehicleCount > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{stats.driverCount} conducteur{stats.driverCount > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                      <Coins className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{stats.chargeCount} charge{stats.chargeCount > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                      <Container className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{stats.trailerCount} remorque{stats.trailerCount > 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+
+                  {/* Errors */}
+                  {syncErrors.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-destructive">
+                          {language === 'en' ? 'Recent errors' : language === 'es' ? 'Errores recientes' : 'Erreurs récentes'}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearErrors}>
+                          <X className="w-3 h-3 mr-1" />
+                          {language === 'en' ? 'Clear' : language === 'es' ? 'Borrar' : 'Effacer'}
+                        </Button>
+                      </div>
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        {syncErrors.map((err, i) => (
+                          <div key={i} className="text-xs bg-destructive/10 text-destructive rounded px-2 py-1 flex items-start gap-2">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium">{err.table}:</span>{' '}
+                              <span className="break-words">{err.message}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Force sync button */}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={() => void forceSync()}
+                    disabled={isSyncing}
+                  >
+                    <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
+                    {language === 'en' ? 'Force sync now' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Force sync (mobile icon) */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void forceSync()}
-              className="md:hidden rounded-full"
-              disabled={isSyncing}
-              title={language === 'en' ? 'Force sync' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
-            >
-              <RefreshCw className={isSyncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="md:hidden rounded-full"
+                  title={language === 'en' ? 'Sync status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
+                >
+                  {isSyncing ? (
+                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                  ) : syncErrors.length > 0 ? (
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <Check className="h-4 w-4 text-green-500" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="end">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">Sync</span>
+                    <Button size="sm" onClick={() => void forceSync()} disabled={isSyncing}>
+                      <RefreshCw className={isSyncing ? 'w-3 h-3 animate-spin mr-1' : 'w-3 h-3 mr-1'} />
+                      Sync
+                    </Button>
+                  </div>
+                  {lastSyncAt && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: dateLocale })}
+                    </p>
+                  )}
+                  {syncErrors.length > 0 && (
+                    <div className="text-xs text-destructive">
+                      {syncErrors.length} erreur{syncErrors.length > 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Theme toggle */}
             <Button

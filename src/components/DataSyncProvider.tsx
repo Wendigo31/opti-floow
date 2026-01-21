@@ -11,10 +11,24 @@ import { supabase } from '@/integrations/supabase/client';
 // Debounce interval in ms - reduced for faster sync (5 seconds)
 const SYNC_DEBOUNCE = 5000;
 
+type SyncError = {
+  table: string;
+  message: string;
+  timestamp: Date;
+};
+
 type DataSyncActions = {
   forceSync: () => Promise<void>;
   isSyncing: boolean;
   lastSyncAt: Date | null;
+  syncErrors: SyncError[];
+  clearErrors: () => void;
+  stats: {
+    vehicleCount: number;
+    driverCount: number;
+    chargeCount: number;
+    trailerCount: number;
+  };
 };
 
 const DataSyncActionsContext = createContext<DataSyncActions | undefined>(undefined);
@@ -32,6 +46,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const [interimDrivers, setInterimDrivers] = useLocalStorage<Driver[]>('optiflow_interim_drivers', []);
   const { syncAllData, loadCompanyData, manualSync, syncStatus } = useDataSync();
   const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [syncErrors, setSyncErrors] = useState<SyncError[]>([]);
   
   const lastSyncRef = useRef<number>(0);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -259,17 +274,30 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
   const forceSync = useCallback(async () => {
-    // 1) Push local changes
-    await manualSync(vehicles, drivers, interimDrivers, charges, trailers);
+    try {
+      // 1) Push local changes
+      await manualSync(vehicles, drivers, interimDrivers, charges, trailers);
 
-    // 2) Pull back company data (truth source) so all sessions converge
-    hasLoadedCompanyData.current = false;
-    const companyData = await loadCompanyData();
-    if (companyData) {
-      hasLoadedCompanyData.current = true;
-      applyCompanyData(companyData);
+      // 2) Pull back company data (truth source) so all sessions converge
+      hasLoadedCompanyData.current = false;
+      const companyData = await loadCompanyData();
+      if (companyData) {
+        hasLoadedCompanyData.current = true;
+        applyCompanyData(companyData);
+      }
+      
+      // Clear errors on successful sync
+      setSyncErrors([]);
+    } catch (error: any) {
+      setSyncErrors(prev => [...prev.slice(-4), {
+        table: 'global',
+        message: error?.message || 'Sync failed',
+        timestamp: new Date(),
+      }]);
     }
   }, [manualSync, vehicles, drivers, interimDrivers, charges, trailers, loadCompanyData, applyCompanyData]);
+
+  const clearErrors = useCallback(() => setSyncErrors([]), []);
 
   useEffect(() => {
     const scheduleSync = async () => {
@@ -334,6 +362,14 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
       forceSync,
       isSyncing: syncStatus.isSyncing,
       lastSyncAt: syncStatus.lastSyncAt,
+      syncErrors,
+      clearErrors,
+      stats: {
+        vehicleCount: syncStatus.vehicleCount,
+        driverCount: syncStatus.driverCount,
+        chargeCount: syncStatus.chargeCount,
+        trailerCount: syncStatus.trailerCount,
+      },
     }}>
       {children}
     </DataSyncActionsContext.Provider>
