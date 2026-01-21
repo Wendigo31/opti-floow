@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLicense } from '@/hooks/useLicense';
 import { toast } from 'sonner';
 import type { SavedTour, SaveTourInput, TourStop } from '@/types/savedTour';
 import type { Json } from '@/integrations/supabase/types';
@@ -53,14 +52,51 @@ async function getUserLicenseId(): Promise<string | null> {
 }
 
 export function useSavedTours() {
-  const { licenseData } = useLicense();
   const [tours, setTours] = useState<SavedTour[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const userId = licenseData?.code || 'anonymous';
   const isDemo = isDemoModeActive();
+
+  // Track auth state (prevents "anonymous" calls that trigger RLS errors)
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      setAuthUserId(user?.id || null);
+
+      if (user) {
+        const lid = await getUserLicenseId();
+        if (!isMounted) return;
+        setLicenseId(lid);
+      } else {
+        setLicenseId(null);
+      }
+    };
+
+    void init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user || null;
+      setAuthUserId(user?.id || null);
+      if (user) {
+        const lid = await getUserLicenseId();
+        setLicenseId(lid);
+      } else {
+        setLicenseId(null);
+        setTours([]);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchTours = useCallback(async () => {
     setLoading(true);
@@ -73,7 +109,9 @@ export function useSavedTours() {
       return;
     }
     
-    if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Not authenticated yet → don't spam error toast
       setLoading(false);
       return;
     }
@@ -82,13 +120,21 @@ export function useSavedTours() {
       // Check if user is part of a company for company-level access
       const fetchedLicenseId = await getUserLicenseId();
       setLicenseId(fetchedLicenseId);
-      
-      // The RLS policies will handle company-level access
-      // We just need to query without user_id filter if we have license_id
-      const { data, error } = await supabase
+
+      // Scope query to company when possible (keeps fast + avoids loading noise)
+      let query = supabase
         .from('saved_tours')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      if (fetchedLicenseId) {
+        // Company tours + personal tours
+        query = query.or(`license_id.eq.${fetchedLicenseId},user_id.eq.${user.id}`);
+      } else {
+        // Personal only
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -99,22 +145,23 @@ export function useSavedTours() {
     } finally {
       setLoading(false);
     }
-  }, [userId, isDemo]);
+  }, [isDemo]);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (isDemo || !authUserId) return;
 
     // Create channel for realtime sync
+    const filter = licenseId ? `license_id=eq.${licenseId}` : `user_id=eq.${authUserId}`;
     channelRef.current = supabase
-      .channel(`saved_tours_${licenseId}`)
+      .channel(`saved_tours_${licenseId || authUserId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'saved_tours',
-          filter: `license_id=eq.${licenseId}`,
+          filter,
         },
         (payload) => {
           console.log('[Realtime] saved_tours change:', payload.eventType);
@@ -145,7 +192,7 @@ export function useSavedTours() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId, authUserId, isDemo]);
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     // In demo mode, save to localStorage
@@ -195,17 +242,19 @@ export function useSavedTours() {
       return newTour;
     }
 
-    if (!userId) {
-      toast.error('Licence non trouvée');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('Vous devez être connecté');
       return null;
     }
 
     try {
       // Get the user's license_id for company-level sync
       const licenseId = await getUserLicenseId();
+      setLicenseId(licenseId);
 
       const tourData = {
-        user_id: userId,
+        user_id: user.id,
         license_id: licenseId,
         client_id: input.client_id || null,
         name: input.name,
@@ -255,7 +304,7 @@ export function useSavedTours() {
       toast.error('Erreur lors de la sauvegarde');
       return null;
     }
-  }, [userId, isDemo]);
+  }, [isDemo]);
 
   const updateTour = useCallback(async (id: string, updates: Partial<SaveTourInput>): Promise<boolean> => {
     // In demo mode, update localStorage

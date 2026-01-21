@@ -23,6 +23,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { isTauri } from '@/hooks/useTauri';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
+import { useDataSyncActions } from '@/components/DataSyncProvider';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -41,6 +42,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { language, t } = useLanguage();
+  const { forceSync, isSyncing } = useDataSyncActions();
 
   // Update time every minute
   useEffect(() => {
@@ -157,6 +159,31 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
             >
               <Mail className="w-4 h-4" />
               <span className="hidden lg:inline">{t.support.title}</span>
+            </Button>
+
+            {/* Force sync (company-wide) */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void forceSync()}
+              className="hidden md:flex gap-2"
+              disabled={isSyncing}
+              title={language === 'en' ? 'Force sync' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
+            >
+              <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
+              <span className="hidden lg:inline">{language === 'en' ? 'Sync' : language === 'es' ? 'Sync' : 'Sync'}</span>
+            </Button>
+
+            {/* Force sync (mobile icon) */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => void forceSync()}
+              className="md:hidden rounded-full"
+              disabled={isSyncing}
+              title={language === 'en' ? 'Force sync' : language === 'es' ? 'Forzar sincronización' : 'Forcer la synchronisation'}
+            >
+              <RefreshCw className={isSyncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
             </Button>
 
             {/* Theme toggle */}
