@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useDataSync } from '@/hooks/useDataSync';
+import { useDataSync, getUserLicenseId } from '@/hooks/useDataSync';
+import { useCompanyRealtimeSync } from '@/hooks/useRealtimeSync';
 import type { Vehicle } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
-import type { Driver } from '@/types';
+import type { Driver, FixedCharge } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 // Debounce interval in ms (sync every 30 seconds max, not on every change)
@@ -16,10 +17,124 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const [trailers, setTrailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
   const [interimDrivers, setInterimDrivers] = useLocalStorage<Driver[]>('optiflow_interim_drivers', []);
   const { syncAllData, loadCompanyData } = useDataSync();
+  const [licenseId, setLicenseId] = useState<string | null>(null);
   
   const lastSyncRef = useRef<number>(0);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasLoadedCompanyData = useRef<boolean>(false);
+
+  // Get license ID on mount
+  useEffect(() => {
+    const fetchLicenseId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const lid = await getUserLicenseId(user.id);
+        setLicenseId(lid);
+      }
+    };
+    fetchLicenseId();
+  }, []);
+
+  // Handle realtime data changes from other users
+  const handleRealtimeChange = useCallback((
+    table: string,
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE',
+    payload: any
+  ) => {
+    const record = payload.new || payload.old;
+    
+    console.log(`[DataSyncProvider] Realtime ${eventType} on ${table}:`, record);
+
+    switch (table) {
+      case 'user_vehicles':
+        if (eventType === 'DELETE') {
+          setVehicles(prev => prev.filter(v => v.id !== record?.local_id));
+        } else {
+          const vehicleData = record?.vehicle_data as Vehicle;
+          if (vehicleData) {
+            setVehicles(prev => {
+              const exists = prev.find(v => v.id === vehicleData.id);
+              if (exists) {
+                return prev.map(v => v.id === vehicleData.id ? vehicleData : v);
+              }
+              return [...prev, vehicleData];
+            });
+          }
+        }
+        break;
+
+      case 'user_trailers':
+        if (eventType === 'DELETE') {
+          setTrailers(prev => prev.filter(t => t.id !== record?.local_id));
+        } else {
+          const trailerData = record?.trailer_data as Trailer;
+          if (trailerData) {
+            setTrailers(prev => {
+              const exists = prev.find(t => t.id === trailerData.id);
+              if (exists) {
+                return prev.map(t => t.id === trailerData.id ? trailerData : t);
+              }
+              return [...prev, trailerData];
+            });
+          }
+        }
+        break;
+
+      case 'user_drivers':
+        if (eventType === 'DELETE') {
+          const localId = record?.local_id;
+          setDrivers(prev => prev.filter(d => d.id !== localId));
+          setInterimDrivers(prev => prev.filter(d => d.id !== localId));
+        } else {
+          const driverData = record?.driver_data as Driver;
+          const driverType = record?.driver_type;
+          if (driverData) {
+            if (driverType === 'interim') {
+              setInterimDrivers(prev => {
+                const exists = prev.find(d => d.id === driverData.id);
+                if (exists) {
+                  return prev.map(d => d.id === driverData.id ? driverData : d);
+                }
+                return [...prev, driverData];
+              });
+            } else {
+              setDrivers(prev => {
+                const exists = prev.find(d => d.id === driverData.id);
+                if (exists) {
+                  return prev.map(d => d.id === driverData.id ? driverData : d);
+                }
+                return [...prev, driverData];
+              });
+            }
+          }
+        }
+        break;
+
+      case 'user_charges':
+        if (eventType === 'DELETE') {
+          setCharges(prev => prev.filter(c => c.id !== record?.local_id));
+        } else {
+          const chargeData = record?.charge_data as FixedCharge;
+          if (chargeData) {
+            setCharges(prev => {
+              const exists = prev.find(c => c.id === chargeData.id);
+              if (exists) {
+                return prev.map(c => c.id === chargeData.id ? chargeData : c);
+              }
+              return [...prev, chargeData];
+            });
+          }
+        }
+        break;
+    }
+  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+
+  // Subscribe to realtime changes for company data
+  useCompanyRealtimeSync({
+    licenseId,
+    onDataChange: handleRealtimeChange,
+    enabled: !!licenseId,
+  });
 
   // Load company-shared data on initial auth
   useEffect(() => {
@@ -39,65 +154,56 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
           trailers: companyData.trailers.length,
         });
 
-        // Merge company data with local data (prefer cloud data for company sync)
-        // Only merge if we have company data and it's different from local
+        // Replace local data with company data for full sync
         if (companyData.vehicles.length > 0) {
-          const cloudVehicles = companyData.vehicles.map((v: any) => v.vehicle_data as Vehicle);
-          // Merge: add cloud vehicles not present locally
-          const localIds = vehicles.map(v => v.id);
-          const newVehicles = cloudVehicles.filter(cv => cv && !localIds.includes(cv.id));
-          if (newVehicles.length > 0) {
-            setVehicles([...vehicles, ...newVehicles]);
+          const cloudVehicles = companyData.vehicles
+            .map((v: any) => v.vehicle_data as Vehicle)
+            .filter(Boolean);
+          if (cloudVehicles.length > 0) {
+            setVehicles(cloudVehicles);
           }
         }
 
         if (companyData.trailers.length > 0) {
-          const cloudTrailers = companyData.trailers.map((t: any) => t.trailer_data as Trailer);
-          // Merge: add cloud trailers not present locally
-          const localIds = trailers.map(t => t.id);
-          const newTrailers = cloudTrailers.filter(ct => ct && !localIds.includes(ct.id));
-          if (newTrailers.length > 0) {
-            setTrailers([...trailers, ...newTrailers]);
+          const cloudTrailers = companyData.trailers
+            .map((t: any) => t.trailer_data as Trailer)
+            .filter(Boolean);
+          if (cloudTrailers.length > 0) {
+            setTrailers(cloudTrailers);
           }
         }
 
         if (companyData.drivers.length > 0) {
           const cdiDrivers = companyData.drivers
             .filter((d: any) => d.driver_type === 'cdi')
-            .map((d: any) => d.driver_data as Driver);
+            .map((d: any) => d.driver_data as Driver)
+            .filter(Boolean);
           const interimDriversCloud = companyData.drivers
             .filter((d: any) => d.driver_type === 'interim')
-            .map((d: any) => d.driver_data as Driver);
+            .map((d: any) => d.driver_data as Driver)
+            .filter(Boolean);
 
-          // Merge CDI drivers
-          const localCdiIds = drivers.map(d => d.id);
-          const newCdiDrivers = cdiDrivers.filter(cd => cd && !localCdiIds.includes(cd.id));
-          if (newCdiDrivers.length > 0) {
-            setDrivers([...drivers, ...newCdiDrivers]);
+          if (cdiDrivers.length > 0) {
+            setDrivers(cdiDrivers);
           }
-
-          // Merge interim drivers
-          const localInterimIds = interimDrivers.map(d => d.id);
-          const newInterimDrivers = interimDriversCloud.filter(id => id && !localInterimIds.includes(id.id));
-          if (newInterimDrivers.length > 0) {
-            setInterimDrivers([...interimDrivers, ...newInterimDrivers]);
+          if (interimDriversCloud.length > 0) {
+            setInterimDrivers(interimDriversCloud);
           }
         }
 
         if (companyData.charges.length > 0) {
-          const cloudCharges = companyData.charges.map((c: any) => c.charge_data);
-          // Merge charges
-          const localChargeIds = charges.map(c => c.id);
-          const newCharges = cloudCharges.filter(cc => cc && !localChargeIds.includes(cc.id));
-          if (newCharges.length > 0) {
-            setCharges([...charges, ...newCharges]);
+          const cloudCharges = companyData.charges
+            .map((c: any) => c.charge_data as FixedCharge)
+            .filter(Boolean);
+          if (cloudCharges.length > 0) {
+            setCharges(cloudCharges);
           }
         }
       }
     };
 
     loadSharedData();
-  }, [loadCompanyData]); // Only run once on mount
+  }, [loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
   useEffect(() => {
     const scheduleSync = async () => {
@@ -140,9 +246,15 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         // Reset the flag to load company data again
         hasLoadedCompanyData.current = false;
         
+        // Update license ID
+        const lid = await getUserLicenseId(session.user.id);
+        setLicenseId(lid);
+        
         // Sync immediately on sign in
         lastSyncRef.current = Date.now();
         await syncAllData(vehicles, drivers, interimDrivers, charges, trailers);
+      } else if (event === 'SIGNED_OUT') {
+        setLicenseId(null);
       }
     });
 
