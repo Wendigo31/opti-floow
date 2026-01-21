@@ -37,9 +37,12 @@ export function useDataSync() {
   });
 
   const syncVehicles = useCallback(async (vehicles: Vehicle[], userId: string, licenseId: string | null) => {
-    if (!userId || vehicles.length === 0) return 0;
+    if (!userId) return 0;
 
     try {
+      // For company sync, we use license_id + local_id as the unique key
+      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
+      
       // Upsert each vehicle with license_id for company sharing
       for (const vehicle of vehicles) {
         const { error } = await supabase
@@ -61,7 +64,8 @@ export function useDataSync() {
             vehicle_data: vehicle as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: 'user_id,local_id',
+            onConflict: onConflictKey,
+            ignoreDuplicates: false,
           });
         
         if (error) console.error('Vehicle upsert error:', error);
@@ -98,9 +102,12 @@ export function useDataSync() {
   }, []);
 
   const syncTrailers = useCallback(async (trailers: Trailer[], userId: string, licenseId: string | null) => {
-    if (!userId || trailers.length === 0) return 0;
+    if (!userId) return 0;
 
     try {
+      // For company sync, we use license_id + local_id as the unique key
+      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
+      
       // Upsert each trailer with license_id for company sharing
       for (const trailer of trailers) {
         const { error } = await supabase
@@ -120,7 +127,8 @@ export function useDataSync() {
             trailer_data: trailer as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: 'user_id,local_id',
+            onConflict: onConflictKey,
+            ignoreDuplicates: false,
           });
         
         if (error) console.error('Trailer upsert error:', error);
@@ -163,9 +171,10 @@ export function useDataSync() {
       ...interimDrivers.map(d => ({ ...d, driverType: 'interim' })),
     ];
 
-    if (allDrivers.length === 0) return 0;
-
     try {
+      // For company sync, we use license_id + local_id as the unique key
+      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
+      
       // Upsert each driver with license_id for company sharing
       for (const driver of allDrivers) {
         const { error } = await supabase
@@ -181,7 +190,8 @@ export function useDataSync() {
             driver_data: driver as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: 'user_id,local_id',
+            onConflict: onConflictKey,
+            ignoreDuplicates: false,
           });
         
         if (error) console.error('Driver upsert error:', error);
@@ -217,9 +227,13 @@ export function useDataSync() {
   }, []);
 
   const syncCharges = useCallback(async (charges: FixedCharge[], userId: string, licenseId: string | null) => {
-    if (!userId || charges.length === 0) return 0;
+    if (!userId) return 0;
 
     try {
+      // For company sync, we use license_id + local_id as the unique key
+      // For personal sync (no license_id), we use user_id + local_id
+      const onConflictKey = licenseId ? 'license_id,local_id' : 'user_id,local_id';
+      
       // Upsert each charge with license_id for company sharing
       for (const charge of charges) {
         const { error } = await supabase
@@ -236,13 +250,14 @@ export function useDataSync() {
             charge_data: charge as unknown as Record<string, unknown>,
             synced_at: new Date().toISOString(),
           } as any, {
-            onConflict: 'user_id,local_id',
+            onConflict: onConflictKey,
+            ignoreDuplicates: false,
           });
         
         if (error) console.error('Charge upsert error:', error);
       }
 
-      // Get current synced charge IDs for this company
+      // Get current synced charge IDs for this company or user
       const query = licenseId 
         ? supabase.from('user_charges').select('local_id, user_id').eq('license_id', licenseId)
         : supabase.from('user_charges').select('local_id, user_id').eq('user_id', userId);
