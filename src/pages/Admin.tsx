@@ -1299,7 +1299,24 @@ export default function Admin() {
         open={userDetailOpen}
         onOpenChange={setUserDetailOpen}
         adminToken={getAdminToken() || ''}
-        onUpdate={fetchLicenses}
+        onUpdate={async () => {
+          await fetchLicenses();
+          // Update the selected license with fresh data from the updated licenses list
+          if (selectedLicenseForDetail) {
+            const token = getAdminToken();
+            if (token) {
+              const { data } = await supabase.functions.invoke('validate-license', {
+                body: { action: 'list-all', adminToken: token },
+              });
+              if (data?.licenses) {
+                const updatedLicense = data.licenses.find((l: License) => l.id === selectedLicenseForDetail.id);
+                if (updatedLicense) {
+                  setSelectedLicenseForDetail(updatedLicense);
+                }
+              }
+            }
+          }
+        }}
       />
     </div>
   );
