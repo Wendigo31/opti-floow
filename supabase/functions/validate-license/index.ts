@@ -215,6 +215,23 @@ const logAdminAction = async (
   }
 };
 
+// Map legacy roles to new simplified roles
+const mapToValidRole = (role: string | null | undefined): 'direction' | 'responsable' | 'exploitation' => {
+  const normalizedRole = (role || '').toLowerCase().trim();
+  switch (normalizedRole) {
+    case 'owner':
+    case 'direction':
+      return 'direction';
+    case 'admin':
+    case 'responsable':
+      return 'responsable';
+    case 'member':
+    case 'exploitation':
+    default:
+      return 'exploitation';
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("validate-license function called");
 
@@ -542,7 +559,7 @@ const handler = async (req: Request): Promise<Response> => {
           .insert({
             license_id: assignToCompanyId,
             email: email.trim().toLowerCase(),
-            role: userRole || 'exploitation',
+            role: mapToValidRole(userRole),
             display_name: displayName,
             is_active: true,
             invited_at: new Date().toISOString(),
