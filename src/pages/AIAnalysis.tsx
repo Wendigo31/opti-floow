@@ -48,6 +48,20 @@ import { validateAIRequest } from '@/utils/aiValidation';
 import type { Vehicle } from '@/types/vehicle';
 import type { SavedTour } from '@/types/savedTour';
 
+// Import itinerary state to get current search
+const ITINERARY_STORAGE_KEY = 'optiflow_itinerary_state';
+function getItineraryState() {
+  try {
+    const stored = sessionStorage.getItem(ITINERARY_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 interface AIOptimization {
   type: string;
   description: string;
@@ -164,7 +178,7 @@ export default function AIAnalysis() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   
-  // Enhanced constraints
+  // Enhanced constraints for truck drivers
   const [preferNight, setPreferNight] = useState(false);
   const [avoidWeekends, setAvoidWeekends] = useState(true);
   const [maxDrivingHours, setMaxDrivingHours] = useState(9);
@@ -172,6 +186,17 @@ export default function AIAnalysis() {
   const [urgency, setUrgency] = useState<'standard' | 'express' | 'flexible'>('standard');
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('full_optimization');
   const [departureTime, setDepartureTime] = useState('');
+  
+  // Additional truck driver constraints
+  const [respectRSE, setRespectRSE] = useState(true);
+  const [includeRestBreaks, setIncludeRestBreaks] = useState(true);
+  const [includeMealBreaks, setIncludeMealBreaks] = useState(true);
+  const [maxConsecutiveDrivingHours, setMaxConsecutiveDrivingHours] = useState(4.5);
+  const [requireOvernightRest, setRequireOvernightRest] = useState(true);
+  const [avoidLowBridges, setAvoidLowBridges] = useState(true);
+  const [avoidWeightRestrictions, setAvoidWeightRestrictions] = useState(true);
+  const [vehicleHeight, setVehicleHeight] = useState(4.0);
+  const [vehicleWeight, setVehicleWeight] = useState(44);
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -244,6 +269,44 @@ export default function AIAnalysis() {
     }
   };
 
+  const handleLoadFromItinerary = () => {
+    const itineraryState = getItineraryState();
+    if (!itineraryState?.originAddress || !itineraryState?.destinationAddress) {
+      toast({
+        title: "Aucun itinéraire",
+        description: "Aucun trajet programmé dans la page Itinéraire",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setOrigin(itineraryState.originAddress);
+    setDestination(itineraryState.destinationAddress);
+    setStops(itineraryState.stops?.map((s: any) => s.address).filter(Boolean) || []);
+    
+    // Load vehicle if selected
+    if (itineraryState.selectedVehicleId) {
+      setSelectedVehicleId(itineraryState.selectedVehicleId);
+    }
+    
+    // Load route constraints from itinerary
+    if (itineraryState.avoidLowBridges !== undefined) {
+      setAvoidLowBridges(itineraryState.avoidLowBridges);
+    }
+    if (itineraryState.avoidWeightRestrictions !== undefined) {
+      setAvoidWeightRestrictions(itineraryState.avoidWeightRestrictions);
+    }
+    
+    setResult(null);
+    setLoadedTour(null);
+    setAnalysisMode('full_optimization');
+    
+    toast({
+      title: "Itinéraire chargé",
+      description: `${itineraryState.originAddress.split(',')[0]} → ${itineraryState.destinationAddress.split(',')[0]}`,
+    });
+  };
+
   const handleLoadTour = (tour: SavedTour) => {
     setLoadedTour(tour);
     setOrigin(tour.origin_address);
@@ -303,11 +366,21 @@ export default function AIAnalysis() {
         drivers: validation.sanitizedDrivers,
         constraints: {
           maxDrivingHours,
+          maxConsecutiveDrivingHours,
           preferNightDriving: preferNight,
           avoidWeekends,
           allowRelay,
           urgency,
           departureTime: departureTime || undefined,
+          // Enhanced truck driver constraints
+          respectRSE,
+          includeRestBreaks,
+          includeMealBreaks,
+          requireOvernightRest,
+          avoidLowBridges,
+          avoidWeightRestrictions,
+          vehicleHeight,
+          vehicleWeight,
         },
       };
 
@@ -383,10 +456,16 @@ export default function AIAnalysis() {
               <p className="text-muted-foreground">Optimisation relais, horaires & coûts</p>
             </div>
           </div>
-          <Button onClick={() => setLoadTourOpen(true)} variant="outline" className="gap-2">
-            <Upload className="w-4 h-4" />
-            Charger une tournée
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleLoadFromItinerary} variant="outline" className="gap-2">
+              <Navigation className="w-4 h-4" />
+              Reprendre l'itinéraire
+            </Button>
+            <Button onClick={() => setLoadTourOpen(true)} variant="outline" className="gap-2">
+              <Upload className="w-4 h-4" />
+              Charger une tournée
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -620,6 +699,104 @@ export default function AIAnalysis() {
                     onChange={(e) => setDepartureTime(e.target.value)}
                     className="mt-1"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Truck Driver Constraints */}
+            <div className="glass-card p-5 opacity-0 animate-slide-up" style={{ animationDelay: '250ms', animationFillMode: 'forwards' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-foreground">Contraintes conducteur routier</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Respect RSE strict</span>
+                  </div>
+                  <Switch checked={respectRSE} onCheckedChange={setRespectRSE} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Inclure pauses repos (45min/4h30)</span>
+                  </div>
+                  <Switch checked={includeRestBreaks} onCheckedChange={setIncludeRestBreaks} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Fuel className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Inclure pauses repas</span>
+                  </div>
+                  <Switch checked={includeMealBreaks} onCheckedChange={setIncludeMealBreaks} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Repos de nuit obligatoire (11h)</span>
+                  </div>
+                  <Switch checked={requireOvernightRest} onCheckedChange={setRequireOvernightRest} />
+                </div>
+                
+                <div className="border-t pt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Restrictions véhicule</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Éviter ponts bas</span>
+                    </div>
+                    <Switch checked={avoidLowBridges} onCheckedChange={setAvoidLowBridges} />
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Éviter limitations tonnage</span>
+                    </div>
+                    <Switch checked={avoidWeightRestrictions} onCheckedChange={setAvoidWeightRestrictions} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Hauteur véhicule (m)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="2"
+                        max="5"
+                        value={vehicleHeight}
+                        onChange={(e) => setVehicleHeight(Number(e.target.value))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">PTAC (tonnes)</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="3.5"
+                        max="44"
+                        value={vehicleWeight}
+                        onChange={(e) => setVehicleWeight(Number(e.target.value))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Pause obligatoire après</Label>
+                    <Select value={String(maxConsecutiveDrivingHours)} onValueChange={(v) => setMaxConsecutiveDrivingHours(Number(v))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4.5">4h30 (RSE)</SelectItem>
+                        <SelectItem value="4">4h00</SelectItem>
+                        <SelectItem value="3.5">3h30</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
