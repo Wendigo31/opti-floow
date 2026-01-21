@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
 import { toast } from 'sonner';
 import type { LocalTrip } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Get user's license_id for company-level sync
 async function getUserLicenseId(): Promise<string | null> {
@@ -44,6 +45,8 @@ export function useTrips() {
   const { licenseData } = useLicense();
   const [trips, setTrips] = useState<LocalTrip[]>([]);
   const [loading, setLoading] = useState(false);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   
   const isDemo = isDemoModeActive();
 
@@ -274,6 +277,115 @@ export function useTrips() {
   const getTripsByClient = useCallback((clientId: string): LocalTrip[] => {
     return trips.filter(t => t.client_id === clientId);
   }, [trips]);
+
+  // Fetch license ID on mount
+  useEffect(() => {
+    if (!isDemo) {
+      getUserLicenseId().then(setLicenseId);
+    }
+  }, [isDemo]);
+
+  // Setup realtime subscription for company-level sync
+  useEffect(() => {
+    if (isDemo || !licenseId) return;
+
+    channelRef.current = supabase
+      .channel(`trips_${licenseId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trips',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] trips change:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            const t = payload.new as any;
+            const newTrip: LocalTrip = {
+              id: t.id,
+              client_id: t.client_id,
+              origin_address: t.origin_address,
+              destination_address: t.destination_address,
+              origin_lat: t.origin_lat,
+              origin_lng: t.origin_lng,
+              destination_lat: t.destination_lat,
+              destination_lng: t.destination_lng,
+              distance_km: t.distance_km,
+              duration_minutes: t.duration_minutes,
+              fuel_cost: t.fuel_cost,
+              toll_cost: t.toll_cost,
+              driver_cost: t.driver_cost,
+              adblue_cost: t.adblue_cost,
+              structure_cost: t.structure_cost,
+              total_cost: t.total_cost,
+              revenue: t.revenue,
+              profit: t.profit,
+              profit_margin: t.profit_margin,
+              trip_date: t.trip_date,
+              status: t.status,
+              notes: t.notes,
+              stops: t.stops,
+              vehicle_data: t.vehicle_data,
+              driver_ids: t.driver_ids,
+              created_at: t.created_at,
+              updated_at: t.updated_at,
+            };
+            setTrips(prev => {
+              if (prev.find(trip => trip.id === newTrip.id)) return prev;
+              return [newTrip, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const t = payload.new as any;
+            const updatedTrip: LocalTrip = {
+              id: t.id,
+              client_id: t.client_id,
+              origin_address: t.origin_address,
+              destination_address: t.destination_address,
+              origin_lat: t.origin_lat,
+              origin_lng: t.origin_lng,
+              destination_lat: t.destination_lat,
+              destination_lng: t.destination_lng,
+              distance_km: t.distance_km,
+              duration_minutes: t.duration_minutes,
+              fuel_cost: t.fuel_cost,
+              toll_cost: t.toll_cost,
+              driver_cost: t.driver_cost,
+              adblue_cost: t.adblue_cost,
+              structure_cost: t.structure_cost,
+              total_cost: t.total_cost,
+              revenue: t.revenue,
+              profit: t.profit,
+              profit_margin: t.profit_margin,
+              trip_date: t.trip_date,
+              status: t.status,
+              notes: t.notes,
+              stops: t.stops,
+              vehicle_data: t.vehicle_data,
+              driver_ids: t.driver_ids,
+              created_at: t.created_at,
+              updated_at: t.updated_at,
+            };
+            setTrips(prev => prev.map(trip => trip.id === updatedTrip.id ? updatedTrip : trip));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as any).id;
+            setTrips(prev => prev.filter(trip => trip.id !== deletedId));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] trips subscription:', status);
+      });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [licenseId, isDemo]);
 
   // Initial fetch
   useEffect(() => {
