@@ -699,7 +699,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Admin: Update existing license (full edit) - includes SIREN sync
     if (action === "update-license") {
-      const { licenseId, email, planType, firstName, lastName, companyName, siren, address, city, postalCode, employeeCount, companyStatus } = body;
+      const { licenseId, email, planType, firstName, lastName, companyName, siren, address, city, postalCode, employeeCount, companyStatus, companyIdentifier } = body;
       const auth = await verifyAdminAuth(body, authHeader);
       
       console.log("Updating license:", licenseId, "by admin:", auth.email);
@@ -718,12 +718,30 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
+      // Check company_identifier uniqueness if being updated
+      if (companyIdentifier !== undefined && companyIdentifier) {
+        const { data: existingId } = await supabase
+          .from("licenses")
+          .select("id")
+          .eq("company_identifier", companyIdentifier.trim())
+          .neq("id", licenseId)
+          .maybeSingle();
+        
+        if (existingId) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Cet identifiant société existe déjà" }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+
       const updateData: Record<string, any> = {};
       if (email !== undefined) updateData.email = email.trim().toLowerCase();
       if (planType !== undefined && ['start', 'pro', 'enterprise'].includes(planType)) updateData.plan_type = planType;
       if (firstName !== undefined) updateData.first_name = firstName || null;
       if (lastName !== undefined) updateData.last_name = lastName || null;
       if (companyName !== undefined) updateData.company_name = companyName || null;
+      if (companyIdentifier !== undefined) updateData.company_identifier = companyIdentifier?.trim() || null;
       if (siren !== undefined) updateData.siren = siren || null;
       if (address !== undefined) updateData.address = address || null;
       if (city !== undefined) updateData.city = city || null;

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { 
   Table, 
   TableBody, 
@@ -16,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 import { 
   Building2, 
   Users, 
@@ -42,7 +44,10 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -125,6 +130,11 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
     revenue: number;
     distance: number;
   } | null>(null);
+  
+  // Identifier editing state
+  const [isEditingIdentifier, setIsEditingIdentifier] = useState(false);
+  const [editIdentifier, setEditIdentifier] = useState('');
+  const [isSavingIdentifier, setIsSavingIdentifier] = useState(false);
 
   // Fetch licenses
   useEffect(() => {
@@ -222,6 +232,43 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
     }
   };
 
+  const handleSaveIdentifier = async () => {
+    if (!selectedLicenseId || !editIdentifier.trim()) return;
+    
+    const token = getAdminToken();
+    if (!token) return;
+    
+    setIsSavingIdentifier(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: {
+          action: 'update-license',
+          licenseId: selectedLicenseId,
+          companyIdentifier: editIdentifier.trim().toUpperCase(),
+          adminToken: token,
+        },
+      });
+      
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erreur');
+      
+      // Update local state
+      setLicenses(prev => prev.map(l => 
+        l.id === selectedLicenseId 
+          ? { ...l, company_identifier: editIdentifier.trim().toUpperCase() } as any
+          : l
+      ));
+      
+      setIsEditingIdentifier(false);
+      toast.success('Identifiant société mis à jour');
+    } catch (err: any) {
+      console.error('Error updating identifier:', err);
+      toast.error(err.message || 'Erreur lors de la mise à jour');
+    } finally {
+      setIsSavingIdentifier(false);
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner': return <Crown className="h-4 w-4 text-amber-500" />;
@@ -289,12 +336,62 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
             {/* Company Overview */}
             <div className="p-4 rounded-lg bg-muted/50 space-y-4">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-lg">{selectedLicense.company_name || selectedLicense.email}</h3>
                   <p className="text-sm text-muted-foreground">{selectedLicense.email}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ID: <code className="bg-background px-1 py-0.5 rounded">{(selectedLicense as any).company_identifier || selectedLicense.license_code}</code>
-                  </p>
+                  
+                  {/* Editable Identifier */}
+                  <div className="mt-2">
+                    {isEditingIdentifier ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editIdentifier}
+                          onChange={(e) => setEditIdentifier(e.target.value.toUpperCase())}
+                          placeholder="IDENTIFIANT-SOCIETE"
+                          className="h-8 w-48 font-mono text-xs"
+                        />
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8"
+                          onClick={handleSaveIdentifier}
+                          disabled={isSavingIdentifier || !editIdentifier.trim()}
+                        >
+                          {isSavingIdentifier ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 text-green-500" />
+                          )}
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8"
+                          onClick={() => setIsEditingIdentifier(false)}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">ID:</span>
+                        <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs font-bold">
+                          {(selectedLicense as any).company_identifier || selectedLicense.license_code}
+                        </code>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setEditIdentifier((selectedLicense as any).company_identifier || '');
+                            setIsEditingIdentifier(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <Badge variant="default" className="mb-2">
