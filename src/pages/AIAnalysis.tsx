@@ -42,6 +42,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
+import { VisualSchedule } from '@/components/ai/VisualSchedule';
 import { AIRouteMap } from '@/components/ai/AIRouteMap';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { validateAIRequest } from '@/utils/aiValidation';
@@ -908,6 +909,21 @@ export default function AIAnalysis() {
                     segments={result.routeDetails?.segments || []}
                   />
                 </div>
+
+                {/* Visual Schedule Timeline */}
+                {result.routeDetails?.segments && result.routeDetails.segments.length > 0 && (
+                  <div className="glass-card p-5 opacity-0 animate-slide-up" style={{ animationDelay: '45ms', animationFillMode: 'forwards' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Planning horaire</h3>
+                    </div>
+                    <VisualSchedule 
+                      segments={result.routeDetails.segments}
+                      departureTime={result.routeDetails.departureTime}
+                      arrivalTime={result.routeDetails.arrivalTime}
+                    />
+                  </div>
+                )}
 
                 {/* Recommendation */}
                 <div className="glass-card p-5 opacity-0 animate-slide-up" style={{ animationDelay: '50ms', animationFillMode: 'forwards' }}>
