@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { 
   MapPin, 
   Navigation, 
@@ -59,11 +59,13 @@ import { useCalculations } from '@/hooks/useCalculations';
 import { FRENCH_TOLL_RATES, SEMI_TRAILER_SPECS } from '@/hooks/useTomTom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState } from 'react';
 
 import { supabase } from '@/integrations/supabase/client';
 
 import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useItineraryState } from '@/hooks/useItineraryState';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -184,10 +186,38 @@ export default function Itinerary() {
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   
-  const [originAddress, setOriginAddress] = useState('');
-  const [originPosition, setOriginPosition] = useState<Position | null>(null);
-  const [destinationAddress, setDestinationAddress] = useState('');
-  const [destinationPosition, setDestinationPosition] = useState<Position | null>(null);
+  // Use persistent state for itinerary search
+  const {
+    originAddress,
+    originPosition,
+    destinationAddress,
+    destinationPosition,
+    stops,
+    selectedVehicleId,
+    selectedClientId,
+    avoidLowBridges,
+    avoidWeightRestrictions,
+    avoidTruckForbidden,
+    highwayRoute,
+    nationalRoute,
+    selectedRouteType,
+    isPanelOpen,
+    setOriginAddress,
+    setOriginPosition,
+    setDestinationAddress,
+    setDestinationPosition,
+    setStops,
+    setSelectedVehicleId,
+    setSelectedClientId,
+    setAvoidLowBridges,
+    setAvoidWeightRestrictions,
+    setAvoidTruckForbidden,
+    setHighwayRoute,
+    setNationalRoute,
+    setSelectedRouteType,
+    setIsPanelOpen,
+    clearState: clearItineraryState,
+  } = useItineraryState();
   
   // Favorite addresses
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoriteAddresses();
@@ -197,8 +227,7 @@ export default function Itinerary() {
   const [addressSelectorTarget, setAddressSelectorTarget] = useState<'origin' | 'destination' | 'stop'>('origin');
   const [addressSelectorStopId, setAddressSelectorStopId] = useState<string | null>(null);
   
-  // Selected vehicle
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  // Selected vehicle from list
   const selectedVehicle = useMemo(() => 
     vehicles.find(v => v.id === selectedVehicleId) || null,
   [vehicles, selectedVehicleId]);
@@ -211,12 +240,6 @@ export default function Itinerary() {
       adBluePriceHT: vehicle.adBluePriceHT,
     });
   }, [selectedVehicle, vehicle.fuelPriceHT, vehicle.adBluePriceHT]);
-  
-  // Stops/waypoints
-  const [stops, setStops] = useState<Waypoint[]>([]);
-  
-  // Selected client
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   
   // Save to client dialog
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -235,14 +258,6 @@ export default function Itinerary() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Panel state
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-  
-  // Truck restrictions
-  const [avoidLowBridges, setAvoidLowBridges] = useState(true);
-  const [avoidWeightRestrictions, setAvoidWeightRestrictions] = useState(true);
-  const [avoidTruckForbidden, setAvoidTruckForbidden] = useState(true);
   
   // Handle address selection from dialog
   const handleAddressSelect = (address: string, position: { lat: number; lon: number }) => {
@@ -291,9 +306,8 @@ export default function Itinerary() {
     }
   };
 
-  const [highwayRoute, setHighwayRoute] = useState<RouteResult | null>(null);
-  const [nationalRoute, setNationalRoute] = useState<RouteResult | null>(null);
-  const [selectedRoute, setSelectedRoute] = useState<'highway' | 'national' | null>(null);
+  // selectedRoute is derived from the persisted selectedRouteType
+  const selectedRoute = selectedRouteType;
 
   // Apply vehicle parameters when a vehicle is selected
   const handleVehicleSelect = (vehicleId: string) => {
@@ -324,25 +338,23 @@ export default function Itinerary() {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
-      setStops((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      const oldIndex = stops.findIndex((item) => item.id === active.id);
+      const newIndex = stops.findIndex((item) => item.id === over.id);
+      setStops(arrayMove(stops, oldIndex, newIndex));
       clearResults();
     }
   };
 
   const addStop = () => {
-    setStops(prev => [...prev, { id: crypto.randomUUID(), address: '', position: null }]);
+    setStops([...stops, { id: crypto.randomUUID(), address: '', position: null }]);
   };
 
   const removeStop = (id: string) => {
-    setStops(prev => prev.filter(s => s.id !== id));
+    setStops(stops.filter(s => s.id !== id));
   };
 
   const updateStop = (id: string, address: string, position: Position | null) => {
-    setStops(prev => prev.map(s => 
+    setStops(stops.map(s => 
       s.id === id ? { ...s, address, position } : s
     ));
   };
@@ -405,7 +417,7 @@ export default function Itinerary() {
   const clearResults = () => {
     setHighwayRoute(null);
     setNationalRoute(null);
-    setSelectedRoute(null);
+    setSelectedRouteType('highway');
   };
 
   const calculateFuelCost = (distanceKm: number): number => {
@@ -550,7 +562,7 @@ export default function Itinerary() {
     setError(null);
     setHighwayRoute(null);
     setNationalRoute(null);
-    setSelectedRoute(null);
+    setSelectedRouteType('highway');
 
     try {
       const [highway, national] = await Promise.all([
@@ -602,7 +614,7 @@ export default function Itinerary() {
       distance: route.distance,
       tollCost: route.tollCost,
     });
-    setSelectedRoute(route.type);
+    setSelectedRouteType(route.type);
   };
 
   const handleSaveToHistory = (route: RouteResult) => {

@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
 import { toast } from 'sonner';
 import type { SavedTour, SaveTourInput, TourStop } from '@/types/savedTour';
 import type { Json } from '@/integrations/supabase/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Helper to convert database row to SavedTour
 function mapDbToSavedTour(row: any): SavedTour {
@@ -55,6 +56,8 @@ export function useSavedTours() {
   const { licenseData } = useLicense();
   const [tours, setTours] = useState<SavedTour[]>([]);
   const [loading, setLoading] = useState(false);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const userId = licenseData?.code || 'anonymous';
   const isDemo = isDemoModeActive();
@@ -77,7 +80,8 @@ export function useSavedTours() {
     
     try {
       // Check if user is part of a company for company-level access
-      const licenseId = await getUserLicenseId();
+      const fetchedLicenseId = await getUserLicenseId();
+      setLicenseId(fetchedLicenseId);
       
       // The RLS policies will handle company-level access
       // We just need to query without user_id filter if we have license_id
@@ -96,6 +100,52 @@ export function useSavedTours() {
       setLoading(false);
     }
   }, [userId, isDemo]);
+
+  // Setup realtime subscription for company-level sync
+  useEffect(() => {
+    if (isDemo || !licenseId) return;
+
+    // Create channel for realtime sync
+    channelRef.current = supabase
+      .channel(`saved_tours_${licenseId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'saved_tours',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] saved_tours change:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            const newTour = mapDbToSavedTour(payload.new);
+            setTours(prev => {
+              // Avoid duplicates
+              if (prev.find(t => t.id === newTour.id)) return prev;
+              return [newTour, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTour = mapDbToSavedTour(payload.new);
+            setTours(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as any).id;
+            setTours(prev => prev.filter(t => t.id !== deletedId));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] saved_tours subscription:', status);
+      });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [licenseId, isDemo]);
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     // In demo mode, save to localStorage

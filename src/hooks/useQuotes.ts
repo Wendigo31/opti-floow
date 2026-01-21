@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
 import { toast } from 'sonner';
 import type { LocalQuote } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Get user's license_id for company-level sync
 async function getUserLicenseId(): Promise<string | null> {
@@ -44,6 +45,8 @@ export function useQuotes() {
   const { licenseData } = useLicense();
   const [quotes, setQuotes] = useState<LocalQuote[]>([]);
   const [loading, setLoading] = useState(false);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   
   const isDemo = isDemoModeActive();
 
@@ -254,6 +257,95 @@ export function useQuotes() {
   const getQuotesByClient = useCallback((clientId: string): LocalQuote[] => {
     return quotes.filter(q => q.client_id === clientId);
   }, [quotes]);
+
+  // Fetch license ID on mount
+  useEffect(() => {
+    if (!isDemo) {
+      getUserLicenseId().then(setLicenseId);
+    }
+  }, [isDemo]);
+
+  // Setup realtime subscription for company-level sync
+  useEffect(() => {
+    if (isDemo || !licenseId) return;
+
+    channelRef.current = supabase
+      .channel(`quotes_${licenseId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quotes',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] quotes change:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            const q = payload.new as any;
+            const newQuote: LocalQuote = {
+              id: q.id,
+              client_id: q.client_id,
+              quote_number: q.quote_number,
+              origin_address: q.origin_address,
+              destination_address: q.destination_address,
+              distance_km: q.distance_km,
+              total_cost: q.total_cost,
+              margin_percent: q.margin_percent,
+              tva_rate: q.tva_rate,
+              price_ht: q.price_ht,
+              price_ttc: q.price_ttc,
+              valid_until: q.valid_until,
+              notes: q.notes,
+              status: q.status,
+              stops: q.stops,
+              created_at: q.created_at,
+              updated_at: q.updated_at,
+            };
+            setQuotes(prev => {
+              if (prev.find(quote => quote.id === newQuote.id)) return prev;
+              return [newQuote, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const q = payload.new as any;
+            const updatedQuote: LocalQuote = {
+              id: q.id,
+              client_id: q.client_id,
+              quote_number: q.quote_number,
+              origin_address: q.origin_address,
+              destination_address: q.destination_address,
+              distance_km: q.distance_km,
+              total_cost: q.total_cost,
+              margin_percent: q.margin_percent,
+              tva_rate: q.tva_rate,
+              price_ht: q.price_ht,
+              price_ttc: q.price_ttc,
+              valid_until: q.valid_until,
+              notes: q.notes,
+              status: q.status,
+              stops: q.stops,
+              created_at: q.created_at,
+              updated_at: q.updated_at,
+            };
+            setQuotes(prev => prev.map(quote => quote.id === updatedQuote.id ? updatedQuote : quote));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as any).id;
+            setQuotes(prev => prev.filter(quote => quote.id !== deletedId));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] quotes subscription:', status);
+      });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [licenseId, isDemo]);
 
   // Initial fetch
   useEffect(() => {

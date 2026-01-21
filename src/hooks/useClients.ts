@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
 import { toast } from 'sonner';
 import type { LocalClient, LocalClientAddress } from '@/types/local';
 import { generateId } from '@/types/local';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Get user's license_id for company-level sync
 async function getUserLicenseId(): Promise<string | null> {
@@ -53,6 +54,8 @@ export function useClients() {
   const [clients, setClients] = useState<LocalClient[]>([]);
   const [addresses, setAddresses] = useState<LocalClientAddress[]>([]);
   const [loading, setLoading] = useState(false);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   
   const isDemo = isDemoModeActive();
 
@@ -271,6 +274,83 @@ export function useClients() {
   const getClientAddresses = useCallback((clientId: string): LocalClientAddress[] => {
     return addresses.filter(a => a.client_id === clientId);
   }, [addresses]);
+
+  // Fetch license ID on mount
+  useEffect(() => {
+    if (!isDemo) {
+      getUserLicenseId().then(setLicenseId);
+    }
+  }, [isDemo]);
+
+  // Setup realtime subscription for company-level sync
+  useEffect(() => {
+    if (isDemo || !licenseId) return;
+
+    channelRef.current = supabase
+      .channel(`clients_${licenseId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clients',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] clients change:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            const newClient: LocalClient = {
+              id: (payload.new as any).id,
+              name: (payload.new as any).name,
+              company: (payload.new as any).company,
+              email: (payload.new as any).email,
+              phone: (payload.new as any).phone,
+              address: (payload.new as any).address,
+              city: (payload.new as any).city,
+              postal_code: (payload.new as any).postal_code,
+              siret: (payload.new as any).siret,
+              notes: (payload.new as any).notes,
+              created_at: (payload.new as any).created_at,
+              updated_at: (payload.new as any).updated_at,
+            };
+            setClients(prev => {
+              if (prev.find(c => c.id === newClient.id)) return prev;
+              return [newClient, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedClient: LocalClient = {
+              id: (payload.new as any).id,
+              name: (payload.new as any).name,
+              company: (payload.new as any).company,
+              email: (payload.new as any).email,
+              phone: (payload.new as any).phone,
+              address: (payload.new as any).address,
+              city: (payload.new as any).city,
+              postal_code: (payload.new as any).postal_code,
+              siret: (payload.new as any).siret,
+              notes: (payload.new as any).notes,
+              created_at: (payload.new as any).created_at,
+              updated_at: (payload.new as any).updated_at,
+            };
+            setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as any).id;
+            setClients(prev => prev.filter(c => c.id !== deletedId));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] clients subscription:', status);
+      });
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [licenseId, isDemo]);
 
   // Initial fetch
   useEffect(() => {
