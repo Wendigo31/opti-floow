@@ -1654,12 +1654,34 @@ const handler = async (req: Request): Promise<Response> => {
       const normalizedEmail = email.trim().toLowerCase();
       const normalizedCode = licenseCode.trim().toUpperCase();
 
-      // First, find license by code only (to support company members)
-      const { data: licenseByCode, error: codeError } = await supabase
+    // First, try to find license by company_identifier (case-insensitive), then by license_code
+      let licenseByCode = null;
+      let codeError = null;
+      
+      // Try company_identifier first (case-insensitive)
+      const { data: licenseById, error: idError } = await supabase
         .from("licenses")
         .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
-        .eq("license_code", normalizedCode)
+        .ilike("company_identifier", normalizedCode)
         .maybeSingle();
+      
+      if (licenseById) {
+        licenseByCode = licenseById;
+        console.log("[check] Found license by company_identifier (case-insensitive)");
+      } else {
+        // Fall back to license_code
+        const { data: licenseByLicenseCode, error: lcError } = await supabase
+          .from("licenses")
+          .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
+          .eq("license_code", normalizedCode)
+          .maybeSingle();
+        
+        licenseByCode = licenseByLicenseCode;
+        codeError = lcError;
+        if (licenseByCode) {
+          console.log("[check] Found license by license_code");
+        }
+      }
 
       if (codeError) {
         console.error("License check error:", codeError);
@@ -1824,20 +1846,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("[validate-license] Validating license:", normalizedCode.substring(0, 4) + '...', "for email:", normalizedEmail);
 
-    // First, try to find license by company_identifier (preferred), then by license_code
+    // First, try to find license by company_identifier (case-insensitive), then by license_code
     let licenseByCode = null;
     let codeError = null;
     
-    // Try company_identifier first
+    // Try company_identifier first (case-insensitive)
     const { data: licenseById, error: idError } = await supabase
       .from("licenses")
       .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info, license_code, company_identifier")
-      .eq("company_identifier", normalizedCode)
+      .ilike("company_identifier", normalizedCode)
       .maybeSingle();
     
     if (licenseById) {
       licenseByCode = licenseById;
-      console.log("[validate-license] Found license by company_identifier");
+      console.log("[validate-license] Found license by company_identifier (case-insensitive)");
     } else {
       // Fall back to license_code
       const { data: licenseByLicenseCode, error: lcError } = await supabase
