@@ -212,7 +212,7 @@ export default function Forecast() {
   };
 
   return (
-    <FeatureGate feature="monthly_tracking">
+    <FeatureGate feature="page_forecast">
       <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
