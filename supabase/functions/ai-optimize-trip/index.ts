@@ -420,6 +420,44 @@ Sois très précis sur les économies réalisables et les temps de trajet.`;
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonString = jsonMatch ? jsonMatch[1] : content;
       parsedResult = JSON.parse(jsonString);
+      
+      // Normalize and validate relay points if present
+      if (parsedResult.relayPlan && parsedResult.relayPlan.relayPoints) {
+        parsedResult.relayPlan.relayPoints = parsedResult.relayPlan.relayPoints.map((relay: any, idx: number) => ({
+          location: relay.location || relay.point || relay.name || `Point de relais ${idx + 1}`,
+          km: typeof relay.km === 'number' ? relay.km : (typeof relay.distance === 'number' ? relay.distance : 0),
+          driverOut: relay.driverOut || relay.driver_out || relay.conducteurSortant || 'Conducteur sortant',
+          driverIn: relay.driverIn || relay.driver_in || relay.conducteurEntrant || 'Conducteur entrant',
+          estimatedTime: relay.estimatedTime || relay.estimated_time || relay.heure || relay.time || '--:--',
+          waitTime: typeof relay.waitTime === 'number' ? relay.waitTime : (typeof relay.wait_time === 'number' ? relay.wait_time : 15),
+          notes: relay.notes || relay.remarques || null,
+        }));
+        
+        // Ensure relayPlan has required fields
+        parsedResult.relayPlan = {
+          isRecommended: parsedResult.relayPlan.isRecommended ?? true,
+          reason: parsedResult.relayPlan.reason || parsedResult.relayPlan.explication || "Stratégie de relais optimisée",
+          relayPoints: parsedResult.relayPlan.relayPoints,
+          totalDriversCost: typeof parsedResult.relayPlan.totalDriversCost === 'number' ? parsedResult.relayPlan.totalDriversCost : 0,
+          savingsVsSolo: typeof parsedResult.relayPlan.savingsVsSolo === 'number' ? parsedResult.relayPlan.savingsVsSolo : 0,
+        };
+      }
+      
+      // Normalize route segments if present
+      if (parsedResult.routeDetails && parsedResult.routeDetails.segments) {
+        parsedResult.routeDetails.segments = parsedResult.routeDetails.segments.map((seg: any) => ({
+          from: seg.from || seg.depart || seg.origine || '',
+          to: seg.to || seg.arrivee || seg.destination || '',
+          distance: typeof seg.distance === 'number' ? seg.distance : 0,
+          duration: typeof seg.duration === 'number' ? seg.duration : 0,
+          driver: seg.driver || seg.conducteur || '',
+          type: seg.type || 'driving',
+          startTime: seg.startTime || seg.start_time || seg.heureDepart || '',
+          endTime: seg.endTime || seg.end_time || seg.heureArrivee || '',
+          notes: seg.notes || '',
+        }));
+      }
+      
     } catch {
       parsedResult = {
         recommendation: {
