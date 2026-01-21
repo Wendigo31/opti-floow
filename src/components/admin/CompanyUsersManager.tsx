@@ -48,12 +48,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// New simplified roles - all have the same rights
+type UserRole = 'direction' | 'responsable' | 'exploitation';
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  direction: 'Direction',
+  responsable: 'Responsable', 
+  exploitation: 'Exploitation',
+};
+
 interface CompanyUser {
   id: string;
   license_id: string;
   user_id: string | null;
   email: string;
-  role: 'owner' | 'admin' | 'member';
+  role: UserRole;
   display_name?: string;
   is_active: boolean;
   created_at: string;
@@ -88,7 +97,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
   // Add user form
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'owner' | 'admin' | 'member'>('member');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('exploitation');
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
 
   // Login as a specific company user
@@ -206,7 +215,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
             license_id: u.license_id,
             user_id: u.user_id,
             email: u.email,
-            role: u.role as 'owner' | 'admin' | 'member',
+            role: mapLegacyRole(u.role),
             display_name: u.display_name,
             is_active: u.is_active ?? true,
             created_at: u.created_at,
@@ -275,7 +284,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         });
         setShowAddDialog(false);
         setNewUserEmail('');
-        setNewUserRole('member');
+        setNewUserRole('exploitation');
         setNewUserDisplayName('');
         
         // Refresh list
@@ -287,7 +296,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
           .order('created_at');
         setCompanyUsers((data || []).map(u => ({
           ...u,
-          role: u.role as 'owner' | 'admin' | 'member',
+          role: mapLegacyRole(u.role),
         })));
       }
     } catch (e) {
@@ -304,17 +313,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
 
-    const user = companyUsers.find(u => u.id === userToRemove);
-    if (user?.role === 'owner') {
-      toast({
-        title: 'Impossible',
-        description: 'Impossible de supprimer le propriétaire',
-        variant: 'destructive',
-      });
-      setUserToRemove(null);
-      return;
-    }
-
+    // All roles have the same rights, so anyone can be removed
     // Use RPC function to bypass RLS
     const { data: success, error } = await supabase
       .rpc('admin_remove_company_user', {
@@ -337,7 +336,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     setUserToRemove(null);
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'member') => {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     // Use RPC function to bypass RLS
     const { data: success, error } = await supabase
       .rpc('admin_update_company_user_role', {
@@ -357,7 +356,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
       ));
       toast({
         title: 'Rôle modifié',
-        description: `Rôle changé en ${newRole}`,
+        description: `Rôle changé en ${ROLE_LABELS[newRole]}`,
       });
     }
   };
@@ -406,18 +405,29 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     setUserToToggle(null);
   };
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'owner': return <Crown className="h-4 w-4 text-amber-500" />;
-      case 'admin': return <Shield className="h-4 w-4 text-blue-500" />;
-      default: return <User className="h-4 w-4 text-muted-foreground" />;
+  // Map legacy roles from database to new roles
+  const mapLegacyRole = (dbRole: string): UserRole => {
+    switch (dbRole) {
+      case 'owner':
+      case 'direction': return 'direction';
+      case 'admin':
+      case 'responsable': return 'responsable';
+      default: return 'exploitation';
     }
   };
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleIcon = (role: UserRole) => {
     switch (role) {
-      case 'owner': return 'default';
-      case 'admin': return 'secondary';
+      case 'direction': return <Crown className="h-4 w-4 text-amber-500" />;
+      case 'responsable': return <Shield className="h-4 w-4 text-blue-500" />;
+      default: return <User className="h-4 w-4 text-emerald-500" />;
+    }
+  };
+
+  const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" => {
+    switch (role) {
+      case 'direction': return 'default';
+      case 'responsable': return 'secondary';
       default: return 'outline';
     }
   };
@@ -604,7 +614,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <div className="flex items-center gap-2">
                     <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center gap-1">
                       {getRoleIcon(user.role)}
-                      {user.role === 'owner' ? 'Propriétaire' : user.role === 'admin' ? 'Admin' : 'Membre'}
+                      {ROLE_LABELS[user.role]}
                     </Badge>
                     
                     {/* Login as this user button - available for all users */}
@@ -619,44 +629,43 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                       <LogIn className="h-4 w-4" />
                     </Button>
                     
-                    {user.role !== 'owner' && (
-                      <>
-                        {/* Role selector */}
-                        <Select
-                          value={user.role}
-                          onValueChange={(v) => handleRoleChange(user.id, v as 'admin' | 'member')}
-                          disabled={!user.is_active}
-                        >
-                          <SelectTrigger className="w-24 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="member">Membre</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {/* Toggle active/inactive button */}
-                        <Button
-                          variant={user.is_active ? "outline" : "default"}
-                          size="icon"
-                          className={`h-8 w-8 ${user.is_active ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                          onClick={() => setUserToToggle({ id: user.id, isActive: user.is_active })}
-                          title={user.is_active ? 'Désactiver l\'utilisateur' : 'Réactiver l\'utilisateur'}
-                        >
-                          {user.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                        </Button>
-                        {/* Delete button */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setUserToRemove(user.id)}
-                          title="Supprimer définitivement"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                    {/* Role selector - all roles have same rights */}
+                    <Select
+                      value={user.role}
+                      onValueChange={(v) => handleRoleChange(user.id, v as UserRole)}
+                      disabled={!user.is_active}
+                    >
+                      <SelectTrigger className="w-28 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="exploitation">Exploitation</SelectItem>
+                        <SelectItem value="responsable">Responsable</SelectItem>
+                        <SelectItem value="direction">Direction</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Toggle active/inactive button */}
+                    <Button
+                      variant={user.is_active ? "outline" : "default"}
+                      size="icon"
+                      className={`h-8 w-8 ${user.is_active ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                      onClick={() => setUserToToggle({ id: user.id, isActive: user.is_active })}
+                      title={user.is_active ? 'Désactiver l\'utilisateur' : 'Réactiver l\'utilisateur'}
+                    >
+                      {user.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                    </Button>
+                    
+                    {/* Delete button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setUserToRemove(user.id)}
+                      title="Supprimer définitivement"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -702,18 +711,18 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
             </div>
             <div>
               <Label>Rôle</Label>
-              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as any)}>
+              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as UserRole)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Membre</SelectItem>
-                  <SelectItem value="admin">Administrateur</SelectItem>
-                  <SelectItem value="owner">Propriétaire</SelectItem>
+                  <SelectItem value="exploitation">Exploitation</SelectItem>
+                  <SelectItem value="responsable">Responsable</SelectItem>
+                  <SelectItem value="direction">Direction</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Propriétaire : accès complet • Admin : peut modifier • Membre : lecture/écriture
+                Tous les rôles ont les mêmes droits d'accès
               </p>
             </div>
           </div>
