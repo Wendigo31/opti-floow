@@ -1,8 +1,8 @@
-import { Settings as SettingsIcon, Bell, History, User } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, History, Shield } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
+import { LicenseSyncSettings } from '@/components/settings/LicenseSyncSettings';
 import { ActivityHistory } from '@/components/shared/ActivityHistory';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Settings() {
   return (
@@ -18,8 +18,12 @@ export default function Settings() {
         </div>
       </div>
 
-      <Tabs defaultValue="notifications" className="space-y-6">
+      <Tabs defaultValue="license" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="license" className="gap-2">
+            <Shield className="w-4 h-4" />
+            Licence
+          </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="w-4 h-4" />
             Notifications
@@ -29,6 +33,10 @@ export default function Settings() {
             Activité équipe
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="license" className="space-y-6">
+          <LicenseSyncSettings />
+        </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
           <NotificationSettings />
