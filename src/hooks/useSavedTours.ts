@@ -106,13 +106,9 @@ export function useSavedTours() {
     };
   }, []);
 
-  const fetchTours = useCallback(async (): Promise<void> => {
-    // De-duplicate calls across pages/components to avoid spam during navigation.
-    if (inFlightRef.current) return inFlightRef.current;
+  const fetchToursCore = useCallback(async (): Promise<void> => {
+    setLoading(true);
 
-    const run = (async () => {
-      setLoading(true);
-    
     // In demo mode, use localStorage data
     if (isDemo) {
       const demoTours = getDemoTours();
@@ -120,60 +116,73 @@ export function useSavedTours() {
       setLoading(false);
       return;
     }
-    
-      // Not authenticated yet → don't spam error toast
-      if (!authUserId) {
-        console.log('[useSavedTours] No authUserId yet, skipping fetch');
-        setLoading(false);
-        return;
-      }
-    
-      try {
-        // Check if user is part of a company for company-level access
-        const fetchedLicenseId = await getUserLicenseId(authUserId);
-        console.log('[useSavedTours] Fetching tours for user:', authUserId, 'licenseId:', fetchedLicenseId);
-        setLicenseId(fetchedLicenseId);
+
+    // Not authenticated yet → don't spam error toast
+    if (!authUserId) {
+      console.log('[useSavedTours] No authUserId yet, skipping fetch');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Check if user is part of a company for company-level access
+      const fetchedLicenseId = await getUserLicenseId(authUserId);
+      console.log('[useSavedTours] Fetching tours for user:', authUserId, 'licenseId:', fetchedLicenseId);
+      setLicenseId(fetchedLicenseId);
 
       // Scope query to company when possible (keeps fast + avoids loading noise)
       let query = supabase
         .from('saved_tours')
         .select('*');
 
-        if (fetchedLicenseId) {
-          // Company tours + personal tours
-          query = query.or(`license_id.eq.${fetchedLicenseId},user_id.eq.${authUserId}`);
-        } else {
-          // Personal only
-          query = query.eq('user_id', authUserId);
-        }
+      if (fetchedLicenseId) {
+        // Company tours + personal tours
+        query = query.or(`license_id.eq.${fetchedLicenseId},user_id.eq.${authUserId}`);
+      } else {
+        // Personal only
+        query = query.eq('user_id', authUserId);
+      }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-        console.log('[useSavedTours] Fetched', data?.length || 0, 'tours');
-        setTours((data || []).map(mapDbToSavedTour));
-      } catch (error) {
-        console.error('Error fetching tours:', error);
 
-        // Prevent toast spam during navigation: max 1 toast / 10s.
-        const now = Date.now();
-        if (now - lastToastAtRef.current > 10_000) {
-          lastToastAtRef.current = now;
-          toast.error('Erreur lors du chargement des tournées');
-        }
-      } finally {
-        setLoading(false);
+      console.log('[useSavedTours] Fetched', data?.length || 0, 'tours');
+      setTours((data || []).map(mapDbToSavedTour));
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+
+      // Prevent toast spam during navigation: max 1 toast / 10s.
+      const now = Date.now();
+      if (now - lastToastAtRef.current > 10_000) {
+        lastToastAtRef.current = now;
+        toast.error('Erreur lors du chargement des tournées', {
+          action: {
+            label: 'Réessayer',
+            onClick: () => {
+              inFlightRef.current = null; // Reset to allow retry
+              void fetchToursCore();
+            },
+          },
+        });
       }
-    })();
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo, authUserId]);
 
+  const fetchTours = useCallback(async (): Promise<void> => {
+    // De-duplicate calls across pages/components to avoid spam during navigation.
+    if (inFlightRef.current) return inFlightRef.current;
+
+    const run = fetchToursCore();
     inFlightRef.current = run;
     try {
       await run;
     } finally {
       inFlightRef.current = null;
     }
-  }, [isDemo, authUserId]);
+  }, [fetchToursCore]);
 
   // Auto-fetch tours when user is authenticated
   useEffect(() => {
