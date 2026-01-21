@@ -185,104 +185,79 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
 
       console.log('[DataSyncProvider] Loading company data for licenseId:', licenseId);
       const companyData = await loadCompanyData();
-      if (companyData) {
-        hasLoadedCompanyData.current = true;
-        console.log('[DataSyncProvider] Loaded company data:', {
-          vehicles: companyData.vehicles.length,
-          drivers: companyData.drivers.length,
-          charges: companyData.charges.length,
-          trailers: companyData.trailers.length,
-        });
+       if (companyData) {
+         hasLoadedCompanyData.current = true;
+         console.log('[DataSyncProvider] Loaded company data:', {
+           vehicles: companyData.vehicles.length,
+           drivers: companyData.drivers.length,
+           charges: companyData.charges.length,
+           trailers: companyData.trailers.length,
+         });
 
-        // Replace local data with company data for full sync
-        if (companyData.vehicles.length > 0) {
-          const cloudVehicles = companyData.vehicles
-            .map((v: any) => v.vehicle_data as Vehicle)
-            .filter(Boolean);
-          if (cloudVehicles.length > 0) {
-            setVehicles(cloudVehicles);
-          }
-        }
+         // Replace local data with company data for full sync.
+         // IMPORTANT: also clear local data when the company source of truth is empty.
+         const cloudVehicles = (companyData.vehicles || [])
+           .map((v: any) => v.vehicle_data as Vehicle)
+           .filter(Boolean);
+         setVehicles(cloudVehicles);
 
-        if (companyData.trailers.length > 0) {
-          const cloudTrailers = companyData.trailers
-            .map((t: any) => t.trailer_data as Trailer)
-            .filter(Boolean);
-          if (cloudTrailers.length > 0) {
-            setTrailers(cloudTrailers);
-          }
-        }
+         const cloudTrailers = (companyData.trailers || [])
+           .map((t: any) => t.trailer_data as Trailer)
+           .filter(Boolean);
+         setTrailers(cloudTrailers);
 
-        if (companyData.drivers.length > 0) {
-          const cdiDrivers = companyData.drivers
-            .filter((d: any) => d.driver_type === 'cdi')
-            .map((d: any) => d.driver_data as Driver)
-            .filter(Boolean);
-          const interimDriversCloud = companyData.drivers
-            .filter((d: any) => d.driver_type === 'interim')
-            .map((d: any) => d.driver_data as Driver)
-            .filter(Boolean);
+         const cdiDrivers = (companyData.drivers || [])
+           .filter((d: any) => d.driver_type === 'cdi')
+           .map((d: any) => d.driver_data as Driver)
+           .filter(Boolean);
+         const interimDriversCloud = (companyData.drivers || [])
+           .filter((d: any) => d.driver_type === 'interim')
+           .map((d: any) => d.driver_data as Driver)
+           .filter(Boolean);
+         setDrivers(cdiDrivers);
+         setInterimDrivers(interimDriversCloud);
 
-          if (cdiDrivers.length > 0) {
-            setDrivers(cdiDrivers);
-          }
-          if (interimDriversCloud.length > 0) {
-            setInterimDrivers(interimDriversCloud);
-          }
-        }
-
-        if (companyData.charges.length > 0) {
-          const cloudCharges = companyData.charges
-            .map((c: any) => c.charge_data as FixedCharge)
-            .filter(Boolean);
-          if (cloudCharges.length > 0) {
-            setCharges(cloudCharges);
-          }
-        }
-      }
+         const cloudCharges = (companyData.charges || [])
+           .map((c: any) => c.charge_data as FixedCharge)
+           .filter(Boolean);
+         setCharges(cloudCharges);
+       }
     };
 
     loadSharedData();
   }, [licenseId, loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
-  const applyCompanyData = useCallback((companyData: any) => {
-    if (!companyData) return;
+   const applyCompanyData = useCallback((companyData: any) => {
+     if (!companyData) return;
 
-    if (companyData.vehicles?.length > 0) {
-      const cloudVehicles = companyData.vehicles
-        .map((v: any) => v.vehicle_data as Vehicle)
-        .filter(Boolean);
-      if (cloudVehicles.length > 0) setVehicles(cloudVehicles);
-    }
+     // Same rule as initial load: if the company truth source is empty,
+     // we must clear local storage to converge across sessions.
+     const cloudVehicles = (companyData.vehicles || [])
+       .map((v: any) => v.vehicle_data as Vehicle)
+       .filter(Boolean);
+     setVehicles(cloudVehicles);
 
-    if (companyData.trailers?.length > 0) {
-      const cloudTrailers = companyData.trailers
-        .map((t: any) => t.trailer_data as Trailer)
-        .filter(Boolean);
-      if (cloudTrailers.length > 0) setTrailers(cloudTrailers);
-    }
+     const cloudTrailers = (companyData.trailers || [])
+       .map((t: any) => t.trailer_data as Trailer)
+       .filter(Boolean);
+     setTrailers(cloudTrailers);
 
-    if (companyData.drivers?.length > 0) {
-      const cdiDrivers = companyData.drivers
-        .filter((d: any) => d.driver_type === 'cdi')
-        .map((d: any) => d.driver_data as Driver)
-        .filter(Boolean);
-      const interimDriversCloud = companyData.drivers
-        .filter((d: any) => d.driver_type === 'interim')
-        .map((d: any) => d.driver_data as Driver)
-        .filter(Boolean);
+     const cdiDrivers = (companyData.drivers || [])
+       .filter((d: any) => d.driver_type === 'cdi')
+       .map((d: any) => d.driver_data as Driver)
+       .filter(Boolean);
+     const interimDriversCloud = (companyData.drivers || [])
+       .filter((d: any) => d.driver_type === 'interim')
+       .map((d: any) => d.driver_data as Driver)
+       .filter(Boolean);
+     setDrivers(cdiDrivers);
+     setInterimDrivers(interimDriversCloud);
 
-      if (cdiDrivers.length > 0) setDrivers(cdiDrivers);
-      if (interimDriversCloud.length > 0) setInterimDrivers(interimDriversCloud);
-    }
-
-    if (companyData.charges?.length > 0) {
-      const cloudCharges = companyData.charges
-        .map((c: any) => c.charge_data as FixedCharge)
-        .filter(Boolean);
-      if (cloudCharges.length > 0) setCharges(cloudCharges);
-    }
-  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+     const cloudCharges = (companyData.charges || [])
+       .map((c: any) => c.charge_data as FixedCharge)
+       .filter(Boolean);
+     setCharges(cloudCharges);
+   }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
   const forceSync = useCallback(async () => {
     try {
