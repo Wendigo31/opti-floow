@@ -834,7 +834,9 @@ export default function Admin() {
                         <TableRow key={license.id}>
                           <TableCell>
                             <div>
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{license.license_code}</code>
+                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">
+                                {(license as any).company_identifier || license.license_code}
+                              </code>
                               <p className="text-xs text-muted-foreground mt-1">{license.email}</p>
                             </div>
                           </TableCell>
