@@ -6,6 +6,16 @@ import type { LocalClient, LocalClientAddress } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+// Extended client with creator info
+export interface ClientWithCreator extends LocalClient {
+  user_id?: string;
+  license_id?: string;
+  creator_email?: string;
+  creator_display_name?: string;
+  is_own?: boolean;
+  is_former_member?: boolean;
+}
+
 // Get user's license_id for company-level sync
 async function getUserLicenseId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -51,10 +61,12 @@ function getDemoAddresses(): LocalClientAddress[] {
 
 export function useClients() {
   const { licenseData } = useLicense();
-  const [clients, setClients] = useState<LocalClient[]>([]);
+  const [clients, setClients] = useState<ClientWithCreator[]>([]);
   const [addresses, setAddresses] = useState<LocalClientAddress[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [membersMap, setMembersMap] = useState<Map<string, { email: string; displayName?: string; isActive: boolean }>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
   
   const isDemo = isDemoModeActive();
@@ -63,7 +75,7 @@ export function useClients() {
     setLoading(true);
     
     if (isDemo) {
-      setClients(getDemoClients());
+      setClients(getDemoClients() as ClientWithCreator[]);
       setAddresses(getDemoAddresses());
       setLoading(false);
       return;
@@ -75,6 +87,29 @@ export function useClients() {
         setLoading(false);
         return;
       }
+      
+      setCurrentUserId(user.id);
+      
+      // Fetch license ID and company members for creator lookup
+      const userLicenseId = await getUserLicenseId();
+      if (userLicenseId) {
+        const { data: members } = await supabase
+          .from('company_users')
+          .select('user_id, email, display_name, is_active')
+          .eq('license_id', userLicenseId);
+        
+        const newMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
+        members?.forEach(m => {
+          if (m.user_id) {
+            newMembersMap.set(m.user_id, { 
+              email: m.email, 
+              displayName: m.display_name || undefined,
+              isActive: m.is_active ?? true
+            });
+          }
+        });
+        setMembersMap(newMembersMap);
+      }
 
       // Fetch clients (RLS handles company-level access)
       const { data: clientsData, error: clientsError } = await supabase
@@ -84,21 +119,30 @@ export function useClients() {
 
       if (clientsError) throw clientsError;
 
-      // Map to local format
-      const mappedClients: LocalClient[] = (clientsData || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        company: c.company,
-        email: c.email,
-        phone: c.phone,
-        address: c.address,
-        city: c.city,
-        postal_code: c.postal_code,
-        siret: c.siret,
-        notes: c.notes,
-        created_at: c.created_at,
-        updated_at: c.updated_at,
-      }));
+      // Map to local format with creator info
+      const mappedClients: ClientWithCreator[] = (clientsData || []).map(c => {
+        const memberInfo = membersMap.get(c.user_id);
+        return {
+          id: c.id,
+          name: c.name,
+          company: c.company,
+          email: c.email,
+          phone: c.phone,
+          address: c.address,
+          city: c.city,
+          postal_code: c.postal_code,
+          siret: c.siret,
+          notes: c.notes,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+          user_id: c.user_id,
+          license_id: c.license_id || undefined,
+          creator_email: memberInfo?.email,
+          creator_display_name: memberInfo?.displayName,
+          is_own: c.user_id === user.id,
+          is_former_member: memberInfo ? !memberInfo.isActive : false,
+        };
+      });
 
       setClients(mappedClients);
 
@@ -132,15 +176,16 @@ export function useClients() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo]);
+  }, [isDemo, membersMap]);
 
-  const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<LocalClient | null> => {
+  const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<ClientWithCreator | null> => {
     if (isDemo) {
-      const newClient: LocalClient = {
+      const newClient: ClientWithCreator = {
         id: generateId(),
         ...input,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        is_own: true,
       };
       
       const demoClients = getDemoClients();
@@ -180,7 +225,8 @@ export function useClients() {
 
       if (error) throw error;
 
-      const newClient: LocalClient = {
+      const memberInfo = membersMap.get(user.id);
+      const newClient: ClientWithCreator = {
         id: data.id,
         name: data.name,
         company: data.company,
@@ -193,6 +239,12 @@ export function useClients() {
         notes: data.notes,
         created_at: data.created_at,
         updated_at: data.updated_at,
+        user_id: data.user_id,
+        license_id: data.license_id || undefined,
+        creator_email: memberInfo?.email || user.email || undefined,
+        creator_display_name: memberInfo?.displayName,
+        is_own: true,
+        is_former_member: false,
       };
 
       setClients(prev => [newClient, ...prev]);
@@ -238,7 +290,7 @@ export function useClients() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, [isDemo, membersMap]);
 
   const deleteClient = useCallback(async (id: string): Promise<boolean> => {
     if (isDemo) {

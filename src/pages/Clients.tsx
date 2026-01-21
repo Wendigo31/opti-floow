@@ -9,26 +9,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import type { LocalClient, LocalClientAddress, LocalClientReport } from '@/types/local';
-import { generateId } from '@/types/local';
+import { useClients, type ClientWithCreator } from '@/hooks/useClients';
+import type { LocalClientReport } from '@/types/local';
 import { ClientDetailDialog } from '@/components/clients/ClientDetailDialog';
 import { ClientsDashboard } from '@/components/clients/ClientsDashboard';
 import { SharedTractionsDialog } from '@/components/clients/SharedTractionsDialog';
 import { ToxicClientsAnalysis } from '@/components/clients/ToxicClientsAnalysis';
+import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
 export default function Clients() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [clients, setClients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
-  const [addresses, setAddresses] = useLocalStorage<LocalClientAddress[]>('optiflow_client_addresses', []);
+  
+  // Use the synced clients hook instead of local storage
+  const { clients, addresses, loading, createClient, updateClient, deleteClient, getClientAddresses } = useClients();
+  
   const [reports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchMode, setSearchMode] = useState<'clients' | 'tours'>('clients');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<LocalClient | null>(null);
-  const [detailClient, setDetailClient] = useState<LocalClient | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientWithCreator | null>(null);
+  const [detailClient, setDetailClient] = useState<ClientWithCreator | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('clients');
   const [sharedTractionsOpen, setSharedTractionsOpen] = useState(false);
@@ -38,19 +41,14 @@ export default function Clients() {
     address: '', city: '', postal_code: '', siret: '', notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (editingClient) {
-      setClients(prev => prev.map(c => 
-        c.id === editingClient.id 
-          ? { ...c, ...formData, updated_at: new Date().toISOString() }
-          : c
-      ));
+      await updateClient(editingClient.id, formData);
       toast({ title: "Client mis à jour" });
     } else {
-      const newClient: LocalClient = {
-        id: generateId(),
+      await createClient({
         name: formData.name,
         company: formData.company || null,
         email: formData.email || null,
@@ -60,30 +58,23 @@ export default function Clients() {
         postal_code: formData.postal_code || null,
         siret: formData.siret || null,
         notes: formData.notes || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      setClients(prev => [...prev, newClient]);
-      toast({ title: "Client ajouté" });
+      });
     }
     
     setDialogOpen(false);
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce client ?')) return;
-    setClients(prev => prev.filter(c => c.id !== id));
-    setAddresses(prev => prev.filter(a => a.client_id !== id));
-    toast({ title: "Client supprimé" });
+    await deleteClient(id);
   };
 
   const resetForm = () => {
     setFormData({ name: '', company: '', email: '', phone: '', address: '', city: '', postal_code: '', siret: '', notes: '' });
     setEditingClient(null);
   };
-
-  const openEdit = (client: LocalClient) => {
+  const openEdit = (client: ClientWithCreator) => {
     setEditingClient(client);
     setFormData({
       name: client.name,
@@ -99,8 +90,8 @@ export default function Clients() {
     setDialogOpen(true);
   };
 
-  const getClientAddresses = (clientId: string) => {
-    return addresses.filter(a => a.client_id === clientId);
+  const getClientAddressesLocal = (clientId: string) => {
+    return getClientAddresses(clientId);
   };
 
   // Filter clients by name/company
@@ -316,19 +307,33 @@ export default function Clients() {
             filteredClients.length === 0 ? (
               <Card className="glass-card">
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  {searchTerm ? 'Aucun client trouvé' : 'Aucun client. Créez votre premier client !'}
+                  {loading ? 'Chargement...' : searchTerm ? 'Aucun client trouvé' : 'Aucun client. Créez votre premier client !'}
                 </CardContent>
               </Card>
             ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredClients.map(client => {
-                const clientAddresses = getClientAddresses(client.id);
+                const clientAddresses = getClientAddressesLocal(client.id);
+                const isShared = !!client.license_id;
+                
                 return (
                   <Card key={client.id} className="glass-card hover:border-primary/30 transition-colors">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{client.name}</CardTitle>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <CardTitle className="text-lg truncate">{client.name}</CardTitle>
+                            {isShared && (
+                              <SharedDataBadge
+                                isShared={isShared}
+                                createdBy={client.creator_display_name}
+                                createdByEmail={client.creator_email}
+                                isOwn={client.is_own}
+                                isFormerMember={client.is_former_member}
+                                compact
+                              />
+                            )}
+                          </div>
                           {client.company && (
                             <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                               <Building2 className="w-3 h-3" /> {client.company}
