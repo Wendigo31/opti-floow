@@ -303,14 +303,13 @@ export default function Dashboard() {
           {/* Tour Filter */}
           <div className="flex-1 min-w-[200px] max-w-[300px]">
             <Select
-              value={selectedTourId || "none"}
-              onValueChange={(value) => setSelectedTourId(value === "none" ? null : value)}
+              value={selectedTourId || ""}
+              onValueChange={(value) => setSelectedTourId(value || null)}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Sélectionner une tournée" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Calcul en cours</SelectItem>
                 {filteredTours.map((tour) => (
                   <SelectItem key={tour.id} value={tour.id}>
                     {tour.name} ({Number(tour.distance_km).toFixed(0)} km)
