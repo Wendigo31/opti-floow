@@ -100,8 +100,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const ADMIN_AUTH_FUNCTION = 'admin-auth';
-const ADMIN_AUTH_STORAGE_KEY = 'optiflow_admin_auth_v1';
-const ADMIN_TOKEN_STORAGE_KEY = 'optiflow_admin_token_v1';
+const ADMIN_AUTH_STORAGE_KEY = 'optiflow_admin_auth_v2';
+const ADMIN_TOKEN_STORAGE_KEY = 'optiflow_admin_token_v2';
 
 interface License {
   id: string;
@@ -226,22 +226,25 @@ export default function Admin() {
   const [adminLoginError, setAdminLoginError] = useState('');
   const [adminLoginLoading, setAdminLoginLoading] = useState(false);
 
-  // Restore admin session
+  // Restore admin session from sessionStorage (more secure)
   useEffect(() => {
     try {
-      const rawSession = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-      const token = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+      const rawSession = sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+      const token = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
       if (!rawSession || !token) {
-        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+        sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        // Also clear legacy localStorage keys
+        localStorage.removeItem('optiflow_admin_auth_v1');
+        localStorage.removeItem('optiflow_admin_token_v1');
         return;
       }
       const session = JSON.parse(rawSession);
       if (session.expiresAt && Date.now() < session.expiresAt) {
         setIsAdminAuthenticated(true);
       } else {
-        localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+        sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
       }
     } catch { }
   }, []);
@@ -265,12 +268,12 @@ export default function Admin() {
 
       if (data?.ok && data?.token) {
         setIsAdminAuthenticated(true);
-        localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.token);
-        localStorage.setItem(
+        sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.token);
+        sessionStorage.setItem(
           ADMIN_AUTH_STORAGE_KEY,
-          JSON.stringify({ expiresAt: Date.now() + (data.expiresIn || 12 * 3600) * 1000 })
+          JSON.stringify({ expiresAt: Date.now() + (data.expiresIn || 2 * 3600) * 1000 })
         );
-        toast.success('Connexion admin réussie');
+        toast.success('Connexion admin réussie (session de 2h)');
         return;
       }
 
@@ -283,7 +286,7 @@ export default function Admin() {
   };
 
   const getAdminToken = (): string | null => {
-    return localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+    return sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
   };
 
   // Fetch licenses
