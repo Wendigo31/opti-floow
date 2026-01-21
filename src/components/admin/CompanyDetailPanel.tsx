@@ -293,7 +293,7 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
                   <h3 className="font-semibold text-lg">{selectedLicense.company_name || selectedLicense.email}</h3>
                   <p className="text-sm text-muted-foreground">{selectedLicense.email}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Code: <code className="bg-background px-1 py-0.5 rounded">{selectedLicense.license_code}</code>
+                    ID: <code className="bg-background px-1 py-0.5 rounded">{(selectedLicense as any).company_identifier || selectedLicense.license_code}</code>
                   </p>
                 </div>
                 <div className="text-right">

@@ -80,11 +80,11 @@ export default function Activation() {
             <div className="space-y-2">
               <Label htmlFor="code" className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-primary" />
-                Code de licence
+                Identifiant société
               </Label>
-              <Input id="code" type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX-XXXX-XXXX" className="font-mono text-center tracking-wider" disabled={loading || success} />
+              <Input id="code" type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="TRANSPORT-MARTIN" className="font-mono text-center tracking-wider" disabled={loading || success} />
               <p className="text-xs text-muted-foreground">
-                Votre code de licence vous a été envoyé par email lors de votre achat.
+                L'identifiant de votre société vous a été communiqué par votre administrateur.
               </p>
             </div>
 
@@ -140,16 +140,16 @@ export default function Activation() {
                 </AccordionTrigger>
                 <AccordionContent className="text-sm space-y-3 pt-2">
                   <div className="space-y-2">
-                    <p className="font-medium text-foreground">Où trouver mon code de licence ?</p>
+                    <p className="font-medium text-foreground">Où trouver mon identifiant société ?</p>
                     <p className="text-muted-foreground">
-                      Votre code de licence vous a été envoyé par email lors de votre achat. 
-                      Vérifiez vos spams si vous ne le trouvez pas.
+                      Votre identifiant société vous a été communiqué par votre administrateur. 
+                      Si vous ne l'avez pas, contactez votre responsable.
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <p className="font-medium text-foreground">Je n'ai pas reçu mon code</p>
+                    <p className="font-medium text-foreground">Je n'ai pas reçu mon identifiant</p>
                     <p className="text-muted-foreground">
-                      Contactez notre support à l'adresse{' '}
+                      Contactez votre administrateur ou notre support à l'adresse{' '}
                       <a href="mailto:support@optiflow.fr" className="text-primary hover:underline">
                         support@optiflow.fr
                       </a>
