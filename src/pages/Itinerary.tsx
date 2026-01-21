@@ -80,6 +80,7 @@ import { AddressSelectorDialog } from '@/components/itinerary/AddressSelectorDia
 import { useFavoriteAddresses } from '@/hooks/useFavoriteAddresses';
 import { SaveItineraryDialog } from '@/components/itinerary/SaveItineraryDialog';
 import { LoadItineraryDialog } from '@/components/itinerary/LoadItineraryDialog';
+import { useTruckRestrictions, type TruckRestriction } from '@/hooks/useTruckRestrictions';
 import type { SavedTour } from '@/types/savedTour';
 
 // Decode Google polyline encoding
@@ -265,6 +266,13 @@ export default function Itinerary() {
   
   // Favorite addresses
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoriteAddresses();
+  
+  // Truck restrictions
+  const { 
+    restrictions: truckRestrictions, 
+    loading: restrictionsLoading, 
+    fetchRestrictions 
+  } = useTruckRestrictions();
   
   // Address selector dialog
   const [addressSelectorOpen, setAddressSelectorOpen] = useState(false);
@@ -697,6 +705,15 @@ export default function Itinerary() {
       setHighwayRoute(highway);
       setNationalRoute(national);
 
+      // Fetch truck restrictions for the calculated route
+      const routeForRestrictions = highway || national;
+      if (routeForRestrictions?.coordinates && routeForRestrictions.coordinates.length > 0) {
+        fetchRestrictions(routeForRestrictions.coordinates, {
+          height: selectedVehicle?.height,
+          weight: selectedVehicle?.weight,
+        });
+      }
+
       // Save route data for PDF export
       const routeToSave = highway || national;
       if (routeToSave) {
@@ -913,6 +930,15 @@ export default function Itinerary() {
           zoom={6}
           markers={markers}
           routeCoordinates={displayedRoute?.coordinates || []}
+          restrictions={truckRestrictions.map(r => ({
+            lat: r.lat,
+            lng: r.lng,
+            type: r.type,
+            value: r.value,
+            unit: r.unit,
+            description: r.description
+          }))}
+          showRestrictionsLegend={true}
         />
         
         {/* Route summary overlay on map */}
@@ -922,6 +948,9 @@ export default function Itinerary() {
               <CheckCircle2 className="w-5 h-5 text-success" />
               <span className="font-medium text-sm">
                 {selectedRoute === 'highway' ? 'Autoroute' : 'Nationale'} • {displayedRoute?.distance} km • {formatDuration(displayedRoute?.duration || 0)}
+                {truckRestrictions.length > 0 && (
+                  <span className="ml-2 text-warning">• {truckRestrictions.length} restrictions</span>
+                )}
               </span>
             </div>
           </div>
