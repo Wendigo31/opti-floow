@@ -64,6 +64,7 @@ export function CreateCompanyDialog({
 }: CreateCompanyDialogProps) {
   const { lookup, loading: sireneLoading, error: sireneError, company, reset: resetSiren } = useSireneLookup();
   const [sirenInput, setSirenInput] = useState('');
+  const [companyIdentifier, setCompanyIdentifier] = useState('');
   const [planType, setPlanType] = useState<PlanType>('start');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerFirstName, setOwnerFirstName] = useState('');
@@ -71,7 +72,7 @@ export function CreateCompanyDialog({
   const [ownerPhone, setOwnerPhone] = useState('');
   const [ownerPosition, setOwnerPosition] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [createdLicense, setCreatedLicense] = useState<{ code: string; email: string } | null>(null);
+  const [createdLicense, setCreatedLicense] = useState<{ identifier: string; email: string } | null>(null);
   
   // Is this in edit mode (syncing SIREN to existing license)?
   const isEditMode = !!editLicenseId;
@@ -138,6 +139,10 @@ export function CreateCompanyDialog({
       toast.error('Email du propriétaire requis');
       return;
     }
+    if (!companyIdentifier.trim()) {
+      toast.error('Identifiant société requis');
+      return;
+    }
 
     setIsCreating(true);
     try {
@@ -150,6 +155,7 @@ export function CreateCompanyDialog({
           firstName: ownerFirstName.trim() || null,
           lastName: ownerLastName.trim() || null,
           companyName: company.companyName,
+          companyIdentifier: companyIdentifier.trim(),
           siren: company.siren,
           address: company.address,
           city: company.city,
@@ -177,7 +183,7 @@ export function CreateCompanyDialog({
         }
 
         setCreatedLicense({
-          code: data.license.license_code,
+          identifier: companyIdentifier.trim(),
           email: ownerEmail,
         });
         toast.success('Société créée avec succès');
@@ -194,6 +200,7 @@ export function CreateCompanyDialog({
   const handleClose = () => {
     // Reset form
     setSirenInput('');
+    setCompanyIdentifier('');
     setOwnerEmail('');
     setOwnerFirstName('');
     setOwnerLastName('');
@@ -205,10 +212,10 @@ export function CreateCompanyDialog({
     onOpenChange(false);
   };
 
-  const copyLicenseCode = () => {
-    if (createdLicense?.code) {
-      navigator.clipboard.writeText(createdLicense.code);
-      toast.success('Code licence copié');
+  const copyIdentifier = () => {
+    if (createdLicense?.identifier) {
+      navigator.clipboard.writeText(createdLicense.identifier);
+      toast.success('Identifiant copié');
     }
   };
 
@@ -249,10 +256,10 @@ export function CreateCompanyDialog({
               </p>
             </div>
             <div className="bg-muted p-4 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground mb-2">Code de licence</p>
+              <p className="text-sm text-muted-foreground mb-2">Identifiant société</p>
               <div className="flex items-center justify-center gap-2">
-                <code className="text-lg font-mono font-bold">{createdLicense.code}</code>
-                <Button variant="ghost" size="sm" onClick={copyLicenseCode}>
+                <code className="text-lg font-mono font-bold">{createdLicense.identifier}</code>
+                <Button variant="ghost" size="sm" onClick={copyIdentifier}>
                   Copier
                 </Button>
               </div>
@@ -355,7 +362,22 @@ export function CreateCompanyDialog({
             {/* Owner Information - Only show in create mode */}
             {!isEditMode && (
               <div className="space-y-4 pt-2">
-                <h4 className="font-medium">Propriétaire de la société</h4>
+                <h4 className="font-medium">Identifiant société</h4>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="companyIdentifier">Identifiant société *</Label>
+                  <Input
+                    id="companyIdentifier"
+                    placeholder="TRANSPORT-MARTIN, ACME-CORP..."
+                    value={companyIdentifier}
+                    onChange={(e) => setCompanyIdentifier(e.target.value.toUpperCase())}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Cet identifiant sera utilisé par les utilisateurs pour se connecter
+                  </p>
+                </div>
+                
+                <h4 className="font-medium pt-2">Propriétaire de la société</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

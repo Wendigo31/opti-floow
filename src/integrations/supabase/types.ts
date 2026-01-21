@@ -592,6 +592,7 @@ export type Database = {
           base_monthly_price: number | null
           billing_period: string | null
           city: string | null
+          company_identifier: string | null
           company_name: string | null
           company_status: string | null
           created_at: string
@@ -626,6 +627,7 @@ export type Database = {
           base_monthly_price?: number | null
           billing_period?: string | null
           city?: string | null
+          company_identifier?: string | null
           company_name?: string | null
           company_status?: string | null
           created_at?: string
@@ -660,6 +662,7 @@ export type Database = {
           base_monthly_price?: number | null
           billing_period?: string | null
           city?: string | null
+          company_identifier?: string | null
           company_name?: string | null
           company_status?: string | null
           created_at?: string

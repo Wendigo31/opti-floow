@@ -497,7 +497,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Admin: Create new license OR add user to existing company
     if (action === "create-license") {
-      const { email, planType, firstName, lastName, companyName, assignToCompanyId, userRole, siren, address, city, postalCode, employeeCount, companyStatus } = body;
+      const { email, planType, firstName, lastName, companyName, assignToCompanyId, userRole, siren, address, city, postalCode, employeeCount, companyStatus, companyIdentifier } = body;
       const auth = await verifyAdminAuth(body, authHeader);
       
       console.log("Creating license for:", email, "by admin:", auth.email, "assignToCompanyId:", assignToCompanyId);
@@ -598,10 +598,27 @@ const handler = async (req: Request): Promise<Response> => {
         attempts++;
       }
 
+      // If companyIdentifier provided, check uniqueness
+      if (companyIdentifier) {
+        const { data: existingId } = await supabase
+          .from("licenses")
+          .select("id")
+          .eq("company_identifier", companyIdentifier.trim())
+          .maybeSingle();
+        
+        if (existingId) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Cet identifiant société existe déjà" }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+
       const { data: newLicense, error } = await supabase
         .from("licenses")
         .insert({
           license_code: licenseCode,
+          company_identifier: companyIdentifier?.trim() || null,
           email: email.trim().toLowerCase(),
           plan_type: planType || 'start',
           first_name: firstName || null,
@@ -1789,12 +1806,34 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("[validate-license] Validating license:", normalizedCode.substring(0, 4) + '...', "for email:", normalizedEmail);
 
-    // First, try to find license by code only (to support company members)
-    const { data: licenseByCode, error: codeError } = await supabase
+    // First, try to find license by company_identifier (preferred), then by license_code
+    let licenseByCode = null;
+    let codeError = null;
+    
+    // Try company_identifier first
+    const { data: licenseById, error: idError } = await supabase
       .from("licenses")
-      .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info")
-      .eq("license_code", normalizedCode)
+      .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info, license_code, company_identifier")
+      .eq("company_identifier", normalizedCode)
       .maybeSingle();
+    
+    if (licenseById) {
+      licenseByCode = licenseById;
+      console.log("[validate-license] Found license by company_identifier");
+    } else {
+      // Fall back to license_code
+      const { data: licenseByLicenseCode, error: lcError } = await supabase
+        .from("licenses")
+        .select("id, email, is_active, first_name, last_name, company_name, siren, company_status, employee_count, address, city, postal_code, activated_at, plan_type, max_drivers, max_clients, max_daily_charges, max_monthly_charges, max_yearly_charges, show_user_info, show_company_info, show_address_info, show_license_info, license_code, company_identifier")
+        .eq("license_code", normalizedCode)
+        .maybeSingle();
+      
+      licenseByCode = licenseByLicenseCode;
+      codeError = lcError;
+      if (licenseByCode) {
+        console.log("[validate-license] Found license by license_code");
+      }
+    }
 
     if (codeError) {
       console.error("[validate-license] License lookup error:", codeError);
@@ -1807,7 +1846,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!licenseByCode) {
       console.log("[validate-license] License not found");
       return new Response(
-        JSON.stringify({ success: false, error: "Licence non trouvée" }),
+        JSON.stringify({ success: false, error: "Identifiant société non trouvé" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
