@@ -174,7 +174,7 @@ export function CreateCompanyDialog({
           .rpc('admin_add_company_user', {
             p_license_id: data.license.id,
             p_email: ownerEmail.toLowerCase().trim(),
-            p_role: 'owner',
+            p_role: 'direction',
             p_display_name: displayName,
           });
 

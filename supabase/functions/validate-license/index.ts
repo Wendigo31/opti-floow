@@ -542,7 +542,7 @@ const handler = async (req: Request): Promise<Response> => {
           .insert({
             license_id: assignToCompanyId,
             email: email.trim().toLowerCase(),
-            role: userRole || 'member',
+            role: userRole || 'exploitation',
             display_name: displayName,
             is_active: true,
             invited_at: new Date().toISOString(),
@@ -2091,17 +2091,17 @@ const handler = async (req: Request): Promise<Response> => {
               console.log(`[validate-license] User already linked or not eligible for ${normalizedEmail}`);
             }
           } else {
-            // No existing entry - check if there's already an owner for this license
-            const { data: existingOwner } = await supabase
+            // No existing entry - check if there's already a direction user for this license
+            const { data: existingDirection } = await supabase
               .from("company_users")
               .select("id")
               .eq("license_id", license.id)
-              .eq("role", "owner")
+              .eq("role", "direction")
               .maybeSingle();
 
-            // If no owner exists and this is the license owner email, add as owner; otherwise as member
+            // If no direction exists and this is the license owner email, add as direction; otherwise as exploitation
             const isLicenseOwnerEmail = license.email === normalizedEmail;
-            const role = (!existingOwner && isLicenseOwnerEmail) ? 'owner' : 'member';
+            const role = (!existingDirection && isLicenseOwnerEmail) ? 'direction' : 'exploitation';
             
             const { error: insertError } = await supabase
               .from("company_users")
