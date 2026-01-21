@@ -143,6 +143,39 @@ export type Database = {
         }
         Relationships: []
       }
+      charge_presets: {
+        Row: {
+          charges: Json
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          license_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          charges?: Json
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          license_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          charges?: Json
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          license_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_addresses: {
         Row: {
           address: string
@@ -858,6 +891,7 @@ export type Database = {
       saved_tours: {
         Row: {
           adblue_cost: number
+          category: string | null
           client_id: string | null
           created_at: string
           destination_address: string
@@ -895,6 +929,7 @@ export type Database = {
         }
         Insert: {
           adblue_cost?: number
+          category?: string | null
           client_id?: string | null
           created_at?: string
           destination_address: string
@@ -932,6 +967,7 @@ export type Database = {
         }
         Update: {
           adblue_cost?: number
+          category?: string | null
           client_id?: string | null
           created_at?: string
           destination_address?: string
