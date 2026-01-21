@@ -112,6 +112,7 @@ export function useSavedTours() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       // Not authenticated yet → don't spam error toast
+      console.log('[useSavedTours] No user, skipping fetch');
       setLoading(false);
       return;
     }
@@ -119,6 +120,7 @@ export function useSavedTours() {
     try {
       // Check if user is part of a company for company-level access
       const fetchedLicenseId = await getUserLicenseId();
+      console.log('[useSavedTours] Fetching tours for user:', user.id, 'licenseId:', fetchedLicenseId);
       setLicenseId(fetchedLicenseId);
 
       // Scope query to company when possible (keeps fast + avoids loading noise)
@@ -138,6 +140,7 @@ export function useSavedTours() {
 
       if (error) throw error;
       
+      console.log('[useSavedTours] Fetched', data?.length || 0, 'tours');
       setTours((data || []).map(mapDbToSavedTour));
     } catch (error) {
       console.error('Error fetching tours:', error);
@@ -145,7 +148,15 @@ export function useSavedTours() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo]);
+  }, [isDemo, authUserId]);
+
+  // Auto-fetch tours when user is authenticated
+  useEffect(() => {
+    if (authUserId && !isDemo) {
+      console.log('[useSavedTours] Auth user changed, fetching tours...');
+      fetchTours();
+    }
+  }, [authUserId, isDemo, fetchTours]);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {

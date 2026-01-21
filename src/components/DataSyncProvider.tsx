@@ -52,17 +52,21 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasLoadedCompanyData = useRef<boolean>(false);
 
-  // Get license ID on mount
+  // Get license ID on mount and reset company data flag when it changes
   useEffect(() => {
     const fetchLicenseId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const lid = await getUserLicenseId(user.id);
+        if (lid !== licenseId) {
+          // Reset flag to allow reloading company data when license changes
+          hasLoadedCompanyData.current = false;
+        }
         setLicenseId(lid);
       }
     };
     fetchLicenseId();
-  }, []);
+  }, [licenseId]);
 
   // Handle realtime data changes from other users
   const handleRealtimeChange = useCallback((
@@ -165,14 +169,21 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     enabled: !!licenseId,
   });
 
-  // Load company-shared data on initial auth
+  // Load company-shared data on initial auth or when licenseId changes
   useEffect(() => {
     const loadSharedData = async () => {
+      // Wait for license ID to be resolved
+      if (!licenseId) {
+        console.log('[DataSyncProvider] Waiting for licenseId...');
+        return;
+      }
+      
       if (hasLoadedCompanyData.current) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('[DataSyncProvider] Loading company data for licenseId:', licenseId);
       const companyData = await loadCompanyData();
       if (companyData) {
         hasLoadedCompanyData.current = true;
@@ -232,7 +243,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadSharedData();
-  }, [loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+  }, [licenseId, loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
 
   const applyCompanyData = useCallback((companyData: any) => {
     if (!companyData) return;
