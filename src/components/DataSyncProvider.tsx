@@ -169,7 +169,70 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     enabled: !!licenseId,
   });
 
+  // Merge cloud data with local data (don't replace, add what's missing)
+  const mergeWithLocalData = useCallback((companyData: any) => {
+    if (!companyData) return;
+
+    // Merge vehicles: keep local, add from cloud if not exists
+    const cloudVehicles = (companyData.vehicles || [])
+      .map((v: any) => v.vehicle_data as Vehicle)
+      .filter(Boolean);
+    
+    setVehicles(prev => {
+      const localIds = new Set(prev.map(v => v.id));
+      const newFromCloud = cloudVehicles.filter((cv: Vehicle) => !localIds.has(cv.id));
+      return [...prev, ...newFromCloud];
+    });
+
+    // Merge trailers
+    const cloudTrailers = (companyData.trailers || [])
+      .map((t: any) => t.trailer_data as Trailer)
+      .filter(Boolean);
+    
+    setTrailers(prev => {
+      const localIds = new Set(prev.map(t => t.id));
+      const newFromCloud = cloudTrailers.filter((ct: Trailer) => !localIds.has(ct.id));
+      return [...prev, ...newFromCloud];
+    });
+
+    // Merge CDI drivers
+    const cdiDrivers = (companyData.drivers || [])
+      .filter((d: any) => d.driver_type === 'cdi')
+      .map((d: any) => d.driver_data as Driver)
+      .filter(Boolean);
+    
+    setDrivers(prev => {
+      const localIds = new Set(prev.map(d => d.id));
+      const newFromCloud = cdiDrivers.filter((cd: Driver) => !localIds.has(cd.id));
+      return [...prev, ...newFromCloud];
+    });
+
+    // Merge interim drivers
+    const interimDriversCloud = (companyData.drivers || [])
+      .filter((d: any) => d.driver_type === 'interim')
+      .map((d: any) => d.driver_data as Driver)
+      .filter(Boolean);
+    
+    setInterimDrivers(prev => {
+      const localIds = new Set(prev.map(d => d.id));
+      const newFromCloud = interimDriversCloud.filter((cd: Driver) => !localIds.has(cd.id));
+      return [...prev, ...newFromCloud];
+    });
+
+    // Merge charges
+    const cloudCharges = (companyData.charges || [])
+      .map((c: any) => c.charge_data as FixedCharge)
+      .filter(Boolean);
+    
+    setCharges(prev => {
+      const localIds = new Set(prev.map(c => c.id));
+      const newFromCloud = cloudCharges.filter((cc: FixedCharge) => !localIds.has(cc.id));
+      return [...prev, ...newFromCloud];
+    });
+  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+
   // Load company-shared data on initial auth or when licenseId changes
+  // Now we MERGE instead of REPLACE to keep user's local session intact
   useEffect(() => {
     const loadSharedData = async () => {
       // Wait for license ID to be resolved
@@ -183,93 +246,42 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      console.log('[DataSyncProvider] Loading company data for licenseId:', licenseId);
+      console.log('[DataSyncProvider] Loading and merging company data for licenseId:', licenseId);
       const companyData = await loadCompanyData();
-       if (companyData) {
-         hasLoadedCompanyData.current = true;
-         console.log('[DataSyncProvider] Loaded company data:', {
-           vehicles: companyData.vehicles.length,
-           drivers: companyData.drivers.length,
-           charges: companyData.charges.length,
-           trailers: companyData.trailers.length,
-         });
+      if (companyData) {
+        hasLoadedCompanyData.current = true;
+        console.log('[DataSyncProvider] Merging company data:', {
+          vehicles: companyData.vehicles.length,
+          drivers: companyData.drivers.length,
+          charges: companyData.charges.length,
+          trailers: companyData.trailers.length,
+        });
 
-         // Replace local data with company data for full sync.
-         // IMPORTANT: also clear local data when the company source of truth is empty.
-         const cloudVehicles = (companyData.vehicles || [])
-           .map((v: any) => v.vehicle_data as Vehicle)
-           .filter(Boolean);
-         setVehicles(cloudVehicles);
-
-         const cloudTrailers = (companyData.trailers || [])
-           .map((t: any) => t.trailer_data as Trailer)
-           .filter(Boolean);
-         setTrailers(cloudTrailers);
-
-         const cdiDrivers = (companyData.drivers || [])
-           .filter((d: any) => d.driver_type === 'cdi')
-           .map((d: any) => d.driver_data as Driver)
-           .filter(Boolean);
-         const interimDriversCloud = (companyData.drivers || [])
-           .filter((d: any) => d.driver_type === 'interim')
-           .map((d: any) => d.driver_data as Driver)
-           .filter(Boolean);
-         setDrivers(cdiDrivers);
-         setInterimDrivers(interimDriversCloud);
-
-         const cloudCharges = (companyData.charges || [])
-           .map((c: any) => c.charge_data as FixedCharge)
-           .filter(Boolean);
-         setCharges(cloudCharges);
-       }
+        // MERGE cloud data with local data instead of replacing
+        mergeWithLocalData(companyData);
+      }
     };
 
     loadSharedData();
-  }, [licenseId, loadCompanyData, setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+  }, [licenseId, loadCompanyData, mergeWithLocalData]);
 
    const applyCompanyData = useCallback((companyData: any) => {
      if (!companyData) return;
-
-     // Same rule as initial load: if the company truth source is empty,
-     // we must clear local storage to converge across sessions.
-     const cloudVehicles = (companyData.vehicles || [])
-       .map((v: any) => v.vehicle_data as Vehicle)
-       .filter(Boolean);
-     setVehicles(cloudVehicles);
-
-     const cloudTrailers = (companyData.trailers || [])
-       .map((t: any) => t.trailer_data as Trailer)
-       .filter(Boolean);
-     setTrailers(cloudTrailers);
-
-     const cdiDrivers = (companyData.drivers || [])
-       .filter((d: any) => d.driver_type === 'cdi')
-       .map((d: any) => d.driver_data as Driver)
-       .filter(Boolean);
-     const interimDriversCloud = (companyData.drivers || [])
-       .filter((d: any) => d.driver_type === 'interim')
-       .map((d: any) => d.driver_data as Driver)
-       .filter(Boolean);
-     setDrivers(cdiDrivers);
-     setInterimDrivers(interimDriversCloud);
-
-     const cloudCharges = (companyData.charges || [])
-       .map((c: any) => c.charge_data as FixedCharge)
-       .filter(Boolean);
-     setCharges(cloudCharges);
-   }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+     // Use merge logic instead of replace
+     mergeWithLocalData(companyData);
+   }, [mergeWithLocalData]);
 
   const forceSync = useCallback(async () => {
     try {
-      // 1) Push local changes
+      // 1) Push local changes to cloud
       await manualSync(vehicles, drivers, interimDrivers, charges, trailers);
 
-      // 2) Pull back company data (truth source) so all sessions converge
+      // 2) Pull back company data and MERGE (not replace)
       hasLoadedCompanyData.current = false;
       const companyData = await loadCompanyData();
       if (companyData) {
         hasLoadedCompanyData.current = true;
-        applyCompanyData(companyData);
+        mergeWithLocalData(companyData);
       }
       
       // Clear errors on successful sync
@@ -281,7 +293,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(),
       }]);
     }
-  }, [manualSync, vehicles, drivers, interimDrivers, charges, trailers, loadCompanyData, applyCompanyData]);
+  }, [manualSync, vehicles, drivers, interimDrivers, charges, trailers, loadCompanyData, mergeWithLocalData]);
 
   const clearErrors = useCallback(() => setSyncErrors([]), []);
 
