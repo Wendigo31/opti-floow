@@ -71,8 +71,23 @@ const defaultCharges: FixedCharge[] = [];
 // Simple encryption/decryption for profile export
 const ENCRYPTION_KEY = 'OptiFlow_LineOptimizer_2024';
 
+// Modern replacement for deprecated escape/unescape
+function utf8ToBase64(str: string): string {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => 
+    String.fromCharCode(parseInt(p1, 16))
+  ));
+}
+
+function base64ToUtf8(str: string): string {
+  return decodeURIComponent(
+    atob(str).split('').map(c => 
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')
+  );
+}
+
 function encrypt(data: string): string {
-  const encoded = btoa(unescape(encodeURIComponent(data)));
+  const encoded = utf8ToBase64(data);
   let result = '';
   for (let i = 0; i < encoded.length; i++) {
     const charCode = encoded.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length);
@@ -89,7 +104,7 @@ function decrypt(data: string): string {
       const charCode = decoded.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length);
       result += String.fromCharCode(charCode);
     }
-    return decodeURIComponent(escape(atob(result)));
+    return base64ToUtf8(atob(result));
   } catch {
     throw new Error('Invalid profile data');
   }

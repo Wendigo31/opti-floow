@@ -125,10 +125,18 @@ export function useCloudVehicles() {
       const fetchedLicenseId = await getUserLicenseId();
       setLicenseId(fetchedLicenseId);
 
+      // Skip query if no license_id - user might not be part of a company yet
+      if (!fetchedLicenseId) {
+        console.log('[useCloudVehicles] No license_id, using cache');
+        setVehicles(getCachedVehicles());
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('user_vehicles')
         .select('*')
-        .eq('license_id', fetchedLicenseId || '')
+        .eq('license_id', fetchedLicenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

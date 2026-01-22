@@ -6,7 +6,7 @@ import { fr, enUS, es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ContactDialog } from '@/components/ContactDialog';
-import { Separator } from '@/components/ui/separator';
+// Separator removed - not used
 import {
   AlertDialog,
   AlertDialogAction,

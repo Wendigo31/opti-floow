@@ -14,14 +14,14 @@ import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
-import Calculator from "./pages/Calculator";
+// Calculator imported via CalculatorWithHistory
 import CalculatorWithHistory from "./pages/CalculatorWithHistory";
 import Itinerary from "./pages/Itinerary";
 import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
 import Charges from "./pages/Charges";
 import Clients from "./pages/Clients";
-import TripHistory from "./pages/TripHistory";
+// TripHistory replaced by CalculatorWithHistory
 import Dashboard from "./pages/Dashboard";
 import Forecast from "./pages/Forecast";
 import Activation from "./pages/Activation";

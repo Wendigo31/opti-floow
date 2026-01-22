@@ -1,4 +1,5 @@
 import { useLocalStorage } from './useLocalStorage';
+import { generateId } from '@/types/local';
 
 export interface FavoriteAddress {
   id: string;
@@ -17,7 +18,7 @@ export function useFavoriteAddresses() {
   const addFavorite = (address: Omit<FavoriteAddress, 'id' | 'createdAt'>) => {
     const newFavorite: FavoriteAddress = {
       ...address,
-      id: crypto.randomUUID(),
+      id: generateId(),
       createdAt: new Date().toISOString(),
     };
     setFavorites(prev => [...prev, newFavorite]);

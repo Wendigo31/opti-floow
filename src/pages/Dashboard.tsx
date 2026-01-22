@@ -33,9 +33,9 @@ interface StoredRoute {
 export default function Dashboard() {
   const { t } = useLanguage();
   const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
-  const { hasFeature } = useLicense();
-  const { clients, loading: clientsLoading } = useClients();
-  const { tours, loading: toursLoading } = useSavedTours();
+  useLicense(); // Hook called for licensing context
+  const { clients } = useClients();
+  const { tours } = useSavedTours();
   
   const [chartType, setChartType] = useState<ChartType>('donut');
   const [forecastMonths] = useState(6);
