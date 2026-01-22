@@ -1,15 +1,16 @@
 import { useEffect, useRef, useCallback, useState, createContext, useContext } from 'react';
-import { useApp } from '@/context/AppContext';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useDataSync, getUserLicenseId } from '@/hooks/useDataSync';
-import { useCompanyRealtimeSync } from '@/hooks/useRealtimeSync';
-import type { Vehicle } from '@/types/vehicle';
-import type { Trailer } from '@/types/trailer';
-import type { Driver, FixedCharge } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useClients } from '@/hooks/useClients';
+import { useSavedTours } from '@/hooks/useSavedTours';
+import { useTrips } from '@/hooks/useTrips';
+import { useQuotes } from '@/hooks/useQuotes';
 
-// Debounce interval in ms - reduced for faster sync (5 seconds)
-const SYNC_DEBOUNCE = 5000;
+// Sync interval in ms (60 seconds)
+const SYNC_INTERVAL = 60_000;
 
 type SyncError = {
   table: string;
@@ -28,6 +29,10 @@ type DataSyncActions = {
     driverCount: number;
     chargeCount: number;
     trailerCount: number;
+    clientCount: number;
+    tourCount: number;
+    tripCount: number;
+    quoteCount: number;
   };
 };
 
@@ -40,334 +45,126 @@ export function useDataSyncActions() {
 }
 
 export function DataSyncProvider({ children }: { children: React.ReactNode }) {
-  const { drivers, charges, setDrivers, setCharges } = useApp();
-  const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers, setTrailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
-  const [interimDrivers, setInterimDrivers] = useLocalStorage<Driver[]>('optiflow_interim_drivers', []);
-  const { syncAllData, loadCompanyData, manualSync, syncStatus } = useDataSync();
-  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const { vehicles, fetchVehicles } = useCloudVehicles();
+  const { trailers, fetchTrailers } = useCloudTrailers();
+  const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
+  const { charges, fetchCharges } = useCloudCharges();
+  const { clients, fetchClients } = useClients();
+  const { tours, fetchTours } = useSavedTours();
+  const { trips, fetchTrips } = useTrips();
+  const { quotes, fetchQuotes } = useQuotes();
+  
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [syncErrors, setSyncErrors] = useState<SyncError[]>([]);
   
-  const lastSyncRef = useRef<number>(0);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasLoadedCompanyData = useRef<boolean>(false);
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Get license ID on mount
-  useEffect(() => {
-    const fetchContext = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const lid = await getUserLicenseId(user.id);
-        if (lid !== licenseId) {
-          // Reset flag to allow reloading company data when license changes
-          hasLoadedCompanyData.current = false;
-        }
-        setLicenseId(lid);
-      }
-    };
-    fetchContext();
-  }, [licenseId]);
-
-  // Handle realtime data changes from other users
-  const handleRealtimeChange = useCallback((
-    table: string,
-    eventType: 'INSERT' | 'UPDATE' | 'DELETE',
-    payload: any
-  ) => {
-    const record = payload.new || payload.old;
-    
-    console.log(`[DataSyncProvider] Realtime ${eventType} on ${table}:`, record);
-
-    switch (table) {
-      case 'user_vehicles':
-        if (eventType === 'DELETE') {
-          setVehicles(prev => prev.filter(v => v.id !== record?.local_id));
-        } else {
-          const vehicleData = record?.vehicle_data as Vehicle;
-          if (vehicleData) {
-            setVehicles(prev => {
-              const exists = prev.find(v => v.id === vehicleData.id);
-              if (exists) {
-                return prev.map(v => v.id === vehicleData.id ? vehicleData : v);
-              }
-              return [...prev, vehicleData];
-            });
-          }
-        }
-        break;
-
-      case 'user_trailers':
-        if (eventType === 'DELETE') {
-          setTrailers(prev => prev.filter(t => t.id !== record?.local_id));
-        } else {
-          const trailerData = record?.trailer_data as Trailer;
-          if (trailerData) {
-            setTrailers(prev => {
-              const exists = prev.find(t => t.id === trailerData.id);
-              if (exists) {
-                return prev.map(t => t.id === trailerData.id ? trailerData : t);
-              }
-              return [...prev, trailerData];
-            });
-          }
-        }
-        break;
-
-      case 'user_drivers':
-        if (eventType === 'DELETE') {
-          const localId = record?.local_id;
-          setDrivers(prev => prev.filter(d => d.id !== localId));
-          setInterimDrivers(prev => prev.filter(d => d.id !== localId));
-        } else {
-          const driverData = record?.driver_data as Driver;
-          const driverType = record?.driver_type;
-          if (driverData) {
-            if (driverType === 'interim') {
-              setInterimDrivers(prev => {
-                const exists = prev.find(d => d.id === driverData.id);
-                if (exists) {
-                  return prev.map(d => d.id === driverData.id ? driverData : d);
-                }
-                return [...prev, driverData];
-              });
-            } else {
-              setDrivers(prev => {
-                const exists = prev.find(d => d.id === driverData.id);
-                if (exists) {
-                  return prev.map(d => d.id === driverData.id ? driverData : d);
-                }
-                return [...prev, driverData];
-              });
-            }
-          }
-        }
-        break;
-
-      case 'user_charges':
-        if (eventType === 'DELETE') {
-          setCharges(prev => prev.filter(c => c.id !== record?.local_id));
-        } else {
-          const chargeData = record?.charge_data as FixedCharge;
-          if (chargeData) {
-            setCharges(prev => {
-              const exists = prev.find(c => c.id === chargeData.id);
-              if (exists) {
-                return prev.map(c => c.id === chargeData.id ? chargeData : c);
-              }
-              return [...prev, chargeData];
-            });
-          }
-        }
-        break;
-    }
-  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
-
-  // Subscribe to realtime changes for company data
-  useCompanyRealtimeSync({
-    licenseId,
-    onDataChange: handleRealtimeChange,
-    enabled: !!licenseId,
-  });
-
-  // Merge cloud data with local data (don't replace, add what's missing)
-  const mergeWithLocalData = useCallback((companyData: any) => {
-    if (!companyData) return;
-
-    // Merge vehicles: keep local, add from cloud if not exists
-    const cloudVehicles = (companyData.vehicles || [])
-      .map((v: any) => v.vehicle_data as Vehicle)
-      .filter(Boolean);
-    
-    setVehicles(prev => {
-      const localIds = new Set(prev.map(v => v.id));
-      const newFromCloud = cloudVehicles.filter((cv: Vehicle) => !localIds.has(cv.id));
-      return [...prev, ...newFromCloud];
-    });
-
-    // Merge trailers
-    const cloudTrailers = (companyData.trailers || [])
-      .map((t: any) => t.trailer_data as Trailer)
-      .filter(Boolean);
-    
-    setTrailers(prev => {
-      const localIds = new Set(prev.map(t => t.id));
-      const newFromCloud = cloudTrailers.filter((ct: Trailer) => !localIds.has(ct.id));
-      return [...prev, ...newFromCloud];
-    });
-
-    // Merge CDI drivers
-    const cdiDrivers = (companyData.drivers || [])
-      .filter((d: any) => d.driver_type === 'cdi')
-      .map((d: any) => d.driver_data as Driver)
-      .filter(Boolean);
-    
-    setDrivers(prev => {
-      const localIds = new Set(prev.map(d => d.id));
-      const newFromCloud = cdiDrivers.filter((cd: Driver) => !localIds.has(cd.id));
-      return [...prev, ...newFromCloud];
-    });
-
-    // Merge interim drivers
-    const interimDriversCloud = (companyData.drivers || [])
-      .filter((d: any) => d.driver_type === 'interim')
-      .map((d: any) => d.driver_data as Driver)
-      .filter(Boolean);
-    
-    setInterimDrivers(prev => {
-      const localIds = new Set(prev.map(d => d.id));
-      const newFromCloud = interimDriversCloud.filter((cd: Driver) => !localIds.has(cd.id));
-      return [...prev, ...newFromCloud];
-    });
-
-    // Merge charges
-    const cloudCharges = (companyData.charges || [])
-      .map((c: any) => c.charge_data as FixedCharge)
-      .filter(Boolean);
-    
-    setCharges(prev => {
-      const localIds = new Set(prev.map(c => c.id));
-      const newFromCloud = cloudCharges.filter((cc: FixedCharge) => !localIds.has(cc.id));
-      return [...prev, ...newFromCloud];
-    });
-  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
-
-  // Load company-shared data on initial auth or when licenseId changes
-  // Now we MERGE instead of REPLACE to keep user's local session intact
-  useEffect(() => {
-    const loadSharedData = async () => {
-      // Wait for license ID to be resolved
-      if (!licenseId) {
-        console.log('[DataSyncProvider] Waiting for licenseId...');
-        return;
-      }
-      
-      if (hasLoadedCompanyData.current) return;
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      console.log('[DataSyncProvider] Loading and merging company data for licenseId:', licenseId);
-      const companyData = await loadCompanyData();
-      if (companyData) {
-        hasLoadedCompanyData.current = true;
-        console.log('[DataSyncProvider] Merging company data:', {
-          vehicles: companyData.vehicles.length,
-          drivers: companyData.drivers.length,
-          charges: companyData.charges.length,
-          trailers: companyData.trailers.length,
-        });
-
-        // MERGE cloud data with local data instead of replacing
-        mergeWithLocalData(companyData);
-      }
-    };
-
-    loadSharedData();
-  }, [licenseId, loadCompanyData, mergeWithLocalData]);
-
-   const applyCompanyData = useCallback((companyData: any) => {
-     if (!companyData) return;
-     // Use merge logic instead of replace
-     mergeWithLocalData(companyData);
-   }, [mergeWithLocalData]);
-
+  // Force sync all cloud data
   const forceSync = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    setIsSyncing(true);
+    
     try {
-      // 1) Push local changes to cloud
-      await manualSync(vehicles, drivers, interimDrivers, charges, trailers);
-
-      // 2) Pull back company data and MERGE (not replace)
-      hasLoadedCompanyData.current = false;
-      const companyData = await loadCompanyData();
-      if (companyData) {
-        hasLoadedCompanyData.current = true;
-        mergeWithLocalData(companyData);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Non authentifié');
       }
+
+      // Fetch all data from cloud in parallel
+      await Promise.all([
+        fetchVehicles(),
+        fetchTrailers(),
+        fetchDrivers(),
+        fetchCharges(),
+        fetchClients(),
+        fetchTours(),
+        fetchTrips(),
+        fetchQuotes(),
+      ]);
       
-      // Clear errors on successful sync
-      setSyncErrors([]);
+      if (isMountedRef.current) {
+        setLastSyncAt(new Date());
+        setSyncErrors([]);
+      }
     } catch (error: any) {
-      setSyncErrors(prev => [...prev.slice(-4), {
-        table: 'global',
-        message: error?.message || 'Sync failed',
-        timestamp: new Date(),
-      }]);
+      if (isMountedRef.current) {
+        setSyncErrors(prev => [...prev.slice(-4), {
+          table: 'global',
+          message: error?.message || 'Erreur de synchronisation',
+          timestamp: new Date(),
+        }]);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsSyncing(false);
+      }
     }
-  }, [manualSync, vehicles, drivers, interimDrivers, charges, trailers, loadCompanyData, mergeWithLocalData]);
+  }, [fetchVehicles, fetchTrailers, fetchDrivers, fetchCharges, fetchClients, fetchTours, fetchTrips, fetchQuotes]);
 
   const clearErrors = useCallback(() => setSyncErrors([]), []);
 
+  // Setup automatic sync every 60 seconds
   useEffect(() => {
-    const scheduleSync = async () => {
-      // Check if user is authenticated
+    isMountedRef.current = true;
+
+    // Initial sync after auth is ready
+    const initSync = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const now = Date.now();
-      const timeSinceLastSync = now - lastSyncRef.current;
-
-      if (timeSinceLastSync >= SYNC_DEBOUNCE) {
-        // Sync immediately
-        lastSyncRef.current = now;
-        await syncAllData(vehicles, drivers, interimDrivers, charges, trailers);
-      } else {
-        // Schedule sync for later
-        if (syncTimeoutRef.current) {
-          clearTimeout(syncTimeoutRef.current);
-        }
-        syncTimeoutRef.current = setTimeout(async () => {
-          lastSyncRef.current = Date.now();
-          await syncAllData(vehicles, drivers, interimDrivers, charges, trailers);
-        }, SYNC_DEBOUNCE - timeSinceLastSync);
+      if (user && isMountedRef.current) {
+        // Initial sync
+        await forceSync();
       }
     };
 
-    scheduleSync();
+    void initSync();
 
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [vehicles, drivers, interimDrivers, charges, trailers, syncAllData]);
+    // Setup interval for periodic sync
+    syncIntervalRef.current = setInterval(() => {
+      void forceSync();
+    }, SYNC_INTERVAL);
 
-  // Initial sync on mount and auth state change
-  useEffect(() => {
+    // Auth state change handler
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        // Reset the flag to load company data again
-        hasLoadedCompanyData.current = false;
-        
-        // Update license ID
-        const lid = await getUserLicenseId(session.user.id);
-        setLicenseId(lid);
-        
-        // Sync immediately on sign in
-        lastSyncRef.current = Date.now();
-        await syncAllData(vehicles, drivers, interimDrivers, charges, trailers);
+        await forceSync();
       } else if (event === 'SIGNED_OUT') {
-        setLicenseId(null);
+        if (isMountedRef.current) {
+          setLastSyncAt(null);
+        }
       }
     });
 
     return () => {
+      isMountedRef.current = false;
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
       subscription.unsubscribe();
     };
-  }, [vehicles, drivers, interimDrivers, charges, trailers, syncAllData]);
+  }, [forceSync]);
+
+  // Calculate stats from cloud data
+  const stats = {
+    vehicleCount: vehicles.length,
+    driverCount: cdiDrivers.length + interimDrivers.length,
+    chargeCount: charges.length,
+    trailerCount: trailers.length,
+    clientCount: clients.length,
+    tourCount: tours.length,
+    tripCount: trips.length,
+    quoteCount: quotes.length,
+  };
 
   return (
     <DataSyncActionsContext.Provider value={{
       forceSync,
-      isSyncing: syncStatus.isSyncing,
-      lastSyncAt: syncStatus.lastSyncAt,
+      isSyncing,
+      lastSyncAt,
       syncErrors,
       clearErrors,
-      stats: {
-        vehicleCount: syncStatus.vehicleCount,
-        driverCount: syncStatus.driverCount,
-        chargeCount: syncStatus.chargeCount,
-        trailerCount: syncStatus.trailerCount,
-      },
+      stats,
     }}>
       {children}
     </DataSyncActionsContext.Provider>
