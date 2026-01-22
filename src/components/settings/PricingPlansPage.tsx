@@ -1,79 +1,46 @@
-import { Check, Crown, Sparkles, Star, ExternalLink } from 'lucide-react';
+import { Check, Crown, Sparkles, Star, ExternalLink, Zap, Rocket, Building2, Plus, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { PRICING_PLANS, getAddOnsByCategory, ADDON_CATEGORY_LABELS } from '@/types/pricing';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface PricingPlansPageProps {
   onBack?: () => void;
 }
 
-const plans = [
-  {
-    name: 'Start',
-    price: '29',
-    description: 'Idéal pour les artisans et indépendants',
-    icon: Sparkles,
-    color: 'border-blue-500/50',
-    iconColor: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
-    features: [
-      'Calculateur de coût de revient',
-      'Planification d\'itinéraire',
-      'Tarification automatique',
-      'Jusqu\'à 2 conducteurs',
-      'Jusqu\'à 5 véhicules',
-      '10 tournées sauvegardées',
-      'Support par email',
-    ],
+const planIcons = {
+  start: Zap,
+  pro: Rocket,
+  enterprise: Building2,
+};
+
+const planColors = {
+  blue: {
+    border: 'border-blue-500/50',
+    bg: 'bg-blue-500/10',
+    icon: 'text-blue-500',
+    badge: 'bg-blue-500',
   },
-  {
-    name: 'Pro',
-    price: '79',
-    description: 'Pour les PME en croissance',
-    icon: Star,
-    color: 'border-orange-500/50',
-    iconColor: 'text-orange-500',
-    bgColor: 'bg-orange-500/10',
-    popular: true,
-    features: [
-      'Tout Start inclus',
-      'Tableau de bord analytique',
-      'Historique des trajets',
-      'Export PDF & Excel avancés',
-      'Jusqu\'à 15 conducteurs',
-      'Jusqu\'à 50 véhicules',
-      '200 tournées sauvegardées',
-      'Alertes de marge',
-      'Support prioritaire',
-    ],
+  orange: {
+    border: 'border-orange-500/50',
+    bg: 'bg-orange-500/10',
+    icon: 'text-orange-500',
+    badge: 'bg-orange-500',
   },
-  {
-    name: 'Enterprise',
-    price: '199',
-    description: 'Pour les grandes entreprises',
-    icon: Crown,
-    color: 'border-amber-500/50',
-    iconColor: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
-    features: [
-      'Tout Pro inclus',
-      'Intelligence artificielle',
-      'Analyse clients avancée',
-      'Multi-agences',
-      'Multi-utilisateurs',
-      'Véhicules illimités',
-      'Tournées illimitées',
-      'Intégration TMS/ERP',
-      'Account manager dédié',
-    ],
+  red: {
+    border: 'border-red-500/50',
+    bg: 'bg-red-500/10',
+    icon: 'text-red-500',
+    badge: 'bg-red-500',
   },
-];
+};
 
 export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -85,16 +52,20 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {plans.map((plan) => {
-            const Icon = plan.icon;
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          {PRICING_PLANS.map((plan) => {
+            const Icon = planIcons[plan.id];
+            const colors = planColors[plan.color];
+            const addOnsByCategory = getAddOnsByCategory(plan.id);
+            const totalAddOns = Object.values(addOnsByCategory).flat().length;
+            
             return (
               <Card 
-                key={plan.name}
+                key={plan.id}
                 className={cn(
                   "relative overflow-hidden transition-all hover:scale-[1.02]",
-                  plan.color,
-                  plan.popular && "ring-2 ring-orange-500"
+                  colors.border,
+                  plan.popular && "ring-2 ring-orange-500 lg:scale-105"
                 )}
               >
                 {plan.popular && (
@@ -105,27 +76,109 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
                   </div>
                 )}
                 <CardHeader>
-                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", plan.bgColor)}>
-                    <Icon className={cn("w-6 h-6", plan.iconColor)} />
+                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", colors.bg)}>
+                    <Icon className={cn("w-6 h-6", colors.icon)} />
                   </div>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardDescription className="italic">"{plan.tagline}"</CardDescription>
+                  
+                  {/* Target */}
+                  <div className={cn("rounded-lg p-2 mt-2", colors.bg)}>
+                    <p className="text-xs text-foreground/80">
+                      <span className="font-semibold">Cible :</span> {plan.target}
+                    </p>
+                  </div>
+                  
+                  {/* Pricing */}
                   <div className="mt-4">
-                    <span className="text-4xl font-bold text-foreground">{plan.price}€</span>
-                    <span className="text-muted-foreground">/mois HT</span>
+                    {plan.isCustomPricing ? (
+                      <>
+                        <span className="text-3xl font-bold text-foreground">Sur devis</span>
+                        <p className="text-sm text-muted-foreground mt-1">SaaS + setup personnalisé</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold text-foreground">{plan.monthlyPrice}€</span>
+                        <span className="text-muted-foreground">/mois HT</span>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          ou <span className="font-semibold">{plan.yearlyPrice}€</span>/an 
+                          <Badge variant="secondary" className="ml-2 text-xs">-{plan.yearlyDiscount}%</Badge>
+                        </p>
+                      </>
+                    )}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className={cn("w-5 h-5 flex-shrink-0 mt-0.5", plan.iconColor)} />
-                        <span className="text-sm text-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                
+                <CardContent className="space-y-4">
+                  {/* Limites */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-muted/50 rounded p-2">
+                      <span className="font-semibold">{plan.limits.maxVehicles ?? '∞'}</span> véhicules
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <span className="font-semibold">{plan.limits.maxDrivers ?? '∞'}</span> conducteurs
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <span className="font-semibold">{plan.limits.maxClients ?? '∞'}</span> clients
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <span className="font-semibold">{plan.limits.maxSavedTours ?? '∞'}</span> tournées
+                    </div>
+                  </div>
+                  
+                  {/* Promise */}
+                  <div className={cn("rounded-lg p-3", colors.bg)}>
+                    <p className="text-sm text-center">
+                      <span className="font-semibold">🎯 Promesse :</span>{' '}
+                      <span className="text-foreground/80">{plan.promise}</span>
+                    </p>
+                  </div>
+
+                  {/* Add-ons disponibles */}
+                  {totalAddOns > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="addons" className="border-none">
+                        <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            <span>{totalAddOns} add-ons disponibles</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-3 pt-2">
+                          {Object.entries(addOnsByCategory).map(([category, addons]) => {
+                            if (addons.length === 0) return null;
+                            const categoryLabel = ADDON_CATEGORY_LABELS[category as keyof typeof ADDON_CATEGORY_LABELS];
+                            return (
+                              <div key={category}>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">
+                                  {categoryLabel.fr}
+                                </p>
+                                <div className="space-y-1">
+                                  {addons.slice(0, 3).map((addon) => (
+                                    <div key={addon.id} className="flex justify-between text-xs">
+                                      <span className="text-foreground/80">{addon.name}</span>
+                                      <span className="font-medium">
+                                        {addon.monthlyPrice > 0 ? `+${addon.monthlyPrice}€/mois` : 'Inclus'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {addons.length > 3 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      +{addons.length - 3} autres options...
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+                  
+                  {/* CTA */}
                   <Button 
-                    className="w-full mt-6" 
+                    className="w-full" 
                     variant={plan.popular ? "default" : "outline"}
                     asChild
                   >
@@ -135,7 +188,7 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
                       rel="noopener noreferrer"
                       className="flex items-center gap-2"
                     >
-                      Souscrire
+                      {plan.isCustomPricing ? 'Demander un devis' : 'Souscrire'}
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
@@ -143,6 +196,15 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
               </Card>
             );
           })}
+        </div>
+
+        {/* Upsell message */}
+        <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-6 mb-12 text-center">
+          <h3 className="text-lg font-semibold mb-2">💡 Maximisez votre rentabilité</h3>
+          <p className="text-muted-foreground">
+            Chaque add-on vous permet de personnaliser votre expérience. 
+            <span className="font-medium text-foreground"> L'abonnement annuel vous fait économiser jusqu'à 2 mois</span> sur votre forfait !
+          </p>
         </div>
 
         {/* FAQ Section */}
@@ -177,12 +239,12 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
           
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Comment obtenir une licence ?</CardTitle>
+              <CardTitle className="text-lg">Les add-ons sont-ils permanents ?</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Après votre souscription sur notre site, vous recevrez votre code de licence 
-                par email sous quelques minutes.
+                Vous pouvez activer ou désactiver vos add-ons à tout moment.
+                Ils sont facturés mensuellement ou inclus dans votre abonnement annuel.
               </p>
             </CardContent>
           </Card>

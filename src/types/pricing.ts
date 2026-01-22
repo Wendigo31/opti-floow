@@ -177,29 +177,39 @@ export const PRICING_PLANS: PricingPlan[] = [
 ];
 
 // ============= ADD-ONS CONFIGURATION =============
+// STRATÉGIE TARIFAIRE: 
+// - START: Add-ons essentiels à bas prix pour créer dépendance + upsell vers PRO
+// - PRO: Add-ons premium à prix moyen pour maximiser ARPU avant upgrade ENTERPRISE  
+// - ENTERPRISE: Tout inclus, add-ons pour services/support uniquement
+
 export const ADD_ONS: AddOn[] = [
-  // === Feature Add-ons for START ===
+  // ╔══════════════════════════════════════════════════════════════════╗
+  // ║                    ADD-ONS FORFAIT START                         ║
+  // ║  Objectif: Créer le besoin, prix d'appel, conversion vers PRO   ║
+  // ╚══════════════════════════════════════════════════════════════════╝
+  
+  // --- Fonctionnalités essentielles (prix d'appel) ---
+  {
+    id: 'addon_saved_tours',
+    name: 'Sauvegarde tournées',
+    description: "Enregistrer et réutiliser vos tournées favorites (50 max)",
+    monthlyPrice: 7,
+    yearlyPrice: 70,
+    icon: 'Bookmark',
+    category: 'feature',
+    availableFor: ['start'],
+    featureKey: 'saved_tours',
+  },
   {
     id: 'addon_itinerary',
     name: 'Planification itinéraire',
-    description: "Carte interactive avec calcul de route et optimisation",
+    description: "Carte interactive avec calcul de route et péages",
     monthlyPrice: 9,
     yearlyPrice: 90,
     icon: 'Route',
     category: 'feature',
     availableFor: ['start'],
     featureKey: 'itinerary_planning',
-  },
-  {
-    id: 'addon_saved_tours',
-    name: 'Sauvegarde tournées',
-    description: "Enregistrer et réutiliser vos tournées favorites",
-    monthlyPrice: 9,
-    yearlyPrice: 90,
-    icon: 'Bookmark',
-    category: 'feature',
-    availableFor: ['start'],
-    featureKey: 'saved_tours',
   },
   {
     id: 'addon_trip_history',
@@ -212,124 +222,25 @@ export const ADD_ONS: AddOn[] = [
     availableFor: ['start'],
     featureKey: 'trip_history',
   },
+  
+  // --- Fonctionnalités avancées (marge plus élevée) ---
   {
     id: 'addon_auto_pricing',
     name: 'Tarification automatique',
     description: "Calcul automatique du prix avec marge cible optimale",
-    monthlyPrice: 12,
-    yearlyPrice: 120,
+    monthlyPrice: 14,
+    yearlyPrice: 140,
     icon: 'Calculator',
     category: 'feature',
     availableFor: ['start'],
     featureKey: 'auto_pricing_basic',
   },
   {
-    id: 'addon_fleet_advanced',
-    name: 'Gestion flotte avancée',
-    description: "Amortissement, entretien, pneus et suivi de consommation",
-    monthlyPrice: 15,
-    yearlyPrice: 150,
-    icon: 'Truck',
-    category: 'feature',
-    availableFor: ['start'],
-    featureKey: 'fleet_management',
-  },
-  
-  // === Feature Add-ons for PRO ===
-  {
-    id: 'addon_ai_optimization',
-    name: 'Pack Intelligence Artificielle',
-    description: "Optimisation IA des trajets + Analyse IA dans les exports PDF",
-    monthlyPrice: 49,
-    yearlyPrice: 490,
-    icon: 'Brain',
-    category: 'feature',
-    availableFor: ['pro'],
-    featureKey: 'ai_optimization',
-  },
-  {
-    id: 'addon_multi_agency',
-    name: 'Multi-agences',
-    description: "Gérez plusieurs sites/agences avec des tableaux de bord consolidés",
-    monthlyPrice: 39,
-    yearlyPrice: 390,
-    icon: 'Building',
-    category: 'feature',
-    availableFor: ['pro'],
-    featureKey: 'multi_agency',
-  },
-  {
-    id: 'addon_smart_quotes',
-    name: 'Devis intelligent',
-    description: "Générateur de devis automatique avec prix optimaux calculés",
-    monthlyPrice: 29,
-    yearlyPrice: 290,
-    icon: 'FileText',
-    category: 'feature',
-    availableFor: ['pro'],
-    featureKey: 'smart_quotes',
-  },
-  {
-    id: 'addon_tms_erp',
-    name: 'Intégration TMS/ERP',
-    description: "Connectez OptiFlow à vos systèmes existants (API, webhooks)",
-    monthlyPrice: 59,
-    yearlyPrice: 590,
-    icon: 'Plug',
-    category: 'feature',
-    availableFor: ['pro', 'enterprise'],
-    featureKey: 'tms_erp_integration',
-  },
-  {
-    id: 'addon_multi_users',
-    name: 'Multi-utilisateurs',
-    description: "Ajoutez jusqu'à 5 comptes utilisateurs sur votre licence",
-    monthlyPrice: 25,
-    yearlyPrice: 250,
-    icon: 'Users',
-    category: 'feature',
-    availableFor: ['pro'],
-    featureKey: 'multi_users',
-  },
-  {
-    id: 'addon_forecast',
-    name: 'Prévisionnel avancé',
-    description: "Projections de revenus sur 3, 6 et 12 mois avec tendances",
-    monthlyPrice: 19,
-    yearlyPrice: 190,
-    icon: 'TrendingUp',
-    category: 'feature',
-    availableFor: ['start'],
-    featureKey: 'forecast',
-  },
-  {
-    id: 'addon_excel_export',
-    name: 'Export Excel/CSV',
-    description: "Exportez toutes vos données en Excel ou CSV",
-    monthlyPrice: 9,
-    yearlyPrice: 90,
-    icon: 'FileSpreadsheet',
-    category: 'feature',
-    availableFor: ['start', 'pro'], // Also add-on for Pro
-    featureKey: 'excel_export',
-  },
-  {
-    id: 'addon_client_analysis',
-    name: 'Analyse clients avancée',
-    description: "Détection des clients toxiques et rentables avec statistiques",
-    monthlyPrice: 19,
-    yearlyPrice: 190,
-    icon: 'Users',
-    category: 'feature',
-    availableFor: ['pro'],
-    featureKey: 'client_analysis',
-  },
-  {
     id: 'addon_margin_alerts',
     name: 'Alertes de marge',
     description: "Notifications automatiques si la marge est trop basse",
-    monthlyPrice: 9,
-    yearlyPrice: 90,
+    monthlyPrice: 12,
+    yearlyPrice: 120,
     icon: 'AlertTriangle',
     category: 'feature',
     availableFor: ['start'],
@@ -339,74 +250,87 @@ export const ADD_ONS: AddOn[] = [
     id: 'addon_dashboard_analytics',
     name: 'Tableau de bord analytique',
     description: "Graphiques et statistiques avancées de votre activité",
-    monthlyPrice: 15,
-    yearlyPrice: 150,
+    monthlyPrice: 19,
+    yearlyPrice: 190,
     icon: 'BarChart3',
     category: 'feature',
     availableFor: ['start'],
     featureKey: 'dashboard_analytics',
   },
-
-  // === Limit Add-ons ===
+  
+  // --- Fonctionnalités premium (incitation upgrade PRO) ---
   {
-    id: 'addon_extra_vehicles_10',
-    name: '+10 véhicules',
-    description: "Ajoutez 10 véhicules supplémentaires à votre quota",
-    monthlyPrice: 15,
-    yearlyPrice: 150,
+    id: 'addon_fleet_advanced',
+    name: 'Gestion flotte avancée',
+    description: "Amortissement, entretien, pneus et suivi de consommation",
+    monthlyPrice: 19,
+    yearlyPrice: 190,
     icon: 'Truck',
-    category: 'limit',
-    availableFor: ['start', 'pro'],
-    limitIncrease: { key: 'maxVehicles', amount: 10 },
+    category: 'feature',
+    availableFor: ['start'],
+    featureKey: 'fleet_management',
   },
   {
-    id: 'addon_extra_drivers_5',
-    name: '+5 conducteurs',
-    description: "Ajoutez 5 conducteurs supplémentaires à votre quota",
-    monthlyPrice: 10,
-    yearlyPrice: 100,
-    icon: 'UserPlus',
-    category: 'limit',
-    availableFor: ['start', 'pro'],
-    limitIncrease: { key: 'maxDrivers', amount: 5 },
+    id: 'addon_forecast_start',
+    name: 'Prévisionnel',
+    description: "Projections de revenus sur 3, 6 et 12 mois avec tendances",
+    monthlyPrice: 24,
+    yearlyPrice: 240,
+    icon: 'TrendingUp',
+    category: 'feature',
+    availableFor: ['start'],
+    featureKey: 'forecast',
   },
   {
-    id: 'addon_extra_clients_50',
-    name: '+50 clients',
-    description: "Ajoutez 50 clients supplémentaires à votre quota",
+    id: 'addon_excel_export_start',
+    name: 'Export Excel/CSV',
+    description: "Exportez toutes vos données en Excel ou CSV",
     monthlyPrice: 12,
     yearlyPrice: 120,
-    icon: 'UserCog',
-    category: 'limit',
-    availableFor: ['start', 'pro'],
-    limitIncrease: { key: 'maxClients', amount: 50 },
-  },
-  {
-    id: 'addon_extra_tours_100',
-    name: '+100 tournées',
-    description: "Ajoutez 100 tournées sauvegardées à votre quota",
-    monthlyPrice: 8,
-    yearlyPrice: 80,
-    icon: 'Route',
-    category: 'limit',
-    availableFor: ['start', 'pro'],
-    limitIncrease: { key: 'maxSavedTours', amount: 100 },
-  },
-  {
-    id: 'addon_unlimited_limits',
-    name: 'Limites illimitées',
-    description: "Passez en illimité sur tous les quotas (véhicules, conducteurs, clients, tournées)",
-    monthlyPrice: 49,
-    yearlyPrice: 490,
-    icon: 'Infinity',
-    category: 'limit',
-    availableFor: ['pro'],
-    limitIncrease: { key: 'maxVehicles', amount: null },
+    icon: 'FileSpreadsheet',
+    category: 'feature',
+    availableFor: ['start'],
+    featureKey: 'excel_export',
   },
 
-  // === Support Add-ons ===
+  // --- Limites START (revenus récurrents) ---
   {
-    id: 'addon_priority_support',
+    id: 'addon_extra_vehicles_5_start',
+    name: '+5 véhicules',
+    description: "Ajoutez 5 véhicules supplémentaires à votre quota",
+    monthlyPrice: 12,
+    yearlyPrice: 120,
+    icon: 'Truck',
+    category: 'limit',
+    availableFor: ['start'],
+    limitIncrease: { key: 'maxVehicles', amount: 5 },
+  },
+  {
+    id: 'addon_extra_drivers_3_start',
+    name: '+3 conducteurs',
+    description: "Ajoutez 3 conducteurs supplémentaires",
+    monthlyPrice: 9,
+    yearlyPrice: 90,
+    icon: 'UserPlus',
+    category: 'limit',
+    availableFor: ['start'],
+    limitIncrease: { key: 'maxDrivers', amount: 3 },
+  },
+  {
+    id: 'addon_extra_clients_25_start',
+    name: '+25 clients',
+    description: "Ajoutez 25 clients supplémentaires",
+    monthlyPrice: 9,
+    yearlyPrice: 90,
+    icon: 'UserCog',
+    category: 'limit',
+    availableFor: ['start'],
+    limitIncrease: { key: 'maxClients', amount: 25 },
+  },
+
+  // --- Support START ---
+  {
+    id: 'addon_priority_support_start',
     name: 'Support prioritaire',
     description: "Temps de réponse garanti sous 4h ouvrées",
     monthlyPrice: 19,
@@ -415,25 +339,220 @@ export const ADD_ONS: AddOn[] = [
     category: 'support',
     availableFor: ['start'],
   },
+
+  // ╔══════════════════════════════════════════════════════════════════╗
+  // ║                     ADD-ONS FORFAIT PRO                          ║
+  // ║  Objectif: Maximiser ARPU, add-ons premium avant ENTERPRISE     ║
+  // ╚══════════════════════════════════════════════════════════════════╝
+  
+  // --- Fonctionnalités IA & Avancées (haute valeur) ---
+  {
+    id: 'addon_ai_optimization',
+    name: 'Pack Intelligence Artificielle',
+    description: "Optimisation IA des trajets + Analyse IA dans les exports PDF",
+    monthlyPrice: 59,
+    yearlyPrice: 590,
+    icon: 'Brain',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'ai_optimization',
+  },
+  {
+    id: 'addon_client_analysis',
+    name: 'Analyse clients avancée',
+    description: "Détection des clients toxiques et rentables avec statistiques",
+    monthlyPrice: 29,
+    yearlyPrice: 290,
+    icon: 'Users',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'client_analysis',
+  },
+  {
+    id: 'addon_smart_quotes',
+    name: 'Devis intelligent',
+    description: "Générateur de devis automatique avec prix optimaux calculés",
+    monthlyPrice: 39,
+    yearlyPrice: 390,
+    icon: 'FileText',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'smart_quotes',
+  },
+  
+  // --- Fonctionnalités Enterprise en preview (incitation upgrade) ---
+  {
+    id: 'addon_multi_users',
+    name: 'Multi-utilisateurs',
+    description: "Ajoutez jusqu'à 5 comptes utilisateurs sur votre licence",
+    monthlyPrice: 35,
+    yearlyPrice: 350,
+    icon: 'Users',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'multi_users',
+  },
+  {
+    id: 'addon_multi_agency',
+    name: 'Multi-agences',
+    description: "Gérez plusieurs sites/agences avec tableaux de bord consolidés",
+    monthlyPrice: 49,
+    yearlyPrice: 490,
+    icon: 'Building',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'multi_agency',
+  },
+  {
+    id: 'addon_tms_erp',
+    name: 'Intégration TMS/ERP',
+    description: "Connectez OptiFlow à vos systèmes existants (API, webhooks)",
+    monthlyPrice: 79,
+    yearlyPrice: 790,
+    icon: 'Plug',
+    category: 'feature',
+    availableFor: ['pro'],
+    featureKey: 'tms_erp_integration',
+  },
+
+  // --- Limites PRO (revenus récurrents, plus généreux) ---
+  {
+    id: 'addon_extra_vehicles_15',
+    name: '+15 véhicules',
+    description: "Ajoutez 15 véhicules supplémentaires à votre quota",
+    monthlyPrice: 25,
+    yearlyPrice: 250,
+    icon: 'Truck',
+    category: 'limit',
+    availableFor: ['pro'],
+    limitIncrease: { key: 'maxVehicles', amount: 15 },
+  },
+  {
+    id: 'addon_extra_drivers_10',
+    name: '+10 conducteurs',
+    description: "Ajoutez 10 conducteurs supplémentaires",
+    monthlyPrice: 19,
+    yearlyPrice: 190,
+    icon: 'UserPlus',
+    category: 'limit',
+    availableFor: ['pro'],
+    limitIncrease: { key: 'maxDrivers', amount: 10 },
+  },
+  {
+    id: 'addon_extra_clients_100',
+    name: '+100 clients',
+    description: "Ajoutez 100 clients supplémentaires",
+    monthlyPrice: 19,
+    yearlyPrice: 190,
+    icon: 'UserCog',
+    category: 'limit',
+    availableFor: ['pro'],
+    limitIncrease: { key: 'maxClients', amount: 100 },
+  },
+  {
+    id: 'addon_extra_tours_200',
+    name: '+200 tournées',
+    description: "Ajoutez 200 tournées sauvegardées",
+    monthlyPrice: 15,
+    yearlyPrice: 150,
+    icon: 'Route',
+    category: 'limit',
+    availableFor: ['pro'],
+    limitIncrease: { key: 'maxSavedTours', amount: 200 },
+  },
+  {
+    id: 'addon_unlimited_limits',
+    name: 'Limites illimitées',
+    description: "Passez en illimité sur tous les quotas (véhicules, conducteurs, clients, tournées)",
+    monthlyPrice: 69,
+    yearlyPrice: 690,
+    icon: 'Infinity',
+    category: 'limit',
+    availableFor: ['pro'],
+    limitIncrease: { key: 'maxVehicles', amount: null },
+  },
+
+  // --- Support PRO ---
   {
     id: 'addon_dedicated_support',
     name: 'Support dédié',
-    description: "Account manager dédié + SLA personnalisé",
-    monthlyPrice: 99,
-    yearlyPrice: 990,
+    description: "Account manager dédié + SLA 2h garanti",
+    monthlyPrice: 129,
+    yearlyPrice: 1290,
     icon: 'Shield',
     category: 'support',
     availableFor: ['pro'],
   },
+
+  // ╔══════════════════════════════════════════════════════════════════╗
+  // ║                   ADD-ONS FORFAIT ENTERPRISE                     ║
+  // ║  Objectif: Services premium, tout est déjà inclus               ║
+  // ╚══════════════════════════════════════════════════════════════════╝
+  
+  // --- Services & Support uniquement ---
   {
-    id: 'addon_onboarding',
+    id: 'addon_onboarding_enterprise',
     name: 'Onboarding personnalisé',
-    description: "Formation 2h en visio + configuration initiale",
-    monthlyPrice: 0, // One-time
-    yearlyPrice: 299, // One-time
+    description: "Formation 4h en visio + configuration complète + import données",
+    monthlyPrice: 0,
+    yearlyPrice: 499,
     icon: 'GraduationCap',
     category: 'support',
-    availableFor: ['start', 'pro', 'enterprise'],
+    availableFor: ['enterprise'],
+  },
+  {
+    id: 'addon_custom_dev',
+    name: 'Développements sur mesure',
+    description: "Fonctionnalités personnalisées selon vos besoins spécifiques",
+    monthlyPrice: 0,
+    yearlyPrice: 0, // Sur devis
+    icon: 'Code',
+    category: 'support',
+    availableFor: ['enterprise'],
+  },
+  {
+    id: 'addon_premium_sla',
+    name: 'SLA Premium',
+    description: "Garantie de disponibilité 99.9% + Réponse sous 1h",
+    monthlyPrice: 199,
+    yearlyPrice: 1990,
+    icon: 'ShieldCheck',
+    category: 'support',
+    availableFor: ['enterprise'],
+  },
+  {
+    id: 'addon_dedicated_infra',
+    name: 'Infrastructure dédiée',
+    description: "Hébergement dédié / cloud privé avec isolation complète",
+    monthlyPrice: 299,
+    yearlyPrice: 2990,
+    icon: 'Server',
+    category: 'support',
+    availableFor: ['enterprise'],
+  },
+
+  // ╔══════════════════════════════════════════════════════════════════╗
+  // ║                    ONBOARDING TOUS FORFAITS                      ║
+  // ╚══════════════════════════════════════════════════════════════════╝
+  {
+    id: 'addon_onboarding_start',
+    name: 'Onboarding express',
+    description: "Formation 1h en visio + configuration initiale",
+    monthlyPrice: 0,
+    yearlyPrice: 149,
+    icon: 'GraduationCap',
+    category: 'support',
+    availableFor: ['start'],
+  },
+  {
+    id: 'addon_onboarding_pro',
+    name: 'Onboarding complet',
+    description: "Formation 2h en visio + configuration + import données",
+    monthlyPrice: 0,
+    yearlyPrice: 299,
+    icon: 'GraduationCap',
+    category: 'support',
+    availableFor: ['pro'],
   },
 ];
 
@@ -502,8 +621,55 @@ export function getPlanById(id: 'start' | 'pro' | 'enterprise'): PricingPlan {
   return PRICING_PLANS.find(p => p.id === id)!;
 }
 
+/**
+ * Récupère les add-ons pour un forfait, triés par catégorie puis par prix décroissant
+ * Stratégie: Afficher les add-ons les plus rentables en premier
+ */
 export function getAddOnsForPlan(planId: 'start' | 'pro' | 'enterprise'): AddOn[] {
-  return ADD_ONS.filter(addon => addon.availableFor.includes(planId));
+  const addons = ADD_ONS.filter(addon => addon.availableFor.includes(planId));
+  
+  // Ordre de priorité des catégories (features premium en premier)
+  const categoryOrder: Record<AddOn['category'], number> = {
+    feature: 1,
+    limit: 2,
+    support: 3,
+  };
+  
+  return addons.sort((a, b) => {
+    // D'abord par catégorie
+    const catDiff = categoryOrder[a.category] - categoryOrder[b.category];
+    if (catDiff !== 0) return catDiff;
+    
+    // Ensuite par prix mensuel décroissant (plus rentable en premier)
+    return b.monthlyPrice - a.monthlyPrice;
+  });
+}
+
+/**
+ * Récupère les add-ons par catégorie pour un forfait donné
+ */
+export function getAddOnsByCategory(planId: 'start' | 'pro' | 'enterprise'): Record<AddOn['category'], AddOn[]> {
+  const addons = getAddOnsForPlan(planId);
+  return {
+    feature: addons.filter(a => a.category === 'feature'),
+    limit: addons.filter(a => a.category === 'limit'),
+    support: addons.filter(a => a.category === 'support'),
+  };
+}
+
+/**
+ * Calcule le revenu potentiel maximum si un client prend tous les add-ons
+ */
+export function getMaxPotentialRevenue(planId: 'start' | 'pro' | 'enterprise', isYearly: boolean): number {
+  const plan = getPlanById(planId);
+  const basePrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+  
+  const addons = getAddOnsForPlan(planId);
+  const addonsTotal = addons.reduce((sum, addon) => {
+    return sum + (isYearly ? addon.yearlyPrice : addon.monthlyPrice);
+  }, 0);
+  
+  return basePrice + addonsTotal;
 }
 
 export function getFeaturesByPlan(planId: 'start' | 'pro' | 'enterprise'): FeatureDefinition[] {
@@ -520,7 +686,7 @@ export function calculateTotalPrice(
   planId: 'start' | 'pro' | 'enterprise',
   selectedAddOns: string[],
   isYearly: boolean
-): { base: number; addons: number; total: number; savings?: number } {
+): { base: number; addons: number; total: number; savings?: number; monthlyEquivalent: number } {
   const plan = getPlanById(planId);
   const basePrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
   
@@ -534,11 +700,32 @@ export function calculateTotalPrice(
 
   const total = basePrice + addonsPrice;
   const monthlyEquivalent = isYearly ? total / 12 : total;
-  const yearlyIfMonthly = !isYearly ? (plan.monthlyPrice * 12) + (addonsPrice * 12) : null;
-  const savings = yearlyIfMonthly ? yearlyIfMonthly - total : undefined;
+  
+  // Économie si passage en annuel
+  let savings: number | undefined;
+  if (isYearly) {
+    const monthlyTotal = plan.monthlyPrice * 12;
+    const monthlyAddonsTotal = selectedAddOns.reduce((sum, addonId) => {
+      const addon = ADD_ONS.find(a => a.id === addonId);
+      if (addon && addon.availableFor.includes(planId)) {
+        return sum + addon.monthlyPrice * 12;
+      }
+      return sum;
+    }, 0);
+    savings = (monthlyTotal + monthlyAddonsTotal) - total;
+  }
 
-  return { base: basePrice, addons: addonsPrice, total, savings };
+  return { base: basePrice, addons: addonsPrice, total, savings, monthlyEquivalent };
 }
+
+/**
+ * Labels des catégories d'add-ons
+ */
+export const ADDON_CATEGORY_LABELS: Record<AddOn['category'], { fr: string; en: string; icon: string }> = {
+  feature: { fr: 'Fonctionnalités', en: 'Features', icon: 'Sparkles' },
+  limit: { fr: 'Capacités', en: 'Capacity', icon: 'ArrowUpCircle' },
+  support: { fr: 'Support & Services', en: 'Support & Services', icon: 'Headphones' },
+};
 
 // ============= CATEGORY LABELS =============
 export const CATEGORY_LABELS: Record<FeatureCategory, { fr: string; icon: string }> = {
