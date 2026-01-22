@@ -456,7 +456,10 @@ export default function Itinerary() {
   };
 
   const addStop = () => {
-    setStops([...stops, { id: crypto.randomUUID(), address: '', position: null }]);
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : generateId();
+    setStops([...stops, { id: newId, address: '', position: null }]);
   };
 
   const removeStop = (id: string) => {
