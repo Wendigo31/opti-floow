@@ -112,10 +112,18 @@ export function useCloudCharges() {
       const fetchedLicenseId = await getUserLicenseId();
       setLicenseId(fetchedLicenseId);
 
+      // Skip query if no license_id - user might not be part of a company yet
+      if (!fetchedLicenseId) {
+        console.log('[useCloudCharges] No license_id, using cache');
+        setCharges(getCachedCharges());
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('user_charges')
         .select('*')
-        .eq('license_id', fetchedLicenseId || '')
+        .eq('license_id', fetchedLicenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

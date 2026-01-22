@@ -60,12 +60,11 @@ function getDemoAddresses(): LocalClientAddress[] {
 }
 
 export function useClients() {
-  const { licenseData } = useLicense();
+  useLicense(); // Hook must be called but licenseData is not used directly
   const [clients, setClients] = useState<ClientWithCreator[]>([]);
   const [addresses, setAddresses] = useState<LocalClientAddress[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [membersMap, setMembersMap] = useState<Map<string, { email: string; displayName?: string; isActive: boolean }>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
   
@@ -87,8 +86,6 @@ export function useClients() {
         setLoading(false);
         return;
       }
-      
-      setCurrentUserId(user.id);
       
       // Fetch license ID and company members for creator lookup
       const userLicenseId = await getUserLicenseId();

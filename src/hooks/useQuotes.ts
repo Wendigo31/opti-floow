@@ -42,7 +42,7 @@ function getDemoQuotes(): LocalQuote[] {
 }
 
 export function useQuotes() {
-  const { licenseData } = useLicense();
+  useLicense(); // Hook must be called for licensing context
   const [quotes, setQuotes] = useState<LocalQuote[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);

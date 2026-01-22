@@ -42,7 +42,7 @@ function getDemoTrips(): LocalTrip[] {
 }
 
 export function useTrips() {
-  const { licenseData } = useLicense();
+  useLicense(); // Hook must be called for licensing context
   const [trips, setTrips] = useState<LocalTrip[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
