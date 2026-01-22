@@ -16,7 +16,9 @@ import {
   PlayCircle,
   StopCircle,
   Settings,
-  EyeOff
+  EyeOff,
+  CloudDownload,
+  Loader2
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -26,6 +28,7 @@ import { useDemoMode } from '@/hooks/useDemoMode';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useDataSyncActions } from '@/components/DataSyncProvider';
 
 // Feature labels for tooltip display
 const FEATURE_LABELS: Record<string, string> = {
@@ -95,6 +98,7 @@ export function Sidebar() {
   const { t, language } = useLanguage();
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const currentDemoSession = getCurrentSession();
+  const { forceSync, isSyncing } = useDataSyncActions();
 
   // Get restricted features (user-specific overrides that are disabled)
   const restrictedFeatures = licenseData?.userFeatureOverrides?.filter(o => !o.enabled) || [];
@@ -325,6 +329,52 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Cloud Sync Button */}
+      <div className="px-4 pb-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={async () => {
+                  await forceSync();
+                  toast.success(
+                    language === 'fr' ? 'Synchronisation terminée' :
+                    language === 'es' ? 'Sincronización completada' :
+                    'Sync completed'
+                  );
+                }}
+                disabled={isSyncing}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors",
+                  "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20",
+                  isSyncing && "opacity-70 cursor-wait"
+                )}
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <CloudDownload className="w-5 h-5" />
+                )}
+                {!collapsed && (
+                  <span className="font-medium text-sm">
+                    {language === 'fr' ? 'Recharger Cloud' :
+                     language === 'es' ? 'Recargar Cloud' :
+                     'Reload Cloud'}
+                  </span>
+                )}
+              </button>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right">
+                {language === 'fr' ? 'Recharger Cloud' :
+                 language === 'es' ? 'Recargar Cloud' :
+                 'Reload Cloud'}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {/* Collapse Toggle */}
       <div className="p-4 border-t border-sidebar-border">
