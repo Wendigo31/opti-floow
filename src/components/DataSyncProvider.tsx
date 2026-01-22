@@ -3,10 +3,12 @@ import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useDataSync, getUserLicenseId } from '@/hooks/useDataSync';
 import { useCompanyRealtimeSync } from '@/hooks/useRealtimeSync';
+import { useSyncDebug, type SyncOperation, type RealtimeStatus } from '@/hooks/useSyncDebug';
 import type { Vehicle } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
 import type { Driver, FixedCharge } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Debounce interval in ms - reduced for faster sync (5 seconds)
 const SYNC_DEBOUNCE = 5000;
@@ -29,6 +31,16 @@ type DataSyncActions = {
     chargeCount: number;
     trailerCount: number;
   };
+  // Debug features
+  isDebugMode: boolean;
+  toggleDebugMode: () => void;
+  debugOperations: SyncOperation[];
+  debugRealtimeStatus: Map<string, RealtimeStatus>;
+  debugLicenseId: string | null;
+  debugUserId: string | null;
+  clearDebugOperations: () => void;
+  reloadSection: (section: 'vehicles' | 'drivers' | 'charges' | 'trailers') => Promise<void>;
+  isReloadingSection: Record<string, boolean>;
 };
 
 const DataSyncActionsContext = createContext<DataSyncActions | undefined>(undefined);
@@ -46,15 +58,20 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const [interimDrivers, setInterimDrivers] = useLocalStorage<Driver[]>('optiflow_interim_drivers', []);
   const { syncAllData, loadCompanyData, manualSync, syncStatus } = useDataSync();
   const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [syncErrors, setSyncErrors] = useState<SyncError[]>([]);
+  const [isReloadingSection, setIsReloadingSection] = useState<Record<string, boolean>>({});
+  
+  // Debug state
+  const syncDebug = useSyncDebug();
   
   const lastSyncRef = useRef<number>(0);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasLoadedCompanyData = useRef<boolean>(false);
 
-  // Get license ID on mount and reset company data flag when it changes
+  // Get license ID and user ID on mount
   useEffect(() => {
-    const fetchLicenseId = async () => {
+    const fetchContext = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const lid = await getUserLicenseId(user.id);
@@ -63,10 +80,72 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
           hasLoadedCompanyData.current = false;
         }
         setLicenseId(lid);
+        setUserId(user.id);
+        syncDebug.setContext(lid, user.id);
       }
     };
-    fetchLicenseId();
-  }, [licenseId]);
+    fetchContext();
+  }, [licenseId, syncDebug]);
+
+  // Reload a single section from the cloud
+  const reloadSection = useCallback(async (section: 'vehicles' | 'drivers' | 'charges' | 'trailers') => {
+    if (!licenseId) {
+      toast.error('Aucune licence associée');
+      return;
+    }
+    
+    setIsReloadingSection(prev => ({ ...prev, [section]: true }));
+    const startTime = Date.now();
+    
+    try {
+      const tableMap: Record<string, 'user_vehicles' | 'user_drivers' | 'user_charges' | 'user_trailers'> = {
+        vehicles: 'user_vehicles',
+        drivers: 'user_drivers',
+        charges: 'user_charges',
+        trailers: 'user_trailers',
+      };
+      
+      const tableName = tableMap[section];
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('license_id', licenseId);
+      
+      if (error) throw error;
+      
+      const duration = Date.now() - startTime;
+      syncDebug.logOperation(tableMap[section], 'select', data?.length || 0, true, undefined, duration);
+      
+      switch (section) {
+        case 'vehicles':
+          const cloudVehicles = (data || []).map((v: any) => v.vehicle_data as Vehicle).filter(Boolean);
+          setVehicles(cloudVehicles);
+          break;
+        case 'drivers':
+          const cdiDrivers = (data || []).filter((d: any) => d.driver_type === 'cdi').map((d: any) => d.driver_data as Driver).filter(Boolean);
+          const interimDriversCloud = (data || []).filter((d: any) => d.driver_type === 'interim').map((d: any) => d.driver_data as Driver).filter(Boolean);
+          setDrivers(cdiDrivers);
+          setInterimDrivers(interimDriversCloud);
+          break;
+        case 'charges':
+          const cloudCharges = (data || []).map((c: any) => c.charge_data as FixedCharge).filter(Boolean);
+          setCharges(cloudCharges);
+          break;
+        case 'trailers':
+          const cloudTrailers = (data || []).map((t: any) => t.trailer_data as Trailer).filter(Boolean);
+          setTrailers(cloudTrailers);
+          break;
+      }
+      
+      toast.success(`${section === 'vehicles' ? 'Véhicules' : section === 'drivers' ? 'Conducteurs' : section === 'charges' ? 'Charges' : 'Remorques'} rechargés (${data?.length || 0})`);
+    } catch (error: any) {
+      console.error(`[DataSync] Error reloading ${section}:`, error);
+      syncDebug.logOperation(section, 'select', 0, false, error?.message);
+      toast.error(`Erreur: ${error?.message || 'Échec du rechargement'}`);
+    } finally {
+      setIsReloadingSection(prev => ({ ...prev, [section]: false }));
+    }
+  }, [licenseId, setVehicles, setDrivers, setInterimDrivers, setCharges, setTrailers, syncDebug]);
 
   // Handle realtime data changes from other users
   const handleRealtimeChange = useCallback((
@@ -160,14 +239,26 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         }
         break;
     }
-  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges]);
+    // Log realtime event to debug
+    syncDebug.updateRealtimeStatus(table, 'SUBSCRIBED', true);
+  }, [setVehicles, setTrailers, setDrivers, setInterimDrivers, setCharges, syncDebug]);
 
   // Subscribe to realtime changes for company data
-  useCompanyRealtimeSync({
+  const realtimeChannel = useCompanyRealtimeSync({
     licenseId,
     onDataChange: handleRealtimeChange,
     enabled: !!licenseId,
   });
+  
+  // Update realtime status in debug when subscription changes
+  useEffect(() => {
+    if (realtimeChannel) {
+      const tables = ['user_vehicles', 'user_drivers', 'user_charges', 'user_trailers', 'saved_tours', 'trips', 'clients', 'quotes', 'company_settings'];
+      tables.forEach(table => {
+        syncDebug.updateRealtimeStatus(table, 'SUBSCRIBED');
+      });
+    }
+  }, [realtimeChannel, syncDebug]);
 
   // Load company-shared data on initial auth or when licenseId changes
   useEffect(() => {
@@ -356,6 +447,16 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         chargeCount: syncStatus.chargeCount,
         trailerCount: syncStatus.trailerCount,
       },
+      // Debug features
+      isDebugMode: syncDebug.isDebugMode,
+      toggleDebugMode: syncDebug.toggleDebugMode,
+      debugOperations: syncDebug.operations,
+      debugRealtimeStatus: syncDebug.realtimeStatus,
+      debugLicenseId: licenseId,
+      debugUserId: userId,
+      clearDebugOperations: syncDebug.clearOperations,
+      reloadSection,
+      isReloadingSection,
     }}>
       {children}
     </DataSyncActionsContext.Provider>
