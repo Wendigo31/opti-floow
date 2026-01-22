@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Bug } from 'lucide-react';
+import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr, enUS, es } from 'date-fns/locale';
 
@@ -30,7 +30,6 @@ import { isTauri } from '@/hooks/useTauri';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 import { useDataSyncActions } from '@/components/DataSyncProvider';
-import { SyncDebugPanel } from '@/components/sync/SyncDebugPanel';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -56,15 +55,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
     syncErrors, 
     clearErrors, 
     stats,
-    isDebugMode,
-    toggleDebugMode,
-    debugOperations,
-    debugRealtimeStatus,
-    debugLicenseId,
-    debugUserId,
-    clearDebugOperations,
-    reloadSection,
-    isReloadingSection,
   } = useDataSyncActions();
 
   // Update time every minute
@@ -188,7 +178,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className={isDebugMode ? "w-96" : "w-80"} align="end">
+              <PopoverContent className="w-80" align="end">
                 <div className="space-y-4">
                   {/* Header */}
                   <div className="flex items-center justify-between">
@@ -281,37 +271,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
                     {language === 'en' ? 'Force full sync' : language === 'es' ? 'Forzar sincronización completa' : 'Forcer la synchronisation complète'}
                   </Button>
-
-                  {/* Debug mode toggle */}
-                  <Separator />
-                  <Button
-                    variant={isDebugMode ? "secondary" : "ghost"}
-                    size="sm"
-                    className="w-full gap-2 text-xs"
-                    onClick={toggleDebugMode}
-                  >
-                    <Bug className="w-3.5 h-3.5" />
-                    {language === 'en' ? 'Debug mode' : language === 'es' ? 'Modo debug' : 'Mode debug'}
-                    {isDebugMode && (
-                      <Badge variant="outline" className="ml-auto text-[10px]">ON</Badge>
-                    )}
-                  </Button>
-
-                  {/* Debug Panel */}
-                  {isDebugMode && (
-                    <>
-                      <Separator />
-                      <SyncDebugPanel
-                        operations={debugOperations}
-                        realtimeStatus={debugRealtimeStatus}
-                        licenseId={debugLicenseId}
-                        userId={debugUserId}
-                        onClear={clearDebugOperations}
-                        onReloadSection={reloadSection}
-                        isReloading={isReloadingSection}
-                      />
-                    </>
-                  )}
                 </div>
               </PopoverContent>
             </Popover>
