@@ -3,10 +3,12 @@ import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, Pig
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CostChart } from '@/components/dashboard/CostChart';
 import { TourComparisonChart } from '@/components/dashboard/TourComparisonChart';
+import { OperationalDashboard } from '@/components/dashboard/OperationalDashboard';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { useTeam } from '@/hooks/useTeam';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +38,7 @@ export default function Dashboard() {
   useLicense(); // Hook called for licensing context
   const { clients } = useClients();
   const { tours } = useSavedTours();
+  const { isDirection, isLoading: isTeamLoading } = useTeam();
   
   const [chartType, setChartType] = useState<ChartType>('donut');
   const [forecastMonths] = useState(6);
@@ -46,6 +49,11 @@ export default function Dashboard() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   
+  // Show operational dashboard for non-direction users
+  // Wait for team loading to complete before deciding which view to show
+  if (!isTeamLoading && !isDirection) {
+    return <OperationalDashboard />;
+  }
   // Get filtered tours based on selected client
   const filteredTours = useMemo(() => {
     if (!selectedClientId) return tours;
