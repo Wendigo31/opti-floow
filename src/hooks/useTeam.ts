@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
 import type { CompanyUser, CompanyInvitation, TeamRole, TeamMember } from '@/types/team';
@@ -17,6 +17,7 @@ interface UseTeamReturn {
   canAddMore: boolean;
   isLoading: boolean;
   error: string | null;
+  licenseId: string | null;
   inviteMember: (email: string, role: TeamRole, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   updateMemberRole: (memberId: string, role: TeamRole) => Promise<{ success: boolean; error?: string }>;
   removeMember: (memberId: string) => Promise<{ success: boolean; error?: string }>;
@@ -25,12 +26,14 @@ interface UseTeamReturn {
 }
 
 export function useTeam(): UseTeamReturn {
-  const { licenseData, planType, hasFeature } = useLicense();
+  const { planType, hasFeature } = useLicense();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
 
   const maxUsers = MAX_USERS_PER_PLAN[planType] || 1;
   const currentUserCount = members.filter(m => m.is_active).length;
@@ -56,28 +59,34 @@ export function useTeam(): UseTeamReturn {
       }
 
       // Get license ID from the current user's company_users entry
-      const { data: currentUserEntry } = await supabase
+      const { data: currentUserEntry, error: userError } = await supabase
         .from('company_users')
         .select('license_id, role')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
 
+      if (userError) {
+        console.error('Error fetching user entry:', userError);
+      }
+
       if (!currentUserEntry?.license_id) {
         // User not in any company - not an error for users without team
         setCurrentUserRole(null);
+        setLicenseId(null);
         setIsLoading(false);
         return;
       }
 
-      const licenseId = currentUserEntry.license_id;
+      const currentLicenseId = currentUserEntry.license_id;
+      setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
 
       // Fetch team members
       const { data: companyUsers, error: usersError } = await supabase
         .from('company_users')
         .select('*')
-        .eq('license_id', licenseId)
+        .eq('license_id', currentLicenseId)
         .order('created_at', { ascending: true });
 
       if (usersError) {
@@ -96,7 +105,7 @@ export function useTeam(): UseTeamReturn {
       const { data: invitations, error: invError } = await supabase
         .from('company_invitations')
         .select('*')
-        .eq('license_id', licenseId)
+        .eq('license_id', currentLicenseId)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
@@ -118,7 +127,10 @@ export function useTeam(): UseTeamReturn {
   }, []);
 
   useEffect(() => {
-    fetchTeam();
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
+      fetchTeam();
+    }
   }, [fetchTeam]);
 
   const inviteMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
@@ -130,8 +142,12 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: `Limite de ${maxUsers} utilisateur(s) atteinte pour votre forfait` };
     }
 
-    if (role === 'owner') {
-      return { success: false, error: 'Impossible d\'inviter un propriétaire' };
+    if (role === 'owner' || role === 'direction') {
+      return { success: false, error: 'Impossible d\'inviter un membre avec ce rôle' };
+    }
+
+    if (!licenseId) {
+      return { success: false, error: 'Aucune licence trouvée' };
     }
 
     try {
@@ -140,22 +156,11 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Non authentifié' };
       }
 
-      // Get license ID
-      const { data: license } = await supabase
-        .from('licenses')
-        .select('id')
-        .eq('license_code', licenseData?.code)
-        .maybeSingle();
-
-      if (!license) {
-        return { success: false, error: 'Licence non trouvée' };
-      }
-
       // Check if already a member or invited
       const { data: existingMember } = await supabase
         .from('company_users')
         .select('id')
-        .eq('license_id', license.id)
+        .eq('license_id', licenseId)
         .eq('email', email.toLowerCase())
         .maybeSingle();
 
@@ -166,7 +171,7 @@ export function useTeam(): UseTeamReturn {
       const { data: existingInvite } = await supabase
         .from('company_invitations')
         .select('id')
-        .eq('license_id', license.id)
+        .eq('license_id', licenseId)
         .eq('email', email.toLowerCase())
         .is('accepted_at', null)
         .maybeSingle();
@@ -175,11 +180,11 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Une invitation est déjà en attente pour cet email' };
       }
 
-      // Create invitation and add user to company_users with display_name
+      // Create invitation
       const { error: insertError } = await supabase
         .from('company_invitations')
         .insert({
-          license_id: license.id,
+          license_id: licenseId,
           email: email.toLowerCase(),
           role,
           invited_by: user.id,
@@ -190,11 +195,11 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Erreur lors de la création de l\'invitation' };
       }
 
-      // Also create company_users entry with display_name so user gets name from start
+      // Also create company_users entry with display_name
       const { error: userError } = await supabase
         .from('company_users')
         .insert({
-          license_id: license.id,
+          license_id: licenseId,
           email: email.toLowerCase(),
           role,
           display_name: displayName?.trim() || null,
@@ -213,7 +218,7 @@ export function useTeam(): UseTeamReturn {
       console.error('Error in inviteMember:', e);
       return { success: false, error: 'Erreur inattendue' };
     }
-  }, [canManageTeam, canAddMore, maxUsers, licenseData?.code, fetchTeam]);
+  }, [canManageTeam, canAddMore, maxUsers, licenseId, fetchTeam]);
 
   const updateMemberRole = useCallback(async (memberId: string, role: TeamRole): Promise<{ success: boolean; error?: string }> => {
     if (!canManageTeam) {
@@ -230,8 +235,8 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Membre non trouvé' };
       }
 
-      if (member.role === 'owner') {
-        return { success: false, error: 'Impossible de modifier le rôle du propriétaire' };
+      if (member.role === 'owner' || member.role === 'direction') {
+        return { success: false, error: 'Impossible de modifier le rôle de la direction' };
       }
 
       const { error: updateError } = await supabase
@@ -254,7 +259,7 @@ export function useTeam(): UseTeamReturn {
 
   const removeMember = useCallback(async (memberId: string): Promise<{ success: boolean; error?: string }> => {
     if (!isOwner) {
-      return { success: false, error: 'Seul le propriétaire peut supprimer des membres' };
+      return { success: false, error: 'Seule la direction peut supprimer des membres' };
     }
 
     try {
@@ -263,8 +268,8 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Membre non trouvé' };
       }
 
-      if (member.role === 'owner') {
-        return { success: false, error: 'Impossible de supprimer le propriétaire' };
+      if (member.role === 'owner' || member.role === 'direction') {
+        return { success: false, error: 'Impossible de supprimer la direction' };
       }
 
       const { error: deleteError } = await supabase
@@ -322,6 +327,7 @@ export function useTeam(): UseTeamReturn {
     canAddMore,
     isLoading,
     error,
+    licenseId,
     inviteMember,
     updateMemberRole,
     removeMember,
