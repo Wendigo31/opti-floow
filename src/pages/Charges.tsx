@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Upload, Package } from 'lucide-react';
+import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Upload, Package, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { toast } from 'sonner';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { ChargePresetsDialog } from '@/components/charges/ChargePresetsDialog';
+import { useTeam } from '@/hooks/useTeam';
 const categoryIcons = {
   insurance: Shield,
   leasing: Car,
@@ -41,6 +42,7 @@ export default function Charges() {
   const { t } = useLanguage();
   const { charges, setCharges, settings } = useApp();
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
+  const { isDirection, isLoading: isTeamLoading } = useTeam();
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -48,6 +50,11 @@ export default function Charges() {
   const [formData, setFormData] = useState<Partial<FixedCharge>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [presetsDialogOpen, setPresetsDialogOpen] = useState(false);
+  
+  // Only direction role can view and modify charges
+  const canViewCharges = isDirection;
+  const canModifyCharges = isDirection;
+  
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
@@ -352,6 +359,34 @@ export default function Charges() {
     );
   };
 
+  // Show access denied message for non-direction users
+  if (!isTeamLoading && !canViewCharges) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{t.charges.title}</h1>
+            <p className="text-muted-foreground mt-1">
+              {t.charges.subtitle}
+            </p>
+          </div>
+        </div>
+        
+        <div className="glass-card p-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <EyeOff className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-semibold text-foreground mb-2">Accès restreint</h3>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Les charges fixes sont réservées aux utilisateurs avec le rôle <span className="font-medium text-foreground">Direction</span>.
+            <br />
+            Contactez votre responsable si vous avez besoin d'accéder à ces informations.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -362,18 +397,20 @@ export default function Charges() {
             {t.charges.subtitle}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPresetsDialogOpen(true)} className="gap-2">
-            <Package className="w-4 h-4" />
-            Presets
-          </Button>
-          <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
-              <Upload className="w-4 h-4" />
-              Importer Excel
+        {canModifyCharges && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setPresetsDialogOpen(true)} className="gap-2">
+              <Package className="w-4 h-4" />
+              Presets
             </Button>
-          </FeatureGate>
-        </div>
+            <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
+                <Upload className="w-4 h-4" />
+                Importer Excel
+              </Button>
+            </FeatureGate>
+          </div>
+        )}
       </div>
       
       <ChargePresetsDialog
@@ -441,7 +478,7 @@ export default function Charges() {
         )}
       </div>
 
-      {charges.length === 0 && !isAdding && (
+      {charges.length === 0 && !isAdding && canModifyCharges && (
         <div className="glass-card p-12 text-center">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">Aucune charge fixe</h3>
