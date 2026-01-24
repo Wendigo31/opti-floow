@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, Calendar, Download, Filter, BarChart3, Truck, Building2, CalendarDays, Edit3 } from 'lucide-react';
+import { TrendingUp, Calendar, Download, Filter, BarChart3, Truck, Building2, CalendarDays, Edit3, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useTeam } from '@/hooks/useTeam';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -36,9 +37,26 @@ interface MonthlyWorkingDays {
 
 export default function Forecast() {
   const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
+  const { isDirection, isLoading: isTeamLoading } = useTeam();
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
+
+  // Only Direction can access this page
+  if (!isTeamLoading && !isDirection) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+          <Lock className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground">Accès restreint</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Le prévisionnel est réservé aux utilisateurs avec le rôle Direction.
+          Contactez votre administrateur pour obtenir l'accès.
+        </p>
+      </div>
+    );
+  }
 
   const [period, setPeriod] = useState<PeriodType>('3');
   const [filterClient, setFilterClient] = useState<string>('all');

@@ -35,7 +35,8 @@ import {
   Phone,
   Mail,
   User,
-  MessageSquare
+  MessageSquare,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +74,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
+import { useTeam } from '@/hooks/useTeam';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -1495,6 +1497,23 @@ function MySubscription() {
 
 export default function Pricing() {
   const { isLicensed } = useLicense();
+  const { isDirection, isLoading: isTeamLoading } = useTeam();
+  
+  // Only Direction can access this page when logged in
+  if (isLicensed && !isTeamLoading && !isDirection) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+          <Lock className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground">Accès restreint</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          La gestion des tarifs est réservée aux utilisateurs avec le rôle Direction.
+          Contactez votre administrateur pour obtenir l'accès.
+        </p>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-8">

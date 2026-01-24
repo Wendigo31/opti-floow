@@ -64,8 +64,11 @@ export function useRolePermissions(): RolePermissions {
     const isExploitation = normalizedRole === 'exploitation';
     const isMembre = normalizedRole === 'membre';
     
-    // Direction OR Exploitation can see financial data
+    // Direction OR Exploitation can see detailed financial data
     const canSeeFinancials = isDirection || isExploitation;
+    
+    // All roles can see the calculated pricing (prix suggéré)
+    // But only Direction can see the detailed charge breakdown
     
     return {
       role: normalizedRole,
@@ -78,8 +81,12 @@ export function useRolePermissions(): RolePermissions {
       
       // Data visibility
       canViewCharges: isDirection,
+      // Direction & Exploitation see full details (costs, margins, profits)
+      // Membres can see the suggested price but not cost breakdown
       canViewFinancialData: canSeeFinancials,
-      canViewPricing: canSeeFinancials,
+      // All roles can see the calculated/suggested price in calculator
+      canViewPricing: true,
+      // Only Direction sees individual charge line items
       canViewCostBreakdown: isDirection,
       
       // Data modification

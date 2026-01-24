@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
 import { useDemoMode } from '@/hooks/useDemoMode';
+import { useTeam } from '@/hooks/useTeam';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -73,12 +74,14 @@ const NAV_LABELS = {
 };
 
 // Define which features are required for each nav item
+// directionOnly: true means only users with Direction role can see this item
 type NavItemConfig = {
   to: string;
   icon: any;
   labelKey: keyof typeof NAV_LABELS;
   requiredFeature?: FeatureKey;
   requiredPlan?: 'pro' | 'enterprise';
+  directionOnly?: boolean;
 };
 
 const navItems: NavItemConfig[] = [
@@ -86,14 +89,14 @@ const navItems: NavItemConfig[] = [
   { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro' },
   { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro' },
   { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro' },
-  { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro' },
+  { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro', directionOnly: true },
   { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles' },
   { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers' },
-  { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges' },
+  { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
   { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
   { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'enterprise' },
-  { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
+  { to: '/pricing', icon: CreditCard, labelKey: 'pricing', directionOnly: true },
 ];
 
 export function Sidebar() {
@@ -102,6 +105,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
+  const { isDirection } = useTeam();
   const currentDemoSession = getCurrentSession();
 
   // Get restricted features (user-specific overrides that are disabled)
@@ -250,6 +254,11 @@ export function Sidebar() {
           
           // Check if feature is disabled via admin panel
           if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+            return null;
+          }
+          
+          // Check if item is reserved for Direction only
+          if (item.directionOnly && !isDirection) {
             return null;
           }
           
