@@ -40,7 +40,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { useApp } from '@/context/AppContext';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
@@ -101,7 +100,6 @@ function LockedFeatureOverlay({ featureName, onUpgrade }: { featureName: string;
 }
 
 export default function Vehicles() {
-  useLanguage();
   const navigate = useNavigate();
   const { vehicle: vehicleParams, setCharges } = useApp();
   const { hasFeature, planType } = useLicense();

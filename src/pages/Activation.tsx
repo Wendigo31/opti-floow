@@ -6,38 +6,35 @@ import { Label } from '@/components/ui/label';
 import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PricingPlansPage } from '@/components/settings/PricingPlansPage';
+
 export default function Activation() {
-  const {
-    t
-  } = useLanguage();
   const [showPricing, setShowPricing] = useState(false);
+  
   const activationSchema = z.object({
-    code: z.string().min(1, t.settings.licenseCode),
-    email: z.string().email(t.errors.validationError).min(1, t.clients.email)
+    code: z.string().min(1, 'Code licence requis'),
+    email: z.string().email('Email invalide').min(1, 'Email requis')
   });
-  const {
-    validateLicense
-  } = useLicense();
+  
+  const { validateLicense } = useLicense();
   const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
-    const validation = activationSchema.safeParse({
-      code,
-      email
-    });
+    
+    const validation = activationSchema.safeParse({ code, email });
     if (!validation.success) {
       setError(validation.error.errors[0].message);
       return;
     }
+    
     setLoading(true);
     try {
       const result = await validateLicense(code, email);
@@ -47,7 +44,7 @@ export default function Activation() {
           window.location.reload();
         }, 1000);
       } else {
-        setError(result.error || 'Erreur d\'activation');
+        setError(result.error || "Erreur d'activation");
       }
     } catch (e) {
       setError('Erreur de connexion au serveur');
@@ -55,16 +52,18 @@ export default function Activation() {
       setLoading(false);
     }
   };
+  
   if (showPricing) {
     return <PricingPlansPage onBack={() => setShowPricing(false)} />;
   }
-  return <div className="min-h-screen bg-background flex items-center justify-center p-4">
+  
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <img src={optiflowLogo} alt="OptiFlow Logo" className="w-64 h-64 mx-auto mb-4 object-contain" />
-          <h1 className="text-3xl font-bold text-foreground">Line Optimizer </h1>
-          
+          <h1 className="text-3xl font-bold text-foreground">Line Optimizer</h1>
         </div>
 
         {/* Activation Card */}
@@ -82,7 +81,15 @@ export default function Activation() {
                 <Key className="w-4 h-4 text-primary" />
                 Identifiant société
               </Label>
-              <Input id="code" type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="TRANSPORT-MARTIN" className="font-mono text-center tracking-wider" disabled={loading || success} />
+              <Input 
+                id="code" 
+                type="text" 
+                value={code} 
+                onChange={e => setCode(e.target.value.toUpperCase())} 
+                placeholder="TRANSPORT-MARTIN" 
+                className="font-mono text-center tracking-wider" 
+                disabled={loading || success} 
+              />
               <p className="text-xs text-muted-foreground">
                 L'identifiant de votre société vous a été communiqué par votre administrateur.
               </p>
@@ -93,30 +100,47 @@ export default function Activation() {
                 <Mail className="w-4 h-4 text-primary" />
                 Email associé à la licence
               </Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="votre@email.com" disabled={loading || success} />
+              <Input 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="votre@email.com" 
+                disabled={loading || success} 
+              />
             </div>
 
-            {error && <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 {error}
-              </div>}
+              </div>
+            )}
 
-            {success && <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm">
+            {success && (
+              <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 Connexion réussie ! Redirection en cours...
-              </div>}
+              </div>
+            )}
 
             <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success}>
-              {loading ? <>
+              {loading ? (
+                <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Connexion...
-                </> : success ? <>
+                </>
+              ) : success ? (
+                <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Connecté
-                </> : <>
+                </>
+              ) : (
+                <>
                   <Key className="w-4 h-4 mr-2" />
                   Se connecter
-                </>}
+                </>
+              )}
             </Button>
           </form>
 
@@ -174,5 +198,6 @@ export default function Activation() {
           © {new Date().getFullYear()} OptiFlow - Tous droits réservés
         </p>
       </div>
-    </div>;
+    </div>
+  );
 }

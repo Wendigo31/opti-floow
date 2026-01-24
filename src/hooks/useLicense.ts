@@ -437,9 +437,10 @@ export function useLicense(): UseLicenseReturn {
               setIsLicensed(false);
             } else if (checkResponse?.valid) {
               // Update license data with fresh info from edge function
+              // IMPORTANT: Keep existing planType if server doesn't return one
               const updatedData: LicenseData = {
                 ...data,
-                planType: checkResponse.licenseData?.planType || 'start',
+                planType: checkResponse.licenseData?.planType || data.planType || 'start',
                 firstName: checkResponse.licenseData?.firstName || undefined,
                 lastName: checkResponse.licenseData?.lastName || undefined,
                 companyName: checkResponse.licenseData?.companyName || undefined,
@@ -552,11 +553,12 @@ export function useLicense(): UseLicenseReturn {
       }
 
       // Store in localStorage
+      // Server MUST return planType - no fallback to 'start' here to avoid overwriting
       const licenseDataToStore: LicenseData = {
         code: response.licenseData.code || code.trim().toUpperCase(),
         email: response.licenseData.email || email.trim().toLowerCase(),
         activatedAt: response.licenseData.activatedAt,
-        planType: response.licenseData.planType || 'start',
+        planType: response.licenseData.planType,
         firstName: response.licenseData.firstName || undefined,
         lastName: response.licenseData.lastName || undefined,
         companyName: response.licenseData.companyName || undefined,
@@ -645,9 +647,10 @@ export function useLicense(): UseLicenseReturn {
       console.log('[refreshLicense] Response:', checkResponse);
 
       if (checkResponse?.valid) {
+        // IMPORTANT: Keep existing planType if server doesn't return one
         const updatedData: LicenseData = {
           ...data,
-          planType: checkResponse.licenseData?.planType || 'start',
+          planType: checkResponse.licenseData?.planType || data.planType || 'start',
           firstName: checkResponse.licenseData?.firstName || undefined,
           lastName: checkResponse.licenseData?.lastName || undefined,
           companyName: checkResponse.licenseData?.companyName || undefined,

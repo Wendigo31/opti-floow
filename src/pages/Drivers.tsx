@@ -10,7 +10,6 @@ import type { Driver } from '@/types';
 import { cn } from '@/lib/utils';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
@@ -30,7 +29,6 @@ interface ExtendedDriver extends Driver {
 }
 
 export default function Drivers() {
-  const { t } = useLanguage();
   const { drivers, setDrivers, selectedDriverIds } = useApp();
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
@@ -656,14 +654,14 @@ export default function Drivers() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.drivers.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground">Gestion des conducteurs</h1>
           <p className="text-muted-foreground mt-1">
-            {t.drivers.subtitle}
+            Configurez vos conducteurs et leurs coûts
           </p>
           {!isUnlimited('maxDrivers') && !canAddDriver && (
             <p className="text-xs text-warning mt-1 flex items-center gap-1">
               <Lock className="w-3 h-3" />
-              {t.drivers.limitReached}
+              Limite de conducteurs atteinte
             </p>
           )}
         </div>

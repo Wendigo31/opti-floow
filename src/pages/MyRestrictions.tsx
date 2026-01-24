@@ -17,7 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useLicense } from '@/hooks/useLicense';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { toast } from 'sonner';
 
 // Feature labels for display
@@ -59,7 +58,6 @@ const FEATURE_LABELS: Record<string, { label: string; description: string; categ
 
 export default function MyRestrictions() {
   const { licenseData } = useLicense();
-  const { language } = useLanguage();
   const [requestMessage, setRequestMessage] = useState('');
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -130,17 +128,8 @@ export default function MyRestrictions() {
     setSending(false);
   };
 
-  const getTitle = () => {
-    if (language === 'en') return 'My Restrictions';
-    if (language === 'es') return 'Mis Restricciones';
-    return 'Mes Restrictions';
-  };
-
-  const getSubtitle = () => {
-    if (language === 'en') return 'View features that have been restricted for your account';
-    if (language === 'es') return 'Ver funciones restringidas para tu cuenta';
-    return 'Consultez les fonctionnalités restreintes pour votre compte';
-  };
+  const getTitle = () => 'Mes Restrictions';
+  const getSubtitle = () => 'Consultez les fonctionnalités restreintes pour votre compte';
 
   return (
     <div className="space-y-6">

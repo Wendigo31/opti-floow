@@ -9,7 +9,6 @@ import { useCalculations } from '@/hooks/useCalculations';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useFuelPrice, FuelType, convertTTCtoHT, convertHTtoTTC } from '@/hooks/useFuelPrice';
@@ -25,7 +24,6 @@ import { toast } from 'sonner';
 import type { SavedTour } from '@/types/savedTour';
 
 export default function Calculator() {
-  const { t } = useLanguage();
   const {
     trip,
     setTrip,
@@ -304,8 +302,8 @@ export default function Calculator() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.calculator.title}</h1>
-          <p className="text-muted-foreground mt-1">{t.calculator.subtitle}</p>
+          <h1 className="text-3xl font-bold text-foreground">Calculateur de trajet</h1>
+          <p className="text-muted-foreground mt-1">Calculez précisément le coût et la rentabilité de vos trajets</p>
         </div>
         <Button
           variant="outline"

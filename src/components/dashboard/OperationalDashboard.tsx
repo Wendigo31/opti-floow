@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useLanguage } from '@/i18n/LanguageContext';
 import type { Vehicle } from '@/types/vehicle';
 
 /**
@@ -18,7 +17,6 @@ import type { Vehicle } from '@/types/vehicle';
  * Calculations still use charges data internally but values are hidden from display
  */
 export function OperationalDashboard() {
-  const { t } = useLanguage();
   const { trip, settings } = useApp();
   const { clients } = useClients();
   const { tours } = useSavedTours();
@@ -128,7 +126,7 @@ export function OperationalDashboard() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.dashboard.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
           <p className="text-muted-foreground mt-1">Vue opérationnelle • Données d'exploitation</p>
         </div>
         <div className="flex items-center gap-2">

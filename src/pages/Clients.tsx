@@ -16,11 +16,9 @@ import { ClientsDashboard } from '@/components/clients/ClientsDashboard';
 import { SharedTractionsDialog } from '@/components/clients/SharedTractionsDialog';
 import { ToxicClientsAnalysis } from '@/components/clients/ToxicClientsAnalysis';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
 export default function Clients() {
-  const { t } = useLanguage();
   const { toast } = useToast();
   
   // Use the synced clients hook instead of local storage
@@ -132,8 +130,8 @@ export default function Clients() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.clients.title}</h1>
-          <p className="text-muted-foreground">{t.clients.subtitle}</p>
+          <h1 className="text-3xl font-bold text-foreground">Gestion des clients</h1>
+          <p className="text-muted-foreground">Gérez votre portefeuille clients</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setSharedTractionsOpen(true)}>

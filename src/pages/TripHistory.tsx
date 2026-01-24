@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { fr, enUS, es } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 import { Search, Calendar, TrendingUp, TrendingDown, MapPin, Fuel, Scale, Trash2, Lock, Edit2, RefreshCw, Users, X, Check, FileSpreadsheet, Download, FileText } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSavedTours } from '@/hooks/useSavedTours';
@@ -18,12 +18,10 @@ import type { SavedTour } from '@/types/savedTour';
 import { useLicense } from '@/hooks/useLicense';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { exportTourDetailedPDF, exportToursSummaryPDF } from '@/utils/tourPdfExport';
 
 export default function TripHistory() {
-  const { t, language } = useLanguage();
   const { toast } = useToast();
   const { hasFeature } = useLicense();
   const navigate = useNavigate();
@@ -37,8 +35,8 @@ export default function TripHistory() {
   const [editForm, setEditForm] = useState<Partial<SavedTour>>({});
   const [excelImportOpen, setExcelImportOpen] = useState(false);
   
-  const canCompare = hasFeature('trip_history'); // Compare is part of trip_history feature
-  const dateLocale = language === 'fr' ? fr : language === 'es' ? es : enUS;
+  const canCompare = hasFeature('trip_history');
+  const dateLocale = fr;
   
   const handleExcelImport = async (data: any[]) => {
     let imported = 0;
@@ -169,8 +167,8 @@ export default function TripHistory() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t.history.title}</h1>
-            <p className="text-muted-foreground">{t.history.subtitle}</p>
+            <h1 className="text-3xl font-bold text-foreground">Historique des trajets</h1>
+            <p className="text-muted-foreground">Consultez et gérez vos trajets enregistrés</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>

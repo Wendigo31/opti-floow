@@ -22,7 +22,6 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { useDemoMode } from '@/hooks/useDemoMode';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
@@ -57,33 +56,41 @@ const FEATURE_LABELS: Record<string, string> = {
   btn_ai_optimize: 'Optimisation IA',
 };
 
+// Navigation labels in French
+const NAV_LABELS = {
+  calculator: 'Calculateur',
+  itinerary: 'Itinéraire',
+  tours: 'Tournées',
+  dashboard: 'Analyse',
+  forecast: 'Prévisionnel',
+  vehicles: 'Véhicules',
+  drivers: 'Conducteurs',
+  charges: 'Charges',
+  clients: 'Clients',
+  settings: 'Paramètres',
+  team: 'Équipe',
+  pricing: 'Tarifs',
+};
+
 // Define which features are required for each nav item
-// If undefined, the item is always visible
 type NavItemConfig = {
   to: string;
   icon: any;
-  labelKey: keyof typeof import('@/i18n/translations').translations.fr.nav;
-  requiredFeature?: FeatureKey; // Feature flag from admin panel (can completely hide)
-  requiredPlan?: 'pro' | 'enterprise'; // Plan requirement (shows locked with upgrade prompt)
+  labelKey: keyof typeof NAV_LABELS;
+  requiredFeature?: FeatureKey;
+  requiredPlan?: 'pro' | 'enterprise';
 };
 
 const navItems: NavItemConfig[] = [
-  // Core calculation tools (Calculator now includes History via tabs)
   { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator' },
   { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro' },
   { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro' },
-  
-  // Analysis & Reports (AI analysis integrated into dashboard)
   { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro' },
   { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro' },
-  
-  // Resource Management (Vehicle Reports now integrated in Vehicles page)
   { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles' },
   { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers' },
   { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges' },
   { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
-  
-  // Settings & Team
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
   { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'enterprise' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
@@ -94,7 +101,6 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
-  const { t, language } = useLanguage();
   const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const currentDemoSession = getCurrentSession();
 
@@ -121,47 +127,16 @@ export function Sidebar() {
     return true;
   };
 
-  const getLockedTitle = (requiredPlan: string) => {
-    if (language === 'en') return `${requiredPlan.toUpperCase()} plan required`;
-    if (language === 'es') return `Plan ${requiredPlan.toUpperCase()} requerido`;
-    return `Forfait ${requiredPlan.toUpperCase()} requis`;
-  };
-
   const handleLockedClick = (e: React.MouseEvent, label: string, requiredPlan: string) => {
     e.preventDefault();
     const planLabel = requiredPlan.toUpperCase();
-    
-    if (language === 'en') {
-      toast.info(`"${label}" requires ${planLabel} plan`, {
-        description: 'Upgrade your subscription to access this feature.',
-        action: {
-          label: 'View plans',
-          onClick: () => navigate('/pricing')
-        }
-      });
-    } else if (language === 'es') {
-      toast.info(`"${label}" requiere el plan ${planLabel}`, {
-        description: 'Actualiza tu suscripción para acceder a esta función.',
-        action: {
-          label: 'Ver planes',
-          onClick: () => navigate('/pricing')
-        }
-      });
-    } else {
-      toast.info(`"${label}" nécessite le forfait ${planLabel}`, {
-        description: 'Passez à un forfait supérieur pour accéder à cette fonctionnalité.',
-        action: {
-          label: 'Voir les forfaits',
-          onClick: () => navigate('/pricing')
-        }
-      });
-    }
-  };
-
-  const getCollapseLabel = () => {
-    if (language === 'en') return 'Collapse';
-    if (language === 'es') return 'Reducir';
-    return 'Réduire';
+    toast.info(`"${label}" nécessite le forfait ${planLabel}`, {
+      description: 'Passez à un forfait supérieur pour accéder à cette fonctionnalité.',
+      action: {
+        label: 'Voir les forfaits',
+        onClick: () => navigate('/pricing')
+      }
+    });
   };
 
   return (
@@ -171,7 +146,7 @@ export function Sidebar() {
         collapsed ? "w-20" : "w-64"
       )}
     >
-      {/* Logo - Clickable to go home */}
+      {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <NavLink to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <img 
@@ -240,7 +215,7 @@ export function Sidebar() {
                         {restrictedFeaturesCount} restriction{restrictedFeaturesCount > 1 ? 's' : ''}
                       </p>
                       <p className="text-xs text-destructive/70 truncate">
-                        {language === 'fr' ? 'Cliquez pour voir' : language === 'es' ? 'Clic para ver' : 'Click to view'}
+                        Cliquez pour voir
                       </p>
                     </div>
                   )}
@@ -249,9 +224,7 @@ export function Sidebar() {
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs">
               <div className="space-y-2">
-                <p className="font-medium text-sm">
-                  {language === 'fr' ? 'Fonctionnalités restreintes' : language === 'es' ? 'Funciones restringidas' : 'Restricted features'}
-                </p>
+                <p className="font-medium text-sm">Fonctionnalités restreintes</p>
                 <ul className="text-xs space-y-1">
                   {getRestrictedFeatureLabels().map((label, i) => (
                     <li key={i} className="flex items-center gap-2">
@@ -261,11 +234,7 @@ export function Sidebar() {
                   ))}
                 </ul>
                 <p className="text-xs text-muted-foreground pt-1 border-t border-border">
-                  {language === 'fr' 
-                    ? 'Cliquez pour demander un accès'
-                    : language === 'es'
-                    ? 'Haga clic para solicitar acceso'
-                    : 'Click to request access'}
+                  Cliquez pour demander un accès
                 </p>
               </div>
             </TooltipContent>
@@ -277,14 +246,14 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.to;
-          const label = t.nav[item.labelKey];
+          const label = NAV_LABELS[item.labelKey];
           
-          // Check if feature is disabled via admin panel - completely hide if disabled
+          // Check if feature is disabled via admin panel
           if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
-            return null; // Hidden by admin
+            return null;
           }
           
-          // Check if plan is insufficient - show locked state with upgrade prompt
+          // Check if plan is insufficient
           const isLocked = !isPlanSufficient(item.requiredPlan);
           
           if (isLocked) {
@@ -293,7 +262,7 @@ export function Sidebar() {
                 key={item.to}
                 onClick={(e) => handleLockedClick(e, label, item.requiredPlan!)}
                 className="nav-item-locked w-full text-left upgrade-shimmer"
-                title={getLockedTitle(item.requiredPlan!)}
+                title={`Forfait ${item.requiredPlan!.toUpperCase()} requis`}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0 opacity-60" />
                 {!collapsed && (
@@ -339,7 +308,7 @@ export function Sidebar() {
           ) : (
             <>
               <ChevronLeft className="w-5 h-5" />
-              <span>{getCollapseLabel()}</span>
+              <span>Réduire</span>
             </>
           )}
         </button>

@@ -15,7 +15,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { LocalClient } from '@/types/local';
 import type { FixedCharge } from '@/types';
-import { useLanguage } from '@/i18n/LanguageContext';
 
 type PeriodType = '3' | '6' | '12';
 
@@ -36,7 +35,6 @@ interface MonthlyWorkingDays {
 }
 
 export default function Forecast() {
-  const { t } = useLanguage();
   const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
@@ -217,15 +215,15 @@ export default function Forecast() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t.forecast.title}</h1>
+            <h1 className="text-3xl font-bold text-foreground">Prévisionnel</h1>
             <p className="text-muted-foreground mt-1">
-              {t.forecast.subtitle}
+              Planifiez vos revenus et dépenses
             </p>
           </div>
           <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
             <Button onClick={exportToPDF} className="gap-2">
               <Download className="w-4 h-4" />
-              {t.dashboard.exportPDF}
+              Export PDF
             </Button>
           </FeatureGate>
         </div>
