@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
+import { useExploitationMetrics } from '@/hooks/useExploitationMetrics';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -39,6 +40,9 @@ export default function Calculator() {
   
   // Role-based permissions
   const { canViewCostBreakdown, canViewFinancialData, canViewPricing, role } = useRolePermissions();
+  
+  // Exploitation-specific metric visibility
+  const { canExploitationView, isDirection } = useExploitationMetrics();
   
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
@@ -1090,31 +1094,41 @@ export default function Calculator() {
               </div>
             )}
             
-            {/* Cost Breakdown - Only visible to Direction */}
-            {canViewCostBreakdown ? (
+            {/* Cost Breakdown - Visible based on exploitation settings */}
+            {(canViewCostBreakdown || canExploitationView('can_view_total_cost')) ? (
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Gazole</span>
-                  <span className="font-medium">{formatCurrency(costs.fuel)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">AdBlue</span>
-                  <span className="font-medium">{formatCurrency(costs.adBlue)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Péages</span>
-                  <span className="font-medium">{formatCurrency(costs.tolls)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Conducteur(s)</span>
-                  <span className="font-medium">{formatCurrency(costs.driverCost)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Structure</span>
-                  <span className="font-medium">{formatCurrency(costs.structureCost)}</span>
-                </div>
+                {(isDirection || canExploitationView('can_view_fuel_cost')) && (
+                  <>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span className="text-muted-foreground">Gazole</span>
+                      <span className="font-medium">{formatCurrency(costs.fuel)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span className="text-muted-foreground">AdBlue</span>
+                      <span className="font-medium">{formatCurrency(costs.adBlue)}</span>
+                    </div>
+                  </>
+                )}
+                {(isDirection || canExploitationView('can_view_toll_cost')) && (
+                  <div className="flex justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Péages</span>
+                    <span className="font-medium">{formatCurrency(costs.tolls)}</span>
+                  </div>
+                )}
+                {(isDirection || canExploitationView('can_view_driver_cost')) && (
+                  <div className="flex justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Conducteur(s)</span>
+                    <span className="font-medium">{formatCurrency(costs.driverCost)}</span>
+                  </div>
+                )}
+                {(isDirection || canExploitationView('can_view_structure_cost')) && (
+                  <div className="flex justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Structure</span>
+                    <span className="font-medium">{formatCurrency(costs.structureCost)}</span>
+                  </div>
+                )}
                 
-                {selectedVehicle && vehicleCostBreakdown && (
+                {selectedVehicle && vehicleCostBreakdown && (isDirection || canExploitationView('can_view_fuel_cost')) && (
                   <>
                     <div className="flex justify-between py-1 border-b border-border/30">
                       <span className="text-muted-foreground">Entretien véhicule</span>
@@ -1131,17 +1145,19 @@ export default function Calculator() {
                   </>
                 )}
                 
-                {selectedTrailer && trailerCostBreakdown && (
+                {selectedTrailer && trailerCostBreakdown && (isDirection || canExploitationView('can_view_fuel_cost')) && (
                   <div className="flex justify-between py-1 border-b border-border/30">
                     <span className="text-muted-foreground">Semi-remorque</span>
                     <span className="font-medium">{formatCurrency(trailerCostForTrip)}</span>
                   </div>
                 )}
                 
-                <div className="flex justify-between py-2 bg-primary/10 rounded-lg px-3 mt-2">
-                  <span className="font-semibold text-foreground">Coût Total</span>
-                  <span className="font-bold text-primary">{formatCurrency(totalCostWithVehicle)}</span>
-                </div>
+                {(isDirection || canExploitationView('can_view_total_cost')) && (
+                  <div className="flex justify-between py-2 bg-primary/10 rounded-lg px-3 mt-2">
+                    <span className="font-semibold text-foreground">Coût Total</span>
+                    <span className="font-bold text-primary">{formatCurrency(totalCostWithVehicle)}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4 bg-muted/30 rounded-lg text-center">
@@ -1166,23 +1182,29 @@ export default function Calculator() {
               </div>
             )}
 
-            {/* Detailed Metrics - Visible to Direction & Exploitation only */}
-            {canViewFinancialData ? (
+            {/* Detailed Metrics - Visible based on exploitation settings */}
+            {(canViewFinancialData || canExploitationView('can_view_revenue')) ? (
               <div className="mt-4 pt-3 border-t border-border space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Coût/km</span>
-                  <span className="font-medium">{totalCostPerKmWithVehicle.toFixed(3)} €</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Chiffre d'affaires</span>
-                  <span className="font-medium text-success">{formatCurrency(revenueWithVehicle)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bénéfice</span>
-                  <span className={cn("font-bold", profitWithVehicle >= 0 ? "text-success" : "text-destructive")}>
-                    {formatCurrency(profitWithVehicle)}
-                  </span>
-                </div>
+                {(isDirection || canExploitationView('can_view_price_per_km')) && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Coût/km</span>
+                    <span className="font-medium">{totalCostPerKmWithVehicle.toFixed(3)} €</span>
+                  </div>
+                )}
+                {(isDirection || canExploitationView('can_view_revenue')) && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Chiffre d'affaires</span>
+                    <span className="font-medium text-success">{formatCurrency(revenueWithVehicle)}</span>
+                  </div>
+                )}
+                {(isDirection || canExploitationView('can_view_profit')) && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bénéfice</span>
+                    <span className={cn("font-bold", profitWithVehicle >= 0 ? "text-success" : "text-destructive")}>
+                      {formatCurrency(profitWithVehicle)}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : !canViewPricing ? (
               <div className="mt-4 pt-3 border-t border-border">
@@ -1193,8 +1215,8 @@ export default function Calculator() {
               </div>
             ) : null}
             
-            {/* Margin indicator - Only for Direction & Exploitation */}
-            {canViewFinancialData && (
+            {/* Margin indicator - Visible based on exploitation settings */}
+            {(isDirection || canExploitationView('can_view_margin')) && (
               <div className={cn(
                 "mt-4 p-3 rounded-lg text-center",
                 profitMarginWithVehicle >= 15 ? "bg-success/20" :
