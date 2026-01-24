@@ -307,16 +307,56 @@ const LICENSE_STORAGE_KEY = 'optiflow-license';
 const LICENSE_CACHE_KEY = 'optiflow-license-cache';
 const OFFLINE_VALIDITY_DAYS = 30;
 
+// Custom event to keep multiple useLicense() instances in sync (same tab)
+const LICENSE_EVENT = 'optiflow:license-updated';
+
+declare global {
+  interface WindowEventMap {
+    'optiflow:license-updated': CustomEvent<LicenseData | null>;
+  }
+}
+
 // Check if we're online
 const checkOnline = (): boolean => {
   return typeof navigator !== 'undefined' ? navigator.onLine : true;
 };
 
+const safeReadStoredLicense = (): LicenseData | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as LicenseData) : null;
+  } catch {
+    return null;
+  }
+};
+
+const broadcastLicenseUpdate = (data: LicenseData | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent<LicenseData | null>(LICENSE_EVENT, { detail: data }));
+  } catch {
+    // noop
+  }
+};
+
 export function useLicense(): UseLicenseReturn {
-  const [isLicensed, setIsLicensed] = useState(false);
+  // Initialize from localStorage to avoid "Start" flicker and ensure consistency on first render
+  const [licenseData, setLicenseData] = useState<LicenseData | null>(() => safeReadStoredLicense());
+  const [isLicensed, setIsLicensed] = useState(() => !!safeReadStoredLicense());
   const [isLoading, setIsLoading] = useState(true);
-  const [licenseData, setLicenseData] = useState<LicenseData | null>(null);
   const [isOffline, setIsOffline] = useState(!checkOnline());
+
+  // Keep all hook instances in sync (same tab)
+  useEffect(() => {
+    const handler = (evt: CustomEvent<LicenseData | null>) => {
+      setLicenseData(evt.detail);
+      setIsLicensed(!!evt.detail);
+    };
+
+    window.addEventListener(LICENSE_EVENT, handler);
+    return () => window.removeEventListener(LICENSE_EVENT, handler);
+  }, []);
 
   // Listen for online/offline events
   useEffect(() => {
@@ -356,6 +396,7 @@ export function useLicense(): UseLicenseReturn {
               console.log('Using cached license (offline mode)');
               setLicenseData(cachedLicense.data);
               setIsLicensed(true);
+              broadcastLicenseUpdate(cachedLicense.data);
               setIsLoading(false);
               return;
             } else {
@@ -366,6 +407,7 @@ export function useLicense(): UseLicenseReturn {
           if (data) {
             setLicenseData(data);
             setIsLicensed(true);
+            broadcastLicenseUpdate(data);
           }
           setIsLoading(false);
           return;
@@ -476,6 +518,7 @@ export function useLicense(): UseLicenseReturn {
 
               setLicenseData(licenseDataToStore);
               setIsLicensed(true);
+              broadcastLicenseUpdate(licenseDataToStore);
               setIsLoading(false);
               return;
             }
@@ -493,11 +536,15 @@ export function useLicense(): UseLicenseReturn {
                   console.log('Server error, using cached license');
                   setLicenseData(cachedLicense.data);
                   setIsLicensed(true);
+                  broadcastLicenseUpdate(cachedLicense.data);
                   setIsLoading(false);
                   return;
                 }
               }
-              setIsLicensed(false);
+              // Keep the stored license as the source of truth if the server is temporarily unreachable
+              setLicenseData(data);
+              setIsLicensed(true);
+              broadcastLicenseUpdate(data);
             } else if (checkResponse?.valid) {
               // Update license data with fresh info from edge function
               // IMPORTANT: Keep existing planType if server doesn't return one
@@ -545,11 +592,14 @@ export function useLicense(): UseLicenseReturn {
               
               setLicenseData(updatedData);
               setIsLicensed(true);
+              broadcastLicenseUpdate(updatedData);
             } else {
               // License deactivated or not found
               localStorage.removeItem(LICENSE_STORAGE_KEY);
               localStorage.removeItem(LICENSE_CACHE_KEY);
               setIsLicensed(false);
+              setLicenseData(null);
+              broadcastLicenseUpdate(null);
             }
           } catch (networkError) {
             console.error('Network error during license check:', networkError);
@@ -560,6 +610,7 @@ export function useLicense(): UseLicenseReturn {
                 console.log('Network error, using cached license');
                 setLicenseData(cachedLicense.data);
                 setIsLicensed(true);
+                broadcastLicenseUpdate(cachedLicense.data);
               }
             }
           }
@@ -662,6 +713,7 @@ export function useLicense(): UseLicenseReturn {
 
       setLicenseData(licenseDataToStore);
       setIsLicensed(true);
+      broadcastLicenseUpdate(licenseDataToStore);
 
       return { success: true };
     } catch (e) {
@@ -684,6 +736,7 @@ export function useLicense(): UseLicenseReturn {
     
     setLicenseData(null);
     setIsLicensed(false);
+    broadcastLicenseUpdate(null);
   }, []);
 
   // Force refresh license data from server
@@ -750,6 +803,7 @@ export function useLicense(): UseLicenseReturn {
         
         setLicenseData(updatedData);
         setIsLicensed(true);
+        broadcastLicenseUpdate(updatedData);
         
         console.log('[refreshLicense] License refreshed successfully, planType:', updatedData.planType);
         return { success: true };
@@ -759,6 +813,8 @@ export function useLicense(): UseLicenseReturn {
         localStorage.removeItem(LICENSE_STORAGE_KEY);
         localStorage.removeItem(LICENSE_CACHE_KEY);
         setIsLicensed(false);
+        setLicenseData(null);
+        broadcastLicenseUpdate(null);
         return { success: false, error: 'Licence désactivée ou invalide' };
       }
     } catch (e) {
