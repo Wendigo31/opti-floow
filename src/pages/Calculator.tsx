@@ -1151,7 +1151,22 @@ export default function Calculator() {
               </div>
             )}
 
-            {/* Metrics - Visible to Direction & Exploitation */}
+            {/* Suggested Price - Visible to ALL roles */}
+            {canViewPricing && (
+              <div className="mt-4 p-4 bg-primary/10 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-foreground">Prix suggéré</span>
+                  <span className="text-xl font-bold text-primary">{formatCurrency(suggestedPriceWithVehicle)}</span>
+                </div>
+                {trip.distance > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1 text-right">
+                    {(suggestedPriceWithVehicle / trip.distance).toFixed(3)} €/km
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Detailed Metrics - Visible to Direction & Exploitation only */}
             {canViewFinancialData ? (
               <div className="mt-4 pt-3 border-t border-border space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -1169,14 +1184,14 @@ export default function Calculator() {
                   </span>
                 </div>
               </div>
-            ) : (
+            ) : !canViewPricing ? (
               <div className="mt-4 pt-3 border-t border-border">
                 <div className="p-3 bg-muted/30 rounded-lg text-center">
                   <EyeOff className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
                   <p className="text-xs text-muted-foreground">Données financières réservées</p>
                 </div>
               </div>
-            )}
+            ) : null}
             
             {/* Margin indicator - Only for Direction & Exploitation */}
             {canViewFinancialData && (
