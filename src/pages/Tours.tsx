@@ -11,7 +11,8 @@ import {
   Euro,
   TrendingUp,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { format } from 'date-fns';
@@ -69,6 +71,7 @@ export default function Tours() {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite } = useSavedTours();
   const { planType } = useLicense();
   const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
+  const { canViewPricing, canViewFinancialData, canExportFinancialReports } = useRolePermissions();
   const [clients] = useLocalStorage<Client[]>('optiflow_clients', []);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -310,24 +313,38 @@ export default function Tours() {
             <p className="text-2xl font-bold text-foreground">{stats.favorites}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-primary mb-1">
-              <Euro className="w-4 h-4" />
-              <span className="text-sm">CA Total</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalRevenue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-green-500 mb-1">
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-sm">Bénéfice Total</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalProfit)}</p>
-          </CardContent>
-        </Card>
+        {canViewFinancialData ? (
+          <>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-primary mb-1">
+                  <Euro className="w-4 h-4" />
+                  <span className="text-sm">CA Total</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalRevenue)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-green-500 mb-1">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="text-sm">Bénéfice Total</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalProfit)}</p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <EyeOff className="w-4 h-4" />
+                <span className="text-sm">Données financières</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Réservé Direction</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Filters */}
@@ -385,9 +402,9 @@ export default function Tours() {
               {isCompanyMember && <TableHead>Créé par</TableHead>}
               <TableHead>Client</TableHead>
               <TableHead>Distance</TableHead>
-              <TableHead>Coût</TableHead>
-              <TableHead>Recette</TableHead>
-              <TableHead>Marge</TableHead>
+              {canViewPricing && <TableHead>Coût</TableHead>}
+              {canViewPricing && <TableHead>Recette</TableHead>}
+              {canViewPricing && <TableHead>Marge</TableHead>}
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -395,13 +412,13 @@ export default function Tours() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={canViewPricing ? 10 : 7} className="text-center py-8 text-muted-foreground">
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : filteredTours.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={canViewPricing ? 10 : 7} className="text-center py-8 text-muted-foreground">
                   Aucune tournée trouvée
                 </TableCell>
               </TableRow>
@@ -452,16 +469,18 @@ export default function Tours() {
                     <Badge variant="outline">{getClientName(tour.client_id)}</Badge>
                   </TableCell>
                   <TableCell>{tour.distance_km.toFixed(0)} km</TableCell>
-                  <TableCell>{formatCurrency(tour.total_cost)}</TableCell>
-                  <TableCell>{formatCurrency(tour.revenue || 0)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={(tour.profit_margin || 0) >= 15 ? 'default' : 'destructive'}
-                      className={(tour.profit_margin || 0) >= 15 ? 'bg-green-500/20 text-green-500' : ''}
-                    >
-                      {(tour.profit_margin || 0).toFixed(1)}%
-                    </Badge>
-                  </TableCell>
+                  {canViewPricing && <TableCell>{formatCurrency(tour.total_cost)}</TableCell>}
+                  {canViewPricing && <TableCell>{formatCurrency(tour.revenue || 0)}</TableCell>}
+                  {canViewPricing && (
+                    <TableCell>
+                      <Badge
+                        variant={(tour.profit_margin || 0) >= 15 ? 'default' : 'destructive'}
+                        className={(tour.profit_margin || 0) >= 15 ? 'bg-green-500/20 text-green-500' : ''}
+                      >
+                        {(tour.profit_margin || 0).toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
                       {format(new Date(tour.created_at), 'dd/MM/yy', { locale: fr })}

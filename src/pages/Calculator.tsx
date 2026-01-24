@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Fuel, Route, Receipt, Truck, Users, Euro, Percent, Check, CalendarDays, AlertTriangle, Calculator as CalculatorIcon, Save, Folder, Container, Upload, TrendingUp, TrendingDown, RefreshCw, Loader2, Eye, EyeOff, Zap } from 'lucide-react';
+import { Fuel, Route, Receipt, Truck, Users, Euro, Percent, Check, CalendarDays, AlertTriangle, Calculator as CalculatorIcon, Save, Folder, Container, Upload, TrendingUp, TrendingDown, RefreshCw, Loader2, Eye, EyeOff, Zap, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -37,6 +38,9 @@ export default function Calculator() {
     settings,
     setSettings,
   } = useApp();
+  
+  // Role-based permissions
+  const { canViewCostBreakdown, canViewFinancialData, canViewPricing, role } = useRolePermissions();
   
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
@@ -1088,94 +1092,113 @@ export default function Calculator() {
               </div>
             )}
             
-            {/* Cost Breakdown */}
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between py-1 border-b border-border/30">
-                <span className="text-muted-foreground">Gazole</span>
-                <span className="font-medium">{formatCurrency(costs.fuel)}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/30">
-                <span className="text-muted-foreground">AdBlue</span>
-                <span className="font-medium">{formatCurrency(costs.adBlue)}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/30">
-                <span className="text-muted-foreground">Péages</span>
-                <span className="font-medium">{formatCurrency(costs.tolls)}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/30">
-                <span className="text-muted-foreground">Conducteur(s)</span>
-                <span className="font-medium">{formatCurrency(costs.driverCost)}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/30">
-                <span className="text-muted-foreground">Structure</span>
-                <span className="font-medium">{formatCurrency(costs.structureCost)}</span>
-              </div>
-              
-              {selectedVehicle && vehicleCostBreakdown && (
-                <>
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground">Entretien véhicule</span>
-                    <span className="font-medium">{formatCurrency(vehicleCostBreakdown.maintenanceCostPerKm * trip.distance)}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground">Pneus</span>
-                    <span className="font-medium">{formatCurrency(vehicleCostBreakdown.tireCostPerKm * trip.distance)}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground">Charges véhicule</span>
-                    <span className="font-medium">{formatCurrency(vehicleCostBreakdown.fixedCostPerKm * trip.distance)}</span>
-                  </div>
-                </>
-              )}
-              
-              {selectedTrailer && trailerCostBreakdown && (
+            {/* Cost Breakdown - Only visible to Direction */}
+            {canViewCostBreakdown ? (
+              <div className="space-y-2 text-sm">
                 <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Semi-remorque</span>
-                  <span className="font-medium">{formatCurrency(trailerCostForTrip)}</span>
+                  <span className="text-muted-foreground">Gazole</span>
+                  <span className="font-medium">{formatCurrency(costs.fuel)}</span>
                 </div>
-              )}
-              
-              <div className="flex justify-between py-2 bg-primary/10 rounded-lg px-3 mt-2">
-                <span className="font-semibold text-foreground">Coût Total</span>
-                <span className="font-bold text-primary">{formatCurrency(totalCostWithVehicle)}</span>
+                <div className="flex justify-between py-1 border-b border-border/30">
+                  <span className="text-muted-foreground">AdBlue</span>
+                  <span className="font-medium">{formatCurrency(costs.adBlue)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/30">
+                  <span className="text-muted-foreground">Péages</span>
+                  <span className="font-medium">{formatCurrency(costs.tolls)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/30">
+                  <span className="text-muted-foreground">Conducteur(s)</span>
+                  <span className="font-medium">{formatCurrency(costs.driverCost)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/30">
+                  <span className="text-muted-foreground">Structure</span>
+                  <span className="font-medium">{formatCurrency(costs.structureCost)}</span>
+                </div>
+                
+                {selectedVehicle && vehicleCostBreakdown && (
+                  <>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span className="text-muted-foreground">Entretien véhicule</span>
+                      <span className="font-medium">{formatCurrency(vehicleCostBreakdown.maintenanceCostPerKm * trip.distance)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span className="text-muted-foreground">Pneus</span>
+                      <span className="font-medium">{formatCurrency(vehicleCostBreakdown.tireCostPerKm * trip.distance)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/30">
+                      <span className="text-muted-foreground">Charges véhicule</span>
+                      <span className="font-medium">{formatCurrency(vehicleCostBreakdown.fixedCostPerKm * trip.distance)}</span>
+                    </div>
+                  </>
+                )}
+                
+                {selectedTrailer && trailerCostBreakdown && (
+                  <div className="flex justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Semi-remorque</span>
+                    <span className="font-medium">{formatCurrency(trailerCostForTrip)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between py-2 bg-primary/10 rounded-lg px-3 mt-2">
+                  <span className="font-semibold text-foreground">Coût Total</span>
+                  <span className="font-bold text-primary">{formatCurrency(totalCostWithVehicle)}</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 bg-muted/30 rounded-lg text-center">
+                <Lock className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Détail des coûts réservé à la Direction</p>
+                <p className="text-xs text-muted-foreground mt-1">Les calculs utilisent les données de structure</p>
+              </div>
+            )}
 
-            {/* Metrics */}
-            <div className="mt-4 pt-3 border-t border-border space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Coût/km</span>
-                <span className="font-medium">{totalCostPerKmWithVehicle.toFixed(3)} €</span>
+            {/* Metrics - Visible to Direction & Exploitation */}
+            {canViewFinancialData ? (
+              <div className="mt-4 pt-3 border-t border-border space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Coût/km</span>
+                  <span className="font-medium">{totalCostPerKmWithVehicle.toFixed(3)} €</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Chiffre d'affaires</span>
+                  <span className="font-medium text-success">{formatCurrency(revenueWithVehicle)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bénéfice</span>
+                  <span className={cn("font-bold", profitWithVehicle >= 0 ? "text-success" : "text-destructive")}>
+                    {formatCurrency(profitWithVehicle)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Chiffre d'affaires</span>
-                <span className="font-medium text-success">{formatCurrency(revenueWithVehicle)}</span>
+            ) : (
+              <div className="mt-4 pt-3 border-t border-border">
+                <div className="p-3 bg-muted/30 rounded-lg text-center">
+                  <EyeOff className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">Données financières réservées</p>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Bénéfice</span>
-                <span className={cn("font-bold", profitWithVehicle >= 0 ? "text-success" : "text-destructive")}>
-                  {formatCurrency(profitWithVehicle)}
-                </span>
-              </div>
-            </div>
+            )}
             
-            {/* Margin indicator */}
-            <div className={cn(
-              "mt-4 p-3 rounded-lg text-center",
-              profitMarginWithVehicle >= 15 ? "bg-success/20" :
-              profitMarginWithVehicle >= 0 ? "bg-warning/20" :
-              "bg-destructive/20"
-            )}>
-              <p className="text-xs text-muted-foreground mb-1">Marge réelle</p>
-              <p className={cn(
-                "text-2xl font-bold",
-                profitMarginWithVehicle >= 15 ? "text-success" :
-                profitMarginWithVehicle >= 0 ? "text-warning" :
-                "text-destructive"
+            {/* Margin indicator - Only for Direction & Exploitation */}
+            {canViewFinancialData && (
+              <div className={cn(
+                "mt-4 p-3 rounded-lg text-center",
+                profitMarginWithVehicle >= 15 ? "bg-success/20" :
+                profitMarginWithVehicle >= 0 ? "bg-warning/20" :
+                "bg-destructive/20"
               )}>
-                {profitMarginWithVehicle.toFixed(1)}%
-              </p>
-            </div>
+                <p className="text-xs text-muted-foreground mb-1">Marge réelle</p>
+                <p className={cn(
+                  "text-2xl font-bold",
+                  profitMarginWithVehicle >= 15 ? "text-success" :
+                  profitMarginWithVehicle >= 0 ? "text-warning" :
+                  "text-destructive"
+                )}>
+                  {profitMarginWithVehicle.toFixed(1)}%
+                </p>
+              </div>
+            )}
 
             {/* Save button */}
             {trip.distance > 0 && (
