@@ -115,24 +115,48 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     }
 
     try {
-      // Clear any existing Supabase auth state
-      const { supabase } = await import('@/integrations/supabase/client');
+      // IMPORTANT: Must set a fresh auth session for the selected user.
       await supabase.auth.signOut();
-      
-      // Use correct storage key that matches useLicense hook
+
+      const { data: validateData, error: validateError } = await supabase.functions.invoke('validate-license', {
+        body: {
+          action: 'validate',
+          licenseCode: license.license_code,
+          email: user.email,
+        },
+      });
+
+      if (validateError) throw validateError;
+      if (!validateData?.success) throw new Error(validateData?.error || 'Validation impossible');
+
+      if (validateData.session) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: validateData.session.access_token,
+          refresh_token: validateData.session.refresh_token,
+        });
+        if (sessionError) {
+          console.error('Impersonation: setSession failed:', sessionError);
+        }
+      }
+
       const licenseData = {
-        code: license.license_code,
-        email: user.email, // Use the user's email
-        activatedAt: new Date().toISOString(),
-        planType: license.plan_type || 'start',
-        companyName: license.company_name,
-        companyUserId: user.id, // Store the company user ID
+        code: validateData.licenseData?.code || license.license_code,
+        email: validateData.licenseData?.email || user.email,
+        activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
+        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        companyName: validateData.licenseData?.companyName ?? license.company_name,
+        companyUserId: validateData.companyUserId ?? user.id,
+        userRole: validateData.userRole ?? user.role,
+        customFeatures: validateData.customFeatures ?? null,
+        userFeatureOverrides: validateData.userFeatureOverrides ?? null,
+        showUserInfo: validateData.licenseData?.showUserInfo ?? true,
+        showCompanyInfo: validateData.licenseData?.showCompanyInfo ?? true,
+        showAddressInfo: validateData.licenseData?.showAddressInfo ?? true,
+        showLicenseInfo: validateData.licenseData?.showLicenseInfo ?? true,
       };
-      
-      // Set the license data with the correct key (optiflow-license with hyphen)
+
       localStorage.setItem('optiflow-license', JSON.stringify(licenseData));
-      
-      // Also update cache for offline support
+
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       localStorage.setItem('optiflow-license-cache', JSON.stringify({

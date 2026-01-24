@@ -418,6 +418,112 @@ export function useLicense(): UseLicenseReturn {
         // Online: verify with server
         if (data) {
           try {
+            // Ensure the authenticated user (if any) matches the stored license email.
+            // This fixes cases where an admin "connexion en tant que" only updates localStorage
+            // but the in-memory/auth session still points to a previous user.
+            const { data: authData, error: authUserError } = await supabase.auth.getUser();
+            if (authUserError) {
+              console.warn('[useLicense] Unable to read current auth user:', authUserError);
+            }
+
+            const authEmail = authData?.user?.email?.toLowerCase() ?? null;
+            const storedEmail = data.email?.toLowerCase() ?? null;
+
+            // If there is no auth user or it doesn't match, we must re-validate to obtain the right session.
+            if (!authEmail || !storedEmail || authEmail !== storedEmail) {
+              console.log('[useLicense] Auth user missing/mismatch, re-validating to set correct session', {
+                authEmail,
+                storedEmail,
+              });
+
+              // Make sure we start from a clean auth state
+              try {
+                await supabase.auth.signOut();
+              } catch (e) {
+                console.warn('[useLicense] signOut before re-validation failed (continuing):', e);
+              }
+
+              const { data: validateResponse, error: validateError } = await supabase.functions.invoke('validate-license', {
+                body: { licenseCode: data.code, email: data.email, action: 'validate' },
+              });
+
+              if (validateError) {
+                console.error('[useLicense] Re-validation error:', validateError);
+                // We can't safely continue with a mismatched user; force a fresh login.
+                localStorage.removeItem(LICENSE_STORAGE_KEY);
+                localStorage.removeItem(LICENSE_CACHE_KEY);
+                setIsLicensed(false);
+                setIsLoading(false);
+                return;
+              }
+
+              if (!validateResponse?.success) {
+                console.error('[useLicense] Re-validation failed:', validateResponse?.error);
+                localStorage.removeItem(LICENSE_STORAGE_KEY);
+                localStorage.removeItem(LICENSE_CACHE_KEY);
+                setIsLicensed(false);
+                setIsLoading(false);
+                return;
+              }
+
+              // If we received an auth session, set it in the client
+              if (validateResponse.session) {
+                const { error: sessionError } = await supabase.auth.setSession({
+                  access_token: validateResponse.session.access_token,
+                  refresh_token: validateResponse.session.refresh_token,
+                });
+                if (sessionError) {
+                  console.error('[useLicense] Failed to set auth session after re-validation:', sessionError);
+                }
+              }
+
+              // Persist the fresh license payload (same logic as validateLicense())
+              const licenseDataToStore: LicenseData = {
+                code: validateResponse.licenseData.code || data.code,
+                email: validateResponse.licenseData.email || data.email,
+                activatedAt: validateResponse.licenseData.activatedAt,
+                planType: validateResponse.licenseData.planType,
+                firstName: validateResponse.licenseData.firstName || undefined,
+                lastName: validateResponse.licenseData.lastName || undefined,
+                companyName: validateResponse.licenseData.companyName || undefined,
+                siren: validateResponse.licenseData.siren || undefined,
+                companyStatus: validateResponse.licenseData.companyStatus || undefined,
+                employeeCount: validateResponse.licenseData.employeeCount || undefined,
+                address: validateResponse.licenseData.address || undefined,
+                city: validateResponse.licenseData.city || undefined,
+                postalCode: validateResponse.licenseData.postalCode || undefined,
+                maxDrivers: validateResponse.licenseData.maxDrivers ?? null,
+                maxClients: validateResponse.licenseData.maxClients ?? null,
+                maxDailyCharges: validateResponse.licenseData.maxDailyCharges ?? null,
+                maxMonthlyCharges: validateResponse.licenseData.maxMonthlyCharges ?? null,
+                maxYearlyCharges: validateResponse.licenseData.maxYearlyCharges ?? null,
+                customFeatures: validateResponse.customFeatures || null,
+                userFeatureOverrides: validateResponse.userFeatureOverrides || null,
+                showUserInfo: validateResponse.licenseData.showUserInfo ?? true,
+                showCompanyInfo: validateResponse.licenseData.showCompanyInfo ?? true,
+                showAddressInfo: validateResponse.licenseData.showAddressInfo ?? true,
+                showLicenseInfo: validateResponse.licenseData.showLicenseInfo ?? true,
+                companyUserId: validateResponse.companyUserId || null,
+                userRole: validateResponse.userRole || null,
+              };
+
+              localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(licenseDataToStore));
+
+              const now = new Date();
+              const expiresAt = new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+              const newCache: CachedLicense = {
+                data: licenseDataToStore,
+                lastValidated: now.toISOString(),
+                expiresAt: expiresAt.toISOString(),
+              };
+              localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
+
+              setLicenseData(licenseDataToStore);
+              setIsLicensed(true);
+              setIsLoading(false);
+              return;
+            }
+
             const { data: checkResponse, error: checkError } = await supabase.functions.invoke('validate-license', {
               body: { licenseCode: data.code, email: data.email, action: 'check' },
             });

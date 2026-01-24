@@ -522,34 +522,61 @@ export default function Admin() {
 
   const loginAsUser = async (license: License) => {
     try {
-      // Use correct storage key that matches useLicense hook
-      const licenseData = {
-        code: license.license_code,
-        email: license.email,
-        activatedAt: new Date().toISOString(),
-        planType: license.plan_type || 'start',
-        firstName: license.first_name,
-        lastName: license.last_name,
-        companyName: license.company_name,
-        siren: license.siren,
-        address: license.address,
-        city: license.city,
-        postalCode: license.postal_code,
-        maxDrivers: license.max_drivers,
-        maxClients: license.max_clients,
-        maxDailyCharges: license.max_daily_charges,
-        maxMonthlyCharges: license.max_monthly_charges,
-        maxYearlyCharges: license.max_yearly_charges,
-        customFeatures: license.features,
-      };
-      
-      // Clear any existing auth state
+      // IMPORTANT:
+      // We must obtain a fresh auth session for the target user, otherwise the app can
+      // keep the previous authenticated identity and appear "stuck" on the first user.
       await supabase.auth.signOut();
-      
-      // Set the license data with the correct key
+
+      const { data: validateData, error: validateError } = await supabase.functions.invoke('validate-license', {
+        body: {
+          action: 'validate',
+          licenseCode: license.license_code,
+          email: license.email,
+        },
+      });
+
+      if (validateError) throw validateError;
+      if (!validateData?.success) throw new Error(validateData?.error || 'Validation impossible');
+
+      if (validateData.session) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: validateData.session.access_token,
+          refresh_token: validateData.session.refresh_token,
+        });
+        if (sessionError) {
+          console.error('Admin impersonation: setSession failed:', sessionError);
+        }
+      }
+
+      // Persist the same shape expected by useLicense
+      const licenseData = {
+        code: validateData.licenseData?.code || license.license_code,
+        email: validateData.licenseData?.email || license.email,
+        activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
+        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        firstName: validateData.licenseData?.firstName ?? license.first_name,
+        lastName: validateData.licenseData?.lastName ?? license.last_name,
+        companyName: validateData.licenseData?.companyName ?? license.company_name,
+        siren: validateData.licenseData?.siren ?? license.siren,
+        address: validateData.licenseData?.address ?? license.address,
+        city: validateData.licenseData?.city ?? license.city,
+        postalCode: validateData.licenseData?.postalCode ?? license.postal_code,
+        maxDrivers: validateData.licenseData?.maxDrivers ?? license.max_drivers,
+        maxClients: validateData.licenseData?.maxClients ?? license.max_clients,
+        maxDailyCharges: validateData.licenseData?.maxDailyCharges ?? license.max_daily_charges,
+        maxMonthlyCharges: validateData.licenseData?.maxMonthlyCharges ?? license.max_monthly_charges,
+        maxYearlyCharges: validateData.licenseData?.maxYearlyCharges ?? license.max_yearly_charges,
+        customFeatures: validateData.customFeatures ?? license.features,
+        userFeatureOverrides: validateData.userFeatureOverrides ?? null,
+        companyUserId: validateData.companyUserId ?? null,
+        userRole: validateData.userRole ?? null,
+        showUserInfo: validateData.licenseData?.showUserInfo ?? true,
+        showCompanyInfo: validateData.licenseData?.showCompanyInfo ?? true,
+        showAddressInfo: validateData.licenseData?.showAddressInfo ?? true,
+        showLicenseInfo: validateData.licenseData?.showLicenseInfo ?? true,
+      };
+
       localStorage.setItem('optiflow-license', JSON.stringify(licenseData));
-      
-      // Also update cache for offline support
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       localStorage.setItem('optiflow-license-cache', JSON.stringify({
@@ -557,10 +584,8 @@ export default function Admin() {
         lastValidated: now.toISOString(),
         expiresAt: expiresAt.toISOString(),
       }));
-      
+
       toast.success(`Connexion en tant que ${license.email}`);
-      
-      // Force full reload to apply new license
       window.location.href = '/';
     } catch (error) {
       console.error('Login as user error:', error);
