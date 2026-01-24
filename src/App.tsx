@@ -35,6 +35,7 @@ import VehicleReports from "./pages/VehicleReports";
 import Tours from "./pages/Tours";
 import Settings from "./pages/Settings";
 import MyRestrictions from "./pages/MyRestrictions";
+import Team from "./pages/Team";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -127,6 +128,7 @@ function AppRoutes() {
               <Route path="/tours" element={<Tours />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/my-restrictions" element={<MyRestrictions />} />
+              <Route path="/team" element={<Team />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X } from 'lucide-react';
+import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase, UserCog } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr, enUS, es } from 'date-fns/locale';
 
@@ -30,6 +30,7 @@ import { isTauri } from '@/hooks/useTauri';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 import { useDataSyncActions } from '@/components/DataSyncProvider';
+import { useTeam } from '@/hooks/useTeam';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -42,12 +43,20 @@ const planConfig: Record<PlanType, { label: string; icon: React.ElementType; col
   enterprise: { label: 'Enterprise', icon: Crown, color: 'bg-amber-500/20 text-amber-500 border-amber-500/30' },
 };
 
+// Role configuration for display
+const roleConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  direction: { label: 'Direction', icon: Crown, color: 'bg-amber-500/20 text-amber-600 border-amber-500/30' },
+  exploitation: { label: 'Exploitation', icon: Briefcase, color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
+  membre: { label: 'Membre', icon: User, color: 'bg-gray-500/20 text-gray-600 border-gray-500/30' },
+};
+
 export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const { planType, licenseData, isOffline, clearLicense } = useLicense();
   const [contactOpen, setContactOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { language, t } = useLanguage();
+  const { currentUserRole, isDirection } = useTeam();
   const { 
     forceSync, 
     isSyncing, 
@@ -56,6 +65,28 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
     clearErrors, 
     stats,
   } = useDataSyncActions();
+
+  // Normalize role for display
+  const getNormalizedRole = (): string | null => {
+    if (!currentUserRole) return null;
+    switch (currentUserRole.toLowerCase()) {
+      case 'direction':
+      case 'owner':
+        return 'direction';
+      case 'exploitation':
+      case 'responsable':
+      case 'admin':
+        return 'exploitation';
+      case 'membre':
+      case 'member':
+        return 'membre';
+      default:
+        return 'membre';
+    }
+  };
+
+  const normalizedRole = getNormalizedRole();
+  const roleInfo = normalizedRole ? roleConfig[normalizedRole] : null;
 
   // Update time every minute
   useEffect(() => {
@@ -274,6 +305,14 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* Role Badge */}
+            {roleInfo && (
+              <Badge variant="outline" className={`hidden md:flex items-center gap-1.5 px-3 py-1 ${roleInfo.color}`}>
+                <roleInfo.icon className="w-3.5 h-3.5" />
+                <span className="font-medium">{roleInfo.label}</span>
+              </Badge>
+            )}
 
             {/* Plan Badge */}
             <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
