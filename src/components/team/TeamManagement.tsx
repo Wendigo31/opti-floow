@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTeam } from '@/hooks/useTeam';
-import { useLicense } from '@/hooks/useLicense';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,12 +182,9 @@ export function TeamManagement() {
     }
   };
 
-  // Check if multi-users is available (based on actual license plan type from DB)
-  // Use planType from useLicense which has validated data from edge function
-  const { planType: validatedPlanType } = useLicense();
-  const effectivePlanType = validatedPlanType || licensePlanType;
-
-  if (effectivePlanType !== 'pro' && effectivePlanType !== 'enterprise') {
+  // Check if multi-users is available (based on actual license plan type)
+  // licensePlanType is now obtained from useLicense via useTeam hook
+  if (licensePlanType !== 'pro' && licensePlanType !== 'enterprise') {
     return (
       <Card>
         <CardHeader>

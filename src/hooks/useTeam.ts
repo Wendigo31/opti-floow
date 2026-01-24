@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { CompanyUser, CompanyInvitation, TeamRole, TeamMember } from '@/types/team';
 import { MAX_USERS_PER_PLAN } from '@/types/team';
 import type { PlanType } from '@/hooks/useLicense';
+import { useLicense } from '@/hooks/useLicense';
 
 interface UseTeamReturn {
   members: TeamMember[];
@@ -27,17 +28,21 @@ interface UseTeamReturn {
 }
 
 export function useTeam(): UseTeamReturn {
+  // Get planType from useLicense (already validated via edge function)
+  const { planType: validatedPlanType, licenseData } = useLicense();
+
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
   const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [licensePlanType, setLicensePlanType] = useState<PlanType>('start');
-  const [licenseMaxUsers, setLicenseMaxUsers] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
 
-  const maxUsers = licenseMaxUsers || MAX_USERS_PER_PLAN[licensePlanType] || 1;
+  // Use planType from useLicense (validated via edge function) - fallback to 'start'
+  const licensePlanType: PlanType = validatedPlanType || 'start';
+  const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
+
+  const maxUsers = licenseMaxUsers;
   const currentUserCount = members.filter(m => m.is_active).length;
   const pendingCount = pendingInvitations.filter(i => !i.accepted_at).length;
   const canAddMore = (currentUserCount + pendingCount) < maxUsers;
@@ -86,21 +91,8 @@ export function useTeam(): UseTeamReturn {
       setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
 
-      // Fetch license info separately
-      const { data: licenseInfo, error: licenseError } = await supabase
-        .from('licenses')
-        .select('plan_type, max_users')
-        .eq('id', currentLicenseId)
-        .maybeSingle();
-
-      if (licenseError) {
-        console.error('Error fetching license info:', licenseError);
-      }
-
-      if (licenseInfo) {
-        setLicensePlanType((licenseInfo.plan_type as PlanType) || 'start');
-        setLicenseMaxUsers(licenseInfo.max_users || 1);
-      }
+      // Note: planType is now obtained from useLicense hook (validated via edge function)
+      // This avoids RLS issues with the licenses table
 
       // Fetch team members
       const { data: companyUsers, error: usersError } = await supabase
@@ -147,10 +139,7 @@ export function useTeam(): UseTeamReturn {
   }, []);
 
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchTeam();
-    }
+    fetchTeam();
   }, [fetchTeam]);
 
   const inviteMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
