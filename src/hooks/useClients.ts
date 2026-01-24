@@ -31,34 +31,6 @@ async function getUserLicenseId(): Promise<string | null> {
   return data?.license_id || null;
 }
 
-// Check if demo mode is active
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-// Get demo clients from localStorage
-function getDemoClients(): LocalClient[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_clients') || '[]');
-  } catch {
-    return [];
-  }
-}
-
-// Get demo addresses from localStorage
-function getDemoAddresses(): LocalClientAddress[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_client_addresses') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 export function useClients() {
   useLicense(); // Hook must be called but licenseData is not used directly
   const [clients, setClients] = useState<ClientWithCreator[]>([]);
@@ -67,18 +39,9 @@ export function useClients() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [membersMap, setMembersMap] = useState<Map<string, { email: string; displayName?: string; isActive: boolean }>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
-  
-  const isDemo = isDemoModeActive();
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
-    
-    if (isDemo) {
-      setClients(getDemoClients() as ClientWithCreator[]);
-      setAddresses(getDemoAddresses());
-      setLoading(false);
-      return;
-    }
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -173,26 +136,9 @@ export function useClients() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, membersMap]);
+  }, [membersMap]);
 
   const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<ClientWithCreator | null> => {
-    if (isDemo) {
-      const newClient: ClientWithCreator = {
-        id: generateId(),
-        ...input,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_own: true,
-      };
-      
-      const demoClients = getDemoClients();
-      const updated = [...demoClients, newClient];
-      localStorage.setItem('optiflow_clients', JSON.stringify(updated));
-      setClients(updated);
-      toast.success('Client ajouté (mode démo)');
-      return newClient;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -252,20 +198,9 @@ export function useClients() {
       toast.error('Erreur lors de la création');
       return null;
     }
-  }, [isDemo]);
+  }, [membersMap]);
 
   const updateClient = useCallback(async (id: string, updates: Partial<LocalClient>): Promise<boolean> => {
-    if (isDemo) {
-      const demoClients = getDemoClients();
-      const updated = demoClients.map(c => 
-        c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c
-      );
-      localStorage.setItem('optiflow_clients', JSON.stringify(updated));
-      setClients(updated);
-      toast.success('Client mis à jour (mode démo)');
-      return true;
-    }
-
     try {
       const { error } = await supabase
         .from('clients')
@@ -287,20 +222,9 @@ export function useClients() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo, membersMap]);
+  }, []);
 
   const deleteClient = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demoClients = getDemoClients();
-      const demoAddresses = getDemoAddresses();
-      localStorage.setItem('optiflow_clients', JSON.stringify(demoClients.filter(c => c.id !== id)));
-      localStorage.setItem('optiflow_client_addresses', JSON.stringify(demoAddresses.filter(a => a.client_id !== id)));
-      setClients(demoClients.filter(c => c.id !== id));
-      setAddresses(demoAddresses.filter(a => a.client_id !== id));
-      toast.success('Client supprimé (mode démo)');
-      return true;
-    }
-
     try {
       // Delete addresses first
       await supabase.from('client_addresses').delete().eq('client_id', id);
@@ -318,7 +242,7 @@ export function useClients() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const getClientAddresses = useCallback((clientId: string): LocalClientAddress[] => {
     return addresses.filter(a => a.client_id === clientId);
@@ -326,14 +250,12 @@ export function useClients() {
 
   // Fetch license ID on mount
   useEffect(() => {
-    if (!isDemo) {
-      getUserLicenseId().then(setLicenseId);
-    }
-  }, [isDemo]);
+    getUserLicenseId().then(setLicenseId);
+  }, []);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`clients_${licenseId}`)
@@ -399,7 +321,7 @@ export function useClients() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   // Initial fetch
   useEffect(() => {

@@ -16,26 +16,6 @@ function mapDbToSavedTour(row: any): SavedTour {
   };
 }
 
-// Check if demo mode is active
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-// Get demo tours from localStorage
-function getDemoTours(): SavedTour[] {
-  try {
-    const tours = JSON.parse(localStorage.getItem('optiflow_saved_tours') || '[]');
-    return tours;
-  } catch {
-    return [];
-  }
-}
-
 // Get user's license_id for company-level sync
 async function getUserLicenseId(userId?: string): Promise<string | null> {
   const uid = userId || (await supabase.auth.getUser()).data.user?.id;
@@ -65,8 +45,6 @@ export function useSavedTours() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
   const lastToastAtRef = useRef<number>(0);
-
-  const isDemo = isDemoModeActive();
 
   // Track auth state (prevents "anonymous" calls that trigger RLS errors)
   useEffect(() => {
@@ -108,14 +86,6 @@ export function useSavedTours() {
 
   const fetchToursCore = useCallback(async (): Promise<void> => {
     setLoading(true);
-
-    // In demo mode, use localStorage data
-    if (isDemo) {
-      const demoTours = getDemoTours();
-      setTours(demoTours);
-      setLoading(false);
-      return;
-    }
 
     // Not authenticated yet → don't spam error toast
     if (!authUserId) {
@@ -169,7 +139,7 @@ export function useSavedTours() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, authUserId]);
+  }, [authUserId]);
 
   const fetchTours = useCallback(async (): Promise<void> => {
     // De-duplicate calls across pages/components to avoid spam during navigation.
@@ -186,15 +156,15 @@ export function useSavedTours() {
 
   // Auto-fetch tours when user is authenticated
   useEffect(() => {
-    if (authUserId && !isDemo) {
+    if (authUserId) {
       console.log('[useSavedTours] Auth user changed, fetching tours...');
       fetchTours();
     }
-  }, [authUserId, isDemo, fetchTours]);
+  }, [authUserId, fetchTours]);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (isDemo || !authUserId) return;
+    if (!authUserId) return;
 
     // Create channel for realtime sync
     const filter = licenseId ? `license_id=eq.${licenseId}` : `user_id=eq.${authUserId}`;
@@ -237,56 +207,9 @@ export function useSavedTours() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, isDemo]);
+  }, [licenseId, authUserId]);
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
-    // In demo mode, save to localStorage
-    if (isDemo) {
-      const newTour: SavedTour = {
-        id: `demo-tour-${Date.now()}`,
-        user_id: 'demo',
-        client_id: input.client_id || null,
-        name: input.name,
-        origin_address: input.origin_address,
-        destination_address: input.destination_address,
-        stops: input.stops || [],
-        distance_km: input.distance_km,
-        duration_minutes: input.duration_minutes || 0,
-        toll_cost: input.toll_cost,
-        fuel_cost: input.fuel_cost,
-        adblue_cost: input.adblue_cost,
-        driver_cost: input.driver_cost,
-        structure_cost: input.structure_cost,
-        vehicle_cost: input.vehicle_cost,
-        total_cost: input.total_cost,
-        pricing_mode: input.pricing_mode,
-        price_per_km: input.price_per_km || 0,
-        fixed_price: input.fixed_price || 0,
-        target_margin: input.target_margin || 15,
-        revenue: input.revenue,
-        profit: input.profit,
-        profit_margin: input.profit_margin,
-        vehicle_id: input.vehicle_id || null,
-        vehicle_data: input.vehicle_data || null,
-        trailer_id: input.trailer_id || null,
-        trailer_data: input.trailer_data || null,
-        driver_ids: input.driver_ids || [],
-        drivers_data: input.drivers_data || [],
-        notes: input.notes || null,
-        tags: input.tags || [],
-        is_favorite: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
-      const demoTours = getDemoTours();
-      const updatedTours = [newTour, ...demoTours];
-      localStorage.setItem('optiflow_saved_tours', JSON.stringify(updatedTours));
-      setTours(updatedTours);
-      toast.success('Tournée sauvegardée (mode démo)');
-      return newTour;
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error('Vous devez être connecté');
@@ -349,21 +272,9 @@ export function useSavedTours() {
       toast.error('Erreur lors de la sauvegarde');
       return null;
     }
-  }, [isDemo]);
+  }, []);
 
   const updateTour = useCallback(async (id: string, updates: Partial<SaveTourInput>): Promise<boolean> => {
-    // In demo mode, update localStorage
-    if (isDemo) {
-      const demoTours = getDemoTours();
-      const updatedTours = demoTours.map(t => 
-        t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } as SavedTour : t
-      );
-      localStorage.setItem('optiflow_saved_tours', JSON.stringify(updatedTours));
-      setTours(updatedTours);
-      toast.success('Tournée mise à jour (mode démo)');
-      return true;
-    }
-
     try {
       // Convert to DB-compatible format
       const dbUpdates: Record<string, any> = { ...updates };
@@ -396,19 +307,9 @@ export function useSavedTours() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteTour = useCallback(async (id: string): Promise<boolean> => {
-    // In demo mode, delete from localStorage
-    if (isDemo) {
-      const demoTours = getDemoTours();
-      const updatedTours = demoTours.filter(t => t.id !== id);
-      localStorage.setItem('optiflow_saved_tours', JSON.stringify(updatedTours));
-      setTours(updatedTours);
-      toast.success('Tournée supprimée (mode démo)');
-      return true;
-    }
-
     try {
       // RLS will check if user can delete (own or company)
       const { error } = await supabase
@@ -426,22 +327,11 @@ export function useSavedTours() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const toggleFavorite = useCallback(async (id: string): Promise<boolean> => {
     const tour = tours.find(t => t.id === id);
     if (!tour) return false;
-
-    // In demo mode, toggle in localStorage
-    if (isDemo) {
-      const demoTours = getDemoTours();
-      const updatedTours = demoTours.map(t => 
-        t.id === id ? { ...t, is_favorite: !t.is_favorite } : t
-      );
-      localStorage.setItem('optiflow_saved_tours', JSON.stringify(updatedTours));
-      setTours(updatedTours);
-      return true;
-    }
 
     try {
       // RLS will check if user can update (own or company)
@@ -460,7 +350,7 @@ export function useSavedTours() {
       console.error('Error toggling favorite:', error);
       return false;
     }
-  }, [tours, isDemo]);
+  }, [tours]);
 
   const getToursByClient = useCallback((clientId: string) => {
     return tours.filter(t => t.client_id === clientId);

@@ -13,8 +13,6 @@ import {
   TrendingUp,
   Truck,
   Route,
-  PlayCircle,
-  StopCircle,
   Settings,
   EyeOff,
   UsersRound
@@ -22,7 +20,6 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
-import { useDemoMode } from '@/hooks/useDemoMode';
 import { useTeam } from '@/hooks/useTeam';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
@@ -104,9 +101,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
-  const { isActive: isDemoActive, getCurrentSession, deactivateDemo } = useDemoMode();
   const { isDirection } = useTeam();
-  const currentDemoSession = getCurrentSession();
 
   // Get restricted features (user-specific overrides that are disabled)
   const restrictedFeatures = licenseData?.userFeatureOverrides?.filter(o => !o.enabled) || [];
@@ -167,37 +162,6 @@ export function Sidebar() {
         </NavLink>
       </div>
 
-      {/* Demo Mode Indicator */}
-      {isDemoActive && currentDemoSession && (
-        <div className={cn(
-          "mx-4 mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30",
-          collapsed && "mx-2 p-2"
-        )}>
-          <div className="flex items-center gap-2">
-            <PlayCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-amber-700 dark:text-amber-400 truncate">
-                  Mode Démo
-                </p>
-                <p className="text-xs text-amber-600/80 truncate">
-                  {currentDemoSession.planType.toUpperCase()}
-                </p>
-              </div>
-            )}
-          </div>
-          {!collapsed && (
-            <button
-              onClick={deactivateDemo}
-              className="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1 text-xs rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-700 dark:text-amber-400 transition-colors"
-            >
-              <StopCircle className="w-3 h-3" />
-              Quitter
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Restricted Features Indicator */}
       {restrictedFeaturesCount > 0 && (
         <TooltipProvider>
@@ -207,8 +171,7 @@ export function Sidebar() {
                 to="/my-restrictions"
                 className={cn(
                   "block mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 cursor-pointer hover:bg-destructive/20 transition-colors",
-                  collapsed && "mx-2 p-2",
-                  isDemoActive && "mt-2"
+                  collapsed && "mx-2 p-2"
                 )}
               >
                 <div className="flex items-center gap-2">
