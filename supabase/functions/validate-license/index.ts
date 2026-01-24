@@ -2314,15 +2314,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Fetch user-specific feature overrides if we have an auth session
     let userFeatureOverrides: { feature_key: string; enabled: boolean }[] = [];
+    let userRole: string | null = null;
     console.log("[validate-license] Checking for user overrides. authSession.user.id:", authSession?.user?.id);
     
     if (authSession?.user?.id) {
       try {
-        // Find the company_user record for this user
+        // Find the company_user record for this user (include role)
         console.log("[validate-license] Looking for company_user with license_id:", license.id, "and user_id:", authSession.user.id);
         const { data: companyUser, error: cuError } = await supabase
           .from("company_users")
-          .select("id")
+          .select("id, role")
           .eq("license_id", license.id)
           .eq("user_id", authSession.user.id)
           .maybeSingle();
@@ -2330,6 +2331,9 @@ const handler = async (req: Request): Promise<Response> => {
         console.log("[validate-license] company_user lookup result:", companyUser, "error:", cuError);
 
         if (companyUser) {
+          // Store the user's role for the response
+          userRole = companyUser.role;
+          
           // Fetch user-specific overrides
           const { data: overrides, error: ovError } = await supabase
             .from("user_feature_overrides")
@@ -2338,7 +2342,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           console.log("[validate-license] overrides lookup result:", overrides, "error:", ovError);
           userFeatureOverrides = overrides || [];
-          console.log("[validate-license] User feature overrides count:", userFeatureOverrides.length);
+          console.log("[validate-license] User feature overrides count:", userFeatureOverrides.length, "userRole:", userRole);
         } else {
           console.log("[validate-license] No company_user found for this user");
         }
@@ -2379,6 +2383,7 @@ const handler = async (req: Request): Promise<Response> => {
         showCompanyInfo: license.show_company_info ?? true,
         showAddressInfo: license.show_address_info ?? true,
         showLicenseInfo: license.show_license_info ?? true,
+        userRole: userRole,
       },
       customFeatures: effectiveFeatures,
       userFeatureOverrides: userFeatureOverrides.length > 0 ? userFeatureOverrides : null,
