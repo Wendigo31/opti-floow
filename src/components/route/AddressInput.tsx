@@ -32,6 +32,15 @@ export function AddressInput({
   const { suggestions, loading, searchAddress, getPlaceDetails, clearSuggestions } = useAddressAutocomplete();
 
   // Search when value changes and input is focused
+  // Using refs to avoid dependency issues and infinite loops
+  const searchAddressRef = useRef(searchAddress);
+  const clearSuggestionsRef = useRef(clearSuggestions);
+  
+  useEffect(() => {
+    searchAddressRef.current = searchAddress;
+    clearSuggestionsRef.current = clearSuggestions;
+  });
+  
   useEffect(() => {
     // Don't search if it's a recently selected value
     if (value === lastSelectedRef.current) {
@@ -39,13 +48,13 @@ export function AddressInput({
     }
     
     if (value.length >= 3 && isFocused) {
-      searchAddress(value);
+      searchAddressRef.current(value);
       setShowSuggestions(true);
     } else if (value.length < 3) {
-      clearSuggestions();
+      clearSuggestionsRef.current();
       setShowSuggestions(false);
     }
-  }, [value, isFocused, searchAddress, clearSuggestions]);
+  }, [value, isFocused]);
 
   // Show suggestions when they arrive
   useEffect(() => {
