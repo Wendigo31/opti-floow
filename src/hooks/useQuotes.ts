@@ -22,42 +22,15 @@ async function getUserLicenseId(): Promise<string | null> {
   return data?.license_id || null;
 }
 
-// Check if demo mode is active
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-// Get demo quotes from localStorage
-function getDemoQuotes(): LocalQuote[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_quotes') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 export function useQuotes() {
   useLicense(); // Hook must be called for licensing context
   const [quotes, setQuotes] = useState<LocalQuote[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  
-  const isDemo = isDemoModeActive();
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
-    
-    if (isDemo) {
-      setQuotes(getDemoQuotes());
-      setLoading(false);
-      return;
-    }
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -101,7 +74,7 @@ export function useQuotes() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo]);
+  }, []);
 
   const generateQuoteNumber = (): string => {
     const now = new Date();
@@ -113,23 +86,6 @@ export function useQuotes() {
 
   const createQuote = useCallback(async (input: Omit<LocalQuote, 'id' | 'quote_number' | 'created_at' | 'updated_at'>): Promise<LocalQuote | null> => {
     const quoteNumber = generateQuoteNumber();
-    
-    if (isDemo) {
-      const newQuote: LocalQuote = {
-        id: generateId(),
-        quote_number: quoteNumber,
-        ...input,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
-      const demoQuotes = getDemoQuotes();
-      const updated = [newQuote, ...demoQuotes];
-      localStorage.setItem('optiflow_quotes', JSON.stringify(updated));
-      setQuotes(updated);
-      toast.success('Devis créé (mode démo)');
-      return newQuote;
-    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -193,20 +149,9 @@ export function useQuotes() {
       toast.error('Erreur lors de la création');
       return null;
     }
-  }, [isDemo]);
+  }, []);
 
   const updateQuote = useCallback(async (id: string, updates: Partial<LocalQuote>): Promise<boolean> => {
-    if (isDemo) {
-      const demoQuotes = getDemoQuotes();
-      const updated = demoQuotes.map(q => 
-        q.id === id ? { ...q, ...updates, updated_at: new Date().toISOString() } : q
-      );
-      localStorage.setItem('optiflow_quotes', JSON.stringify(updated));
-      setQuotes(updated);
-      toast.success('Devis mis à jour (mode démo)');
-      return true;
-    }
-
     try {
       const dbUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
       if (updates.stops) dbUpdates.stops = updates.stops as Json;
@@ -228,17 +173,9 @@ export function useQuotes() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteQuote = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demoQuotes = getDemoQuotes();
-      localStorage.setItem('optiflow_quotes', JSON.stringify(demoQuotes.filter(q => q.id !== id)));
-      setQuotes(demoQuotes.filter(q => q.id !== id));
-      toast.success('Devis supprimé (mode démo)');
-      return true;
-    }
-
     try {
       const { error } = await supabase.from('quotes').delete().eq('id', id);
 
@@ -252,7 +189,7 @@ export function useQuotes() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const getQuotesByClient = useCallback((clientId: string): LocalQuote[] => {
     return quotes.filter(q => q.client_id === clientId);
@@ -260,14 +197,12 @@ export function useQuotes() {
 
   // Fetch license ID on mount
   useEffect(() => {
-    if (!isDemo) {
-      getUserLicenseId().then(setLicenseId);
-    }
-  }, [isDemo]);
+    getUserLicenseId().then(setLicenseId);
+  }, []);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`quotes_${licenseId}`)
@@ -345,7 +280,7 @@ export function useQuotes() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   // Initial fetch
   useEffect(() => {

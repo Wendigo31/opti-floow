@@ -22,42 +22,15 @@ async function getUserLicenseId(): Promise<string | null> {
   return data?.license_id || null;
 }
 
-// Check if demo mode is active
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-// Get demo trips from localStorage
-function getDemoTrips(): LocalTrip[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_trips') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 export function useTrips() {
   useLicense(); // Hook must be called for licensing context
   const [trips, setTrips] = useState<LocalTrip[]>([]);
   const [loading, setLoading] = useState(false);
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  
-  const isDemo = isDemoModeActive();
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
-    
-    if (isDemo) {
-      setTrips(getDemoTrips());
-      setLoading(false);
-      return;
-    }
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -111,25 +84,9 @@ export function useTrips() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo]);
+  }, []);
 
   const createTrip = useCallback(async (input: Omit<LocalTrip, 'id' | 'created_at' | 'updated_at'>): Promise<LocalTrip | null> => {
-    if (isDemo) {
-      const newTrip: LocalTrip = {
-        id: generateId(),
-        ...input,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
-      const demoTrips = getDemoTrips();
-      const updated = [newTrip, ...demoTrips];
-      localStorage.setItem('optiflow_trips', JSON.stringify(updated));
-      setTrips(updated);
-      toast.success('Trajet ajouté (mode démo)');
-      return newTrip;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -212,20 +169,9 @@ export function useTrips() {
       toast.error('Erreur lors de l\'enregistrement');
       return null;
     }
-  }, [isDemo]);
+  }, []);
 
   const updateTrip = useCallback(async (id: string, updates: Partial<LocalTrip>): Promise<boolean> => {
-    if (isDemo) {
-      const demoTrips = getDemoTrips();
-      const updated = demoTrips.map(t => 
-        t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
-      );
-      localStorage.setItem('optiflow_trips', JSON.stringify(updated));
-      setTrips(updated);
-      toast.success('Trajet mis à jour (mode démo)');
-      return true;
-    }
-
     try {
       const dbUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
       if (updates.stops) dbUpdates.stops = updates.stops as Json;
@@ -248,17 +194,9 @@ export function useTrips() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteTrip = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demoTrips = getDemoTrips();
-      localStorage.setItem('optiflow_trips', JSON.stringify(demoTrips.filter(t => t.id !== id)));
-      setTrips(demoTrips.filter(t => t.id !== id));
-      toast.success('Trajet supprimé (mode démo)');
-      return true;
-    }
-
     try {
       const { error } = await supabase.from('trips').delete().eq('id', id);
 
@@ -272,7 +210,7 @@ export function useTrips() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const getTripsByClient = useCallback((clientId: string): LocalTrip[] => {
     return trips.filter(t => t.client_id === clientId);
@@ -280,14 +218,12 @@ export function useTrips() {
 
   // Fetch license ID on mount
   useEffect(() => {
-    if (!isDemo) {
-      getUserLicenseId().then(setLicenseId);
-    }
-  }, [isDemo]);
+    getUserLicenseId().then(setLicenseId);
+  }, []);
 
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`trips_${licenseId}`)
@@ -385,7 +321,7 @@ export function useTrips() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   // Initial fetch
   useEffect(() => {

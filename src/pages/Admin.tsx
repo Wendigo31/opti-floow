@@ -93,7 +93,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense, PlanType } from '@/hooks/useLicense';
-import { useDemoMode } from '@/hooks/useDemoMode';
 import { useSireneLookup } from '@/hooks/useSireneLookup';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -166,7 +165,6 @@ const ADMIN_NAV = [
   { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Utilisateurs & données' },
   { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les accès' },
   { id: 'updates', label: 'Mises à jour', icon: RefreshCw, description: 'Versions PWA' },
-  { id: 'demo', label: 'Démo', icon: PlayCircle, description: 'Mode démonstration' },
 ] as const;
 
 type AdminTab = typeof ADMIN_NAV[number]['id'];
@@ -174,7 +172,6 @@ type AdminTab = typeof ADMIN_NAV[number]['id'];
 export default function Admin() {
   const navigate = useNavigate();
   const { isLicensed, isLoading, licenseData } = useLicense();
-  const { isActive: isDemoActive, currentSessionId, availableSessions, activateDemo, deactivateDemo, getCurrentSession } = useDemoMode();
   
   // Core state
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -765,10 +762,9 @@ export default function Admin() {
                         sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
                         sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
 
-                        // Clear license + offline cache + demo mode
+                        // Clear license + offline cache
                         localStorage.removeItem('optiflow-license');
                         localStorage.removeItem('optiflow-license-cache');
-                        localStorage.removeItem('optiflow_demo_mode');
 
                         // Clear auth session
                         await supabase.auth.signOut();
@@ -1115,73 +1111,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Demo Tab */}
-          {adminActiveTab === 'demo' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Mode Démonstration</h2>
-                <p className="text-sm text-muted-foreground">Activez une session de démo pour vos présentations</p>
-              </div>
-
-              {isDemoActive && getCurrentSession() && (
-                <Card className="border-amber-500/30 bg-amber-500/5">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
-                      <div>
-                        <p className="font-medium">Mode démo actif : {getCurrentSession()?.name}</p>
-                        <p className="text-sm text-muted-foreground">{getCurrentSession()?.description}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" onClick={() => { deactivateDemo(); navigate('/'); }}>
-                      <StopCircle className="w-4 h-4 mr-2" />
-                      Quitter
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-3">
-                {availableSessions.map((session) => (
-                  <Card key={session.id} className={cn(
-                    "transition-all",
-                    currentSessionId === session.id && "ring-2 ring-amber-500"
-                  )}>
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        {session.planType === 'enterprise' && <Crown className="w-5 h-5 text-amber-500" />}
-                        {session.planType === 'pro' && <Star className="w-5 h-5 text-blue-500" />}
-                        {session.planType === 'start' && <Sparkles className="w-5 h-5 text-emerald-500" />}
-                        <CardTitle className="text-base">{session.name}</CardTitle>
-                      </div>
-                      <CardDescription>{session.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1 text-xs text-muted-foreground mb-4">
-                        <p>• {session.drivers.length} conducteur(s)</p>
-                        <p>• {session.clients.length} client(s)</p>
-                        <p>• {session.trips.length} trajet(s)</p>
-                      </div>
-                      <Button
-                        className="w-full"
-                        variant={currentSessionId === session.id ? "outline" : "default"}
-                        onClick={() => {
-                          if (currentSessionId === session.id) {
-                            deactivateDemo();
-                          } else {
-                            activateDemo(session.planType);
-                            navigate('/');
-                          }
-                        }}
-                      >
-                        {currentSessionId === session.id ? 'Désactiver' : 'Activer'}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </main>
 

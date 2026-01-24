@@ -8,25 +8,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 const CACHE_KEY = 'optiflow_vehicles_cache';
 const CACHE_TIMESTAMP_KEY = 'optiflow_vehicles_cache_ts';
 
-// Check if demo mode is active
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-// Get demo vehicles from localStorage
-function getDemoVehicles(): Vehicle[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_vehicles') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 // Get cached vehicles for offline support
 function getCachedVehicles(): Vehicle[] {
   try {
@@ -67,7 +48,6 @@ export function useCloudVehicles() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isDemo = isDemoModeActive();
 
   // Track auth state
   useEffect(() => {
@@ -110,12 +90,6 @@ export function useCloudVehicles() {
   const fetchVehicles = useCallback(async (): Promise<void> => {
     setLoading(true);
 
-    if (isDemo) {
-      setVehicles(getDemoVehicles());
-      setLoading(false);
-      return;
-    }
-
     if (!authUserId) {
       setLoading(false);
       return;
@@ -156,18 +130,18 @@ export function useCloudVehicles() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, authUserId]);
+  }, [authUserId]);
 
   // Auto-fetch when authenticated
   useEffect(() => {
-    if (authUserId && !isDemo) {
+    if (authUserId) {
       fetchVehicles();
     }
-  }, [authUserId, isDemo, fetchVehicles]);
+  }, [authUserId, fetchVehicles]);
 
   // Realtime subscription
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`vehicles_${licenseId}`)
@@ -212,17 +186,9 @@ export function useCloudVehicles() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   const createVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
-    if (isDemo) {
-      const demoVehicles = getDemoVehicles();
-      localStorage.setItem('optiflow_vehicles', JSON.stringify([vehicle, ...demoVehicles]));
-      setVehicles([vehicle, ...demoVehicles]);
-      toast.success('Véhicule ajouté (mode démo)');
-      return true;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -263,18 +229,9 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [isDemo, vehicles]);
+  }, [vehicles]);
 
   const updateVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
-    if (isDemo) {
-      const demoVehicles = getDemoVehicles();
-      const updated = demoVehicles.map(v => v.id === vehicle.id ? vehicle : v);
-      localStorage.setItem('optiflow_vehicles', JSON.stringify(updated));
-      setVehicles(updated);
-      toast.success('Véhicule mis à jour (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -311,18 +268,9 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteVehicle = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demoVehicles = getDemoVehicles();
-      const updated = demoVehicles.filter(v => v.id !== id);
-      localStorage.setItem('optiflow_vehicles', JSON.stringify(updated));
-      setVehicles(updated);
-      toast.success('Véhicule supprimé (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -346,7 +294,7 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   return {
     vehicles,

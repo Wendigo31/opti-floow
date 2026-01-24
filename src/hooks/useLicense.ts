@@ -305,37 +305,11 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
 
 const LICENSE_STORAGE_KEY = 'optiflow-license';
 const LICENSE_CACHE_KEY = 'optiflow-license-cache';
-const DEMO_MODE_KEY = 'optiflow_demo_mode';
 const OFFLINE_VALIDITY_DAYS = 30;
 
 // Check if we're online
 const checkOnline = (): boolean => {
   return typeof navigator !== 'undefined' ? navigator.onLine : true;
-};
-
-// Check if demo mode is active
-const isDemoModeActive = (): boolean => {
-  try {
-    const demoState = JSON.parse(localStorage.getItem(DEMO_MODE_KEY) || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-};
-
-// Get demo plan type
-const getDemoPlanType = (): PlanType => {
-  try {
-    const demoState = JSON.parse(localStorage.getItem(DEMO_MODE_KEY) || '{}');
-    if (demoState.currentSession) {
-      if (demoState.currentSession.includes('start')) return 'start';
-      if (demoState.currentSession.includes('pro')) return 'pro';
-      if (demoState.currentSession.includes('enterprise')) return 'enterprise';
-    }
-    return 'start';
-  } catch {
-    return 'start';
-  }
 };
 
 export function useLicense(): UseLicenseReturn {
@@ -364,25 +338,6 @@ export function useLicense(): UseLicenseReturn {
       try {
         const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
         const cached = localStorage.getItem(LICENSE_CACHE_KEY);
-
-        // Demo mode should NOT override a real stored license.
-        // This prevents ending up in a Start demo plan after logging in as a real user.
-        if (isDemoModeActive() && !stored && !cached) {
-          const demoPlan = getDemoPlanType();
-          const demoLicenseData: LicenseData = {
-            code: 'DEMO-MODE',
-            email: 'demo@optiflow.app',
-            activatedAt: new Date().toISOString(),
-            planType: demoPlan,
-            firstName: 'Mode',
-            lastName: 'Démo',
-            companyName: `Démo ${demoPlan.toUpperCase()}`,
-          };
-          setLicenseData(demoLicenseData);
-          setIsLicensed(true);
-          setIsLoading(false);
-          return;
-        }
         
         if (!stored && !cached) {
           setIsLoading(false);
@@ -621,13 +576,6 @@ export function useLicense(): UseLicenseReturn {
 
   const validateLicense = useCallback(async (code: string, email: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // If a real login happens, disable demo mode so it cannot override the plan.
-      try {
-        localStorage.removeItem(DEMO_MODE_KEY);
-      } catch {
-        // ignore
-      }
-
       const { data: response, error } = await supabase.functions.invoke('validate-license', {
         body: { licenseCode: code, email, action: 'validate' },
       });

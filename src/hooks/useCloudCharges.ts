@@ -6,23 +6,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const CACHE_KEY = 'optiflow_charges_cache';
 
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-function getDemoCharges(): FixedCharge[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_charges') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 function getCachedCharges(): FixedCharge[] {
   try {
     return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
@@ -59,7 +42,6 @@ export function useCloudCharges() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isDemo = isDemoModeActive();
 
   useEffect(() => {
     let isMounted = true;
@@ -96,12 +78,6 @@ export function useCloudCharges() {
 
   const fetchCharges = useCallback(async (): Promise<void> => {
     setLoading(true);
-
-    if (isDemo) {
-      setCharges(getDemoCharges());
-      setLoading(false);
-      return;
-    }
 
     if (!authUserId) {
       setLoading(false);
@@ -141,16 +117,16 @@ export function useCloudCharges() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, authUserId]);
+  }, [authUserId]);
 
   useEffect(() => {
-    if (authUserId && !isDemo) {
+    if (authUserId) {
       fetchCharges();
     }
-  }, [authUserId, isDemo, fetchCharges]);
+  }, [authUserId, fetchCharges]);
 
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`charges_${licenseId}`)
@@ -191,17 +167,9 @@ export function useCloudCharges() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   const createCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoCharges();
-      localStorage.setItem('optiflow_charges', JSON.stringify([charge, ...demo]));
-      setCharges([charge, ...demo]);
-      toast.success('Charge ajoutée (mode démo)');
-      return true;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -236,18 +204,9 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [isDemo, charges]);
+  }, [charges]);
 
   const updateCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoCharges();
-      const updated = demo.map(c => c.id === charge.id ? charge : c);
-      localStorage.setItem('optiflow_charges', JSON.stringify(updated));
-      setCharges(updated);
-      toast.success('Charge mise à jour (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -279,18 +238,9 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoCharges();
-      const updated = demo.filter(c => c.id !== id);
-      localStorage.setItem('optiflow_charges', JSON.stringify(updated));
-      setCharges(updated);
-      toast.success('Charge supprimée (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -314,7 +264,7 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   return {
     charges,

@@ -7,31 +7,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
 
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-function getDemoDrivers(): Driver[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_drivers') || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function getDemoInterimDrivers(): Driver[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_interim_drivers') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 function getCachedCdiDrivers(): Driver[] {
   try {
     return JSON.parse(localStorage.getItem(CACHE_KEY_CDI) || '[]');
@@ -78,7 +53,6 @@ export function useCloudDrivers() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isDemo = isDemoModeActive();
 
   useEffect(() => {
     let isMounted = true;
@@ -116,13 +90,6 @@ export function useCloudDrivers() {
 
   const fetchDrivers = useCallback(async (): Promise<void> => {
     setLoading(true);
-
-    if (isDemo) {
-      setCdiDrivers(getDemoDrivers());
-      setInterimDrivers(getDemoInterimDrivers());
-      setLoading(false);
-      return;
-    }
 
     if (!authUserId) {
       setLoading(false);
@@ -179,16 +146,16 @@ export function useCloudDrivers() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, authUserId]);
+  }, [authUserId]);
 
   useEffect(() => {
-    if (authUserId && !isDemo) {
+    if (authUserId) {
       fetchDrivers();
     }
-  }, [authUserId, isDemo, fetchDrivers]);
+  }, [authUserId, fetchDrivers]);
 
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`drivers_${licenseId}`)
@@ -244,23 +211,9 @@ export function useCloudDrivers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo, cdiDrivers, interimDrivers]);
+  }, [licenseId, cdiDrivers, interimDrivers]);
 
   const createDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
-    if (isDemo) {
-      if (isInterim) {
-        const demo = getDemoInterimDrivers();
-        localStorage.setItem('optiflow_interim_drivers', JSON.stringify([driver, ...demo]));
-        setInterimDrivers([driver, ...demo]);
-      } else {
-        const demo = getDemoDrivers();
-        localStorage.setItem('optiflow_drivers', JSON.stringify([driver, ...demo]));
-        setCdiDrivers([driver, ...demo]);
-      }
-      toast.success('Conducteur ajouté (mode démo)');
-      return true;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -297,25 +250,9 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const updateDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
-    if (isDemo) {
-      if (isInterim) {
-        const demo = getDemoInterimDrivers();
-        const updated = demo.map(d => d.id === driver.id ? driver : d);
-        localStorage.setItem('optiflow_interim_drivers', JSON.stringify(updated));
-        setInterimDrivers(updated);
-      } else {
-        const demo = getDemoDrivers();
-        const updated = demo.map(d => d.id === driver.id ? driver : d);
-        localStorage.setItem('optiflow_drivers', JSON.stringify(updated));
-        setCdiDrivers(updated);
-      }
-      toast.success('Conducteur mis à jour (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -354,25 +291,9 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo, cdiDrivers, interimDrivers]);
+  }, [cdiDrivers, interimDrivers]);
 
   const deleteDriver = useCallback(async (id: string, isInterim: boolean = false): Promise<boolean> => {
-    if (isDemo) {
-      if (isInterim) {
-        const demo = getDemoInterimDrivers();
-        const updated = demo.filter(d => d.id !== id);
-        localStorage.setItem('optiflow_interim_drivers', JSON.stringify(updated));
-        setInterimDrivers(updated);
-      } else {
-        const demo = getDemoDrivers();
-        const updated = demo.filter(d => d.id !== id);
-        localStorage.setItem('optiflow_drivers', JSON.stringify(updated));
-        setCdiDrivers(updated);
-      }
-      toast.success('Conducteur supprimé (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -404,7 +325,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo, cdiDrivers, interimDrivers]);
+  }, [cdiDrivers, interimDrivers]);
 
   return {
     cdiDrivers,

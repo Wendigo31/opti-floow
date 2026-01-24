@@ -6,23 +6,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const CACHE_KEY = 'optiflow_trailers_cache';
 
-function isDemoModeActive(): boolean {
-  try {
-    const demoState = JSON.parse(localStorage.getItem('optiflow_demo_mode') || '{}');
-    return demoState.isActive === true;
-  } catch {
-    return false;
-  }
-}
-
-function getDemoTrailers(): Trailer[] {
-  try {
-    return JSON.parse(localStorage.getItem('optiflow_trailers') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 function getCachedTrailers(): Trailer[] {
   try {
     return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
@@ -59,7 +42,6 @@ export function useCloudTrailers() {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isDemo = isDemoModeActive();
 
   useEffect(() => {
     let isMounted = true;
@@ -96,12 +78,6 @@ export function useCloudTrailers() {
 
   const fetchTrailers = useCallback(async (): Promise<void> => {
     setLoading(true);
-
-    if (isDemo) {
-      setTrailers(getDemoTrailers());
-      setLoading(false);
-      return;
-    }
 
     if (!authUserId) {
       setLoading(false);
@@ -141,16 +117,16 @@ export function useCloudTrailers() {
     } finally {
       setLoading(false);
     }
-  }, [isDemo, authUserId]);
+  }, [authUserId]);
 
   useEffect(() => {
-    if (authUserId && !isDemo) {
+    if (authUserId) {
       fetchTrailers();
     }
-  }, [authUserId, isDemo, fetchTrailers]);
+  }, [authUserId, fetchTrailers]);
 
   useEffect(() => {
-    if (isDemo || !licenseId) return;
+    if (!licenseId) return;
 
     channelRef.current = supabase
       .channel(`trailers_${licenseId}`)
@@ -191,17 +167,9 @@ export function useCloudTrailers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, isDemo]);
+  }, [licenseId]);
 
   const createTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoTrailers();
-      localStorage.setItem('optiflow_trailers', JSON.stringify([trailer, ...demo]));
-      setTrailers([trailer, ...demo]);
-      toast.success('Remorque ajoutée (mode démo)');
-      return true;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -239,18 +207,9 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [isDemo, trailers]);
+  }, [trailers]);
 
   const updateTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoTrailers();
-      const updated = demo.map(t => t.id === trailer.id ? trailer : t);
-      localStorage.setItem('optiflow_trailers', JSON.stringify(updated));
-      setTrailers(updated);
-      toast.success('Remorque mise à jour (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -285,18 +244,9 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   const deleteTrailer = useCallback(async (id: string): Promise<boolean> => {
-    if (isDemo) {
-      const demo = getDemoTrailers();
-      const updated = demo.filter(t => t.id !== id);
-      localStorage.setItem('optiflow_trailers', JSON.stringify(updated));
-      setTrailers(updated);
-      toast.success('Remorque supprimée (mode démo)');
-      return true;
-    }
-
     try {
       const currentLicenseId = await getUserLicenseId();
 
@@ -320,7 +270,7 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [isDemo]);
+  }, []);
 
   return {
     trailers,
