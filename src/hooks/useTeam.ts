@@ -46,7 +46,7 @@ export function useTeam(): UseTeamReturn {
   const isOwner = currentUserRole === 'owner' || currentUserRole === 'direction';
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner' || currentUserRole === 'direction' || currentUserRole === 'responsable';
   const isDirection = currentUserRole === 'direction' || currentUserRole === 'owner';
-  // canManageTeam depends on the actual plan type from DB, not from useLicense hook
+  // canManageTeam depends on the actual plan type
   const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
   const canManageTeam = isAdmin && hasMultiUsers;
 
