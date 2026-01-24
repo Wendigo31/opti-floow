@@ -10,6 +10,7 @@ interface UseTeamReturn {
   currentUserRole: TeamRole | null;
   isOwner: boolean;
   isAdmin: boolean;
+  isDirection: boolean;
   canManageTeam: boolean;
   maxUsers: number;
   currentUserCount: number;
@@ -36,8 +37,10 @@ export function useTeam(): UseTeamReturn {
   const pendingCount = pendingInvitations.filter(i => !i.accepted_at).length;
   const canAddMore = (currentUserCount + pendingCount) < maxUsers;
 
-  const isOwner = currentUserRole === 'owner';
-  const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner';
+  // Support both legacy (owner/admin) and new (direction/responsable) role names
+  const isOwner = currentUserRole === 'owner' || currentUserRole === 'direction';
+  const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner' || currentUserRole === 'direction' || currentUserRole === 'responsable';
+  const isDirection = currentUserRole === 'direction' || currentUserRole === 'owner';
   const canManageTeam = isAdmin && hasFeature('multi_users');
 
   // Fetch team data
@@ -316,6 +319,7 @@ export function useTeam(): UseTeamReturn {
     currentUserRole,
     isOwner,
     isAdmin,
+    isDirection,
     canManageTeam,
     maxUsers,
     currentUserCount,
