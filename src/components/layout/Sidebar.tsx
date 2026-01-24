@@ -16,7 +16,8 @@ import {
   PlayCircle,
   StopCircle,
   Settings,
-  EyeOff
+  EyeOff,
+  UsersRound
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -82,8 +83,9 @@ const navItems: NavItemConfig[] = [
   { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges' },
   { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
   
-  // Settings & Subscription
+  // Settings & Team
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
+  { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'enterprise' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing' },
 ];
 

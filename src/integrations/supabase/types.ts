@@ -450,6 +450,60 @@ export type Database = {
           },
         ]
       }
+      exploitation_metric_settings: {
+        Row: {
+          can_view_dashboard_financials: boolean | null
+          can_view_driver_cost: boolean | null
+          can_view_forecast: boolean | null
+          can_view_fuel_cost: boolean | null
+          can_view_margin: boolean | null
+          can_view_price_per_km: boolean | null
+          can_view_profit: boolean | null
+          can_view_revenue: boolean | null
+          can_view_structure_cost: boolean | null
+          can_view_toll_cost: boolean | null
+          can_view_total_cost: boolean | null
+          created_at: string
+          id: string
+          license_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_view_dashboard_financials?: boolean | null
+          can_view_driver_cost?: boolean | null
+          can_view_forecast?: boolean | null
+          can_view_fuel_cost?: boolean | null
+          can_view_margin?: boolean | null
+          can_view_price_per_km?: boolean | null
+          can_view_profit?: boolean | null
+          can_view_revenue?: boolean | null
+          can_view_structure_cost?: boolean | null
+          can_view_toll_cost?: boolean | null
+          can_view_total_cost?: boolean | null
+          created_at?: string
+          id?: string
+          license_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_view_dashboard_financials?: boolean | null
+          can_view_driver_cost?: boolean | null
+          can_view_forecast?: boolean | null
+          can_view_fuel_cost?: boolean | null
+          can_view_margin?: boolean | null
+          can_view_price_per_km?: boolean | null
+          can_view_profit?: boolean | null
+          can_view_revenue?: boolean | null
+          can_view_structure_cost?: boolean | null
+          can_view_toll_cost?: boolean | null
+          can_view_total_cost?: boolean | null
+          created_at?: string
+          id?: string
+          license_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       license_addons: {
         Row: {
           activated_at: string | null

@@ -45,11 +45,6 @@ export function useTeam(): UseTeamReturn {
 
   // Fetch team data
   const fetchTeam = useCallback(async () => {
-    if (!licenseData?.code) {
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError(null);
@@ -60,24 +55,29 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      // Get license ID from the licenses table
-      const { data: license } = await supabase
-        .from('licenses')
-        .select('id')
-        .eq('license_code', licenseData.code)
+      // Get license ID from the current user's company_users entry
+      const { data: currentUserEntry } = await supabase
+        .from('company_users')
+        .select('license_id, role')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
         .maybeSingle();
 
-      if (!license) {
-        setError('Licence non trouvée');
+      if (!currentUserEntry?.license_id) {
+        // User not in any company - not an error for users without team
+        setCurrentUserRole(null);
         setIsLoading(false);
         return;
       }
+
+      const licenseId = currentUserEntry.license_id;
+      setCurrentUserRole(currentUserEntry.role as TeamRole);
 
       // Fetch team members
       const { data: companyUsers, error: usersError } = await supabase
         .from('company_users')
         .select('*')
-        .eq('license_id', license.id)
+        .eq('license_id', licenseId)
         .order('created_at', { ascending: true });
 
       if (usersError) {
@@ -90,17 +90,13 @@ export function useTeam(): UseTeamReturn {
           isCurrentUser: cu.user_id === user.id,
         }));
         setMembers(teamMembers);
-
-        // Set current user role
-        const currentMember = teamMembers.find(m => m.user_id === user.id);
-        setCurrentUserRole(currentMember?.role || null);
       }
 
       // Fetch pending invitations
       const { data: invitations, error: invError } = await supabase
         .from('company_invitations')
         .select('*')
-        .eq('license_id', license.id)
+        .eq('license_id', licenseId)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
@@ -119,7 +115,7 @@ export function useTeam(): UseTeamReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [licenseData?.code]);
+  }, []);
 
   useEffect(() => {
     fetchTeam();
