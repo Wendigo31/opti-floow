@@ -362,8 +362,12 @@ export function useLicense(): UseLicenseReturn {
   useEffect(() => {
     const checkStoredLicense = async () => {
       try {
-        // Check if demo mode is active first
-        if (isDemoModeActive()) {
+        const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
+        const cached = localStorage.getItem(LICENSE_CACHE_KEY);
+
+        // Demo mode should NOT override a real stored license.
+        // This prevents ending up in a Start demo plan after logging in as a real user.
+        if (isDemoModeActive() && !stored && !cached) {
           const demoPlan = getDemoPlanType();
           const demoLicenseData: LicenseData = {
             code: 'DEMO-MODE',
@@ -379,9 +383,6 @@ export function useLicense(): UseLicenseReturn {
           setIsLoading(false);
           return;
         }
-
-        const stored = localStorage.getItem(LICENSE_STORAGE_KEY);
-        const cached = localStorage.getItem(LICENSE_CACHE_KEY);
         
         if (!stored && !cached) {
           setIsLoading(false);
@@ -620,6 +621,13 @@ export function useLicense(): UseLicenseReturn {
 
   const validateLicense = useCallback(async (code: string, email: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // If a real login happens, disable demo mode so it cannot override the plan.
+      try {
+        localStorage.removeItem(DEMO_MODE_KEY);
+      } catch {
+        // ignore
+      }
+
       const { data: response, error } = await supabase.functions.invoke('validate-license', {
         body: { licenseCode: code, email, action: 'validate' },
       });

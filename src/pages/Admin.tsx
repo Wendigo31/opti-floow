@@ -720,20 +720,72 @@ export default function Admin() {
         </ScrollArea>
 
         <div className="p-3 border-t">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => {
-              setIsAdminAuthenticated(false);
-              localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-              localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-              toast.success('Déconnexion réussie');
-              navigate('/');
-            }}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Déconnexion
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => {
+                setIsAdminAuthenticated(false);
+                // Admin session is stored in sessionStorage
+                sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+                sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                toast.success('Déconnexion admin réussie');
+                navigate('/');
+              }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Déconnexion admin
+            </Button>
+
+            {/* Logout ALL local sessions (admin + user license + auth) */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Déconnecter toutes les sessions
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Déconnecter toutes les sessions ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cela supprimera la session d'authentification, la session admin et le cache licence sur cet appareil, puis retournera à l'écran de connexion.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      try {
+                        // Clear admin session
+                        setIsAdminAuthenticated(false);
+                        sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+                        sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+
+                        // Clear license + offline cache + demo mode
+                        localStorage.removeItem('optiflow-license');
+                        localStorage.removeItem('optiflow-license-cache');
+                        localStorage.removeItem('optiflow_demo_mode');
+
+                        // Clear auth session
+                        await supabase.auth.signOut();
+                      } catch (e) {
+                        console.error('Logout all sessions failed:', e);
+                      } finally {
+                        // Hard reload ensures all in-memory state is reset
+                        window.location.href = '/';
+                      }
+                    }}
+                  >
+                    Confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </aside>
 
