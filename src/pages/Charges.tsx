@@ -10,12 +10,12 @@ import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
 import type { FixedCharge } from '@/types';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { toast } from 'sonner';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { ChargePresetsDialog } from '@/components/charges/ChargePresetsDialog';
 import { useTeam } from '@/hooks/useTeam';
+
 const categoryIcons = {
   insurance: Shield,
   leasing: Car,
@@ -39,7 +39,6 @@ const periodicityLabels = {
 };
 
 export default function Charges() {
-  const { t } = useLanguage();
   const { charges, setCharges, settings } = useApp();
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
   const { isDirection, isLoading: isTeamLoading } = useTeam();
@@ -365,9 +364,9 @@ export default function Charges() {
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t.charges.title}</h1>
+            <h1 className="text-3xl font-bold text-foreground">Gestion des charges fixes</h1>
             <p className="text-muted-foreground mt-1">
-              {t.charges.subtitle}
+              Configurez vos charges récurrentes
             </p>
           </div>
         </div>
@@ -392,9 +391,9 @@ export default function Charges() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.charges.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground">Gestion des charges fixes</h1>
           <p className="text-muted-foreground mt-1">
-            {t.charges.subtitle}
+            Configurez vos charges récurrentes
           </p>
         </div>
         {canModifyCharges && (

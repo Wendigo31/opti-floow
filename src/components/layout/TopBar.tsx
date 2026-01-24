@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase, UserCog } from 'lucide-react';
+import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { fr, enUS, es } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ContactDialog } from '@/components/ContactDialog';
-// Separator removed - not used
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,6 @@ import {
 import { useLicense, PlanType } from '@/hooks/useLicense';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { isTauri } from '@/hooks/useTauri';
-import { useLanguage } from '@/i18n/LanguageContext';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 import { useDataSyncActions } from '@/components/DataSyncProvider';
 import { useTeam } from '@/hooks/useTeam';
@@ -55,8 +53,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const [contactOpen, setContactOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
-  const { language, t } = useLanguage();
-  const { currentUserRole, isDirection } = useTeam();
+  const { currentUserRole } = useTeam();
   const { 
     forceSync, 
     isSyncing, 
@@ -99,9 +96,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const plan = planConfig[planType];
   const PlanIcon = plan.icon;
 
-  // Locale pour date-fns
-  const dateLocale = language === 'en' ? enUS : language === 'es' ? es : fr;
-
   // User display name
   const userName = licenseData?.firstName && licenseData?.lastName 
     ? `${licenseData.firstName} ${licenseData.lastName}`
@@ -109,14 +103,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
   // Blocage pour forfait Start hors-ligne
   const isStartOfflineBlocked = planType === 'start' && (!isOnline || isOffline);
-
-  const getLogoutText = () => {
-    if (language === 'en') return { title: 'Sign out', description: 'Are you sure you want to sign out? You will need to enter your license again.' };
-    if (language === 'es') return { title: 'Cerrar sesión', description: '¿Estás seguro de que quieres cerrar sesión? Deberás ingresar tu licencia nuevamente.' };
-    return { title: 'Déconnexion', description: 'Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez entrer à nouveau votre licence.' };
-  };
-
-  const logoutText = getLogoutText();
 
   return (
     <>
@@ -128,18 +114,14 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               <Lock className="w-10 h-10 text-destructive" />
             </div>
             <h2 className="text-2xl font-bold text-foreground">
-              {language === 'en' ? 'Offline mode unavailable' : language === 'es' ? 'Modo offline no disponible' : 'Mode hors-ligne indisponible'}
+              Mode hors-ligne indisponible
             </h2>
             <p className="text-muted-foreground max-w-md">
-              {language === 'en' 
-                ? 'The Start plan requires an internet connection to work. Upgrade to Pro to benefit from offline mode.' 
-                : language === 'es' 
-                ? 'El plan Start requiere conexión a internet. Pase al plan Pro para beneficiarse del modo offline.'
-                : 'Le forfait Start nécessite une connexion internet pour fonctionner. Passez au forfait Pro pour bénéficier du mode hors-ligne.'}
+              Le forfait Start nécessite une connexion internet pour fonctionner. Passez au forfait Pro pour bénéficier du mode hors-ligne.
             </p>
             <div className="flex items-center justify-center gap-2 text-destructive">
               <WifiOff className="w-5 h-5" />
-              <span>{t.network.offline}</span>
+              <span>Hors ligne</span>
             </div>
           </div>
         </div>
@@ -175,7 +157,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
             {(!isOnline || isOffline) && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/20 text-destructive animate-pulse">
                 <WifiOff className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">{t.network.offline}</span>
+                <span className="text-sm font-medium hidden sm:inline">Hors ligne</span>
               </div>
             )}
           </div>
@@ -189,7 +171,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                   variant={syncErrors.length > 0 ? "destructive" : "outline"}
                   size="sm"
                   className="gap-2"
-                  title={language === 'en' ? 'Sync status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
+                  title="État de synchronisation"
                 >
                   {isSyncing ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -201,11 +183,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     <RefreshCw className="w-4 h-4" />
                   )}
                   <span className="hidden sm:inline">
-                    {isSyncing 
-                      ? (language === 'en' ? 'Syncing...' : language === 'es' ? 'Sincronizando...' : 'Synchro...')
-                      : syncErrors.length > 0 
-                        ? (language === 'en' ? 'Errors' : language === 'es' ? 'Errores' : 'Erreurs')
-                        : 'Sync'}
+                    {isSyncing ? 'Synchro...' : syncErrors.length > 0 ? 'Erreurs' : 'Sync'}
                   </span>
                 </Button>
               </PopoverTrigger>
@@ -213,18 +191,16 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                 <div className="space-y-4">
                   {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">
-                      {language === 'en' ? 'Sync Status' : language === 'es' ? 'Estado de sincronización' : 'État de synchronisation'}
-                    </h4>
+                    <h4 className="font-medium text-sm">État de synchronisation</h4>
                     {isSyncing ? (
                       <Badge variant="secondary" className="text-xs gap-1">
                         <RefreshCw className="w-3 h-3 animate-spin" />
-                        {language === 'en' ? 'In progress' : language === 'es' ? 'En progreso' : 'En cours'}
+                        En cours
                       </Badge>
                     ) : syncErrors.length > 0 ? (
                       <Badge variant="destructive" className="text-xs gap-1">
                         <AlertTriangle className="w-3 h-3" />
-                        {language === 'en' ? 'Errors' : language === 'es' ? 'Errores' : 'Erreurs'}
+                        Erreurs
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
@@ -239,8 +215,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <Clock className="w-3 h-3" />
                       <span>
-                        {language === 'en' ? 'Last sync: ' : language === 'es' ? 'Última sincr.: ' : 'Dernière synchro : '}
-                        {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: dateLocale })}
+                        Dernière synchro : {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: fr })}
                       </span>
                     </div>
                   )}
@@ -269,12 +244,10 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                   {syncErrors.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-destructive">
-                          {language === 'en' ? 'Recent errors' : language === 'es' ? 'Errores recientes' : 'Erreurs récentes'}
-                        </span>
+                        <span className="text-xs font-medium text-destructive">Erreurs récentes</span>
                         <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearErrors}>
                           <X className="w-3 h-3 mr-1" />
-                          {language === 'en' ? 'Clear' : language === 'es' ? 'Borrar' : 'Effacer'}
+                          Effacer
                         </Button>
                       </div>
                       <div className="space-y-1 max-h-24 overflow-y-auto">
@@ -300,7 +273,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     disabled={isSyncing}
                   >
                     <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                    {language === 'en' ? 'Force full sync' : language === 'es' ? 'Forzar sincronización completa' : 'Forcer la synchronisation complète'}
+                    Forcer la synchronisation complète
                   </Button>
                 </div>
               </PopoverContent>
@@ -317,13 +290,13 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
             {/* Plan Badge */}
             <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
               <PlanIcon className="w-3.5 h-3.5" />
-              <span className="font-medium">{t.plans[planType as keyof typeof t.plans] || plan.label}</span>
+              <span className="font-medium">{plan.label}</span>
             </Badge>
 
             {/* Date */}
             <div className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
               <Calendar className="w-3.5 h-3.5" />
-              <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: dateLocale })}</span>
+              <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: fr })}</span>
             </div>
 
             {/* Contact button */}
@@ -334,7 +307,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               className="hidden lg:flex gap-2"
             >
               <Mail className="w-4 h-4" />
-              <span className="hidden xl:inline">{t.support.title}</span>
+              <span className="hidden xl:inline">Support</span>
             </Button>
 
             {/* Theme toggle */}
@@ -343,7 +316,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               size="icon"
               onClick={onToggleTheme}
               className="rounded-full"
-              title={isDark === null ? t.theme.auto : isDark ? t.theme.dark : t.theme.light}
+              title={isDark === null ? 'Auto' : isDark ? 'Sombre' : 'Clair'}
             >
               {isDark === null ? (
                 <div className="relative">
@@ -365,75 +338,51 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     variant="outline"
                     size="icon"
                     className="rounded-full"
-                    title={
-                      language === 'en'
-                        ? 'Clear cache / Force reload'
-                        : language === 'es'
-                          ? 'Vaciar caché / Forzar recarga'
-                          : 'Vider le cache / Forcer rechargement'
-                    }
+                    title="Vider le cache / Forcer rechargement"
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {language === 'en'
-                        ? 'Clear cache and reload?'
-                        : language === 'es'
-                          ? '¿Vaciar caché y recargar?'
-                          : 'Vider le cache et relancer ?'}
-                    </AlertDialogTitle>
+                    <AlertDialogTitle>Vider le cache et relancer ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {language === 'en'
-                        ? 'This clears any cached files/service worker and restarts the app to ensure the latest UI is loaded.'
-                        : language === 'es'
-                          ? 'Esto borra archivos en caché/service worker y reinicia la app para cargar la última interfaz.'
-                          : "Cela supprime les fichiers en cache / service worker puis relance l'app pour charger la dernière interface."}
+                      Cela supprimera les données en cache et forcera un rechargement complet de l'application.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>
-                      {language === 'en' ? 'Cancel' : language === 'es' ? 'Cancelar' : 'Annuler'}
-                    </AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void clearDesktopCacheAndReload()}>
-                      {language === 'en'
-                        ? 'Clear & reload'
-                        : language === 'es'
-                          ? 'Vaciar y recargar'
-                          : 'Vider & relancer'}
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearDesktopCacheAndReload}>
+                      Confirmer
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             )}
 
-            {/* Logout button */}
+            {/* Logout */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  title={logoutText.title}
+                  className="rounded-full text-muted-foreground hover:text-destructive"
+                  title="Déconnexion"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{logoutText.title}</AlertDialogTitle>
+                  <AlertDialogTitle>Déconnexion</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {logoutText.description}
+                    Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez entrer à nouveau votre licence.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    {language === 'en' ? 'Cancel' : language === 'es' ? 'Cancelar' : 'Annuler'}
-                  </AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { clearLicense(); window.location.reload(); }} className="bg-destructive hover:bg-destructive/90">
-                    {logoutText.title}
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => clearLicense()} className="bg-destructive hover:bg-destructive/90">
+                    Se déconnecter
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

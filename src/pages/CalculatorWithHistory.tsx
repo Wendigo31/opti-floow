@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Calculator as CalculatorIcon, History, Plus } from 'lucide-react';
+import { History, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Calculator from './Calculator';
 import TripHistory from './TripHistory';
-import { useLanguage } from '@/i18n/LanguageContext';
 
 export default function CalculatorWithHistory() {
-  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('calculator');
 
   return (

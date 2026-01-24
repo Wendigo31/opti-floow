@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
-import { useLanguage } from '@/i18n/LanguageContext';
 import AIAnalysisPanel from '@/components/dashboard/AIAnalysisPanel';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
@@ -33,7 +32,6 @@ interface StoredRoute {
 }
 
 export default function Dashboard() {
-  const { t } = useLanguage();
   const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
   useLicense(); // Hook called for licensing context
   const { clients } = useClients();
@@ -296,8 +294,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t.dashboard.title}</h1>
-          <p className="text-muted-foreground mt-1">{t.dashboard.subtitle}</p>
+          <h1 className="text-3xl font-bold text-foreground">Analyse & Graphiques</h1>
+          <p className="text-muted-foreground mt-1">Visualisez la rentabilité de vos trajets</p>
         </div>
         <div className="flex items-center gap-3">
           <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
