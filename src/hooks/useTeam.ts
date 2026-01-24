@@ -62,18 +62,10 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      // Get license ID and license info from the current user's company_users entry with a join
-      // This avoids the RLS issue on the licenses table
+      // Get license ID and role from company_users (simple query without join)
       const { data: currentUserEntry, error: userError } = await supabase
         .from('company_users')
-        .select(`
-          license_id, 
-          role,
-          licenses!company_users_license_id_fkey (
-            plan_type,
-            max_users
-          )
-        `)
+        .select('license_id, role')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -94,8 +86,17 @@ export function useTeam(): UseTeamReturn {
       setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
 
-      // Extract license info from the joined query
-      const licenseInfo = currentUserEntry.licenses as { plan_type: string | null; max_users: number | null } | null;
+      // Fetch license info separately
+      const { data: licenseInfo, error: licenseError } = await supabase
+        .from('licenses')
+        .select('plan_type, max_users')
+        .eq('id', currentLicenseId)
+        .maybeSingle();
+
+      if (licenseError) {
+        console.error('Error fetching license info:', licenseError);
+      }
+
       if (licenseInfo) {
         setLicensePlanType((licenseInfo.plan_type as PlanType) || 'start');
         setLicenseMaxUsers(licenseInfo.max_users || 1);

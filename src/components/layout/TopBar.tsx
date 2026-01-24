@@ -63,10 +63,11 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
     stats,
   } = useDataSyncActions();
 
-  // Normalize role for display
+  // Normalize role for display - use licenseData.userRole directly
   const getNormalizedRole = (): string | null => {
-    if (!currentUserRole) return null;
-    switch (currentUserRole.toLowerCase()) {
+    const role = licenseData?.userRole || currentUserRole;
+    if (!role) return null;
+    switch (role.toLowerCase()) {
       case 'direction':
       case 'owner':
         return 'direction';

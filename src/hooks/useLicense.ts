@@ -41,8 +41,9 @@ interface LicenseData {
   showLicenseInfo?: boolean;
   // Company user info
   companyUserId?: string | null;
+  // User role in the company
+  userRole?: string | null;
 }
-
 // Cached license with offline support
 interface CachedLicense {
   data: LicenseData;
