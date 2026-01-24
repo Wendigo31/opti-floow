@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTeam } from '@/hooks/useTeam';
-import { useLicense } from '@/hooks/useLicense';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +38,6 @@ import {
 
 export function TeamManagement() {
   const { toast } = useToast();
-  const { planType, hasFeature } = useLicense();
   const {
     members,
     pendingInvitations,
@@ -51,6 +49,7 @@ export function TeamManagement() {
     canAddMore,
     isLoading,
     error,
+    licensePlanType,
     inviteMember,
     updateMemberRole,
     removeMember,
@@ -183,8 +182,8 @@ export function TeamManagement() {
     }
   };
 
-  // Check if multi-users is available
-  if (!hasFeature('multi_users') && planType !== 'enterprise') {
+  // Check if multi-users is available (based on actual license plan type from DB)
+  if (licensePlanType !== 'pro' && licensePlanType !== 'enterprise') {
     return (
       <Card>
         <CardHeader>
@@ -199,11 +198,11 @@ export function TeamManagement() {
         <CardContent>
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Fonctionnalité Enterprise</h3>
+            <h3 className="text-lg font-medium mb-2">Fonctionnalité Pro / Enterprise</h3>
             <p className="text-muted-foreground mb-4">
-              La gestion d'équipe multi-utilisateurs est disponible avec le forfait Enterprise.
+              La gestion d'équipe multi-utilisateurs est disponible avec les forfaits Pro et Enterprise.
             </p>
-            <Badge variant="outline">Forfait actuel : {planType.toUpperCase()}</Badge>
+            <Badge variant="outline">Forfait actuel : {licensePlanType.toUpperCase()}</Badge>
           </div>
         </CardContent>
       </Card>

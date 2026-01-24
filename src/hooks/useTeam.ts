@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLicense } from '@/hooks/useLicense';
 import type { CompanyUser, CompanyInvitation, TeamRole, TeamMember } from '@/types/team';
 import { MAX_USERS_PER_PLAN } from '@/types/team';
+import type { PlanType } from '@/hooks/useLicense';
 
 interface UseTeamReturn {
   members: TeamMember[];
@@ -18,6 +18,7 @@ interface UseTeamReturn {
   isLoading: boolean;
   error: string | null;
   licenseId: string | null;
+  licensePlanType: PlanType; // The actual plan type from database
   inviteMember: (email: string, role: TeamRole, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   updateMemberRole: (memberId: string, role: TeamRole) => Promise<{ success: boolean; error?: string }>;
   removeMember: (memberId: string) => Promise<{ success: boolean; error?: string }>;
@@ -26,16 +27,17 @@ interface UseTeamReturn {
 }
 
 export function useTeam(): UseTeamReturn {
-  const { planType, hasFeature } = useLicense();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
   const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [licensePlanType, setLicensePlanType] = useState<PlanType>('start');
+  const [licenseMaxUsers, setLicenseMaxUsers] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
-  const maxUsers = MAX_USERS_PER_PLAN[planType] || 1;
+  const maxUsers = licenseMaxUsers || MAX_USERS_PER_PLAN[licensePlanType] || 1;
   const currentUserCount = members.filter(m => m.is_active).length;
   const pendingCount = pendingInvitations.filter(i => !i.accepted_at).length;
   const canAddMore = (currentUserCount + pendingCount) < maxUsers;
@@ -44,7 +46,9 @@ export function useTeam(): UseTeamReturn {
   const isOwner = currentUserRole === 'owner' || currentUserRole === 'direction';
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner' || currentUserRole === 'direction' || currentUserRole === 'responsable';
   const isDirection = currentUserRole === 'direction' || currentUserRole === 'owner';
-  const canManageTeam = isAdmin && hasFeature('multi_users');
+  // canManageTeam depends on the actual plan type from DB, not from useLicense hook
+  const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
+  const canManageTeam = isAdmin && hasMultiUsers;
 
   // Fetch team data
   const fetchTeam = useCallback(async () => {
@@ -58,10 +62,18 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      // Get license ID from the current user's company_users entry
+      // Get license ID and license info from the current user's company_users entry with a join
+      // This avoids the RLS issue on the licenses table
       const { data: currentUserEntry, error: userError } = await supabase
         .from('company_users')
-        .select('license_id, role')
+        .select(`
+          license_id, 
+          role,
+          licenses!company_users_license_id_fkey (
+            plan_type,
+            max_users
+          )
+        `)
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -81,6 +93,13 @@ export function useTeam(): UseTeamReturn {
       const currentLicenseId = currentUserEntry.license_id;
       setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
+
+      // Extract license info from the joined query
+      const licenseInfo = currentUserEntry.licenses as { plan_type: string | null; max_users: number | null } | null;
+      if (licenseInfo) {
+        setLicensePlanType((licenseInfo.plan_type as PlanType) || 'start');
+        setLicenseMaxUsers(licenseInfo.max_users || 1);
+      }
 
       // Fetch team members
       const { data: companyUsers, error: usersError } = await supabase
@@ -328,6 +347,7 @@ export function useTeam(): UseTeamReturn {
     isLoading,
     error,
     licenseId,
+    licensePlanType,
     inviteMember,
     updateMemberRole,
     removeMember,
