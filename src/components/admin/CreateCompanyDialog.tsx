@@ -442,7 +442,6 @@ export function CreateCompanyDialog({
                     <SelectContent>
                       <SelectItem value="start">Start</SelectItem>
                       <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="expert">Expert</SelectItem>
                       <SelectItem value="enterprise">Enterprise</SelectItem>
                     </SelectContent>
                   </Select>
