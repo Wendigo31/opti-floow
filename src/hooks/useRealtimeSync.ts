@@ -26,6 +26,17 @@ export function useRealtimeSync({
   enabled = true,
 }: UseRealtimeSyncOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  
+  // Use refs for callbacks to prevent subscription churn
+  const onInsertRef = useRef(onInsert);
+  const onUpdateRef = useRef(onUpdate);
+  const onDeleteRef = useRef(onDelete);
+  
+  useEffect(() => {
+    onInsertRef.current = onInsert;
+    onUpdateRef.current = onUpdate;
+    onDeleteRef.current = onDelete;
+  });
 
   useEffect(() => {
     // Only subscribe if we have a license_id (company member) and enabled
@@ -49,7 +60,7 @@ export function useRealtimeSync({
         },
         (payload) => {
           console.log(`[Realtime] ${table} INSERT:`, payload);
-          onInsert?.(payload);
+          onInsertRef.current?.(payload);
         }
       )
       .on(
@@ -62,7 +73,7 @@ export function useRealtimeSync({
         },
         (payload) => {
           console.log(`[Realtime] ${table} UPDATE:`, payload);
-          onUpdate?.(payload);
+          onUpdateRef.current?.(payload);
         }
       )
       .on(
@@ -75,7 +86,7 @@ export function useRealtimeSync({
         },
         (payload) => {
           console.log(`[Realtime] ${table} DELETE:`, payload);
-          onDelete?.(payload);
+          onDeleteRef.current?.(payload);
         }
       )
       .subscribe((status) => {
@@ -89,7 +100,7 @@ export function useRealtimeSync({
         channelRef.current = null;
       }
     };
-  }, [table, licenseId, enabled, onInsert, onUpdate, onDelete]);
+  }, [table, licenseId, enabled]); // Remove callback deps - use refs
 
   return channelRef.current;
 }
