@@ -288,6 +288,47 @@ export type Database = {
           },
         ]
       }
+      company_config: {
+        Row: {
+          config_data: Json
+          config_type: string
+          created_at: string
+          id: string
+          license_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          config_data?: Json
+          config_type: string
+          created_at?: string
+          id?: string
+          license_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          config_data?: Json
+          config_type?: string
+          created_at?: string
+          id?: string
+          license_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_config_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_invitations: {
         Row: {
           accepted_at: string | null
@@ -387,6 +428,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_settings_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_sync_events: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          license_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          license_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          license_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_sync_events_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
