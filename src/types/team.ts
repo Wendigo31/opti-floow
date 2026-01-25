@@ -1,6 +1,6 @@
 // Team/Company Users Types
-// Supports both legacy roles (owner/admin/member) and new roles (direction/responsable/exploitation)
-export type TeamRole = 'owner' | 'admin' | 'member' | 'direction' | 'responsable' | 'exploitation';
+// Only 3 roles: direction, exploitation, membre
+export type TeamRole = 'direction' | 'exploitation' | 'membre';
 
 export interface CompanyUser {
   id: string;
@@ -34,21 +34,15 @@ export interface TeamMember extends CompanyUser {
 }
 
 export const ROLE_LABELS: Record<TeamRole, string> = {
-  owner: 'Propriétaire',
-  admin: 'Administrateur',
-  member: 'Membre',
   direction: 'Direction',
-  responsable: 'Responsable',
   exploitation: 'Exploitation',
+  membre: 'Membre',
 };
 
 export const ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
-  owner: 'Accès complet, gestion de l\'équipe et de la licence',
-  admin: 'Peut inviter des membres et gérer les données',
-  member: 'Accès aux données partagées de l\'entreprise',
   direction: 'Accès complet, gestion de l\'équipe, des charges et de la licence',
-  responsable: 'Peut inviter des membres et gérer les données partagées',
-  exploitation: 'Accès aux données partagées de l\'entreprise',
+  exploitation: 'Accès aux données partagées et aux calculs de tournées',
+  membre: 'Accès limité aux données partagées de l\'entreprise',
 };
 
 // Maximum users per plan

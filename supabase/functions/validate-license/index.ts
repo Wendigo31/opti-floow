@@ -346,8 +346,8 @@ const logAdminAction = async (
   }
 };
 
-// Map legacy roles to new simplified roles
-const mapToValidRole = (role: string | null | undefined): 'direction' | 'responsable' | 'exploitation' => {
+// Map legacy roles to new simplified roles: direction, exploitation, membre
+const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploitation' | 'membre' => {
   const normalizedRole = (role || '').toLowerCase().trim();
   switch (normalizedRole) {
     case 'owner':
@@ -355,11 +355,12 @@ const mapToValidRole = (role: string | null | undefined): 'direction' | 'respons
       return 'direction';
     case 'admin':
     case 'responsable':
-      return 'responsable';
-    case 'member':
     case 'exploitation':
-    default:
       return 'exploitation';
+    case 'member':
+    case 'membre':
+    default:
+      return 'membre';
   }
 };
 
