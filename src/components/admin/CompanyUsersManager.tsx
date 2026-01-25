@@ -164,6 +164,13 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         lastValidated: now.toISOString(),
         expiresAt: expiresAt.toISOString(),
       }));
+
+      // Notify any in-memory listeners (same tab) that the license has changed.
+      try {
+        window.dispatchEvent(new CustomEvent('optiflow:license-updated', { detail: licenseData }));
+      } catch {
+        // noop
+      }
       
       toast({
         title: 'Connexion réussie',

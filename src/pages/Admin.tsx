@@ -582,6 +582,14 @@ export default function Admin() {
         expiresAt: expiresAt.toISOString(),
       }));
 
+      // Notify any in-memory listeners (same tab) that the license has changed.
+      // This prevents some screens from still showing a stale plan until a full reload.
+      try {
+        window.dispatchEvent(new CustomEvent('optiflow:license-updated', { detail: licenseData }));
+      } catch {
+        // noop
+      }
+
       toast.success(`Connexion en tant que ${license.email}`);
       window.location.href = '/';
     } catch (error) {

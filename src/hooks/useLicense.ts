@@ -358,6 +358,20 @@ export function useLicense(): UseLicenseReturn {
     return () => window.removeEventListener(LICENSE_EVENT, handler);
   }, []);
 
+  // Keep license state in sync across browser tabs/windows.
+  // Note: the native 'storage' event only fires in *other* documents (not the one doing the write).
+  useEffect(() => {
+    const handleStorage = (evt: StorageEvent) => {
+      if (evt.key !== LICENSE_STORAGE_KEY && evt.key !== LICENSE_CACHE_KEY) return;
+      const next = safeReadStoredLicense();
+      setLicenseData(next);
+      setIsLicensed(!!next);
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
