@@ -81,7 +81,7 @@ export function UserPermissionsManager() {
 
   // Filter out direction users - they have full access
   const editableMembers = members.filter(m => 
-    m.role !== 'direction' && m.role !== 'owner' && !m.isCurrentUser
+    m.role !== 'direction' && !m.isCurrentUser
   );
 
   // Fetch existing overrides

@@ -58,16 +58,16 @@ export function TeamManagement() {
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteDisplayName, setInviteDisplayName] = useState('');
-  const [inviteRole, setInviteRole] = useState<TeamRole>('member');
+  const [inviteRole, setInviteRole] = useState<TeamRole>('membre');
   const [isInviting, setIsInviting] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [invitationToCancel, setInvitationToCancel] = useState<string | null>(null);
 
   const getRoleIcon = (role: TeamRole) => {
     switch (role) {
-      case 'owner':
+      case 'direction':
         return <Crown className="h-4 w-4 text-amber-500" />;
-      case 'admin':
+      case 'exploitation':
         return <Shield className="h-4 w-4 text-blue-500" />;
       default:
         return <User className="h-4 w-4 text-muted-foreground" />;
@@ -76,9 +76,9 @@ export function TeamManagement() {
 
   const getRoleBadgeVariant = (role: TeamRole) => {
     switch (role) {
-      case 'owner':
+      case 'direction':
         return 'default';
-      case 'admin':
+      case 'exploitation':
         return 'secondary';
       default:
         return 'outline';
@@ -115,7 +115,7 @@ export function TeamManagement() {
       });
       setInviteEmail('');
       setInviteDisplayName('');
-      setInviteRole('member');
+      setInviteRole('membre');
     } else {
       toast({
         title: 'Erreur',
@@ -301,8 +301,9 @@ export function TeamManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="member">Membre</SelectItem>
-                      <SelectItem value="admin">Administrateur</SelectItem>
+                      <SelectItem value="membre">Membre</SelectItem>
+                      <SelectItem value="exploitation">Exploitation</SelectItem>
+                      <SelectItem value="direction">Direction</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -368,7 +369,7 @@ export function TeamManagement() {
                       {getRoleIcon(member.role)}
                       {ROLE_LABELS[member.role]}
                     </Badge>
-                    {canManageTeam && member.role !== 'owner' && !member.isCurrentUser && (
+                    {canManageTeam && member.role !== 'direction' && !member.isCurrentUser && (
                       <div className="flex items-center gap-2">
                         <Select
                           value={member.role}
@@ -378,8 +379,8 @@ export function TeamManagement() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="member">Membre</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="membre">Membre</SelectItem>
+                            <SelectItem value="exploitation">Exploitation</SelectItem>
                           </SelectContent>
                         </Select>
                         {isOwner && (

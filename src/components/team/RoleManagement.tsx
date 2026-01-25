@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { TeamRole } from '@/types/team';
 
-const SIMPLE_ROLES = ['exploitation', 'member'] as const;
+const SIMPLE_ROLES = ['exploitation', 'membre'] as const;
 type SimpleRole = typeof SIMPLE_ROLES[number];
 
 const ROLE_CONFIG: Record<SimpleRole, { 
@@ -34,7 +34,7 @@ const ROLE_CONFIG: Record<SimpleRole, {
     icon: Truck,
     color: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
   },
-  member: {
+  membre: {
     label: 'Membre',
     description: 'Gère véhicules, conducteurs et clients sans données financières',
     icon: User,
@@ -76,14 +76,11 @@ export function RoleManagement() {
   const getSimpleRole = (role: TeamRole): SimpleRole | 'direction' => {
     switch (role) {
       case 'direction':
-      case 'owner':
         return 'direction';
       case 'exploitation':
-      case 'responsable':
-      case 'admin':
         return 'exploitation';
       default:
-        return 'member';
+        return 'membre';
     }
   };
 

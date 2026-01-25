@@ -47,13 +47,13 @@ export function useTeam(): UseTeamReturn {
   const pendingCount = pendingInvitations.filter(i => !i.accepted_at).length;
   const canAddMore = (currentUserCount + pendingCount) < maxUsers;
 
-  // Support both legacy (owner/admin) and new (direction/responsable) role names
-  const isOwner = currentUserRole === 'owner' || currentUserRole === 'direction';
-  const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner' || currentUserRole === 'direction' || currentUserRole === 'responsable';
-  const isDirection = currentUserRole === 'direction' || currentUserRole === 'owner';
+  // Map roles - direction is the admin level
+  const isOwner = currentUserRole === 'direction';
+  const isAdmin = currentUserRole === 'direction';
+  const isDirection = currentUserRole === 'direction';
   // canManageTeam depends on the actual plan type
   const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
-  const canManageTeam = isAdmin && hasMultiUsers;
+  const canManageTeam = isDirection && hasMultiUsers;
 
   // Fetch team data
   const fetchTeam = useCallback(async () => {
@@ -151,8 +151,8 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: `Limite de ${maxUsers} utilisateur(s) atteinte pour votre forfait` };
     }
 
-    if (role === 'owner' || role === 'direction') {
-      return { success: false, error: 'Impossible d\'inviter un membre avec ce rôle' };
+    if (role === 'direction') {
+      return { success: false, error: 'Impossible d\'inviter un membre avec le rôle Direction' };
     }
 
     if (!licenseId) {
@@ -234,8 +234,8 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: 'Vous n\'avez pas les permissions' };
     }
 
-    if (role === 'owner') {
-      return { success: false, error: 'Impossible de définir comme propriétaire' };
+    if (role === 'direction') {
+      return { success: false, error: 'Impossible de définir comme Direction' };
     }
 
     try {
@@ -244,8 +244,8 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Membre non trouvé' };
       }
 
-      if (member.role === 'owner' || member.role === 'direction') {
-        return { success: false, error: 'Impossible de modifier le rôle de la direction' };
+      if (member.role === 'direction') {
+        return { success: false, error: 'Impossible de modifier le rôle de la Direction' };
       }
 
       const { error: updateError } = await supabase
@@ -277,8 +277,8 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Membre non trouvé' };
       }
 
-      if (member.role === 'owner' || member.role === 'direction') {
-        return { success: false, error: 'Impossible de supprimer la direction' };
+      if (member.role === 'direction') {
+        return { success: false, error: 'Impossible de supprimer la Direction' };
       }
 
       const { error: deleteError } = await supabase
