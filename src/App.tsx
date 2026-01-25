@@ -67,6 +67,60 @@ function RealtimeNotificationsWrapper({ children }: { children: React.ReactNode 
   return <>{children}</>;
 }
 
+// Loading screen component - extracted to avoid hook issues
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">Vérification de la licence...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main app content - only rendered when licensed
+function LicensedAppContent() {
+  return (
+    <DataSyncProvider>
+      <RealtimeNotificationsWrapper>
+        <MainLayout>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/calculator" element={<CalculatorWithHistory />} />
+            <Route path="/itinerary" element={<Itinerary />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/forecast" element={<Forecast />} />
+            <Route path="/history" element={<CalculatorWithHistory />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/drivers" element={<Drivers />} />
+            <Route path="/vehicles" element={<Vehicles />} />
+            <Route path="/charges" element={<Charges />} />
+            <Route path="/pricing" element={<Pricing />} />
+            
+            <Route path="/ai-analysis" element={<AIAnalysis />} />
+            <Route path="/vehicle-reports" element={<VehicleReports />} />
+            <Route path="/tours" element={<Tours />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/my-restrictions" element={<MyRestrictions />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </MainLayout>
+      </RealtimeNotificationsWrapper>
+    </DataSyncProvider>
+  );
+}
+
+// Admin route content
+function AdminContent() {
+  return (
+    <Routes>
+      <Route path="/admin" element={<Admin />} />
+    </Routes>
+  );
+}
+
 function AppRoutes() {
   const { isLicensed, isLoading } = useLicense();
   const location = useLocation();
@@ -74,65 +128,18 @@ function AppRoutes() {
   // Permettre l'accès à /admin (y compris /admin/...) même sans licence
   const isAdminRoute = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
 
-  if (isLoading && !isAdminRoute) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Vérification de la licence...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Si on va vers /admin, on affiche directement la page admin sans MainLayout mais avec AppProvider
-  if (isAdminRoute) {
-    return (
-      <AppProvider>
-        <Routes>
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
-      </AppProvider>
-    );
-  }
-
-  if (!isLicensed) {
-    return (
-      <AppProvider>
-        <Activation />
-      </AppProvider>
-    );
-  }
-
+  // Wrap everything in AppProvider to ensure stable hook tree
   return (
     <AppProvider>
-      <DataSyncProvider>
-        <RealtimeNotificationsWrapper>
-          <MainLayout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/calculator" element={<CalculatorWithHistory />} />
-              <Route path="/itinerary" element={<Itinerary />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/forecast" element={<Forecast />} />
-              <Route path="/history" element={<CalculatorWithHistory />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/drivers" element={<Drivers />} />
-              <Route path="/vehicles" element={<Vehicles />} />
-              <Route path="/charges" element={<Charges />} />
-              <Route path="/pricing" element={<Pricing />} />
-              
-              <Route path="/ai-analysis" element={<AIAnalysis />} />
-              <Route path="/vehicle-reports" element={<VehicleReports />} />
-              <Route path="/tours" element={<Tours />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/my-restrictions" element={<MyRestrictions />} />
-              <Route path="/team" element={<Team />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </MainLayout>
-        </RealtimeNotificationsWrapper>
-      </DataSyncProvider>
+      {isAdminRoute ? (
+        <AdminContent />
+      ) : isLoading ? (
+        <LoadingScreen />
+      ) : !isLicensed ? (
+        <Activation />
+      ) : (
+        <LicensedAppContent />
+      )}
     </AppProvider>
   );
 }
