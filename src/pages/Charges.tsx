@@ -378,8 +378,7 @@ export default function Charges() {
           <h3 className="text-xl font-semibold text-foreground mb-2">Accès restreint</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
             Les charges fixes sont réservées aux utilisateurs avec le rôle <span className="font-medium text-foreground">Direction</span>.
-            <br />
-            Contactez votre responsable si vous avez besoin d'accéder à ces informations.
+            Contactez la direction de votre entreprise si vous avez besoin d'accéder à ces informations.
           </p>
         </div>
       </div>

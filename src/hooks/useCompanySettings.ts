@@ -68,7 +68,7 @@ export function useCompanySettings() {
             .eq('is_active', true)
             .maybeSingle();
 
-          setCanEdit(['owner', 'admin', 'direction', 'responsable'].includes(companyUser?.role || ''));
+          setCanEdit(['owner', 'admin', 'direction', 'exploitation'].includes(companyUser?.role || ''));
         } else {
           setCanEdit(true); // Personal settings, user can always edit
         }
