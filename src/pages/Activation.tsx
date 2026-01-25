@@ -167,7 +167,7 @@ export default function Activation() {
                     <p className="font-medium text-foreground">Où trouver mon identifiant société ?</p>
                     <p className="text-muted-foreground">
                       Votre identifiant société vous a été communiqué par votre administrateur. 
-                      Si vous ne l'avez pas, contactez votre responsable.
+                      Si vous ne l'avez pas, contactez la direction de votre entreprise.
                     </p>
                   </div>
                   <div className="space-y-2">

@@ -354,7 +354,6 @@ const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploit
     case 'direction':
       return 'direction';
     case 'admin':
-    case 'responsable':
     case 'exploitation':
       return 'exploitation';
     case 'member':

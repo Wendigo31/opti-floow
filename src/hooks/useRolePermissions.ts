@@ -117,12 +117,10 @@ function normalizeRole(role: string | null): UserRole {
     case 'owner':
       return 'direction';
     case 'exploitation':
-    case 'responsable':
     case 'admin':
       return 'exploitation';
     case 'membre':
     case 'member':
-      return 'membre';
     default:
       return 'membre'; // Default to lowest permission level
   }

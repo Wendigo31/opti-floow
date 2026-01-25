@@ -72,12 +72,10 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
       case 'owner':
         return 'direction';
       case 'exploitation':
-      case 'responsable':
       case 'admin':
         return 'exploitation';
       case 'membre':
       case 'member':
-        return 'membre';
       default:
         return 'membre';
     }

@@ -49,58 +49,118 @@ export function useUserPreferences() {
   const [userId, setUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
-  // Fetch preferences on mount
+  // Reset state when user changes
+  const resetState = useCallback(() => {
+    setPreferences(null);
+    setLoading(true);
+    setUserId(null);
+    currentUserIdRef.current = null;
+    
+    // Clear any pending saves
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    // Cleanup realtime channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+  }, []);
+
+  // Fetch preferences for current user
+  const fetchPreferences = useCallback(async (authUserId: string) => {
+    // Skip if we already have this user's data
+    if (currentUserIdRef.current === authUserId && preferences) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('[UserPreferences] Fetching for user:', authUserId);
+    setLoading(true);
+    currentUserIdRef.current = authUserId;
+    setUserId(authUserId);
+
+    try {
+      const { data, error } = await getPreferencesTable()
+        .select('*')
+        .eq('user_id', authUserId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        console.log('[UserPreferences] Found existing preferences');
+        setPreferences(data as UserPreferences);
+      } else {
+        // Create default preferences for new user
+        console.log('[UserPreferences] Creating default preferences for new user');
+        const { data: newPrefs, error: createError } = await getPreferencesTable()
+          .insert({
+            user_id: authUserId,
+            ...DEFAULT_PREFERENCES,
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setPreferences(newPrefs as UserPreferences);
+      }
+    } catch (error) {
+      console.error('[useUserPreferences] Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [preferences]);
+
+  // Listen for auth state changes to detect user switching
   useEffect(() => {
     let isMounted = true;
 
-    const init = async () => {
+    // Initial fetch
+    const initFetch = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!isMounted) return;
 
-      if (!user) {
+      if (user) {
+        await fetchPreferences(user.id);
+      } else {
+        resetState();
         setLoading(false);
-        return;
-      }
-
-      setUserId(user.id);
-
-      try {
-        const { data, error } = await getPreferencesTable()
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data) {
-          setPreferences(data as UserPreferences);
-        } else {
-          // Create default preferences
-          const { data: newPrefs, error: createError } = await getPreferencesTable()
-            .insert({
-              user_id: user.id,
-              ...DEFAULT_PREFERENCES,
-            })
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          setPreferences(newPrefs as UserPreferences);
-        }
-      } catch (error) {
-        console.error('[useUserPreferences] Error:', error);
-      } finally {
-        if (isMounted) setLoading(false);
       }
     };
 
-    void init();
+    void initFetch();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      console.log('[UserPreferences] Auth state changed:', event);
+
+      if (event === 'SIGNED_OUT') {
+        resetState();
+        setLoading(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          // Check if user has actually changed
+          if (currentUserIdRef.current !== session.user.id) {
+            console.log('[UserPreferences] User changed, resetting state');
+            resetState();
+            await fetchPreferences(session.user.id);
+          }
+        }
+      }
+    });
 
     return () => {
       isMounted = false;
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchPreferences, resetState]);
 
   // Setup realtime subscription for cross-device sync
   useEffect(() => {

@@ -48,13 +48,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-// New simplified roles - all have the same rights
-type UserRole = 'direction' | 'responsable' | 'exploitation';
+// Simplified roles - direction has full access, exploitation is manager, membre is staff
+type UserRole = 'direction' | 'exploitation' | 'membre';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   direction: 'Direction',
-  responsable: 'Responsable', 
   exploitation: 'Exploitation',
+  membre: 'Membre',
 };
 
 interface CompanyUser {
@@ -442,15 +442,18 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
       case 'owner':
       case 'direction': return 'direction';
       case 'admin':
-      case 'responsable': return 'responsable';
-      default: return 'exploitation';
+      case 'responsable':
+      case 'exploitation': return 'exploitation';
+      case 'member':
+      case 'membre':
+      default: return 'membre';
     }
   };
 
   const getRoleIcon = (role: UserRole) => {
     switch (role) {
       case 'direction': return <Crown className="h-4 w-4 text-amber-500" />;
-      case 'responsable': return <Shield className="h-4 w-4 text-blue-500" />;
+      case 'exploitation': return <Shield className="h-4 w-4 text-blue-500" />;
       default: return <User className="h-4 w-4 text-emerald-500" />;
     }
   };
@@ -458,7 +461,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" => {
     switch (role) {
       case 'direction': return 'default';
-      case 'responsable': return 'secondary';
+      case 'exploitation': return 'secondary';
       default: return 'outline';
     }
   };
@@ -670,8 +673,8 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="membre">Membre</SelectItem>
                         <SelectItem value="exploitation">Exploitation</SelectItem>
-                        <SelectItem value="responsable">Responsable</SelectItem>
                         <SelectItem value="direction">Direction</SelectItem>
                       </SelectContent>
                     </Select>
@@ -747,13 +750,13 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="membre">Membre</SelectItem>
                   <SelectItem value="exploitation">Exploitation</SelectItem>
-                  <SelectItem value="responsable">Responsable</SelectItem>
                   <SelectItem value="direction">Direction</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Tous les rôles ont les mêmes droits d'accès
+                Direction: accès total • Exploitation: gestion opérationnelle • Membre: accès restreint
               </p>
             </div>
           </div>
