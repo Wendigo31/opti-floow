@@ -61,7 +61,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     limits: {
       maxVehicles: 2,
       maxDrivers: 2,
-      maxClients: 15,
+      maxClients: 5,
       maxSavedTours: 0, // Disponible en add-on
       maxDailyCharges: 10,
       maxMonthlyCharges: 10,
@@ -88,10 +88,10 @@ export const PRICING_PLANS: PricingPlan[] = [
     icon: 'Rocket',
     popular: true,
     limits: {
-      maxVehicles: 15,
-      maxDrivers: 15,
-      maxClients: 100,
-      maxSavedTours: 200,
+      maxVehicles: 10,
+      maxDrivers: 5,
+      maxClients: 20,
+      maxSavedTours: 5,
       maxDailyCharges: 50,
       maxMonthlyCharges: 50,
       maxYearlyCharges: 25,

@@ -11,20 +11,20 @@ const PLAN_LIMITS: Record<PlanType, {
   maxVehicles: number;
 }> = {
   start: {
-    maxDrivers: 1,
-    maxClients: 3,
-    maxDailyCharges: 5,
-    maxMonthlyCharges: 5,
-    maxYearlyCharges: 1,
-    maxVehicles: 3,
+    maxDrivers: 2,
+    maxClients: 5,
+    maxDailyCharges: 10,
+    maxMonthlyCharges: 10,
+    maxYearlyCharges: 5,
+    maxVehicles: 2,
   },
   pro: {
-    maxDrivers: 10,
-    maxClients: 50,
-    maxDailyCharges: 20,
-    maxMonthlyCharges: 20,
-    maxYearlyCharges: 10,
-    maxVehicles: 30,
+    maxDrivers: 5,
+    maxClients: 20,
+    maxDailyCharges: 50,
+    maxMonthlyCharges: 50,
+    maxYearlyCharges: 25,
+    maxVehicles: 10,
   },
   enterprise: {
     maxDrivers: Infinity,
