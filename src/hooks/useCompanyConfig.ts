@@ -157,7 +157,12 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
     fetchConfig();
   }, [fetchConfig]);
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates - use ref to avoid version dependency loop
+  const versionRef = useRef(version);
+  useEffect(() => {
+    versionRef.current = version;
+  }, [version]);
+
   useEffect(() => {
     if (!licenseIdRef.current) return;
 
@@ -175,7 +180,7 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
           if (payload.new && (payload.new as CompanyConfigRow).config_type === configType) {
             const newRow = payload.new as CompanyConfigRow;
             // Only update if version is newer (avoid loops)
-            if (newRow.version > version) {
+            if (newRow.version > versionRef.current) {
               setConfig(newRow.config_data as T);
               setVersion(newRow.version);
               configIdRef.current = newRow.id;
@@ -188,7 +193,7 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [configType, version]);
+  }, [configType]); // Remove version from deps - use ref instead
 
   // Re-fetch when license changes
   useEffect(() => {

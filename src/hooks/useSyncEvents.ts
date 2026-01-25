@@ -29,7 +29,7 @@ interface LogEventParams {
 export function useSyncEvents() {
   const [recentEvents, setRecentEvents] = useState<SyncEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const licenseIdRef = useRef<string | null>(null);
+  const [licenseId, setLicenseId] = useState<string | null>(null);
   const userIdRef = useRef<string | null>(null);
 
   // Fetch recent events
@@ -56,7 +56,8 @@ export function useSyncEvents() {
         return;
       }
 
-      licenseIdRef.current = companyUser.license_id;
+      // Use state instead of ref so useEffect reacts
+      setLicenseId(companyUser.license_id);
 
       // Fetch recent events
       const { data, error } = await supabase
@@ -86,11 +87,15 @@ export function useSyncEvents() {
     eventData,
   }: LogEventParams): Promise<boolean> => {
     try {
-      if (!licenseIdRef.current || !userIdRef.current) {
+      let currentLicenseId = licenseId;
+      let currentUserId = userIdRef.current;
+
+      if (!currentLicenseId || !currentUserId) {
         // Try to get license_id if not set
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return false;
 
+        currentUserId = user.id;
         userIdRef.current = user.id;
 
         const { data: companyUser } = await supabase
@@ -101,12 +106,13 @@ export function useSyncEvents() {
           .maybeSingle();
 
         if (!companyUser?.license_id) return false;
-        licenseIdRef.current = companyUser.license_id;
+        currentLicenseId = companyUser.license_id;
+        setLicenseId(currentLicenseId);
       }
 
       const insertData = {
-        license_id: licenseIdRef.current,
-        user_id: userIdRef.current,
+        license_id: currentLicenseId,
+        user_id: currentUserId,
         event_type: eventType,
         entity_type: entityType,
         entity_id: entityId,
@@ -127,16 +133,16 @@ export function useSyncEvents() {
       console.error('Error in logEvent:', err);
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   // Get events for a specific entity
   const getEntityHistory = useCallback(async (entityType: EntityType, entityId: string) => {
-    if (!licenseIdRef.current) return [];
+    if (!licenseId) return [];
 
     const { data, error } = await supabase
       .from('company_sync_events')
       .select('*')
-      .eq('license_id', licenseIdRef.current)
+      .eq('license_id', licenseId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: false });
@@ -147,26 +153,26 @@ export function useSyncEvents() {
     }
 
     return (data as unknown as SyncEvent[]) || [];
-  }, []);
+  }, [licenseId]);
 
   // Initial fetch
   useEffect(() => {
     fetchRecentEvents();
   }, [fetchRecentEvents]);
 
-  // Subscribe to realtime updates for new events
+  // Subscribe to realtime updates for new events - depend on licenseId state
   useEffect(() => {
-    if (!licenseIdRef.current) return;
+    if (!licenseId) return;
 
     const channel = supabase
-      .channel('company_sync_events')
+      .channel(`company_sync_events_${licenseId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'company_sync_events',
-          filter: `license_id=eq.${licenseIdRef.current}`,
+          filter: `license_id=eq.${licenseId}`,
         },
         (payload) => {
           const newEvent = payload.new as SyncEvent;
@@ -178,7 +184,7 @@ export function useSyncEvents() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [licenseId]);
 
   return {
     recentEvents,
