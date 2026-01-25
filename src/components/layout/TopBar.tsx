@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Mail, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase } from 'lucide-react';
+import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ContactDialog } from '@/components/ContactDialog';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +50,6 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
 
 export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const { planType, licenseData, isOffline, clearLicense } = useLicense();
-  const [contactOpen, setContactOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { currentUserRole } = useTeam();
@@ -298,16 +297,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               <span className="capitalize">{format(currentTime, 'EEEE d MMMM', { locale: fr })}</span>
             </div>
 
-            {/* Contact button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setContactOpen(true)}
-              className="hidden lg:flex gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="hidden xl:inline">Support</span>
-            </Button>
 
             {/* Theme toggle */}
             <Button
@@ -390,7 +379,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
         </div>
       </div>
 
-      <ContactDialog open={contactOpen} onOpenChange={setContactOpen} />
+      
     </>
   );
 }
