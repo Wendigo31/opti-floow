@@ -52,7 +52,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const { planType, licenseData, isOffline, clearLicense } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
-  const { currentUserRole } = useTeam();
+  const { currentUserRole, currentUserInfo } = useTeam();
   const { 
     forceSync, 
     isSyncing, 
@@ -94,10 +94,12 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const plan = planConfig[planType];
   const PlanIcon = plan.icon;
 
-  // User display name
-  const userName = licenseData?.firstName && licenseData?.lastName 
-    ? `${licenseData.firstName} ${licenseData.lastName}`
-    : licenseData?.firstName || licenseData?.lastName || null;
+  // User display name - prioritize user-specific info from company_users over license owner info
+  const userName = currentUserInfo.displayName 
+    || (currentUserInfo.email ? currentUserInfo.email.split('@')[0] : null)
+    || (licenseData?.firstName && licenseData?.lastName 
+      ? `${licenseData.firstName} ${licenseData.lastName}`
+      : licenseData?.firstName || licenseData?.lastName || null);
 
   // Blocage pour forfait Start hors-ligne
   const isStartOfflineBlocked = planType === 'start' && (!isOnline || isOffline);
