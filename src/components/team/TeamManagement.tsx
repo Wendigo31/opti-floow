@@ -303,7 +303,7 @@ export function TeamManagement() {
                     <SelectContent>
                       <SelectItem value="membre">Membre</SelectItem>
                       <SelectItem value="exploitation">Exploitation</SelectItem>
-                      <SelectItem value="direction">Direction</SelectItem>
+                      {/* Direction role can only be created by admin panel */}
                     </SelectContent>
                   </Select>
                 </div>

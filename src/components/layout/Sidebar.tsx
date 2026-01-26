@@ -92,7 +92,7 @@ const navItems: NavItemConfig[] = [
   { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
   { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
-  { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'enterprise' },
+  { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' }, // Pro/Enterprise can see Team, Direction manages it
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing', directionOnly: true },
 ];
 
