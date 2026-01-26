@@ -171,8 +171,10 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: `Limite de ${maxUsers} utilisateur(s) atteinte pour votre forfait` };
     }
 
+    // Direction can invite exploitation and membre, but not another direction
+    // Only admin panel can create direction users
     if (role === 'direction') {
-      return { success: false, error: 'Impossible d\'inviter un membre avec le rôle Direction' };
+      return { success: false, error: 'Seul l\'administrateur système peut créer un compte Direction' };
     }
 
     if (!licenseId) {
