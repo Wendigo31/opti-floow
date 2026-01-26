@@ -5,10 +5,18 @@ import { MAX_USERS_PER_PLAN } from '@/types/team';
 import type { PlanType } from '@/hooks/useLicense';
 import { useLicense } from '@/hooks/useLicense';
 
+// Current user info for session isolation
+interface CurrentUserInfo {
+  displayName: string | null;
+  email: string | null;
+  userId: string | null;
+}
+
 interface UseTeamReturn {
   members: TeamMember[];
   pendingInvitations: CompanyInvitation[];
   currentUserRole: TeamRole | null;
+  currentUserInfo: CurrentUserInfo; // User-specific info for display
   isOwner: boolean;
   isAdmin: boolean;
   isDirection: boolean;
@@ -34,6 +42,11 @@ export function useTeam(): UseTeamReturn {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
+  const [currentUserInfo, setCurrentUserInfo] = useState<CurrentUserInfo>({
+    displayName: null,
+    email: null,
+    userId: null,
+  });
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,10 +80,10 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      // Get license ID and role from company_users (simple query without join)
+      // Get license ID, role, and display_name from company_users for current user
       const { data: currentUserEntry, error: userError } = await supabase
         .from('company_users')
-        .select('license_id, role')
+        .select('license_id, role, display_name, email')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -82,6 +95,7 @@ export function useTeam(): UseTeamReturn {
       if (!currentUserEntry?.license_id) {
         // User not in any company - not an error for users without team
         setCurrentUserRole(null);
+        setCurrentUserInfo({ displayName: null, email: user.email || null, userId: user.id });
         setLicenseId(null);
         setIsLoading(false);
         return;
@@ -90,6 +104,12 @@ export function useTeam(): UseTeamReturn {
       const currentLicenseId = currentUserEntry.license_id;
       setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
+      // Set current user info for session isolation
+      setCurrentUserInfo({
+        displayName: currentUserEntry.display_name || null,
+        email: currentUserEntry.email || user.email || null,
+        userId: user.id,
+      });
 
       // Note: planType is now obtained from useLicense hook (validated via edge function)
       // This avoids RLS issues with the licenses table
@@ -327,6 +347,7 @@ export function useTeam(): UseTeamReturn {
     members,
     pendingInvitations,
     currentUserRole,
+    currentUserInfo,
     isOwner,
     isAdmin,
     isDirection,
