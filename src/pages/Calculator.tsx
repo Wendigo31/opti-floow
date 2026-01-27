@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Fuel, Route, Receipt, Truck, Users, Euro, Percent, Check, CalendarDays, AlertTriangle, Calculator as CalculatorIcon, Save, Folder, Container, Upload, TrendingUp, TrendingDown, RefreshCw, Loader2, Eye, EyeOff, Zap, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { useExploitationMetrics } from '@/hooks/useExploitationMetrics';
+import { useMarginAlerts } from '@/hooks/useMarginAlerts';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -21,6 +22,7 @@ import { Link } from 'react-router-dom';
 import { SaveTourDialog } from '@/components/tours/SaveTourDialog';
 import { ToursList } from '@/components/tours/ToursList';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
+import { MarginAlertIndicator } from '@/components/alerts/MarginAlertIndicator';
 import { toast } from 'sonner';
 import type { SavedTour } from '@/types/savedTour';
 
@@ -43,6 +45,9 @@ export default function Calculator() {
   
   // Exploitation-specific metric visibility
   const { canExploitationView, isDirection } = useExploitationMetrics();
+  
+  // Margin alerts
+  const { settings: marginSettings, checkMargin } = useMarginAlerts();
   
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
@@ -1232,6 +1237,19 @@ export default function Calculator() {
                 )}>
                   {profitMarginWithVehicle.toFixed(1)}%
                 </p>
+              </div>
+            )}
+            
+            {/* Margin Alert - Show when margin is below threshold */}
+            {marginSettings.showInCalculator && trip.distance > 0 && (
+              <div className="mt-4">
+                <MarginAlertIndicator
+                  currentMargin={profitMarginWithVehicle}
+                  profit={profitWithVehicle}
+                  revenue={revenueWithVehicle}
+                  showSettings={isDirection}
+                  compact={false}
+                />
               </div>
             )}
 

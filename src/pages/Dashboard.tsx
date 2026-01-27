@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, PiggyBank, Sparkles, Filter, X } from 'lucide-react';
+import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, PiggyBank, Sparkles, Filter, X, TrendingUp } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CostChart } from '@/components/dashboard/CostChart';
 import { TourComparisonChart } from '@/components/dashboard/TourComparisonChart';
 import { OperationalDashboard } from '@/components/dashboard/OperationalDashboard';
+import { CostPredictionPanel } from '@/components/dashboard/CostPredictionPanel';
+import { MarginAlertIndicator, MarginAlertsList } from '@/components/alerts/MarginAlertIndicator';
 import { useApp } from '@/context/AppContext';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useTeam } from '@/hooks/useTeam';
+import { useMarginAlerts } from '@/hooks/useMarginAlerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,10 +40,12 @@ export default function Dashboard() {
   const { clients } = useClients();
   const { tours } = useSavedTours();
   const { isDirection, isLoading: isTeamLoading } = useTeam();
+  const { settings: marginSettings } = useMarginAlerts();
   
   const [chartType, setChartType] = useState<ChartType>('donut');
   const [forecastMonths] = useState(6);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showPrediction, setShowPrediction] = useState(false);
   const [lastRoute] = useLocalStorage<StoredRoute | null>('last-calculated-route', null);
   
   // Filter state
@@ -297,7 +302,11 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-foreground">Analyse & Graphiques</h1>
           <p className="text-muted-foreground mt-1">Visualisez la rentabilité de vos trajets</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button onClick={() => setShowPrediction(!showPrediction)} variant={showPrediction ? "default" : "outline"} size="sm" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Prédiction IA
+          </Button>
           <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
             <Button onClick={() => setShowExportDialog(true)} variant="outline" size="sm" className="gap-2">
               <FileDown className="w-4 h-4" />
@@ -431,6 +440,19 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Cost Prediction Panel */}
+      {showPrediction && (
+        <CostPredictionPanel
+          currentFuelPrice={vehicle.fuelPriceHT}
+          currentTollCost={displayCosts.tolls}
+          distanceKm={analysisData?.distance || trip.distance}
+          fuelConsumption={vehicle.fuelConsumption}
+        />
+      )}
+
+      {/* Margin Alerts */}
+      {marginSettings.showInDashboard && <MarginAlertsList maxItems={3} />}
+
       {/* Tabs for Analysis and AI */}
       <Tabs defaultValue="analysis" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -445,6 +467,16 @@ export default function Dashboard() {
         </TabsList>
 
         <TabsContent value="analysis" className="space-y-6 mt-6">
+          {/* Margin Alert for current analysis */}
+          {marginSettings.showInDashboard && displayCosts.profitMargin < marginSettings.minMarginPercent && (
+            <MarginAlertIndicator
+              currentMargin={displayCosts.profitMargin}
+              profit={displayCosts.profit}
+              revenue={displayCosts.revenue}
+              tripName={selectedTours.length > 0 ? selectedTours[0]?.name : undefined}
+              showSettings={true}
+            />
+          )}
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <StatCard title="Coût Total HT" value={formatCurrency(displayCosts.totalCost)} subtitle={selectedTours.length > 1 ? `${selectedTours.length} tournées` : "Coût de revient"} icon={<Euro className="w-6 h-6" />} variant="default" delay={100} />

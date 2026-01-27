@@ -1,1 +1,4 @@
 project_id = "zlesqkxvydmljcctnrez"
+
+[functions.predict-costs]
+verify_jwt = false
