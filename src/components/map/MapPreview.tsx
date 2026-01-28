@@ -37,8 +37,14 @@ let googleMapsPromise: Promise<void> | null = null;
 let isGoogleMapsLoaded = false;
 
 const loadGoogleMapsAPI = (): Promise<void> => {
-  if (isGoogleMapsLoaded && window.google?.maps) {
+  // Always check if Google Maps is actually available in window
+  if (isGoogleMapsLoaded && window.google?.maps?.Map) {
     return Promise.resolve();
+  }
+
+  // Reset state if Google Maps isn't actually loaded (crashed or partial load)
+  if (!window.google?.maps?.Map) {
+    isGoogleMapsLoaded = false;
   }
 
   if (googleMapsPromise) {
@@ -47,11 +53,17 @@ const loadGoogleMapsAPI = (): Promise<void> => {
 
   googleMapsPromise = new Promise((resolve, reject) => {
     // Check if already loaded
-    if (window.google?.maps) {
+    if (window.google?.maps?.Map) {
       isGoogleMapsLoaded = true;
       resolve();
       return;
     }
+
+    // Remove any existing broken Google Maps scripts
+    const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+    existingScripts.forEach(script => script.remove());
+
+    console.log('[MapPreview] Fetching Google Maps API key...');
 
     // Fetch the API key from edge function
     fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`, {
@@ -61,11 +73,18 @@ const loadGoogleMapsAPI = (): Promise<void> => {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API key fetch failed: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (!data.apiKey) {
           throw new Error('No API key returned');
         }
+
+        console.log('[MapPreview] Loading Google Maps script...');
 
         const script = document.createElement('script');
         script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=geometry,marker&loading=async`;
@@ -73,11 +92,20 @@ const loadGoogleMapsAPI = (): Promise<void> => {
         script.defer = true;
         
         script.onload = () => {
-          isGoogleMapsLoaded = true;
-          resolve();
+          // Verify that Maps is actually available
+          if (window.google?.maps?.Map) {
+            console.log('[MapPreview] Google Maps loaded successfully');
+            isGoogleMapsLoaded = true;
+            resolve();
+          } else {
+            console.error('[MapPreview] Script loaded but Maps not available');
+            googleMapsPromise = null;
+            reject(new Error('Google Maps script loaded but API not available'));
+          }
         };
         
-        script.onerror = () => {
+        script.onerror = (e) => {
+          console.error('[MapPreview] Failed to load Google Maps script:', e);
           googleMapsPromise = null;
           reject(new Error('Failed to load Google Maps'));
         };
@@ -85,6 +113,7 @@ const loadGoogleMapsAPI = (): Promise<void> => {
         document.head.appendChild(script);
       })
       .catch(err => {
+        console.error('[MapPreview] Error loading Google Maps:', err);
         googleMapsPromise = null;
         reject(err);
       });
@@ -432,12 +461,29 @@ export function MapPreview({
     }
   }, [center, zoom, routeCoordinates.length, markers.length]);
 
+  // Retry function
+  const retryLoadMap = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    // Reset global state to force reload
+    googleMapsPromise = null;
+    isGoogleMapsLoaded = false;
+    mapInstanceRef.current = null;
+    initMap();
+  }, [initMap]);
+
   if (error) {
     return (
       <div className={`rounded-lg overflow-hidden bg-muted flex items-center justify-center ${className}`}>
         <div className="text-center text-muted-foreground p-4">
-          <p className="text-sm">{error}</p>
-          <p className="text-xs mt-1">Vérifiez votre connexion internet</p>
+          <p className="text-sm font-medium">{error}</p>
+          <p className="text-xs mt-1 mb-3">Vérifiez votre connexion internet</p>
+          <button 
+            onClick={retryLoadMap}
+            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            Réessayer
+          </button>
         </div>
       </div>
     );
