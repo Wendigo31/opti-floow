@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Building2, Star, Search, MapPin, Check, Truck, Package, Mail, Box, Plus, X, MapPinned } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -196,6 +196,7 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
             <MapPin className="w-5 h-5 text-primary" />
             Sélectionner une adresse
           </DialogTitle>
+          <DialogDescription>Recherchez parmi les transporteurs, vos favoris ou ajoutez une adresse personnalisée.</DialogDescription>
         </DialogHeader>
 
         <div className="relative mb-4">

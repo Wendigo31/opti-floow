@@ -73,7 +73,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import type { LocalTrip, LocalClient, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { Vehicle } from '@/types/vehicle';
 import { calculateVehicleCosts, formatCostPerKm } from '@/hooks/useVehicleCost';
 import { AddressSelectorDialog } from '@/components/itinerary/AddressSelectorDialog';
@@ -1507,6 +1507,7 @@ export default function Itinerary() {
               <Save className="w-5 h-5 text-primary" />
               Sauvegarder la tournée
             </DialogTitle>
+            <DialogDescription>Enregistrez cet itinéraire pour le retrouver dans votre historique.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {routeToSave && (
