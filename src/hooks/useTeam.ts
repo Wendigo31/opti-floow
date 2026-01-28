@@ -37,7 +37,7 @@ interface UseTeamReturn {
 
 export function useTeam(): UseTeamReturn {
   // Get planType from useLicense (already validated via edge function)
-  const { planType: validatedPlanType, licenseData } = useLicense();
+  const { planType: validatedPlanType, licenseData, isLoading: isLicenseLoading } = useLicense();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
@@ -48,12 +48,16 @@ export function useTeam(): UseTeamReturn {
     userId: null,
   });
   const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isTeamLoading, setIsTeamLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Use planType from useLicense (validated via edge function) - fallback to 'start'
+  // IMPORTANT: Keep the previous planType if license is still loading to avoid flickering
   const licensePlanType: PlanType = validatedPlanType || 'start';
   const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
+  
+  // Combined loading state: wait for both license and team data
+  const isLoading = isLicenseLoading || isTeamLoading;
 
   const maxUsers = licenseMaxUsers;
   const currentUserCount = members.filter(m => m.is_active).length;
@@ -71,12 +75,12 @@ export function useTeam(): UseTeamReturn {
   // Fetch team data
   const fetchTeam = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsTeamLoading(true);
       setError(null);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setIsLoading(false);
+        setIsTeamLoading(false);
         return;
       }
 
@@ -97,7 +101,7 @@ export function useTeam(): UseTeamReturn {
         setCurrentUserRole(null);
         setCurrentUserInfo({ displayName: null, email: user.email || null, userId: user.id });
         setLicenseId(null);
-        setIsLoading(false);
+        setIsTeamLoading(false);
         return;
       }
 
@@ -154,7 +158,7 @@ export function useTeam(): UseTeamReturn {
       console.error('Error in fetchTeam:', e);
       setError('Erreur inattendue');
     } finally {
-      setIsLoading(false);
+      setIsTeamLoading(false);
     }
   }, []);
 
