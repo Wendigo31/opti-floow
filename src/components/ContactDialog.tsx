@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -100,6 +100,7 @@ export function ContactDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Contacter l'équipe technique</DialogTitle>
+          <DialogDescription>Envoyez un message à notre équipe pour toute question ou problème.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">

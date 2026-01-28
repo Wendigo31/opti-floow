@@ -68,7 +68,7 @@ const loadGoogleMapsAPI = (): Promise<void> => {
         }
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=geometry`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=geometry,marker&loading=async`;
         script.async = true;
         script.defer = true;
         
@@ -93,56 +93,74 @@ const loadGoogleMapsAPI = (): Promise<void> => {
   return googleMapsPromise;
 };
 
-// Custom marker URL based on type
-const createMarkerIcon = (type?: 'start' | 'end' | 'stop' | 'default'): string => {
-  const colors: Record<string, string> = {
-    start: '22c55e',
-    end: 'ef4444',
-    stop: 'f97316',
-    default: '3b82f6'
-  };
-  const color = colors[type || 'default'];
-  
-  // Use Google's chart API for custom markers
-  return `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${color}|ffffff`;
+// Marker colors and SVG content for different types
+const MARKER_COLORS: Record<string, string> = {
+  start: '#22c55e',
+  end: '#ef4444',
+  stop: '#f97316',
+  default: '#3b82f6'
 };
 
-// Create restriction marker icon as SVG data URL
-const createRestrictionIcon = (type: RestrictionMarker['type']): google.maps.Icon => {
-  const colors: Record<string, string> = {
-    lowBridge: '#FF6B35',
-    weightLimit: '#E63946',
-    truckForbidden: '#D62828',
-    tunnel: '#5C4033',
-    narrowRoad: '#F4A261'
-  };
-  
-  const symbols: Record<string, string> = {
-    lowBridge: '🌉',
-    weightLimit: '⚖',
-    truckForbidden: '🚫',
-    tunnel: '🚇',
-    narrowRoad: '↔'
-  };
-  
-  const color = colors[type] || '#6B7280';
-  const symbol = symbols[type] || '⚠';
-  
-  // Create SVG marker
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+const RESTRICTION_COLORS: Record<string, string> = {
+  lowBridge: '#FF6B35',
+  weightLimit: '#E63946',
+  truckForbidden: '#D62828',
+  tunnel: '#5C4033',
+  narrowRoad: '#F4A261'
+};
+
+const RESTRICTION_SYMBOLS: Record<string, string> = {
+  lowBridge: '🌉',
+  weightLimit: '⚖',
+  truckForbidden: '🚫',
+  tunnel: '🚇',
+  narrowRoad: '↔'
+};
+
+// Create a DOM element for route marker
+const createMarkerContent = (type?: 'start' | 'end' | 'stop' | 'default'): HTMLElement => {
+  const color = MARKER_COLORS[type || 'default'];
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 18 12 18s12-9 12-18C24 5.373 18.627 0 12 0z" fill="${color}"/>
+      <circle cx="12" cy="10" r="5" fill="white"/>
+    </svg>
+  `;
+  div.style.cursor = 'pointer';
+  return div;
+};
+
+// Create a DOM element for restriction marker
+const createRestrictionContent = (type: RestrictionMarker['type']): HTMLElement => {
+  const color = RESTRICTION_COLORS[type] || '#6B7280';
+  const symbol = RESTRICTION_SYMBOLS[type] || '⚠';
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="35" viewBox="0 0 32 40">
       <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z" fill="${color}"/>
       <circle cx="16" cy="14" r="10" fill="white"/>
       <text x="16" y="18" text-anchor="middle" font-size="12">${symbol}</text>
     </svg>
   `;
-  
-  return {
-    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(28, 35),
-    anchor: new google.maps.Point(14, 35)
-  };
+  div.style.cursor = 'pointer';
+  return div;
 };
+
+// Helper function to get label for restriction type
+function getRestrictionLabel(type: RestrictionMarker['type']): string {
+  const labels: Record<string, string> = {
+    lowBridge: 'Pont bas - Hauteur limitée',
+    weightLimit: 'Limitation de poids',
+    truckForbidden: 'Interdit aux poids lourds',
+    tunnel: 'Tunnel',
+    narrowRoad: 'Route étroite'
+  };
+  return labels[type] || 'Restriction';
+}
+
+// Type alias for AdvancedMarkerElement or Marker
+type MapMarker = google.maps.marker.AdvancedMarkerElement | google.maps.Marker;
 
 export function MapPreview({ 
   className = '', 
@@ -155,8 +173,8 @@ export function MapPreview({
 }: MapPreviewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const restrictionMarkersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<MapMarker[]>([]);
+  const restrictionMarkersRef = useRef<MapMarker[]>([]);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +195,7 @@ export function MapPreview({
         streetViewControl: false,
         fullscreenControl: false,
         zoomControl: true,
+        mapId: 'OPTIFLOW_MAP', // Required for AdvancedMarkerElement
         styles: [
           {
             featureType: 'poi',
@@ -201,11 +220,23 @@ export function MapPreview({
     
     return () => {
       // Cleanup markers
-      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current.forEach(m => {
+        if ('setMap' in m && typeof m.setMap === 'function') {
+          m.setMap(null);
+        } else if ('map' in m) {
+          (m as google.maps.marker.AdvancedMarkerElement).map = null;
+        }
+      });
       markersRef.current = [];
       
       // Cleanup restriction markers
-      restrictionMarkersRef.current.forEach(m => m.setMap(null));
+      restrictionMarkersRef.current.forEach(m => {
+        if ('setMap' in m && typeof m.setMap === 'function') {
+          m.setMap(null);
+        } else if ('map' in m) {
+          (m as google.maps.marker.AdvancedMarkerElement).map = null;
+        }
+      });
       restrictionMarkersRef.current = [];
       
       // Cleanup polyline
@@ -249,35 +280,64 @@ export function MapPreview({
     }
   }, [routeCoordinates]);
 
-  // Update markers
+  // Update markers using AdvancedMarkerElement
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !isGoogleMapsLoaded) return;
 
     // Remove existing markers
-    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current.forEach(m => {
+      if ('setMap' in m && typeof m.setMap === 'function') {
+        m.setMap(null);
+      } else if ('map' in m) {
+        (m as google.maps.marker.AdvancedMarkerElement).map = null;
+      }
+    });
     markersRef.current = [];
 
-    // Add new markers
+    // Add new markers using AdvancedMarkerElement
     markers.forEach((markerData, index) => {
-      const marker = new google.maps.Marker({
-        position: { lat: markerData.position[0], lng: markerData.position[1] },
-        map,
-        title: markerData.label,
-        icon: createMarkerIcon(markerData.type),
-        zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
-      });
+      const position = { lat: markerData.position[0], lng: markerData.position[1] };
+      
+      // Check if AdvancedMarkerElement is available
+      if (google.maps.marker?.AdvancedMarkerElement) {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position,
+          map,
+          title: markerData.label,
+          content: createMarkerContent(markerData.type),
+          zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
+        });
 
-      // Add info window
-      const infoWindow = new google.maps.InfoWindow({
-        content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
-      });
+        // Add click listener for info window
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
+        });
 
-      marker.addListener('click', () => {
-        infoWindow.open(map, marker);
-      });
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
 
-      markersRef.current.push(marker);
+        markersRef.current.push(marker);
+      } else {
+        // Fallback to legacy Marker (suppressed deprecation)
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          title: markerData.label,
+          zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+      }
     });
 
     // Fit bounds if we have markers but no route
@@ -294,26 +354,26 @@ export function MapPreview({
     }
   }, [markers, routeCoordinates.length]);
 
-  // Update restriction markers
+  // Update restriction markers using AdvancedMarkerElement
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !isGoogleMapsLoaded) return;
 
     // Remove existing restriction markers
-    restrictionMarkersRef.current.forEach(m => m.setMap(null));
+    restrictionMarkersRef.current.forEach(m => {
+      if ('setMap' in m && typeof m.setMap === 'function') {
+        m.setMap(null);
+      } else if ('map' in m) {
+        (m as google.maps.marker.AdvancedMarkerElement).map = null;
+      }
+    });
     restrictionMarkersRef.current = [];
 
     // Add new restriction markers
     restrictions.forEach((restriction) => {
-      const marker = new google.maps.Marker({
-        position: { lat: restriction.lat, lng: restriction.lng },
-        map,
-        title: restriction.description,
-        icon: createRestrictionIcon(restriction.type),
-        zIndex: 200 // Above route markers
-      });
-
-      // Add info window with restriction details
+      const position = { lat: restriction.lat, lng: restriction.lng };
+      
+      // Info window content
       const valueInfo = restriction.value 
         ? `<div style="font-size: 14px; font-weight: bold; color: #E63946;">${restriction.value}${restriction.unit || ''}</div>`
         : '';
@@ -328,11 +388,36 @@ export function MapPreview({
         `
       });
 
-      marker.addListener('click', () => {
-        infoWindow.open(map, marker);
-      });
+      // Check if AdvancedMarkerElement is available
+      if (google.maps.marker?.AdvancedMarkerElement) {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position,
+          map,
+          title: restriction.description,
+          content: createRestrictionContent(restriction.type),
+          zIndex: 200
+        });
 
-      restrictionMarkersRef.current.push(marker);
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        restrictionMarkersRef.current.push(marker);
+      } else {
+        // Fallback to legacy Marker
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          title: restriction.description,
+          zIndex: 200
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        restrictionMarkersRef.current.push(marker);
+      }
     });
   }, [restrictions]);
 
@@ -406,16 +491,4 @@ export function MapPreview({
       )}
     </div>
   );
-}
-
-// Helper function to get label for restriction type
-function getRestrictionLabel(type: RestrictionMarker['type']): string {
-  const labels: Record<string, string> = {
-    lowBridge: 'Pont bas - Hauteur limitée',
-    weightLimit: 'Limitation de poids',
-    truckForbidden: 'Interdit aux poids lourds',
-    tunnel: 'Tunnel',
-    narrowRoad: 'Route étroite'
-  };
-  return labels[type] || 'Restriction';
 }
