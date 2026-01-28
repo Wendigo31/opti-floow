@@ -1464,6 +1464,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          app_settings: Json
+          created_at: string
+          id: string
+          last_saved_at: string
+          license_id: string
+          selected_driver_ids: string[] | null
+          trip_params: Json
+          updated_at: string
+          user_id: string
+          vehicle_params: Json
+        }
+        Insert: {
+          app_settings?: Json
+          created_at?: string
+          id?: string
+          last_saved_at?: string
+          license_id: string
+          selected_driver_ids?: string[] | null
+          trip_params?: Json
+          updated_at?: string
+          user_id: string
+          vehicle_params?: Json
+        }
+        Update: {
+          app_settings?: Json
+          created_at?: string
+          id?: string
+          last_saved_at?: string
+          license_id?: string
+          selected_driver_ids?: string[] | null
+          trip_params?: Json
+          updated_at?: string
+          user_id?: string
+          vehicle_params?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_trailers: {
         Row: {
           brand: string | null
