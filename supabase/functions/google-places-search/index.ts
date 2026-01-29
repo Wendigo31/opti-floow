@@ -32,10 +32,10 @@ serve(async (req) => {
     }
 
     // Use Google Places Autocomplete API - support addresses, establishments (companies), and geocodes (cities)
-    // Note: Google limits to 5 country components max (FR, BE, DE, ES, PT)
+    // Note: Google limits to 5 country components max (FR, BE, CH, DE, ES)
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedQuery}&key=${GOOGLE_MAPS_API_KEY}&components=country:fr|country:be|country:de|country:es|country:pt&language=fr`
+      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedQuery}&key=${GOOGLE_MAPS_API_KEY}&components=country:fr|country:be|country:ch|country:de|country:es&language=fr`
     );
 
     if (!response.ok) {
