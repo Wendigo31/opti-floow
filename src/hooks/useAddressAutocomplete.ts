@@ -21,9 +21,10 @@ export function useAddressAutocomplete() {
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const searchAddress = useCallback(async (query: string): Promise<void> => {
+  const searchAddress = useCallback((query: string): void => {
     if (query.length < 3) {
       setSuggestions([]);
+      setLoading(false);
       return;
     }
 
@@ -31,20 +32,25 @@ export function useAddressAutocomplete() {
       clearTimeout(debounceRef.current);
     }
 
+    // Set loading immediately for better UX
+    setLoading(true);
+
     debounceRef.current = setTimeout(async () => {
-      setLoading(true);
       try {
+        console.log('[useAddressAutocomplete] Searching for:', query);
         // Use Google Places Autocomplete via edge function
         const { data, error } = await supabase.functions.invoke('google-places-search', {
           body: { query }
         });
+
+        console.log('[useAddressAutocomplete] Response:', { data, error });
 
         if (error) {
           console.error('Google Places search error:', error);
           throw new Error('Search failed');
         }
         
-        const results: AddressSuggestion[] = data.predictions?.map((prediction: any) => {
+        const results: AddressSuggestion[] = data?.predictions?.map((prediction: any) => {
           return {
             id: prediction.place_id,
             placeId: prediction.place_id,
@@ -53,6 +59,7 @@ export function useAddressAutocomplete() {
           };
         }) || [];
 
+        console.log('[useAddressAutocomplete] Results:', results.length);
         setSuggestions(results);
       } catch (error) {
         console.error('Address search error:', error);
