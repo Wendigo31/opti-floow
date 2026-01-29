@@ -335,21 +335,24 @@ export default function Itinerary() {
   useEffect(() => {
     // Only save if we have both origin and destination addresses with positions
     if (originAddress && destinationAddress && originPosition && destinationPosition) {
-      const searchId = addSearch({
-        originAddress,
-        originPosition,
-        destinationAddress,
-        destinationPosition,
-        stops,
-        vehicleId: selectedVehicleId,
-        clientId: selectedClientId,
-        calculated: false,
-      });
-      if (searchId) {
-        currentSearchIdRef.current = searchId;
-      }
+      const saveSearch = async () => {
+        const searchId = await addSearch({
+          originAddress,
+          originPosition,
+          destinationAddress,
+          destinationPosition,
+          stops,
+          vehicleId: selectedVehicleId,
+          clientId: selectedClientId,
+          calculated: false,
+        });
+        if (searchId) {
+          currentSearchIdRef.current = searchId;
+        }
+      };
+      saveSearch();
     }
-  }, [originAddress, destinationAddress, originPosition, destinationPosition, stops, selectedVehicleId, selectedClientId]);
+  }, [originAddress, destinationAddress, originPosition, destinationPosition, stops, selectedVehicleId, selectedClientId, addSearch]);
   
   // Load a search from history
   const handleLoadSearchHistory = useCallback((entry: SearchHistoryEntry) => {
