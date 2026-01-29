@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
+import { useUserFeatureOverrides, FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -72,6 +73,7 @@ const NAV_LABELS = {
 
 // Define which features are required for each nav item
 // directionOnly: true means only users with Direction role can see this item
+// userFeatureKey: feature key to check for user-specific overrides
 type NavItemConfig = {
   to: string;
   icon: any;
@@ -79,20 +81,21 @@ type NavItemConfig = {
   requiredFeature?: FeatureKey;
   requiredPlan?: 'pro' | 'enterprise';
   directionOnly?: boolean;
+  userFeatureKey?: UserFeatureKey;
 };
 
 const navItems: NavItemConfig[] = [
-  { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator' },
-  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro' },
-  { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro' },
-  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro' },
+  { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
+  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro', userFeatureKey: 'page_itinerary' },
+  { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
+  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro', userFeatureKey: 'page_dashboard' },
   { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro', directionOnly: true },
-  { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles' },
-  { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers' },
+  { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
+  { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
   { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
-  { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
+  { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
-  { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' }, // Pro/Enterprise can see Team, Direction manages it
+  { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing', directionOnly: true },
 ];
 
@@ -102,6 +105,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
   const { isDirection } = useTeam();
+  const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   // Get restricted features (user-specific overrides that are disabled)
   const restrictedFeatures = licenseData?.userFeatureOverrides?.filter(o => !o.enabled) || [];
@@ -215,13 +219,18 @@ export function Sidebar() {
           const isActive = location.pathname === item.to;
           const label = NAV_LABELS[item.labelKey];
           
-          // Check if feature is disabled via admin panel
+          // Check if feature is disabled via admin panel (license-level)
           if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
             return null;
           }
           
           // Check if item is reserved for Direction only
           if (item.directionOnly && !isDirection) {
+            return null;
+          }
+          
+          // Check user-specific feature override (individual restrictions by Direction)
+          if (item.userFeatureKey && !canAccessUserFeature(item.userFeatureKey)) {
             return null;
           }
           
