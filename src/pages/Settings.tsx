@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Settings as SettingsIcon, Bell, History, Shield, User, Building2, MapPin, KeyRound, RefreshCw, Info as InfoIcon, FileText, Database, HardDrive, Scale, Lock, HelpCircle, Download, Upload, FolderOpen } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, History, Shield, User, Building2, MapPin, KeyRound, Info as InfoIcon, FileText, Database, HardDrive, Scale, Lock, HelpCircle, Download, Upload, FolderOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { LicenseSyncSettings } from '@/components/settings/LicenseSyncSettings';
@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useLicense } from '@/hooks/useLicense';
+import { useTeam } from '@/hooks/useTeam';
 import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from 'sonner';
@@ -30,30 +31,13 @@ const getAppVersion = () => {
 };
 
 export default function Settings() {
-  const { licenseData, refreshLicense } = useLicense();
+  const { licenseData } = useLicense();
+  const { currentUserInfo } = useTeam();
   const { exportProfile, importProfile } = useApp();
   const [importText, setImportText] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
   const dataFileInputRef = useRef<HTMLInputElement>(null);
   const [alwaysAskLocation, setAlwaysAskLocation] = useLocalStorage('optiflow-always-ask-download-location', true);
   const [lastDownloadFolder, setLastDownloadFolder] = useLocalStorage<string | null>('optiflow-last-download-folder', null);
-
-  const handleForceSync = async () => {
-    setIsSyncing(true);
-    try {
-      const result = await refreshLicense();
-      if (result.success) {
-        toast.success('Licence synchronisée avec succès');
-      } else {
-        toast.error(result.error || 'Erreur lors de la synchronisation');
-      }
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast.error('Erreur lors de la synchronisation');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handleExportProfile = async () => {
     const encryptedData = exportProfile();
@@ -223,21 +207,15 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Nom</span>
-                    <span className="text-foreground">
-                      {licenseData?.lastName || '-'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Prénom</span>
-                    <span className="text-foreground">
-                      {licenseData?.firstName || '-'}
+                    <span className="text-muted-foreground">Nom complet</span>
+                    <span className="text-foreground font-medium">
+                      {currentUserInfo?.displayName || `${licenseData?.firstName || ''} ${licenseData?.lastName || ''}`.trim() || '-'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Email</span>
                     <span className="text-foreground">
-                      {licenseData?.email || '-'}
+                      {currentUserInfo?.email || licenseData?.email || '-'}
                     </span>
                   </div>
                 </CardContent>
@@ -300,29 +278,6 @@ export default function Settings() {
               </Card>
             )}
 
-            {/* Synchronisation */}
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <RefreshCw className="w-5 h-5 text-primary" />
-                </div>
-                <CardTitle>Synchronisation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Récupérez les dernières modifications apportées à votre licence par l'administrateur.
-                </p>
-                <Button 
-                  onClick={handleForceSync} 
-                  disabled={isSyncing}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Synchronisation...' : 'Forcer la synchronisation'}
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* Version */}
             <Card>
