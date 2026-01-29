@@ -224,7 +224,8 @@ export function MapPreview({
         streetViewControl: false,
         fullscreenControl: false,
         zoomControl: true,
-        mapId: 'OPTIFLOW_MAP', // Required for AdvancedMarkerElement
+        // Don't use mapId - it requires configuration in Google Cloud Console
+        // Without a valid mapId, AdvancedMarkerElement silently fails
         styles: [
           {
             featureType: 'poi',
@@ -324,49 +325,38 @@ export function MapPreview({
     });
     markersRef.current = [];
 
-    // Add new markers using AdvancedMarkerElement
+    // Add new markers using classic Marker (AdvancedMarkerElement requires mapId configured in Google Cloud Console)
     markers.forEach((markerData, index) => {
       const position = { lat: markerData.position[0], lng: markerData.position[1] };
       
-      // Check if AdvancedMarkerElement is available
-      if (google.maps.marker?.AdvancedMarkerElement) {
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position,
-          map,
-          title: markerData.label,
-          content: createMarkerContent(markerData.type),
-          zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
-        });
+      // Define marker icon based on type
+      const color = MARKER_COLORS[markerData.type || 'default'];
+      const icon = {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 10,
+      };
+      
+      const marker = new google.maps.Marker({
+        position,
+        map,
+        title: markerData.label,
+        icon,
+        zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
+      });
 
-        // Add click listener for info window
-        const infoWindow = new google.maps.InfoWindow({
-          content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
-        });
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
+      });
 
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
+      marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+      });
 
-        markersRef.current.push(marker);
-      } else {
-        // Fallback to legacy Marker (suppressed deprecation)
-        const marker = new google.maps.Marker({
-          position,
-          map,
-          title: markerData.label,
-          zIndex: markerData.type === 'start' ? 100 : markerData.type === 'end' ? 99 : 50 + index
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `<div style="font-weight: 500; padding: 4px;">${markerData.label}</div>`
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        markersRef.current.push(marker);
-      }
+      markersRef.current.push(marker);
     });
 
     // Fit bounds if we have markers but no route
@@ -398,7 +388,7 @@ export function MapPreview({
     });
     restrictionMarkersRef.current = [];
 
-    // Add new restriction markers
+    // Add new restriction markers using classic Marker
     restrictions.forEach((restriction) => {
       const position = { lat: restriction.lat, lng: restriction.lng };
       
@@ -417,36 +407,29 @@ export function MapPreview({
         `
       });
 
-      // Check if AdvancedMarkerElement is available
-      if (google.maps.marker?.AdvancedMarkerElement) {
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position,
-          map,
-          title: restriction.description,
-          content: createRestrictionContent(restriction.type),
-          zIndex: 200
-        });
+      const color = RESTRICTION_COLORS[restriction.type] || '#6B7280';
+      const icon = {
+        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 6,
+      };
+      
+      const marker = new google.maps.Marker({
+        position,
+        map,
+        title: restriction.description,
+        icon,
+        zIndex: 200
+      });
 
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
+      marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+      });
 
-        restrictionMarkersRef.current.push(marker);
-      } else {
-        // Fallback to legacy Marker
-        const marker = new google.maps.Marker({
-          position,
-          map,
-          title: restriction.description,
-          zIndex: 200
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        restrictionMarkersRef.current.push(marker);
-      }
+      restrictionMarkersRef.current.push(marker);
     });
   }, [restrictions]);
 

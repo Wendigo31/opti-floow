@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, CreditCard } from 'lucide-react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, CreditCard, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,9 +111,20 @@ export default function Activation() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+                error.includes('simultanée') 
+                  ? 'bg-warning/10 border border-warning/30 text-warning-foreground' 
+                  : 'bg-destructive/10 border border-destructive/30 text-destructive'
+              }`}>
+                {error.includes('simultanée') ? (
+                  <Users className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium">{error.includes('simultanée') ? 'Connexion simultanée détectée' : 'Erreur'}</p>
+                  <p className="text-xs mt-1 opacity-80">{error}</p>
+                </div>
               </div>
             )}
 
