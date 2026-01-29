@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { LoadingScreen } from './LoadingScreen';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
   // null = auto (système), true = dark, false = light
   const [isDark, setIsDark] = useState<boolean | null>(() => {
     if (typeof window !== 'undefined') {
@@ -72,10 +74,11 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
       
       <div className="min-h-screen bg-background">
-        <Sidebar />
+        {/* Hide sidebar on mobile */}
+        {!isMobile && <Sidebar />}
         <TopBar isDark={isDark} onToggleTheme={handleToggleTheme} />
-        <main className="ml-20 lg:ml-64 pt-14 transition-all duration-300">
-          <div className="p-6 lg:p-8">
+        <main className={`pt-14 transition-all duration-300 ${isMobile ? 'ml-0' : 'ml-20 lg:ml-64'}`}>
+          <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
             {children}
           </div>
         </main>

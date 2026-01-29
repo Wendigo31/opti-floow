@@ -36,6 +36,7 @@ import Tours from "./pages/Tours";
 import Settings from "./pages/Settings";
 import MyRestrictions from "./pages/MyRestrictions";
 import Team from "./pages/Team";
+import Install from "./pages/Install";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -106,6 +107,7 @@ function LicensedAppContent() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/my-restrictions" element={<MyRestrictions />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/install" element={<Install />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
