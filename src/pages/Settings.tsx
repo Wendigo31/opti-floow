@@ -506,7 +506,7 @@ export default function Settings() {
                           <div className="flex items-start gap-3">
                             <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                             <div>
-                              <p className="font-semibold text-foreground">SAS OptiFleet</p>
+                              <p className="font-semibold text-foreground">SAS OptiGroup</p>
                               <p className="text-sm text-muted-foreground">Société par Actions Simplifiée</p>
                             </div>
                           </div>
@@ -555,7 +555,7 @@ export default function Settings() {
                         Propriété intellectuelle
                       </h2>
                       <p className="text-muted-foreground mb-6">
-                        L'ensemble du contenu du site OptiFlow est la propriété exclusive de SAS OptiFleet 
+                        L'ensemble du contenu du site OptiFlow est la propriété exclusive de SAS OptiGroup 
                         ou de ses partenaires et est protégé par les lois françaises et internationales 
                         relatives à la propriété intellectuelle.
                       </p>
@@ -588,7 +588,7 @@ export default function Settings() {
 
                       <h3 className="text-lg font-semibold text-foreground mt-6 mb-3">Article 1 - Objet</h3>
                       <p className="text-muted-foreground mb-4">
-                        Les présentes CGVU régissent l'utilisation du logiciel OptiFlow, édité par SAS OptiFleet.
+                        Les présentes CGVU régissent l'utilisation du logiciel OptiFlow, édité par SAS OptiGroup.
                       </p>
 
                       <h3 className="text-lg font-semibold text-foreground mt-6 mb-3">Article 2 - Licence</h3>
@@ -625,7 +625,7 @@ export default function Settings() {
 
                       <div className="bg-primary/10 p-4 rounded-lg mb-6">
                         <p className="text-sm text-foreground">
-                          Chez OptiFlow / SAS OptiFleet, nous accordons une importance primordiale à la protection 
+                          Chez OptiFlow / SAS OptiGroup, nous accordons une importance primordiale à la protection 
                           de vos données personnelles, conformément au RGPD.
                         </p>
                       </div>
@@ -791,7 +791,7 @@ export default function Settings() {
 
       {/* Copyright */}
       <div className="text-center text-sm text-muted-foreground pt-4 border-t border-border">
-        <p>© {new Date().getFullYear()} OptiFlow - SAS OptiFleet. Tous droits réservés.</p>
+        <p>© {new Date().getFullYear()} OptiFlow - SAS OptiGroup. Tous droits réservés.</p>
         <p className="mt-1">{getAppVersion()}</p>
       </div>
     </div>
