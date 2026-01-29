@@ -1108,56 +1108,6 @@ export default function Admin() {
                   licenseId={selectedLicenseForPricing.id}
                   planType={(selectedLicenseForPricing.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
                   activeAddOns={licenseAddOns}
-                  onSave={async (data) => {
-                    setSavingPricing(true);
-                    try {
-                      // Update plan type if changed
-                      if (data.planType !== selectedLicenseForPricing.plan_type) {
-                        await supabase.functions.invoke('validate-license', {
-                          body: { 
-                            action: 'update-plan', 
-                            licenseId: selectedLicenseForPricing.id, 
-                            planType: data.planType, 
-                            adminToken: getAdminToken() 
-                          },
-                        });
-                      }
-                      
-                      // Update add-ons
-                      await supabase.functions.invoke('validate-license', {
-                        body: { 
-                          action: 'admin-update-addons',
-                          licenseId: selectedLicenseForPricing.id,
-                          addonIds: data.addOns,
-                          adminToken: getAdminToken()
-                        },
-                      });
-                      
-                      // Update pricing info if custom
-                      if (data.customPricing) {
-                        await supabase.functions.invoke('validate-license', {
-                          body: { 
-                            action: 'update-pricing',
-                            licenseId: selectedLicenseForPricing.id,
-                            baseMonthlyPrice: data.customPricing.basePrice,
-                            addonsMonthlyTotal: data.customPricing.addonsTotal,
-                            billingPeriod: data.customPricing.billingPeriod,
-                            adminToken: getAdminToken()
-                          },
-                        });
-                      }
-                      
-                      toast.success('Tarification mise à jour');
-                      fetchLicenses();
-                      setLicenseAddOns(data.addOns);
-                    } catch (error) {
-                      toast.error('Erreur lors de la mise à jour');
-                      console.error(error);
-                    } finally {
-                      setSavingPricing(false);
-                    }
-                  }}
-                  saving={savingPricing}
                 />
               ) : (
                 <Card>
