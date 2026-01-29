@@ -1149,6 +1149,68 @@ export type Database = {
           },
         ]
       }
+      search_history: {
+        Row: {
+          calculated: boolean | null
+          client_id: string | null
+          created_at: string
+          destination_address: string
+          destination_lat: number | null
+          destination_lon: number | null
+          id: string
+          license_id: string | null
+          origin_address: string
+          origin_lat: number | null
+          origin_lon: number | null
+          stops: Json | null
+          updated_at: string
+          user_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          calculated?: boolean | null
+          client_id?: string | null
+          created_at?: string
+          destination_address: string
+          destination_lat?: number | null
+          destination_lon?: number | null
+          id?: string
+          license_id?: string | null
+          origin_address: string
+          origin_lat?: number | null
+          origin_lon?: number | null
+          stops?: Json | null
+          updated_at?: string
+          user_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          calculated?: boolean | null
+          client_id?: string | null
+          created_at?: string
+          destination_address?: string
+          destination_lat?: number | null
+          destination_lon?: number | null
+          id?: string
+          license_id?: string | null
+          origin_address?: string
+          origin_lat?: number | null
+          origin_lon?: number | null
+          stops?: Json | null
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_history_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           adblue_cost: number | null

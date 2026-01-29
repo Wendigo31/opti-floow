@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useLocalStorage } from './useLocalStorage';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Position {
   lat: number;
@@ -22,94 +22,253 @@ export interface SearchHistoryEntry {
   stops: Waypoint[];
   vehicleId: string | null;
   clientId: string | null;
-  calculated: boolean; // Whether the route was actually calculated
+  calculated: boolean;
+}
+
+interface DbSearchHistory {
+  id: string;
+  user_id: string;
+  license_id: string | null;
+  origin_address: string;
+  origin_lat: number | null;
+  origin_lon: number | null;
+  destination_address: string;
+  destination_lat: number | null;
+  destination_lon: number | null;
+  stops: Waypoint[];
+  vehicle_id: string | null;
+  client_id: string | null;
+  calculated: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const MAX_HISTORY_ENTRIES = 50;
-const STORAGE_KEY = 'optiflow_search_history';
+
+function dbToEntry(db: DbSearchHistory): SearchHistoryEntry {
+  return {
+    id: db.id,
+    timestamp: db.created_at,
+    originAddress: db.origin_address,
+    originPosition: db.origin_lat && db.origin_lon ? { lat: db.origin_lat, lon: db.origin_lon } : null,
+    destinationAddress: db.destination_address,
+    destinationPosition: db.destination_lat && db.destination_lon ? { lat: db.destination_lat, lon: db.destination_lon } : null,
+    stops: Array.isArray(db.stops) ? db.stops : [],
+    vehicleId: db.vehicle_id,
+    clientId: db.client_id,
+    calculated: db.calculated,
+  };
+}
+
+async function getUserLicenseId(userId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('company_users')
+      .select('license_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+    return data?.license_id || null;
+  } catch {
+    return null;
+  }
+}
 
 export function useSearchHistory() {
-  const [history, setHistory] = useLocalStorage<SearchHistoryEntry[]>(STORAGE_KEY, []);
+  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch history from cloud
+  const fetchHistory = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setHistory([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('search_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(MAX_HISTORY_ENTRIES);
+
+      if (error) {
+        console.error('Error fetching search history:', error);
+        return;
+      }
+
+      const entries = (data || []).map((row) => dbToEntry(row as unknown as DbSearchHistory));
+      setHistory(entries);
+    } catch (e) {
+      console.error('Error fetching search history:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('search_history_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'search_history',
+        },
+        () => {
+          fetchHistory();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchHistory]);
 
   // Add a new search entry to history
-  const addSearch = useCallback((entry: Omit<SearchHistoryEntry, 'id' | 'timestamp'>) => {
-    // Only save if we have at least origin and destination
+  const addSearch = useCallback(async (entry: Omit<SearchHistoryEntry, 'id' | 'timestamp'>): Promise<string | null> => {
     if (!entry.originAddress || !entry.destinationAddress) {
       return null;
     }
 
-    const newEntry: SearchHistoryEntry = {
-      ...entry,
-      id: crypto.randomUUID?.() || `search-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-    setHistory(prev => {
-      // Check for duplicate (same origin + destination + stops in last 5 minutes)
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      const isDuplicate = prev.some(p => {
-        if (new Date(p.timestamp).getTime() < fiveMinutesAgo) return false;
-        if (p.originAddress !== entry.originAddress) return false;
-        if (p.destinationAddress !== entry.destinationAddress) return false;
-        if (p.stops.length !== entry.stops.length) return false;
-        return true;
-      });
+      // Check for duplicate in the last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      
+      const { data: existing } = await supabase
+        .from('search_history')
+        .select('id, calculated')
+        .eq('origin_address', entry.originAddress)
+        .eq('destination_address', entry.destinationAddress)
+        .gte('created_at', fiveMinutesAgo)
+        .limit(1);
 
-      if (isDuplicate) {
-        // Update the existing entry if calculated status changed
-        return prev.map(p => {
-          if (p.originAddress === entry.originAddress && 
-              p.destinationAddress === entry.destinationAddress &&
-              new Date(p.timestamp).getTime() >= fiveMinutesAgo) {
-            return { ...p, calculated: entry.calculated || p.calculated };
-          }
-          return p;
-        });
+      if (existing && existing.length > 0) {
+        // Update existing entry if calculated status changed
+        if (entry.calculated && !existing[0].calculated) {
+          await supabase
+            .from('search_history')
+            .update({ calculated: true, updated_at: new Date().toISOString() })
+            .eq('id', existing[0].id);
+        }
+        return existing[0].id;
       }
 
-      // Add new entry at the beginning, limit to max entries
-      return [newEntry, ...prev].slice(0, MAX_HISTORY_ENTRIES);
-    });
+      // Get license_id
+      const licenseId = await getUserLicenseId(user.id);
 
-    return newEntry.id;
-  }, [setHistory]);
+      // Insert new entry using raw insert to avoid type issues with new table
+      const insertData = {
+        user_id: user.id,
+        license_id: licenseId,
+        origin_address: entry.originAddress,
+        origin_lat: entry.originPosition?.lat || null,
+        origin_lon: entry.originPosition?.lon || null,
+        destination_address: entry.destinationAddress,
+        destination_lat: entry.destinationPosition?.lat || null,
+        destination_lon: entry.destinationPosition?.lon || null,
+        stops: entry.stops as unknown as Record<string, unknown>[],
+        vehicle_id: entry.vehicleId,
+        client_id: entry.clientId,
+        calculated: entry.calculated,
+      };
+
+      const { data, error } = await supabase
+        .from('search_history')
+        .insert(insertData as never)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error adding search history:', error);
+        return null;
+      }
+
+      return data?.id || null;
+    } catch (e) {
+      console.error('Error adding search history:', e);
+      return null;
+    }
+  }, []);
 
   // Mark a search as calculated
-  const markAsCalculated = useCallback((searchId: string) => {
-    setHistory(prev => prev.map(entry => 
-      entry.id === searchId ? { ...entry, calculated: true } : entry
-    ));
-  }, [setHistory]);
+  const markAsCalculated = useCallback(async (searchId: string) => {
+    try {
+      await supabase
+        .from('search_history')
+        .update({ calculated: true, updated_at: new Date().toISOString() })
+        .eq('id', searchId);
+    } catch (e) {
+      console.error('Error marking search as calculated:', e);
+    }
+  }, []);
 
   // Update existing search by matching recent entries
-  const updateRecentSearch = useCallback((
+  const updateRecentSearch = useCallback(async (
     originAddress: string,
     destinationAddress: string,
     updates: Partial<SearchHistoryEntry>
   ) => {
-    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-    
-    setHistory(prev => prev.map(entry => {
-      if (entry.originAddress === originAddress && 
-          entry.destinationAddress === destinationAddress &&
-          new Date(entry.timestamp).getTime() >= fiveMinutesAgo) {
-        return { ...entry, ...updates };
-      }
-      return entry;
-    }));
-  }, [setHistory]);
+    try {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      
+      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (updates.calculated !== undefined) updateData.calculated = updates.calculated;
+      if (updates.vehicleId !== undefined) updateData.vehicle_id = updates.vehicleId;
+      if (updates.clientId !== undefined) updateData.client_id = updates.clientId;
+
+      await supabase
+        .from('search_history')
+        .update(updateData)
+        .eq('origin_address', originAddress)
+        .eq('destination_address', destinationAddress)
+        .gte('created_at', fiveMinutesAgo);
+    } catch (e) {
+      console.error('Error updating search history:', e);
+    }
+  }, []);
 
   // Remove a specific entry
-  const removeSearch = useCallback((searchId: string) => {
-    setHistory(prev => prev.filter(entry => entry.id !== searchId));
-  }, [setHistory]);
+  const removeSearch = useCallback(async (searchId: string) => {
+    try {
+      await supabase
+        .from('search_history')
+        .delete()
+        .eq('id', searchId);
+    } catch (e) {
+      console.error('Error removing search history:', e);
+    }
+  }, []);
 
   // Clear all history
-  const clearHistory = useCallback(() => {
-    setHistory([]);
-  }, [setHistory]);
+  const clearHistory = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  // Get uncalculated searches (searches that were never calculated)
+      await supabase
+        .from('search_history')
+        .delete()
+        .eq('user_id', user.id);
+    } catch (e) {
+      console.error('Error clearing search history:', e);
+    }
+  }, []);
+
+  // Get uncalculated searches
   const uncalculatedSearches = history.filter(entry => !entry.calculated);
 
   // Get recent searches (last 24 hours)
@@ -123,10 +282,12 @@ export function useSearchHistory() {
     history,
     recentSearches,
     uncalculatedSearches,
+    isLoading,
     addSearch,
     markAsCalculated,
     updateRecentSearch,
     removeSearch,
     clearHistory,
+    refetch: fetchHistory,
   };
 }
