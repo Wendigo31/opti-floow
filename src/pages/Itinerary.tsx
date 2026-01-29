@@ -620,142 +620,161 @@ export default function Itinerary() {
 
   const calculateRoute = async (
     avoidHighways: boolean
-  ): Promise<RouteResult | null> => {
-    // Create abort controller for timeout - 60 seconds to handle cold starts
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-    
-    try {
-      // Build waypoints for Google Directions API
-      const waypoints: { lat: number; lon: number }[] = [];
-      
-      if (originPosition) {
-        waypoints.push({ lat: originPosition.lat, lon: originPosition.lon });
-      }
-      
-      stops.forEach(stop => {
-        if (stop.position) {
-          waypoints.push({ lat: stop.position.lat, lon: stop.position.lon });
-        }
-      });
-      
-      if (destinationPosition) {
-        waypoints.push({ lat: destinationPosition.lat, lon: destinationPosition.lon });
-      }
+  ): Promise<RouteResult> => {
+    const getInvokeErrorMessage = (err: unknown): string => {
+      if (!err || typeof err !== 'object') return 'Erreur inconnue';
 
-      if (waypoints.length < 2) {
-        throw new Error('Au moins 2 points sont nécessaires');
-      }
-
-      const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
-      const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
-      const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
-
-      console.log('Calling google-directions with:', { origin, destination, intermediateWaypoints, avoidHighways });
-
-      // Call Google Directions API via edge function with timeout
-      const response = await Promise.race([
-        supabase.functions.invoke('google-directions', {
-          body: {
-            origin,
-            destination,
-            waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
-            avoidHighways,
-          }
-        }),
-        new Promise<never>((_, reject) => {
-          controller.signal.addEventListener('abort', () => {
-            reject(new Error('Délai d\'attente dépassé pour le calcul de l\'itinéraire'));
-          });
-        })
-      ]);
-      
-      clearTimeout(timeoutId);
-      
-      const { data, error } = response;
-      
-      if (error) {
-        console.error('Google Directions API error:', error);
-        throw new Error(`Erreur de calcul de route`);
-      }
-      
-      if (!data.routes || data.routes.length === 0) {
-        throw new Error('Aucun itinéraire trouvé');
-      }
-
-      const route = data.routes[0];
-      
-      // Calculate total distance and duration from all legs
-      let totalDistanceMeters = 0;
-      let totalDurationSeconds = 0;
-      
-      for (const leg of route.legs) {
-        totalDistanceMeters += leg.distance.value;
-        totalDurationSeconds += leg.duration.value;
-      }
-
-      const distanceKm = totalDistanceMeters / 1000;
-
-      // Decode polyline to get coordinates
-      const coordinates: [number, number][] = [];
-      if (route.overview_polyline?.points) {
-        const decoded = decodePolyline(route.overview_polyline.points);
-        coordinates.push(...decoded);
-      }
-
-      // Calculate toll cost using TomTom API for accurate truck toll estimation
-      let tollCost = 0;
-      if (!avoidHighways) {
+      const anyErr = err as any;
+      // supabase-js FunctionsHttpError often contains context.body
+      const body = anyErr?.context?.body;
+      if (typeof body === 'string') {
         try {
-          const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
-            body: {
-              waypoints,
-              distanceKm,
-              vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
-              vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500,
-              avoidHighways,
-            }
-          });
-          
-          if (tollData?.tollCost) {
-            tollCost = tollData.tollCost;
-            console.log('TomTom toll cost:', tollCost, 'source:', tollData.source);
-          } else {
-            // Fallback to estimation
-            const estimatedHighwayRatio = 0.85;
-            const tollableDistance = distanceKm * estimatedHighwayRatio;
-            tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
-          }
-        } catch (tollError) {
-          console.warn('TomTom toll calculation failed, using estimation:', tollError);
+          const parsed = JSON.parse(body);
+          if (parsed?.error) return String(parsed.error);
+        } catch {
+          // ignore
+        }
+      }
+
+      if (typeof anyErr?.message === 'string' && anyErr.message.trim()) {
+        return anyErr.message;
+      }
+      return 'Erreur de calcul de route';
+    };
+
+    const withTimeout = async <T,>(
+      promise: Promise<T>,
+      ms: number,
+      timeoutMessage: string
+    ): Promise<T> => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+      });
+      try {
+        return await Promise.race([promise, timeoutPromise]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    // Build waypoints for Google Directions API
+    const waypoints: { lat: number; lon: number }[] = [];
+
+    if (originPosition) {
+      waypoints.push({ lat: originPosition.lat, lon: originPosition.lon });
+    }
+
+    stops.forEach(stop => {
+      if (stop.position) {
+        waypoints.push({ lat: stop.position.lat, lon: stop.position.lon });
+      }
+    });
+
+    if (destinationPosition) {
+      waypoints.push({ lat: destinationPosition.lat, lon: destinationPosition.lon });
+    }
+
+    if (waypoints.length < 2) {
+      throw new Error('Au moins 2 points sont nécessaires');
+    }
+
+    const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
+    const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
+    const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
+
+    console.log('Calling google-directions with:', { origin, destination, intermediateWaypoints, avoidHighways });
+
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke('google-directions', {
+        body: {
+          origin,
+          destination,
+          waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
+          avoidHighways,
+        },
+      }),
+      60000,
+      "Délai d'attente dépassé pour le calcul de l'itinéraire"
+    );
+
+    if (error) {
+      console.error('Google Directions API error:', error);
+      throw new Error(getInvokeErrorMessage(error));
+    }
+
+    if (data?.error) {
+      throw new Error(String(data.error));
+    }
+
+    if (!data?.routes || data.routes.length === 0) {
+      throw new Error('Aucun itinéraire trouvé');
+    }
+
+    const route = data.routes[0];
+
+    // Calculate total distance and duration from all legs
+    let totalDistanceMeters = 0;
+    let totalDurationSeconds = 0;
+
+    for (const leg of route.legs) {
+      totalDistanceMeters += leg.distance.value;
+      totalDurationSeconds += leg.duration.value;
+    }
+
+    const distanceKm = totalDistanceMeters / 1000;
+
+    // Decode polyline to get coordinates
+    const coordinates: [number, number][] = [];
+    if (route.overview_polyline?.points) {
+      const decoded = decodePolyline(route.overview_polyline.points);
+      coordinates.push(...decoded);
+    }
+
+    // Calculate toll cost using TomTom API for accurate truck toll estimation
+    let tollCost = 0;
+    if (!avoidHighways) {
+      try {
+        const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
+          body: {
+            waypoints,
+            distanceKm,
+            vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
+            vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500,
+            avoidHighways,
+          },
+        });
+
+        if (tollData?.tollCost) {
+          tollCost = tollData.tollCost;
+          console.log('TomTom toll cost:', tollCost, 'source:', tollData.source);
+        } else {
+          // Fallback to estimation
           const estimatedHighwayRatio = 0.85;
           const tollableDistance = distanceKm * estimatedHighwayRatio;
           tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
         }
-      } else {
-        // National roads: minimal tolls (bridges, tunnels)
-        tollCost = distanceKm * FRENCH_TOLL_RATES.NATIONAL;
+      } catch (tollError) {
+        console.warn('TomTom toll calculation failed, using estimation:', tollError);
+        const estimatedHighwayRatio = 0.85;
+        const tollableDistance = distanceKm * estimatedHighwayRatio;
+        tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
       }
-      
-      const fuelCost = calculateFuelCost(distanceKm);
-
-      return {
-        distance: Math.round(distanceKm),
-        duration: Math.round(totalDurationSeconds / 3600 * 10) / 10,
-        tollCost: Math.round(tollCost * 100) / 100,
-        fuelCost: Math.round(fuelCost * 100) / 100,
-        coordinates,
-        type: avoidHighways ? 'national' : 'highway',
-      };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (err instanceof Error && err.message.includes('Délai')) {
-        console.error('Route calculation timeout:', err);
-      } else {
-        console.error('Route calculation error:', err);
-      }
-      return null;
+    } else {
+      // National roads: minimal tolls (bridges, tunnels)
+      tollCost = distanceKm * FRENCH_TOLL_RATES.NATIONAL;
     }
+
+    const fuelCost = calculateFuelCost(distanceKm);
+
+    return {
+      distance: Math.round(distanceKm),
+      duration: Math.round(totalDurationSeconds / 3600 * 10) / 10,
+      tollCost: Math.round(tollCost * 100) / 100,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      coordinates,
+      type: avoidHighways ? 'national' : 'highway',
+    };
   };
 
   const handleCalculateRoutes = async () => {
@@ -778,17 +797,40 @@ export default function Itinerary() {
     setSelectedRouteType('highway');
 
     try {
-      const [highway, national] = await Promise.all([
-        calculateRoute(false),
-        calculateRoute(true),
-      ]);
+      let highway: RouteResult | null = null;
+      let national: RouteResult | null = null;
+      let highwayError: string | null = null;
+      let nationalError: string | null = null;
 
-      if (!highway && !national) {
-        throw new Error('Impossible de calculer les itinéraires');
+      // 1) Autoroute d'abord (résultat affichable plus vite)
+      try {
+        highway = await calculateRoute(false);
+        setHighwayRoute(highway);
+      } catch (e) {
+        highwayError = e instanceof Error ? e.message : 'Erreur autoroute inconnue';
       }
 
-      setHighwayRoute(highway);
-      setNationalRoute(national);
+      // 2) Nationale ensuite (évite 2 appels Google simultanés)
+      try {
+        national = await calculateRoute(true);
+        setNationalRoute(national);
+      } catch (e) {
+        nationalError = e instanceof Error ? e.message : 'Erreur nationale inconnue';
+      }
+
+      if (!highway && !national) {
+        throw new Error(
+          `Impossible de calculer les itinéraires (autoroute: ${highwayError || 'inconnue'} / nationale: ${nationalError || 'inconnue'})`
+        );
+      }
+
+      // Si une variante échoue, on le signale sans bloquer l'autre
+      if (highway && !national && nationalError) {
+        setError(`Trajet national indisponible : ${nationalError}`);
+      }
+      if (national && !highway && highwayError) {
+        setError(`Trajet autoroute indisponible : ${highwayError}`);
+      }
       
       // Mark search as calculated in history
       if (currentSearchIdRef.current) {
