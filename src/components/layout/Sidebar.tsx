@@ -17,11 +17,11 @@ import {
   EyeOff,
   UsersRound
 } from 'lucide-react';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
 import { useUserFeatureOverrides, FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
+import { useSidebarContext } from '@/context/SidebarContext';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -127,7 +127,7 @@ const navGroups: { label: string; items: NavItemConfig[] }[] = [
 const navItems: NavItemConfig[] = navGroups.flatMap(g => g.items as NavItemConfig[]);
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
@@ -313,7 +313,7 @@ export function Sidebar() {
       {/* Collapse Toggle */}
       <div className="p-4 border-t border-sidebar-border">
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggleSidebar}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
         >
           {collapsed ? (

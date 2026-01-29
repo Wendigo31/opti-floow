@@ -3,14 +3,17 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { LoadingScreen } from './LoadingScreen';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SidebarProvider, useSidebarContext } from '@/context/SidebarContext';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+function MainLayoutContent({ children }: MainLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
+  const { collapsed } = useSidebarContext();
+  
   // null = auto (système), true = dark, false = light
   const [isDark, setIsDark] = useState<boolean | null>(() => {
     if (typeof window !== 'undefined') {
@@ -66,6 +69,12 @@ export function MainLayout({ children }: MainLayoutProps) {
     setIsLoading(false);
   };
 
+  // Calculate margin based on sidebar state
+  const getMainMargin = () => {
+    if (isMobile) return 'ml-0';
+    return collapsed ? 'ml-20' : 'ml-64';
+  };
+
   return (
     <>
       {/* Loading overlay - always render layout underneath to keep hooks stable */}
@@ -77,12 +86,20 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Hide sidebar on mobile */}
         {!isMobile && <Sidebar />}
         <TopBar isDark={isDark} onToggleTheme={handleToggleTheme} />
-        <main className={`pt-14 transition-all duration-300 ${isMobile ? 'ml-0' : 'ml-20 lg:ml-64'}`}>
+        <main className={`pt-14 transition-all duration-300 ${getMainMargin()}`}>
           <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
             {children}
           </div>
         </main>
       </div>
     </>
+  );
+}
+
+export function MainLayout({ children }: MainLayoutProps) {
+  return (
+    <SidebarProvider>
+      <MainLayoutContent>{children}</MainLayoutContent>
+    </SidebarProvider>
   );
 }
