@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Users, 
@@ -16,13 +15,9 @@ import {
   Shield, 
   User, 
   Mail, 
-  Clock, 
   Trash2, 
-  Edit2,
   Loader2,
   AlertCircle,
-  Check,
-  X
 } from 'lucide-react';
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, TeamRole } from '@/types/team';
 import {
@@ -40,7 +35,6 @@ export function TeamManagement() {
   const { toast } = useToast();
   const {
     members,
-    pendingInvitations,
     currentUserRole,
     isOwner,
     canManageTeam,
@@ -50,18 +44,16 @@ export function TeamManagement() {
     isLoading,
     error,
     licensePlanType,
-    inviteMember,
+    addMember,
     updateMemberRole,
     removeMember,
-    cancelInvitation,
   } = useTeam();
 
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteDisplayName, setInviteDisplayName] = useState('');
-  const [inviteRole, setInviteRole] = useState<TeamRole>('membre');
-  const [isInviting, setIsInviting] = useState(false);
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberDisplayName, setMemberDisplayName] = useState('');
+  const [memberRole, setMemberRole] = useState<TeamRole>('membre');
+  const [isAdding, setIsAdding] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
-  const [invitationToCancel, setInvitationToCancel] = useState<string | null>(null);
 
   const getRoleIcon = (role: TeamRole) => {
     switch (role) {
@@ -85,8 +77,8 @@ export function TeamManagement() {
     }
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) {
+  const handleAddMember = async () => {
+    if (!memberEmail.trim()) {
       toast({
         title: 'Email requis',
         description: 'Veuillez entrer une adresse email',
@@ -95,7 +87,7 @@ export function TeamManagement() {
       return;
     }
 
-    if (!inviteDisplayName.trim()) {
+    if (!memberDisplayName.trim()) {
       toast({
         title: 'Nom requis',
         description: 'Veuillez entrer le nom et prénom de l\'utilisateur',
@@ -104,18 +96,18 @@ export function TeamManagement() {
       return;
     }
 
-    setIsInviting(true);
-    const result = await inviteMember(inviteEmail.trim(), inviteRole, inviteDisplayName.trim());
-    setIsInviting(false);
+    setIsAdding(true);
+    const result = await addMember(memberEmail.trim(), memberRole, memberDisplayName.trim());
+    setIsAdding(false);
 
     if (result.success) {
       toast({
-        title: 'Invitation envoyée',
-        description: `Une invitation a été créée pour ${inviteDisplayName || inviteEmail}`,
+        title: 'Membre ajouté',
+        description: `${memberDisplayName || memberEmail} a été ajouté à l'équipe`,
       });
-      setInviteEmail('');
-      setInviteDisplayName('');
-      setInviteRole('membre');
+      setMemberEmail('');
+      setMemberDisplayName('');
+      setMemberRole('membre');
     } else {
       toast({
         title: 'Erreur',
@@ -145,26 +137,6 @@ export function TeamManagement() {
     }
   };
 
-  const handleCancelInvitation = async () => {
-    if (!invitationToCancel) return;
-
-    const result = await cancelInvitation(invitationToCancel);
-    setInvitationToCancel(null);
-
-    if (result.success) {
-      toast({
-        title: 'Invitation annulée',
-        description: 'L\'invitation a été annulée',
-      });
-    } else {
-      toast({
-        title: 'Erreur',
-        description: result.error,
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleRoleChange = async (memberId: string, newRole: TeamRole) => {
     const result = await updateMemberRole(memberId, newRole);
 
@@ -182,8 +154,7 @@ export function TeamManagement() {
     }
   };
 
-  // Check if multi-users is available (based on actual license plan type)
-  // licensePlanType is now obtained from useLicense via useTeam hook
+  // Check if multi-users is available
   if (licensePlanType !== 'pro' && licensePlanType !== 'enterprise') {
     return (
       <Card>
@@ -193,7 +164,7 @@ export function TeamManagement() {
             Gestion d'équipe
           </CardTitle>
           <CardDescription>
-            Invitez des collaborateurs et partagez vos données
+            Ajoutez des collaborateurs et partagez vos données
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -257,45 +228,45 @@ export function TeamManagement() {
           </CardHeader>
         </Card>
 
-        {/* Invite form */}
+        {/* Add member form */}
         {canManageTeam && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <UserPlus className="h-5 w-5" />
-                Inviter un collaborateur
+                Ajouter un collaborateur
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="invite-name">Prénom et Nom *</Label>
+                  <Label htmlFor="member-name">Prénom et Nom *</Label>
                   <Input
-                    id="invite-name"
+                    id="member-name"
                     type="text"
                     placeholder="Jean Dupont"
-                    value={inviteDisplayName}
-                    onChange={(e) => setInviteDisplayName(e.target.value)}
-                    disabled={!canAddMore || isInviting}
+                    value={memberDisplayName}
+                    onChange={(e) => setMemberDisplayName(e.target.value)}
+                    disabled={!canAddMore || isAdding}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="invite-email">Adresse email *</Label>
+                  <Label htmlFor="member-email">Adresse email *</Label>
                   <Input
-                    id="invite-email"
+                    id="member-email"
                     type="email"
                     placeholder="collaborateur@entreprise.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    disabled={!canAddMore || isInviting}
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    disabled={!canAddMore || isAdding}
                   />
                 </div>
                 <div>
                   <Label>Rôle</Label>
                   <Select
-                    value={inviteRole}
-                    onValueChange={(v) => setInviteRole(v as TeamRole)}
-                    disabled={!canAddMore || isInviting}
+                    value={memberRole}
+                    onValueChange={(v) => setMemberRole(v as TeamRole)}
+                    disabled={!canAddMore || isAdding}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -303,22 +274,21 @@ export function TeamManagement() {
                     <SelectContent>
                       <SelectItem value="membre">Membre</SelectItem>
                       <SelectItem value="exploitation">Exploitation</SelectItem>
-                      {/* Direction role can only be created by admin panel */}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-end">
                   <Button
-                    onClick={handleInvite}
-                    disabled={!canAddMore || isInviting || !inviteEmail.trim() || !inviteDisplayName.trim()}
+                    onClick={handleAddMember}
+                    disabled={!canAddMore || isAdding || !memberEmail.trim() || !memberDisplayName.trim()}
                     className="w-full"
                   >
-                    {isInviting ? (
+                    {isAdding ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
                       <UserPlus className="h-4 w-4 mr-2" />
                     )}
-                    Inviter
+                    Ajouter
                   </Button>
                 </div>
               </div>
@@ -356,6 +326,9 @@ export function TeamManagement() {
                         </span>
                         {member.isCurrentUser && (
                           <Badge variant="outline" className="text-xs">Vous</Badge>
+                        )}
+                        {!member.user_id && (
+                          <Badge variant="secondary" className="text-xs">En attente de connexion</Badge>
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -408,51 +381,6 @@ export function TeamManagement() {
           </CardContent>
         </Card>
 
-        {/* Pending invitations */}
-        {pendingInvitations.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Invitations en attente
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {pendingInvitations.map((invitation) => (
-                  <div
-                    key={invitation.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-dashed"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{invitation.email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Expire le {new Date(invitation.expires_at).toLocaleDateString('fr-FR')}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{ROLE_LABELS[invitation.role]}</Badge>
-                      {canManageTeam && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setInvitationToCancel(invitation.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Role descriptions */}
         <Card>
           <CardHeader>
@@ -489,24 +417,6 @@ export function TeamManagement() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemoveMember} className="bg-destructive hover:bg-destructive/90">
               Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirm cancel invitation dialog */}
-      <AlertDialog open={!!invitationToCancel} onOpenChange={() => setInvitationToCancel(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Annuler cette invitation ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              L'utilisateur ne pourra plus rejoindre l'équipe avec ce lien d'invitation.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Garder</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancelInvitation}>
-              Annuler l'invitation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

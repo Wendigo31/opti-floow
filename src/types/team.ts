@@ -5,28 +5,16 @@ export type TeamRole = 'direction' | 'exploitation' | 'membre';
 export interface CompanyUser {
   id: string;
   license_id: string;
-  user_id: string;
+  user_id: string | null;
   email: string;
   role: TeamRole;
   display_name?: string;
   invited_by?: string;
-  invited_at: string;
+  invited_at?: string;
   accepted_at?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface CompanyInvitation {
-  id: string;
-  license_id: string;
-  email: string;
-  role: TeamRole;
-  token: string;
-  invited_by: string;
-  expires_at: string;
-  accepted_at?: string;
-  created_at: string;
 }
 
 export interface TeamMember extends CompanyUser {

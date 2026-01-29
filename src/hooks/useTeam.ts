@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { CompanyUser, CompanyInvitation, TeamRole, TeamMember } from '@/types/team';
+import type { CompanyUser, TeamRole, TeamMember } from '@/types/team';
 import { MAX_USERS_PER_PLAN } from '@/types/team';
 import type { PlanType } from '@/hooks/useLicense';
 import { useLicense } from '@/hooks/useLicense';
@@ -14,9 +14,8 @@ interface CurrentUserInfo {
 
 interface UseTeamReturn {
   members: TeamMember[];
-  pendingInvitations: CompanyInvitation[];
   currentUserRole: TeamRole | null;
-  currentUserInfo: CurrentUserInfo; // User-specific info for display
+  currentUserInfo: CurrentUserInfo;
   isOwner: boolean;
   isAdmin: boolean;
   isDirection: boolean;
@@ -27,20 +26,17 @@ interface UseTeamReturn {
   isLoading: boolean;
   error: string | null;
   licenseId: string | null;
-  licensePlanType: PlanType; // The actual plan type from database
-  inviteMember: (email: string, role: TeamRole, displayName?: string) => Promise<{ success: boolean; error?: string }>;
+  licensePlanType: PlanType;
+  addMember: (email: string, role: TeamRole, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   updateMemberRole: (memberId: string, role: TeamRole) => Promise<{ success: boolean; error?: string }>;
   removeMember: (memberId: string) => Promise<{ success: boolean; error?: string }>;
-  cancelInvitation: (invitationId: string) => Promise<{ success: boolean; error?: string }>;
   refreshTeam: () => Promise<void>;
 }
 
 export function useTeam(): UseTeamReturn {
-  // Get planType from useLicense (already validated via edge function)
   const { planType: validatedPlanType, licenseData, isLoading: isLicenseLoading } = useLicense();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [pendingInvitations, setPendingInvitations] = useState<CompanyInvitation[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
   const [currentUserInfo, setCurrentUserInfo] = useState<CurrentUserInfo>({
     displayName: null,
@@ -51,24 +47,18 @@ export function useTeam(): UseTeamReturn {
   const [isTeamLoading, setIsTeamLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use planType from useLicense (validated via edge function) - fallback to 'start'
-  // IMPORTANT: Keep the previous planType if license is still loading to avoid flickering
   const licensePlanType: PlanType = validatedPlanType || 'start';
   const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
   
-  // Combined loading state: wait for both license and team data
   const isLoading = isLicenseLoading || isTeamLoading;
 
   const maxUsers = licenseMaxUsers;
   const currentUserCount = members.filter(m => m.is_active).length;
-  const pendingCount = pendingInvitations.filter(i => !i.accepted_at).length;
-  const canAddMore = (currentUserCount + pendingCount) < maxUsers;
+  const canAddMore = currentUserCount < maxUsers;
 
-  // Map roles - direction is the admin level
   const isOwner = currentUserRole === 'direction';
   const isAdmin = currentUserRole === 'direction';
   const isDirection = currentUserRole === 'direction';
-  // canManageTeam depends on the actual plan type
   const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
   const canManageTeam = isDirection && hasMultiUsers;
 
@@ -84,7 +74,6 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      // Get license ID, role, and display_name from company_users for current user
       const { data: currentUserEntry, error: userError } = await supabase
         .from('company_users')
         .select('license_id, role, display_name, email')
@@ -97,7 +86,6 @@ export function useTeam(): UseTeamReturn {
       }
 
       if (!currentUserEntry?.license_id) {
-        // User not in any company - not an error for users without team
         setCurrentUserRole(null);
         setCurrentUserInfo({ displayName: null, email: user.email || null, userId: user.id });
         setLicenseId(null);
@@ -108,15 +96,11 @@ export function useTeam(): UseTeamReturn {
       const currentLicenseId = currentUserEntry.license_id;
       setLicenseId(currentLicenseId);
       setCurrentUserRole(currentUserEntry.role as TeamRole);
-      // Set current user info for session isolation
       setCurrentUserInfo({
         displayName: currentUserEntry.display_name || null,
         email: currentUserEntry.email || user.email || null,
         userId: user.id,
       });
-
-      // Note: planType is now obtained from useLicense hook (validated via edge function)
-      // This avoids RLS issues with the licenses table
 
       // Fetch team members
       const { data: companyUsers, error: usersError } = await supabase
@@ -136,24 +120,6 @@ export function useTeam(): UseTeamReturn {
         }));
         setMembers(teamMembers);
       }
-
-      // Fetch pending invitations
-      const { data: invitations, error: invError } = await supabase
-        .from('company_invitations')
-        .select('*')
-        .eq('license_id', currentLicenseId)
-        .is('accepted_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (invError) {
-        console.error('Error fetching invitations:', invError);
-      } else {
-        setPendingInvitations((invitations || []).map(inv => ({
-          ...inv,
-          role: inv.role as TeamRole,
-        })));
-      }
     } catch (e) {
       console.error('Error in fetchTeam:', e);
       setError('Erreur inattendue');
@@ -166,17 +132,17 @@ export function useTeam(): UseTeamReturn {
     fetchTeam();
   }, [fetchTeam]);
 
-  const inviteMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
+  // Add member directly (no invitation flow)
+  const addMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
     if (!canManageTeam) {
-      return { success: false, error: 'Vous n\'avez pas les permissions pour inviter des membres' };
+      return { success: false, error: 'Vous n\'avez pas les permissions pour ajouter des membres' };
     }
 
     if (!canAddMore) {
       return { success: false, error: `Limite de ${maxUsers} utilisateur(s) atteinte pour votre forfait` };
     }
 
-    // Direction can invite exploitation and membre, but not another direction
-    // Only admin panel can create direction users
+    // Direction can add exploitation and membre, but not another direction
     if (role === 'direction') {
       return { success: false, error: 'Seul l\'administrateur système peut créer un compte Direction' };
     }
@@ -191,7 +157,7 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Non authentifié' };
       }
 
-      // Check if already a member or invited
+      // Check if already a member
       const { data: existingMember } = await supabase
         .from('company_users')
         .select('id')
@@ -203,34 +169,7 @@ export function useTeam(): UseTeamReturn {
         return { success: false, error: 'Cet utilisateur est déjà membre de l\'équipe' };
       }
 
-      const { data: existingInvite } = await supabase
-        .from('company_invitations')
-        .select('id')
-        .eq('license_id', licenseId)
-        .eq('email', email.toLowerCase())
-        .is('accepted_at', null)
-        .maybeSingle();
-
-      if (existingInvite) {
-        return { success: false, error: 'Une invitation est déjà en attente pour cet email' };
-      }
-
-      // Create invitation
-      const { error: insertError } = await supabase
-        .from('company_invitations')
-        .insert({
-          license_id: licenseId,
-          email: email.toLowerCase(),
-          role,
-          invited_by: user.id,
-        });
-
-      if (insertError) {
-        console.error('Error creating invitation:', insertError);
-        return { success: false, error: 'Erreur lors de la création de l\'invitation' };
-      }
-
-      // Also create company_users entry with display_name
+      // Create company_users entry directly
       const { error: userError } = await supabase
         .from('company_users')
         .insert({
@@ -239,18 +178,19 @@ export function useTeam(): UseTeamReturn {
           role,
           display_name: displayName?.trim() || null,
           invited_by: user.id,
+          invited_at: new Date().toISOString(),
           is_active: true,
         });
 
       if (userError) {
         console.error('Error creating company user:', userError);
-        // Don't fail - invitation was created successfully
+        return { success: false, error: 'Erreur lors de l\'ajout du membre' };
       }
 
       await fetchTeam();
       return { success: true };
     } catch (e) {
-      console.error('Error in inviteMember:', e);
+      console.error('Error in addMember:', e);
       return { success: false, error: 'Erreur inattendue' };
     }
   }, [canManageTeam, canAddMore, maxUsers, licenseId, fetchTeam]);
@@ -325,33 +265,8 @@ export function useTeam(): UseTeamReturn {
     }
   }, [isOwner, members, fetchTeam]);
 
-  const cancelInvitation = useCallback(async (invitationId: string): Promise<{ success: boolean; error?: string }> => {
-    if (!canManageTeam) {
-      return { success: false, error: 'Vous n\'avez pas les permissions' };
-    }
-
-    try {
-      const { error: deleteError } = await supabase
-        .from('company_invitations')
-        .delete()
-        .eq('id', invitationId);
-
-      if (deleteError) {
-        console.error('Error canceling invitation:', deleteError);
-        return { success: false, error: 'Erreur lors de l\'annulation' };
-      }
-
-      await fetchTeam();
-      return { success: true };
-    } catch (e) {
-      console.error('Error in cancelInvitation:', e);
-      return { success: false, error: 'Erreur inattendue' };
-    }
-  }, [canManageTeam, fetchTeam]);
-
   return {
     members,
-    pendingInvitations,
     currentUserRole,
     currentUserInfo,
     isOwner,
@@ -365,10 +280,9 @@ export function useTeam(): UseTeamReturn {
     error,
     licenseId,
     licensePlanType,
-    inviteMember,
+    addMember,
     updateMemberRole,
     removeMember,
-    cancelInvitation,
     refreshTeam: fetchTeam,
   };
 }
