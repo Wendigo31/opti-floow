@@ -508,7 +508,7 @@ export default function Upgrade() {
             <Info className="w-4 h-4" />
             <AlertDescription>
               Pour changer de forfait ou pour toute question sur votre abonnement, 
-              contactez-nous à <a href="mailto:contact@optiflow.fr" className="text-primary hover:underline">contact@optiflow.fr</a>
+              contactez-nous à <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">support@opti-group.fr</a>
             </AlertDescription>
           </Alert>
         </TabsContent>

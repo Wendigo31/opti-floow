@@ -523,7 +523,7 @@ export default function Settings() {
                           </div>
                           <div className="flex items-center gap-3">
                             <Mail className="w-4 h-4 text-muted-foreground" />
-                            <p className="text-foreground">yanis.dini3121@gmail.com</p>
+                            <p className="text-foreground">support@opti-group.fr</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -599,7 +599,7 @@ export default function Settings() {
 
                       <h3 className="text-lg font-semibold text-foreground mt-6 mb-3">Article 3 - Support</h3>
                       <p className="text-muted-foreground">
-                        Le support technique est accessible par email à yanis.dini3121@gmail.com ou par téléphone 
+                        Le support technique est accessible par email à support@opti-group.fr ou par téléphone 
                         au +33 6 46 69 14 62, du lundi au vendredi de 9h à 18h.
                       </p>
                     </div>
@@ -639,7 +639,7 @@ export default function Settings() {
                       </ul>
 
                       <p className="text-muted-foreground">
-                        Contact DPO : M. Yanis Dini - yanis.dini3121@gmail.com
+                        Contact DPO : M. Yanis Dini - support@opti-group.fr
                       </p>
                     </div>
                   </ScrollArea>
@@ -725,7 +725,7 @@ export default function Settings() {
                   <AccordionTrigger>Comment changer de forfait ?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground">
-                      Contactez notre équipe à yanis.dini3121@gmail.com ou au +33 6 46 69 14 62. 
+                      Contactez notre équipe à support@opti-group.fr ou au +33 6 46 69 14 62. 
                       Le changement ne nécessite pas de nouveau code licence.
                     </p>
                   </AccordionContent>
@@ -745,7 +745,7 @@ export default function Settings() {
                   <AccordionTrigger>Comment résilier mon abonnement ?</AccordionTrigger>
                   <AccordionContent>
                     <p className="text-muted-foreground">
-                      Vous pouvez résilier à tout moment par email à yanis.dini3121@gmail.com. 
+                      Vous pouvez résilier à tout moment par email à support@opti-group.fr. 
                       La résiliation prend effet à la fin de la période de facturation en cours.
                     </p>
                   </AccordionContent>
@@ -758,7 +758,7 @@ export default function Settings() {
                       Support disponible du lundi au vendredi de 9h à 18h :
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground mt-2 ml-4">
-                      <li>Email : yanis.dini3121@gmail.com</li>
+                      <li>Email : support@opti-group.fr</li>
                       <li>Téléphone : +33 6 46 69 14 62</li>
                     </ul>
                   </AccordionContent>
