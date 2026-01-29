@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
+import { useUserFeatureOverrides, FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
 import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -48,18 +49,19 @@ type NavItemConfig = {
   requiredFeature?: FeatureKey;
   requiredPlan?: 'pro' | 'enterprise';
   directionOnly?: boolean;
+  userFeatureKey?: UserFeatureKey;
 };
 
 const navItems: NavItemConfig[] = [
-  { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator' },
-  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro' },
-  { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro' },
-  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro' },
+  { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
+  { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro', userFeatureKey: 'page_itinerary' },
+  { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
+  { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro', userFeatureKey: 'page_dashboard' },
   { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro', directionOnly: true },
-  { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles' },
-  { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers' },
+  { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
+  { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
   { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
-  { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients' },
+  { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
   { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
   { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' },
   { to: '/pricing', icon: CreditCard, labelKey: 'pricing', directionOnly: true },
@@ -71,6 +73,7 @@ export function MobileNav() {
   const navigate = useNavigate();
   const { planType, hasFeature } = useLicense();
   const { isDirection } = useTeam();
+  const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
     if (!requiredPlan) return true;
@@ -138,6 +141,11 @@ export function MobileNav() {
             }
             
             if (item.directionOnly && !isDirection) {
+              return null;
+            }
+            
+            // Check user-specific feature override
+            if (item.userFeatureKey && !canAccessUserFeature(item.userFeatureKey)) {
               return null;
             }
             
