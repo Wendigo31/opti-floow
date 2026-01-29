@@ -31,10 +31,10 @@ serve(async (req) => {
       );
     }
 
-    // Use Google Places Autocomplete API
+    // Use Google Places Autocomplete API - support addresses, establishments (companies), and geocodes (cities)
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedQuery}&key=${GOOGLE_MAPS_API_KEY}&components=country:fr|country:be|country:ch|country:de|country:es&language=fr&types=address`
+      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedQuery}&key=${GOOGLE_MAPS_API_KEY}&components=country:fr|country:be|country:ch|country:de|country:es|country:it|country:lu&language=fr`
     );
 
     if (!response.ok) {
