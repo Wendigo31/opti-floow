@@ -39,6 +39,7 @@ import {
 import { GitMerge } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FeatureEditor } from '@/components/admin/FeatureEditor';
+import { PricingManager } from '@/components/admin/PricingManager';
 import { PWAUpdatesManager } from '@/components/admin/PWAUpdatesManager';
 import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { SchemaSyncManager } from '@/components/admin/SchemaSyncManager';
@@ -163,6 +164,7 @@ const emptyFormData: LicenseFormData = {
 const ADMIN_NAV = [
   { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer toutes les licences' },
   { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Utilisateurs & données' },
+  { id: 'pricing', label: 'Tarification', icon: Star, description: 'Forfaits & Add-ons' },
   { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les accès' },
   { id: 'updates', label: 'Mises à jour', icon: RefreshCw, description: 'Versions PWA' },
 ] as const;
@@ -206,6 +208,11 @@ export default function Admin() {
   const [selectedLicenseForFeatures, setSelectedLicenseForFeatures] = useState<License | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<AdminTab>('licenses');
+  
+  // Pricing manager
+  const [selectedLicenseForPricing, setSelectedLicenseForPricing] = useState<License | null>(null);
+  const [savingPricing, setSavingPricing] = useState(false);
+  const [licenseAddOns, setLicenseAddOns] = useState<string[]>([]);
 
   // User detail dialog
   const [selectedLicenseForDetail, setSelectedLicenseForDetail] = useState<License | null>(null);
@@ -1035,6 +1042,131 @@ export default function Admin() {
                 getAdminToken={getAdminToken}
                 onCompanyCreated={fetchLicenses}
               />
+            </div>
+          )}
+
+          {/* Pricing Tab - New unified pricing management */}
+          {adminActiveTab === 'pricing' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Tarification & Add-ons</h2>
+                <p className="text-sm text-muted-foreground">Gérez les forfaits, add-ons et options de facturation</p>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Sélectionner une licence</CardTitle>
+                  <CardDescription>Choisissez une licence pour gérer sa tarification</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select 
+                    value={selectedLicenseForPricing?.id || ''} 
+                    onValueChange={async (id) => {
+                      const license = licenses.find(l => l.id === id) || null;
+                      setSelectedLicenseForPricing(license);
+                      if (license) {
+                        // Fetch add-ons for this license
+                        try {
+                          const { data } = await supabase.functions.invoke('validate-license', {
+                            body: { 
+                              action: 'admin-get-addons',
+                              licenseId: license.id,
+                              adminToken: getAdminToken()
+                            },
+                          });
+                          if (data?.success) {
+                            setLicenseAddOns((data.addons || []).filter((a: any) => a.is_active).map((a: any) => a.addon_id));
+                          }
+                        } catch (e) {
+                          console.error('Error fetching add-ons:', e);
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="max-w-md">
+                      <SelectValue placeholder="Choisir une licence..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {licenses.map(license => (
+                        <SelectItem key={license.id} value={license.id}>
+                          <div className="flex items-center gap-2">
+                            {getPlanIcon(license.plan_type)}
+                            <span>{license.company_name || license.email}</span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {(license.plan_type || 'start').toUpperCase()}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              {selectedLicenseForPricing ? (
+                <PricingManager
+                  licenseId={selectedLicenseForPricing.id}
+                  planType={(selectedLicenseForPricing.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
+                  activeAddOns={licenseAddOns}
+                  onSave={async (data) => {
+                    setSavingPricing(true);
+                    try {
+                      // Update plan type if changed
+                      if (data.planType !== selectedLicenseForPricing.plan_type) {
+                        await supabase.functions.invoke('validate-license', {
+                          body: { 
+                            action: 'update-plan', 
+                            licenseId: selectedLicenseForPricing.id, 
+                            planType: data.planType, 
+                            adminToken: getAdminToken() 
+                          },
+                        });
+                      }
+                      
+                      // Update add-ons
+                      await supabase.functions.invoke('validate-license', {
+                        body: { 
+                          action: 'admin-update-addons',
+                          licenseId: selectedLicenseForPricing.id,
+                          addonIds: data.addOns,
+                          adminToken: getAdminToken()
+                        },
+                      });
+                      
+                      // Update pricing info if custom
+                      if (data.customPricing) {
+                        await supabase.functions.invoke('validate-license', {
+                          body: { 
+                            action: 'update-pricing',
+                            licenseId: selectedLicenseForPricing.id,
+                            baseMonthlyPrice: data.customPricing.basePrice,
+                            addonsMonthlyTotal: data.customPricing.addonsTotal,
+                            billingPeriod: data.customPricing.billingPeriod,
+                            adminToken: getAdminToken()
+                          },
+                        });
+                      }
+                      
+                      toast.success('Tarification mise à jour');
+                      fetchLicenses();
+                      setLicenseAddOns(data.addOns);
+                    } catch (error) {
+                      toast.error('Erreur lors de la mise à jour');
+                      console.error(error);
+                    } finally {
+                      setSavingPricing(false);
+                    }
+                  }}
+                  saving={savingPricing}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Star className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Sélectionnez une licence pour gérer sa tarification et ses add-ons</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
