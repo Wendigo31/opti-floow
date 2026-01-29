@@ -1487,7 +1487,7 @@ function MySubscription() {
           <Info className="w-4 h-4" />
           <AlertDescription>
             Pour changer de forfait ou pour toute question sur votre abonnement, 
-            contactez-nous à <a href="mailto:contact@optiflow.fr" className="text-primary hover:underline">contact@optiflow.fr</a>
+            contactez-nous à <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">support@opti-group.fr</a>
           </AlertDescription>
         </Alert>
       </div>
@@ -1572,7 +1572,7 @@ export default function Pricing() {
         <p>Tous les prix sont HT. Engagement annuel recommandé pour bénéficier du meilleur tarif (-17%).</p>
         <p className="mt-1">
           Besoin d'une solution personnalisée ?{' '}
-          <a href="mailto:contact@optiflow.fr" className="text-primary hover:underline">
+          <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">
             Contactez-nous
           </a>
         </p>

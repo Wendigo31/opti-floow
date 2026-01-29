@@ -275,8 +275,8 @@ export function PricingPlansPage({ onBack }: PricingPlansPageProps) {
         <div className="text-center mt-12 text-sm text-muted-foreground">
           <p>
             Des questions ? Contactez-nous à{' '}
-            <a href="mailto:contact@optiflow.fr" className="text-primary hover:underline">
-              contact@optiflow.fr
+            <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">
+              support@opti-group.fr
             </a>
           </p>
         </div>

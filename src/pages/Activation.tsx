@@ -185,8 +185,8 @@ export default function Activation() {
                     <p className="font-medium text-foreground">Je n'ai pas reçu mon identifiant</p>
                     <p className="text-muted-foreground">
                       Contactez votre administrateur ou notre support à l'adresse{' '}
-                      <a href="mailto:support@optiflow.fr" className="text-primary hover:underline">
-                        support@optiflow.fr
+                      <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">
+                        support@opti-group.fr
                       </a>
                     </p>
                   </div>
