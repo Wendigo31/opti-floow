@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Driver } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
@@ -32,87 +33,31 @@ function setCachedDrivers(cdi: Driver[], interim: Driver[]) {
   }
 }
 
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useCloudDrivers() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [cdiDrivers, setCdiDrivers] = useState<Driver[]>(() => getCachedCdiDrivers());
   const [interimDrivers, setInterimDrivers] = useState<Driver[]>(() => getCachedInterimDrivers());
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setAuthUserId(user?.id || null);
-      if (user) {
-        const lid = await getUserLicenseId();
-        if (!isMounted) return;
-        setLicenseId(lid);
-      }
-    };
-
-    void init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setAuthUserId(session?.user?.id || null);
-      if (session?.user) {
-        const lid = await getUserLicenseId();
-        setLicenseId(lid);
-      } else {
-        setLicenseId(null);
-        setCdiDrivers([]);
-        setInterimDrivers([]);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const fetchInProgressRef = useRef(false);
 
   const fetchDrivers = useCallback(async (): Promise<void> => {
-    setLoading(true);
-
-    if (!authUserId) {
-      setLoading(false);
+    if (fetchInProgressRef.current) return;
+    
+    if (!authUserId || !licenseId) {
+      setCdiDrivers(getCachedCdiDrivers());
+      setInterimDrivers(getCachedInterimDrivers());
       return;
     }
 
+    fetchInProgressRef.current = true;
+    setLoading(true);
+
     try {
-      const fetchedLicenseId = await getUserLicenseId();
-      setLicenseId(fetchedLicenseId);
-
-      // Skip query if no license_id - user might not be part of a company yet
-      if (!fetchedLicenseId) {
-        console.log('[useCloudDrivers] No license_id, using cache');
-        setCdiDrivers(getCachedCdiDrivers());
-        setInterimDrivers(getCachedInterimDrivers());
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('user_drivers')
-        .select('*')
-        .eq('license_id', fetchedLicenseId)
+        .select('driver_data, driver_type')
+        .eq('license_id', licenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -145,15 +90,11 @@ export function useCloudDrivers() {
       }
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
-  }, [authUserId]);
+  }, [authUserId, licenseId]);
 
-  useEffect(() => {
-    if (authUserId) {
-      fetchDrivers();
-    }
-  }, [authUserId, fetchDrivers]);
-
+  // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
 
@@ -221,7 +162,7 @@ export function useCloudDrivers() {
         return false;
       }
 
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_drivers')
@@ -239,9 +180,17 @@ export function useCloudDrivers() {
       if (error) throw error;
 
       if (isInterim) {
-        setInterimDrivers(prev => [driver, ...prev]);
+        setInterimDrivers(prev => {
+          const updated = [driver, ...prev];
+          setCachedDrivers(cdiDrivers, updated);
+          return updated;
+        });
       } else {
-        setCdiDrivers(prev => [driver, ...prev]);
+        setCdiDrivers(prev => {
+          const updated = [driver, ...prev];
+          setCachedDrivers(updated, interimDrivers);
+          return updated;
+        });
       }
       toast.success('Conducteur ajouté');
       return true;
@@ -250,11 +199,11 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, []);
+  }, [cdiDrivers, interimDrivers]);
 
   const updateDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_drivers')
@@ -295,7 +244,7 @@ export function useCloudDrivers() {
 
   const deleteDriver = useCallback(async (id: string, isInterim: boolean = false): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_drivers')

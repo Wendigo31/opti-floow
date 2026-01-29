@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Trailer } from '@/types/trailer';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 const CACHE_KEY = 'optiflow_trailers_cache';
 
@@ -22,89 +23,36 @@ function setCachedTrailers(trailers: Trailer[]) {
   }
 }
 
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useCloudTrailers() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [trailers, setTrailers] = useState<Trailer[]>(() => getCachedTrailers());
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setAuthUserId(user?.id || null);
-      if (user) {
-        const lid = await getUserLicenseId();
-        if (!isMounted) return;
-        setLicenseId(lid);
-      }
-    };
-
-    void init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setAuthUserId(session?.user?.id || null);
-      if (session?.user) {
-        const lid = await getUserLicenseId();
-        setLicenseId(lid);
-      } else {
-        setLicenseId(null);
-        setTrailers([]);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const fetchInProgressRef = useRef(false);
 
   const fetchTrailers = useCallback(async (): Promise<void> => {
-    setLoading(true);
-
-    if (!authUserId) {
-      setLoading(false);
+    if (fetchInProgressRef.current) return;
+    
+    if (!authUserId || !licenseId) {
+      setTrailers(getCachedTrailers());
       return;
     }
 
+    fetchInProgressRef.current = true;
+    setLoading(true);
+
     try {
-      const fetchedLicenseId = await getUserLicenseId();
-      setLicenseId(fetchedLicenseId);
-
-      // Skip query if no license_id - user might not be part of a company yet
-      if (!fetchedLicenseId) {
-        console.log('[useCloudTrailers] No license_id, using cache');
-        setTrailers(getCachedTrailers());
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('user_trailers')
-        .select('*')
-        .eq('license_id', fetchedLicenseId)
+        .select('trailer_data')
+        .eq('license_id', licenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const mapped: Trailer[] = (data || []).map(row => row.trailer_data as unknown as Trailer).filter(Boolean);
+      const mapped: Trailer[] = (data || [])
+        .map(row => row.trailer_data as unknown as Trailer)
+        .filter(Boolean);
       setTrailers(mapped);
       setCachedTrailers(mapped);
     } catch (error) {
@@ -116,15 +64,11 @@ export function useCloudTrailers() {
       }
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
-  }, [authUserId]);
+  }, [authUserId, licenseId]);
 
-  useEffect(() => {
-    if (authUserId) {
-      fetchTrailers();
-    }
-  }, [authUserId, fetchTrailers]);
-
+  // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
 
@@ -177,7 +121,7 @@ export function useCloudTrailers() {
         return false;
       }
 
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_trailers')
@@ -198,8 +142,11 @@ export function useCloudTrailers() {
 
       if (error) throw error;
 
-      setTrailers(prev => [trailer, ...prev]);
-      setCachedTrailers([trailer, ...trailers]);
+      setTrailers(prev => {
+        const updated = [trailer, ...prev];
+        setCachedTrailers(updated);
+        return updated;
+      });
       toast.success('Remorque ajoutée');
       return true;
     } catch (error) {
@@ -207,11 +154,11 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [trailers]);
+  }, []);
 
   const updateTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_trailers')
@@ -248,7 +195,7 @@ export function useCloudTrailers() {
 
   const deleteTrailer = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_trailers')
