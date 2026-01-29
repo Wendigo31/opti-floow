@@ -2090,6 +2090,52 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // --- Simultaneous Login Detection ---
+    // Check if this user (email) already has an active session from a different location
+    const { data: existingSession } = await supabase
+      .from("company_users")
+      .select("id, last_activity_at, user_id")
+      .eq("license_id", license.id)
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingSession?.last_activity_at) {
+      const lastActivityTime = new Date(existingSession.last_activity_at);
+      const now = new Date();
+      const minutesSinceLastActivity = (now.getTime() - lastActivityTime.getTime()) / (1000 * 60);
+      
+      // If user was active in the last 2 minutes from this same license, check if it's a new connection attempt
+      // We use a grace period of 2 minutes to detect simultaneous logins
+      if (minutesSinceLastActivity < 2 && existingSession.user_id) {
+        // Check the most recent login from login_history for this license/user
+        const { data: recentLogins } = await supabase
+          .from("login_history")
+          .select("ip_address, login_at")
+          .eq("license_id", license.id)
+          .order("login_at", { ascending: false })
+          .limit(5);
+        
+        // Check if there's a login from a different IP in the last 2 minutes
+        const recentDifferentIP = recentLogins?.find(login => {
+          const loginTime = new Date(login.login_at);
+          const loginMinutesAgo = (now.getTime() - loginTime.getTime()) / (1000 * 60);
+          return loginMinutesAgo < 2 && login.ip_address !== clientIp;
+        });
+        
+        if (recentDifferentIP) {
+          console.log("[validate-license] Simultaneous login detected for:", normalizedEmail, "from IP:", clientIp, "conflict with:", recentDifferentIP.ip_address);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Connexion simultanée détectée. Ce compte est déjà connecté depuis un autre appareil. Veuillez patienter quelques minutes ou déconnectez l'autre session.",
+              errorCode: "SIMULTANEOUS_LOGIN"
+            }),
+            { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+    }
+
     // Fetch custom features for this license
     const { data: features } = await supabase
       .from("license_features")

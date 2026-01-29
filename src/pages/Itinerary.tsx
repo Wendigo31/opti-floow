@@ -561,6 +561,10 @@ export default function Itinerary() {
   const calculateRoute = async (
     avoidHighways: boolean
   ): Promise<RouteResult | null> => {
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     try {
       // Build waypoints for Google Directions API
       const waypoints: { lat: number; lon: number }[] = [];
@@ -587,15 +591,26 @@ export default function Itinerary() {
       const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
       const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
 
-      // Call Google Directions API via edge function
-      const { data, error } = await supabase.functions.invoke('google-directions', {
-        body: {
-          origin,
-          destination,
-          waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
-          avoidHighways,
-        }
-      });
+      // Call Google Directions API via edge function with timeout
+      const response = await Promise.race([
+        supabase.functions.invoke('google-directions', {
+          body: {
+            origin,
+            destination,
+            waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
+            avoidHighways,
+          }
+        }),
+        new Promise<never>((_, reject) => {
+          controller.signal.addEventListener('abort', () => {
+            reject(new Error('Délai d\'attente dépassé pour le calcul de l\'itinéraire'));
+          });
+        })
+      ]);
+      
+      clearTimeout(timeoutId);
+      
+      const { data, error } = response;
       
       if (error) {
         console.error('Google Directions API error:', error);
@@ -671,7 +686,12 @@ export default function Itinerary() {
         type: avoidHighways ? 'national' : 'highway',
       };
     } catch (err) {
-      console.error('Route calculation error:', err);
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.message.includes('Délai')) {
+        console.error('Route calculation timeout:', err);
+      } else {
+        console.error('Route calculation error:', err);
+      }
       return null;
     }
   };
