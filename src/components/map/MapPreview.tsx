@@ -87,21 +87,36 @@ const loadGoogleMapsAPI = (): Promise<void> => {
         console.log('[MapPreview] Loading Google Maps script...');
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=geometry,marker&loading=async`;
+        // NOTE: Do NOT use `loading=async` here.
+        // With the async loader, `google.maps.Map` may not be available at `script.onload`,
+        // which caused "Script loaded but Maps not available".
+        // We load the standard script and then wait until `google.maps.Map` is ready.
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=geometry`;
         script.async = true;
         script.defer = true;
         
         script.onload = () => {
-          // Verify that Maps is actually available
-          if (window.google?.maps?.Map) {
-            console.log('[MapPreview] Google Maps loaded successfully');
-            isGoogleMapsLoaded = true;
-            resolve();
-          } else {
-            console.error('[MapPreview] Script loaded but Maps not available');
-            googleMapsPromise = null;
-            reject(new Error('Google Maps script loaded but API not available'));
-          }
+          // Verify that Maps is actually available (some environments need a short delay)
+          const startedAt = Date.now();
+          const waitForMaps = () => {
+            if (window.google?.maps?.Map) {
+              console.log('[MapPreview] Google Maps loaded successfully');
+              isGoogleMapsLoaded = true;
+              resolve();
+              return;
+            }
+
+            if (Date.now() - startedAt > 5000) {
+              console.error('[MapPreview] Script loaded but Maps not available');
+              googleMapsPromise = null;
+              reject(new Error('Google Maps script loaded but API not available (possible key restrictions)'));
+              return;
+            }
+
+            setTimeout(waitForMaps, 50);
+          };
+
+          waitForMaps();
         };
         
         script.onerror = (e) => {
