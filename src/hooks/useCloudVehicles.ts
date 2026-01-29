@@ -3,10 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Vehicle } from '@/types/vehicle';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 // Local storage key for offline cache
 const CACHE_KEY = 'optiflow_vehicles_cache';
-const CACHE_TIMESTAMP_KEY = 'optiflow_vehicles_cache_ts';
 
 // Get cached vehicles for offline support
 function getCachedVehicles(): Vehicle[] {
@@ -21,107 +21,47 @@ function getCachedVehicles(): Vehicle[] {
 function setCachedVehicles(vehicles: Vehicle[]) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(vehicles));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
   } catch (e) {
     console.error('Failed to cache vehicles:', e);
   }
 }
 
-// Get user's license_id for company-level sync
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useCloudVehicles() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getCachedVehicles());
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  // Track auth state
-  useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setAuthUserId(user?.id || null);
-
-      if (user) {
-        const lid = await getUserLicenseId();
-        if (!isMounted) return;
-        setLicenseId(lid);
-      } else {
-        setLicenseId(null);
-      }
-    };
-
-    void init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const user = session?.user || null;
-      setAuthUserId(user?.id || null);
-      if (user) {
-        const lid = await getUserLicenseId();
-        setLicenseId(lid);
-      } else {
-        setLicenseId(null);
-        setVehicles([]);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const fetchInProgressRef = useRef(false);
 
   const fetchVehicles = useCallback(async (): Promise<void> => {
-    setLoading(true);
-
-    if (!authUserId) {
-      setLoading(false);
+    // Prevent concurrent fetches
+    if (fetchInProgressRef.current) return;
+    
+    if (!authUserId || !licenseId) {
+      setVehicles(getCachedVehicles());
       return;
     }
 
+    fetchInProgressRef.current = true;
+    setLoading(true);
+
     try {
-      const fetchedLicenseId = await getUserLicenseId();
-      setLicenseId(fetchedLicenseId);
-
-      // Skip query if no license_id - user might not be part of a company yet
-      if (!fetchedLicenseId) {
-        console.log('[useCloudVehicles] No license_id, using cache');
-        setVehicles(getCachedVehicles());
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('user_vehicles')
-        .select('*')
-        .eq('license_id', fetchedLicenseId)
+        .select('vehicle_data')
+        .eq('license_id', licenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const mappedVehicles: Vehicle[] = (data || []).map(row => row.vehicle_data as unknown as Vehicle).filter(Boolean);
+      const mappedVehicles: Vehicle[] = (data || [])
+        .map(row => row.vehicle_data as unknown as Vehicle)
+        .filter(Boolean);
       
       setVehicles(mappedVehicles);
       setCachedVehicles(mappedVehicles);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
-      // Use cache as fallback
       const cached = getCachedVehicles();
       if (cached.length > 0) {
         setVehicles(cached);
@@ -129,17 +69,11 @@ export function useCloudVehicles() {
       }
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
-  }, [authUserId]);
+  }, [authUserId, licenseId]);
 
-  // Auto-fetch when authenticated
-  useEffect(() => {
-    if (authUserId) {
-      fetchVehicles();
-    }
-  }, [authUserId, fetchVehicles]);
-
-  // Realtime subscription
+  // Realtime subscription - only when licenseId is available
   useEffect(() => {
     if (!licenseId) return;
 
@@ -154,8 +88,6 @@ export function useCloudVehicles() {
           filter: `license_id=eq.${licenseId}`,
         },
         (payload) => {
-          console.log('[Realtime] user_vehicles change:', payload.eventType);
-          
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const vehicleData = (payload.new as any).vehicle_data as Vehicle;
             if (vehicleData) {
@@ -196,7 +128,7 @@ export function useCloudVehicles() {
         return false;
       }
 
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_vehicles')
@@ -219,9 +151,12 @@ export function useCloudVehicles() {
 
       if (error) throw error;
 
-      // Optimistic update (realtime will confirm)
-      setVehicles(prev => [vehicle, ...prev]);
-      setCachedVehicles([vehicle, ...vehicles]);
+      // Optimistic update
+      setVehicles(prev => {
+        const updated = [vehicle, ...prev];
+        setCachedVehicles(updated);
+        return updated;
+      });
       toast.success('Véhicule ajouté');
       return true;
     } catch (error) {
@@ -229,11 +164,11 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [vehicles]);
+  }, []);
 
   const updateVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_vehicles')
@@ -272,7 +207,7 @@ export function useCloudVehicles() {
 
   const deleteVehicle = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_vehicles')
@@ -303,6 +238,6 @@ export function useCloudVehicles() {
     createVehicle,
     updateVehicle,
     deleteVehicle,
-    setVehicles, // For direct state manipulation if needed
+    setVehicles,
   };
 }

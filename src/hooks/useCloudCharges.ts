@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { FixedCharge } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 const CACHE_KEY = 'optiflow_charges_cache';
 
@@ -22,89 +23,36 @@ function setCachedCharges(charges: FixedCharge[]) {
   }
 }
 
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useCloudCharges() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [charges, setCharges] = useState<FixedCharge[]>(() => getCachedCharges());
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setAuthUserId(user?.id || null);
-      if (user) {
-        const lid = await getUserLicenseId();
-        if (!isMounted) return;
-        setLicenseId(lid);
-      }
-    };
-
-    void init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setAuthUserId(session?.user?.id || null);
-      if (session?.user) {
-        const lid = await getUserLicenseId();
-        setLicenseId(lid);
-      } else {
-        setLicenseId(null);
-        setCharges([]);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const fetchInProgressRef = useRef(false);
 
   const fetchCharges = useCallback(async (): Promise<void> => {
-    setLoading(true);
-
-    if (!authUserId) {
-      setLoading(false);
+    if (fetchInProgressRef.current) return;
+    
+    if (!authUserId || !licenseId) {
+      setCharges(getCachedCharges());
       return;
     }
 
+    fetchInProgressRef.current = true;
+    setLoading(true);
+
     try {
-      const fetchedLicenseId = await getUserLicenseId();
-      setLicenseId(fetchedLicenseId);
-
-      // Skip query if no license_id - user might not be part of a company yet
-      if (!fetchedLicenseId) {
-        console.log('[useCloudCharges] No license_id, using cache');
-        setCharges(getCachedCharges());
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('user_charges')
-        .select('*')
-        .eq('license_id', fetchedLicenseId)
+        .select('charge_data')
+        .eq('license_id', licenseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const mapped: FixedCharge[] = (data || []).map(row => row.charge_data as unknown as FixedCharge).filter(Boolean);
+      const mapped: FixedCharge[] = (data || [])
+        .map(row => row.charge_data as unknown as FixedCharge)
+        .filter(Boolean);
       setCharges(mapped);
       setCachedCharges(mapped);
     } catch (error) {
@@ -116,15 +64,11 @@ export function useCloudCharges() {
       }
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
-  }, [authUserId]);
+  }, [authUserId, licenseId]);
 
-  useEffect(() => {
-    if (authUserId) {
-      fetchCharges();
-    }
-  }, [authUserId, fetchCharges]);
-
+  // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
 
@@ -177,7 +121,7 @@ export function useCloudCharges() {
         return false;
       }
 
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_charges')
@@ -195,8 +139,11 @@ export function useCloudCharges() {
 
       if (error) throw error;
 
-      setCharges(prev => [charge, ...prev]);
-      setCachedCharges([charge, ...charges]);
+      setCharges(prev => {
+        const updated = [charge, ...prev];
+        setCachedCharges(updated);
+        return updated;
+      });
       toast.success('Charge ajoutée');
       return true;
     } catch (error) {
@@ -204,11 +151,11 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [charges]);
+  }, []);
 
   const updateCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_charges')
@@ -242,7 +189,7 @@ export function useCloudCharges() {
 
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getUserLicenseId();
+      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_charges')

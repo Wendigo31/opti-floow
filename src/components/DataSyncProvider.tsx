@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback, useState, createContext, useContext } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useCloudTrailers } from '@/hooks/useCloudTrailers';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
@@ -8,9 +7,10 @@ import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useTrips } from '@/hooks/useTrips';
 import { useQuotes } from '@/hooks/useQuotes';
+import { useLicenseContext } from '@/context/LicenseContext';
 
-// Sync interval in ms (60 seconds)
-const SYNC_INTERVAL = 60_000;
+// Sync interval in ms (5 minutes - reduced frequency since we have realtime)
+const SYNC_INTERVAL = 5 * 60 * 1000;
 
 type SyncError = {
   table: string;
@@ -45,6 +45,7 @@ export function useDataSyncActions() {
 }
 
 export function DataSyncProvider({ children }: { children: React.ReactNode }) {
+  const { licenseId, authUserId } = useLicenseContext();
   const { vehicles, fetchVehicles } = useCloudVehicles();
   const { trailers, fetchTrailers } = useCloudTrailers();
   const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
@@ -60,18 +61,16 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
+  const hasSyncedRef = useRef(false);
 
   // Force sync all cloud data
   const forceSync = useCallback(async () => {
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current || !authUserId || !licenseId) return;
+    if (isSyncing) return; // Prevent concurrent syncs
+    
     setIsSyncing(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Non authentifié');
-      }
-
       // Fetch all data from cloud in parallel
       await Promise.all([
         fetchVehicles(),
@@ -101,49 +100,34 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         setIsSyncing(false);
       }
     }
-  }, [fetchVehicles, fetchTrailers, fetchDrivers, fetchCharges, fetchClients, fetchTours, fetchTrips, fetchQuotes]);
+  }, [authUserId, licenseId, isSyncing, fetchVehicles, fetchTrailers, fetchDrivers, fetchCharges, fetchClients, fetchTours, fetchTrips, fetchQuotes]);
 
   const clearErrors = useCallback(() => setSyncErrors([]), []);
 
-  // Setup automatic sync every 60 seconds
+  // Initial sync when license context is ready, then periodic sync
   useEffect(() => {
     isMountedRef.current = true;
 
-    // Initial sync after auth is ready
-    const initSync = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && isMountedRef.current) {
-        // Initial sync
-        await forceSync();
-      }
-    };
-
-    void initSync();
-
-    // Setup interval for periodic sync
-    syncIntervalRef.current = setInterval(() => {
+    // Only sync once when licenseId becomes available
+    if (licenseId && authUserId && !hasSyncedRef.current) {
+      hasSyncedRef.current = true;
       void forceSync();
-    }, SYNC_INTERVAL);
+    }
 
-    // Auth state change handler
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await forceSync();
-      } else if (event === 'SIGNED_OUT') {
-        if (isMountedRef.current) {
-          setLastSyncAt(null);
-        }
+    // Setup interval for periodic sync (less frequent since realtime handles updates)
+    syncIntervalRef.current = setInterval(() => {
+      if (licenseId && authUserId) {
+        void forceSync();
       }
-    });
+    }, SYNC_INTERVAL);
 
     return () => {
       isMountedRef.current = false;
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current);
       }
-      subscription.unsubscribe();
     };
-  }, [forceSync]);
+  }, [licenseId, authUserId, forceSync]);
 
   // Calculate stats from cloud data
   const stats = {
