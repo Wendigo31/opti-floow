@@ -248,7 +248,10 @@ export function useCloudSession({
   }, [saveSession]);
 
   // Save on auth state change (before logout)
+  // Use a debounce to avoid rapid re-loads during auth state transitions
   useEffect(() => {
+    let debounceTimeout: NodeJS.Timeout | null = null;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_OUT') {
         // Clear refs
@@ -258,13 +261,25 @@ export function useCloudSession({
         setSessionId(null);
         setLastSavedAt(null);
       } else if (event === 'SIGNED_IN') {
-        // Reload session for new user
-        hasLoadedRef.current = false;
-        loadSession();
+        // Debounce to avoid multiple rapid calls during re-validation cycles
+        if (debounceTimeout) {
+          clearTimeout(debounceTimeout);
+        }
+        debounceTimeout = setTimeout(() => {
+          // Only reload if we haven't loaded yet
+          if (!hasLoadedRef.current) {
+            loadSession();
+          }
+        }, 500);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+    };
   }, [loadSession]);
 
   // Subscribe to realtime updates for cross-device sync

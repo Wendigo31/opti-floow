@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { LicenseFeatures } from '@/types/features';
+
+// Flag to prevent re-validation loops
+let isRevalidating = false;
 
 export type PlanType = 'start' | 'pro' | 'enterprise';
 
@@ -431,11 +434,15 @@ export function useLicense(): UseLicenseReturn {
             const storedEmail = data.email?.toLowerCase() ?? null;
 
             // If there is no auth user or it doesn't match, we must re-validate to obtain the right session.
-            if (!authEmail || !storedEmail || authEmail !== storedEmail) {
+            // BUT skip if we're already in a re-validation cycle to prevent infinite loops
+            if ((!authEmail || !storedEmail || authEmail !== storedEmail) && !isRevalidating) {
               console.log('[useLicense] Auth user missing/mismatch, re-validating to set correct session', {
                 authEmail,
                 storedEmail,
               });
+
+              // Set the flag to prevent re-entry
+              isRevalidating = true;
 
               // Make sure we start from a clean auth state
               try {
@@ -444,84 +451,110 @@ export function useLicense(): UseLicenseReturn {
                 console.warn('[useLicense] signOut before re-validation failed (continuing):', e);
               }
 
-              const { data: validateResponse, error: validateError } = await supabase.functions.invoke('validate-license', {
-                body: { licenseCode: data.code, email: data.email, action: 'validate' },
-              });
-
-              if (validateError) {
-                console.error('[useLicense] Re-validation error:', validateError);
-                // We can't safely continue with a mismatched user; force a fresh login.
-                localStorage.removeItem(LICENSE_STORAGE_KEY);
-                localStorage.removeItem(LICENSE_CACHE_KEY);
-                setIsLicensed(false);
-                setIsLoading(false);
-                return;
-              }
-
-              if (!validateResponse?.success) {
-                console.error('[useLicense] Re-validation failed:', validateResponse?.error);
-                localStorage.removeItem(LICENSE_STORAGE_KEY);
-                localStorage.removeItem(LICENSE_CACHE_KEY);
-                setIsLicensed(false);
-                setIsLoading(false);
-                return;
-              }
-
-              // If we received an auth session, set it in the client
-              if (validateResponse.session) {
-                const { error: sessionError } = await supabase.auth.setSession({
-                  access_token: validateResponse.session.access_token,
-                  refresh_token: validateResponse.session.refresh_token,
+              try {
+                const { data: validateResponse, error: validateError } = await supabase.functions.invoke('validate-license', {
+                  body: { licenseCode: data.code, email: data.email, action: 'validate' },
                 });
-                if (sessionError) {
-                  console.error('[useLicense] Failed to set auth session after re-validation:', sessionError);
+
+                if (validateError) {
+                  console.error('[useLicense] Re-validation error:', validateError);
+                  // We can't safely continue with a mismatched user; force a fresh login.
+                  localStorage.removeItem(LICENSE_STORAGE_KEY);
+                  localStorage.removeItem(LICENSE_CACHE_KEY);
+                  setIsLicensed(false);
+                  setIsLoading(false);
+                  isRevalidating = false;
+                  return;
                 }
+
+                if (!validateResponse?.success) {
+                  console.error('[useLicense] Re-validation failed:', validateResponse?.error);
+                  localStorage.removeItem(LICENSE_STORAGE_KEY);
+                  localStorage.removeItem(LICENSE_CACHE_KEY);
+                  setIsLicensed(false);
+                  setIsLoading(false);
+                  isRevalidating = false;
+                  return;
+                }
+
+                // If we received an auth session, set it in the client
+                if (validateResponse.session) {
+                  console.log('[useLicense] Setting Supabase auth session');
+                  const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: validateResponse.session.access_token,
+                    refresh_token: validateResponse.session.refresh_token,
+                  });
+                  if (sessionError) {
+                    console.error('[useLicense] Failed to set auth session after re-validation:', sessionError);
+                  } else {
+                    console.log('[useLicense] Auth session set successfully');
+                  }
+                }
+
+                // Persist the fresh license payload (same logic as validateLicense())
+                const licenseDataToStore: LicenseData = {
+                  code: validateResponse.licenseData.code || data.code,
+                  email: validateResponse.licenseData.email || data.email,
+                  activatedAt: validateResponse.licenseData.activatedAt,
+                  planType: validateResponse.licenseData.planType,
+                  firstName: validateResponse.licenseData.firstName || undefined,
+                  lastName: validateResponse.licenseData.lastName || undefined,
+                  companyName: validateResponse.licenseData.companyName || undefined,
+                  siren: validateResponse.licenseData.siren || undefined,
+                  companyStatus: validateResponse.licenseData.companyStatus || undefined,
+                  employeeCount: validateResponse.licenseData.employeeCount || undefined,
+                  address: validateResponse.licenseData.address || undefined,
+                  city: validateResponse.licenseData.city || undefined,
+                  postalCode: validateResponse.licenseData.postalCode || undefined,
+                  maxDrivers: validateResponse.licenseData.maxDrivers ?? null,
+                  maxClients: validateResponse.licenseData.maxClients ?? null,
+                  maxDailyCharges: validateResponse.licenseData.maxDailyCharges ?? null,
+                  maxMonthlyCharges: validateResponse.licenseData.maxMonthlyCharges ?? null,
+                  maxYearlyCharges: validateResponse.licenseData.maxYearlyCharges ?? null,
+                  customFeatures: validateResponse.customFeatures || null,
+                  userFeatureOverrides: validateResponse.userFeatureOverrides || null,
+                  showUserInfo: validateResponse.licenseData.showUserInfo ?? true,
+                  showCompanyInfo: validateResponse.licenseData.showCompanyInfo ?? true,
+                  showAddressInfo: validateResponse.licenseData.showAddressInfo ?? true,
+                  showLicenseInfo: validateResponse.licenseData.showLicenseInfo ?? true,
+                  companyUserId: validateResponse.companyUserId || null,
+                  userRole: validateResponse.userRole || null,
+                };
+
+                localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(licenseDataToStore));
+
+                const now = new Date();
+                const expiresAt = new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+                const newCache: CachedLicense = {
+                  data: licenseDataToStore,
+                  lastValidated: now.toISOString(),
+                  expiresAt: expiresAt.toISOString(),
+                };
+                localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
+
+                setLicenseData(licenseDataToStore);
+                setIsLicensed(true);
+                broadcastLicenseUpdate(licenseDataToStore);
+                setIsLoading(false);
+                
+                // Clear the flag after a delay to allow auth state to propagate
+                setTimeout(() => {
+                  isRevalidating = false;
+                }, 2000);
+                
+                return;
+              } catch (err) {
+                console.error('[useLicense] Re-validation exception:', err);
+                isRevalidating = false;
+                setIsLoading(false);
+                return;
               }
-
-              // Persist the fresh license payload (same logic as validateLicense())
-              const licenseDataToStore: LicenseData = {
-                code: validateResponse.licenseData.code || data.code,
-                email: validateResponse.licenseData.email || data.email,
-                activatedAt: validateResponse.licenseData.activatedAt,
-                planType: validateResponse.licenseData.planType,
-                firstName: validateResponse.licenseData.firstName || undefined,
-                lastName: validateResponse.licenseData.lastName || undefined,
-                companyName: validateResponse.licenseData.companyName || undefined,
-                siren: validateResponse.licenseData.siren || undefined,
-                companyStatus: validateResponse.licenseData.companyStatus || undefined,
-                employeeCount: validateResponse.licenseData.employeeCount || undefined,
-                address: validateResponse.licenseData.address || undefined,
-                city: validateResponse.licenseData.city || undefined,
-                postalCode: validateResponse.licenseData.postalCode || undefined,
-                maxDrivers: validateResponse.licenseData.maxDrivers ?? null,
-                maxClients: validateResponse.licenseData.maxClients ?? null,
-                maxDailyCharges: validateResponse.licenseData.maxDailyCharges ?? null,
-                maxMonthlyCharges: validateResponse.licenseData.maxMonthlyCharges ?? null,
-                maxYearlyCharges: validateResponse.licenseData.maxYearlyCharges ?? null,
-                customFeatures: validateResponse.customFeatures || null,
-                userFeatureOverrides: validateResponse.userFeatureOverrides || null,
-                showUserInfo: validateResponse.licenseData.showUserInfo ?? true,
-                showCompanyInfo: validateResponse.licenseData.showCompanyInfo ?? true,
-                showAddressInfo: validateResponse.licenseData.showAddressInfo ?? true,
-                showLicenseInfo: validateResponse.licenseData.showLicenseInfo ?? true,
-                companyUserId: validateResponse.companyUserId || null,
-                userRole: validateResponse.userRole || null,
-              };
-
-              localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(licenseDataToStore));
-
-              const now = new Date();
-              const expiresAt = new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
-              const newCache: CachedLicense = {
-                data: licenseDataToStore,
-                lastValidated: now.toISOString(),
-                expiresAt: expiresAt.toISOString(),
-              };
-              localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
-
-              setLicenseData(licenseDataToStore);
+            } else if (isRevalidating) {
+              // Skip re-validation, just use stored data
+              console.log('[useLicense] Skipping re-validation (already in progress)');
+              setLicenseData(data);
               setIsLicensed(true);
-              broadcastLicenseUpdate(licenseDataToStore);
+              broadcastLicenseUpdate(data);
               setIsLoading(false);
               return;
             }
