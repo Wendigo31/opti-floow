@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
   MapPin, 
   Navigation, 
@@ -82,6 +82,8 @@ import { SaveItineraryDialog } from '@/components/itinerary/SaveItineraryDialog'
 import { LoadItineraryDialog } from '@/components/itinerary/LoadItineraryDialog';
 import { useTruckRestrictions, type TruckRestriction } from '@/hooks/useTruckRestrictions';
 import type { SavedTour } from '@/types/savedTour';
+import { useSearchHistory, type SearchHistoryEntry } from '@/hooks/useSearchHistory';
+import { SearchHistoryDialog } from '@/components/itinerary/SearchHistoryDialog';
 
 // Decode Google polyline encoding
 function decodePolyline(encoded: string): [number, number][] {
@@ -267,6 +269,19 @@ export default function Itinerary() {
   // Favorite addresses
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoriteAddresses();
   
+  // Search history
+  const { 
+    history: searchHistory, 
+    uncalculatedSearches, 
+    addSearch, 
+    markAsCalculated,
+    removeSearch,
+    clearHistory 
+  } = useSearchHistory();
+  
+  // Track current search ID for marking as calculated
+  const currentSearchIdRef = useRef<string | null>(null);
+  
   // Truck restrictions
   const { 
     restrictions: truckRestrictions, 
@@ -316,6 +331,48 @@ export default function Itinerary() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Auto-save search to history when origin and destination are set
+  useEffect(() => {
+    // Only save if we have both origin and destination addresses with positions
+    if (originAddress && destinationAddress && originPosition && destinationPosition) {
+      const searchId = addSearch({
+        originAddress,
+        originPosition,
+        destinationAddress,
+        destinationPosition,
+        stops,
+        vehicleId: selectedVehicleId,
+        clientId: selectedClientId,
+        calculated: false,
+      });
+      if (searchId) {
+        currentSearchIdRef.current = searchId;
+      }
+    }
+  }, [originAddress, destinationAddress, originPosition, destinationPosition, stops, selectedVehicleId, selectedClientId]);
+  
+  // Load a search from history
+  const handleLoadSearchHistory = useCallback((entry: SearchHistoryEntry) => {
+    setOriginAddress(entry.originAddress);
+    setOriginPosition(entry.originPosition);
+    setDestinationAddress(entry.destinationAddress);
+    setDestinationPosition(entry.destinationPosition);
+    setStops(entry.stops);
+    if (entry.vehicleId) {
+      setSelectedVehicleId(entry.vehicleId);
+    }
+    if (entry.clientId) {
+      setSelectedClientId(entry.clientId);
+    }
+    // Clear previous results
+    clearResults();
+    
+    toast({
+      title: "Recherche chargée",
+      description: "Cliquez sur Calculer pour recalculer l'itinéraire",
+    });
+  }, [setOriginAddress, setOriginPosition, setDestinationAddress, setDestinationPosition, setStops, setSelectedVehicleId, setSelectedClientId, toast]);
+
   // Handle loading a saved tour into the itinerary
   const handleLoadSavedTour = (tour: SavedTour) => {
     // Set origin
@@ -727,6 +784,11 @@ export default function Itinerary() {
 
       setHighwayRoute(highway);
       setNationalRoute(national);
+      
+      // Mark search as calculated in history
+      if (currentSearchIdRef.current) {
+        markAsCalculated(currentSearchIdRef.current);
+      }
 
       // Fetch truck restrictions for the calculated route
       const routeForRestrictions = highway || national;
@@ -1004,6 +1066,13 @@ export default function Itinerary() {
                 <p className="text-sm text-muted-foreground">Calculez vos trajets poids lourd</p>
               </div>
               <div className="flex items-center gap-1">
+                <SearchHistoryDialog
+                  history={searchHistory}
+                  uncalculatedSearches={uncalculatedSearches}
+                  onLoad={handleLoadSearchHistory}
+                  onRemove={removeSearch}
+                  onClear={clearHistory}
+                />
                 <Button 
                   variant="ghost" 
                   size="icon" 
