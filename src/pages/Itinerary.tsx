@@ -685,6 +685,9 @@ export default function Itinerary() {
 
     console.log('Calling google-directions with:', { origin, destination, intermediateWaypoints, avoidHighways });
 
+    // Use longer timeout for national routes (avoidHighways) as they take more time to compute
+    const timeoutMs = avoidHighways ? 90000 : 60000;
+
     const { data, error } = await withTimeout(
       supabase.functions.invoke('google-directions', {
         body: {
@@ -694,7 +697,7 @@ export default function Itinerary() {
           avoidHighways,
         },
       }),
-      60000,
+      timeoutMs,
       "Délai d'attente dépassé pour le calcul de l'itinéraire"
     );
 
