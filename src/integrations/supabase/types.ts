@@ -71,6 +71,92 @@ export type Database = {
           },
         ]
       }
+      active_itinerary_sessions: {
+        Row: {
+          avoid_low_bridges: boolean | null
+          avoid_truck_forbidden: boolean | null
+          avoid_weight_restrictions: boolean | null
+          created_at: string
+          destination_address: string | null
+          destination_lat: number | null
+          destination_lon: number | null
+          display_name: string | null
+          highway_route: Json | null
+          id: string
+          is_panel_open: boolean | null
+          last_activity_at: string | null
+          license_id: string | null
+          national_route: Json | null
+          origin_address: string | null
+          origin_lat: number | null
+          origin_lon: number | null
+          selected_client_id: string | null
+          selected_route_type: string | null
+          selected_vehicle_id: string | null
+          stops: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avoid_low_bridges?: boolean | null
+          avoid_truck_forbidden?: boolean | null
+          avoid_weight_restrictions?: boolean | null
+          created_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lon?: number | null
+          display_name?: string | null
+          highway_route?: Json | null
+          id?: string
+          is_panel_open?: boolean | null
+          last_activity_at?: string | null
+          license_id?: string | null
+          national_route?: Json | null
+          origin_address?: string | null
+          origin_lat?: number | null
+          origin_lon?: number | null
+          selected_client_id?: string | null
+          selected_route_type?: string | null
+          selected_vehicle_id?: string | null
+          stops?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avoid_low_bridges?: boolean | null
+          avoid_truck_forbidden?: boolean | null
+          avoid_weight_restrictions?: boolean | null
+          created_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lon?: number | null
+          display_name?: string | null
+          highway_route?: Json | null
+          id?: string
+          is_panel_open?: boolean | null
+          last_activity_at?: string | null
+          license_id?: string | null
+          national_route?: Json | null
+          origin_address?: string | null
+          origin_lat?: number | null
+          origin_lon?: number | null
+          selected_client_id?: string | null
+          selected_route_type?: string | null
+          selected_vehicle_id?: string | null
+          stops?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_itinerary_sessions_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_audit_log: {
         Row: {
           action: string
