@@ -29,6 +29,8 @@ import { isTauri } from '@/hooks/useTauri';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 import { useDataSyncActions } from '@/components/DataSyncProvider';
 import { useTeam } from '@/hooks/useTeam';
+import { MobileNav } from './MobileNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -53,6 +55,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { currentUserRole, currentUserInfo } = useTeam();
+  const isMobile = useIsMobile();
   const { 
     forceSync, 
     isSyncing, 
@@ -127,10 +130,12 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
         </div>
       )}
 
-      <div className="fixed top-0 left-20 lg:left-64 right-0 h-14 z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300">
+      <div className={`fixed top-0 right-0 h-14 z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${isMobile ? 'left-0' : 'left-20 lg:left-64'}`}>
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
-          {/* Left side - Time + User info */}
-          <div className="flex items-center gap-4">
+          {/* Left side - Mobile menu + Time + User info */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile Navigation */}
+            {isMobile && <MobileNav />}
             {/* Current time */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
               <Clock className="w-3.5 h-3.5" />
