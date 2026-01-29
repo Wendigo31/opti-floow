@@ -621,9 +621,9 @@ export default function Itinerary() {
   const calculateRoute = async (
     avoidHighways: boolean
   ): Promise<RouteResult | null> => {
-    // Create abort controller for timeout
+    // Create abort controller for timeout - 60 seconds to handle cold starts
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
     
     try {
       // Build waypoints for Google Directions API
@@ -650,6 +650,8 @@ export default function Itinerary() {
       const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
       const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
       const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
+
+      console.log('Calling google-directions with:', { origin, destination, intermediateWaypoints, avoidHighways });
 
       // Call Google Directions API via edge function with timeout
       const response = await Promise.race([
