@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Truck, Container, Users, Route, DollarSign, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Truck, Container, Users, Route, DollarSign, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -79,7 +79,6 @@ export function CompanyDataStats({ getAdminToken }: Props) {
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [trailers, setTrailers] = useState<TrailerData[]>([]);
   const [tours, setTours] = useState<TourData[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   // Fetch licenses on mount
   useEffect(() => {
@@ -98,51 +97,45 @@ export function CompanyDataStats({ getAdminToken }: Props) {
     fetchLicenses();
   }, [getAdminToken]);
 
-  // Fetch stats when license is selected
-  useEffect(() => {
+  // Fetch stats when license is selected - use edge function to bypass RLS
+  const fetchCompanyData = async () => {
     if (!selectedLicenseId) {
       setStats(null);
+      setVehicles([]);
+      setTrailers([]);
+      setTours([]);
       return;
     }
 
-    const fetchStats = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch counts for each entity type
-        const [vehiclesRes, trailersRes, driversRes, chargesRes, toursRes, usersRes] = await Promise.all([
-          supabase.from('user_vehicles').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId),
-          supabase.from('user_trailers').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId),
-          supabase.from('user_drivers').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId),
-          supabase.from('user_charges').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId),
-          supabase.from('saved_tours').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId),
-          supabase.from('company_users').select('id', { count: 'exact' }).eq('license_id', selectedLicenseId).eq('is_active', true),
-        ]);
+    const token = getAdminToken();
+    if (!token) return;
 
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: { 
+          action: 'get-company-data', 
+          adminToken: token,
+          licenseId: selectedLicenseId 
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        // Set stats from company totals
+        const totals = data.companyTotals || {};
         setStats({
-          vehicleCount: vehiclesRes.count || 0,
-          trailerCount: trailersRes.count || 0,
-          driverCount: driversRes.count || 0,
-          chargeCount: chargesRes.count || 0,
-          tourCount: toursRes.count || 0,
-          userCount: usersRes.count || 0,
+          vehicleCount: totals.vehicles || 0,
+          trailerCount: totals.trailers || 0,
+          driverCount: totals.drivers || 0,
+          chargeCount: totals.charges || 0,
+          tourCount: totals.tours || 0,
+          userCount: data.companyUsers?.length || 0,
         });
 
-        // Fetch detailed data
-        const [vehiclesData, trailersData, toursData] = await Promise.all([
-          supabase.from('user_vehicles').select('*').eq('license_id', selectedLicenseId).order('created_at', { ascending: false }),
-          supabase.from('user_trailers').select('*').eq('license_id', selectedLicenseId).order('created_at', { ascending: false }),
-          supabase.from('saved_tours').select('*').eq('license_id', selectedLicenseId).order('created_at', { ascending: false }),
-        ]);
-
-        // Get user emails for mapping
-        const { data: companyUsers } = await supabase
-          .from('company_users')
-          .select('user_id, email')
-          .eq('license_id', selectedLicenseId);
-        
-        const userEmailMap = new Map(companyUsers?.map(u => [u.user_id, u.email]) || []);
-
-        setVehicles((vehiclesData.data || []).map(v => ({
+        // Set detailed data
+        setVehicles((data.vehicles || []).map((v: any) => ({
           id: v.id,
           name: v.name,
           license_plate: v.license_plate || '',
@@ -150,22 +143,22 @@ export function CompanyDataStats({ getAdminToken }: Props) {
           model: v.model,
           vehicle_type: v.vehicle_type,
           current_km: v.current_km,
-          user_email: userEmailMap.get(v.user_id),
+          user_email: v.user_email,
           created_at: v.created_at,
         })));
 
-        setTrailers((trailersData.data || []).map(t => ({
+        setTrailers((data.trailers || []).map((t: any) => ({
           id: t.id,
           name: t.name,
           license_plate: t.license_plate,
           brand: t.brand,
           model: t.model,
           trailer_type: t.trailer_type,
-          user_email: userEmailMap.get(t.user_id),
+          user_email: t.user_email,
           created_at: t.created_at,
         })));
 
-        setTours((toursData.data || []).map(t => ({
+        setTours((data.tours || []).map((t: any) => ({
           id: t.id,
           name: t.name,
           origin_address: t.origin_address,
@@ -177,15 +170,17 @@ export function CompanyDataStats({ getAdminToken }: Props) {
           user_id: t.user_id,
           created_at: t.created_at,
         })));
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-        toast.error('Erreur lors du chargement des statistiques');
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching company data:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchStats();
+  useEffect(() => {
+    fetchCompanyData();
   }, [selectedLicenseId]);
 
   const selectedLicense = licenses.find(l => l.id === selectedLicenseId);
@@ -228,8 +223,8 @@ export function CompanyDataStats({ getAdminToken }: Props) {
             </SelectContent>
           </Select>
           {selectedLicenseId && (
-            <Button variant="outline" size="icon" onClick={() => setSelectedLicenseId(selectedLicenseId)}>
-              <RefreshCw className="h-4 w-4" />
+            <Button variant="outline" size="icon" onClick={fetchCompanyData} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           )}
         </div>
@@ -427,8 +422,14 @@ export function CompanyDataStats({ getAdminToken }: Props) {
             </Tabs>
           </>
         ) : selectedLicenseId ? (
-          <p className="text-center py-8 text-muted-foreground">Sélectionnez une société pour voir les données</p>
-        ) : null}
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Sélectionnez une société pour voir ses données</p>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Sélectionnez une société pour voir ses données</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

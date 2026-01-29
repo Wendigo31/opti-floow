@@ -1045,8 +1045,12 @@ const handler = async (req: Request): Promise<Response> => {
           { count: vehiclesCount },
           { count: driversCount },
           { count: chargesCount },
+          { count: trailersCount },
           { data: toursRevenue },
           { data: tripsRevenue },
+          { data: vehiclesData },
+          { data: trailersData },
+          { data: toursData },
         ] = await Promise.all([
           supabase.from('saved_tours').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
           supabase.from('trips').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
@@ -1055,14 +1059,21 @@ const handler = async (req: Request): Promise<Response> => {
           supabase.from('user_vehicles').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
           supabase.from('user_drivers').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
           supabase.from('user_charges').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
+          supabase.from('user_trailers').select('*', { count: 'exact', head: true }).eq('license_id', licenseId),
           supabase.from('saved_tours').select('revenue, distance_km').eq('license_id', licenseId),
           supabase.from('trips').select('revenue, distance_km').eq('license_id', licenseId),
+          supabase.from('user_vehicles').select('*').eq('license_id', licenseId).order('created_at', { ascending: false }),
+          supabase.from('user_trailers').select('*').eq('license_id', licenseId).order('created_at', { ascending: false }),
+          supabase.from('saved_tours').select('*').eq('license_id', licenseId).order('created_at', { ascending: false }),
         ]);
 
         const tourRevenue = (toursRevenue || []).reduce((sum: number, t: any) => sum + (t.revenue || 0), 0);
         const tourDistance = (toursRevenue || []).reduce((sum: number, t: any) => sum + (t.distance_km || 0), 0);
         const tripRevenue = (tripsRevenue || []).reduce((sum: number, t: any) => sum + (t.revenue || 0), 0);
         const tripDistance = (tripsRevenue || []).reduce((sum: number, t: any) => sum + (t.distance_km || 0), 0);
+
+        // Build user email map for data attribution
+        const userEmailMap = new Map((companyUsers || []).map((u: any) => [u.user_id, u.email]));
 
         const companyTotals = {
           tours: toursCount || 0,
@@ -1072,6 +1083,7 @@ const handler = async (req: Request): Promise<Response> => {
           vehicles: vehiclesCount || 0,
           drivers: driversCount || 0,
           charges: chargesCount || 0,
+          trailers: trailersCount || 0,
           revenue: tourRevenue + tripRevenue,
           distance: tourDistance + tripDistance,
         };
@@ -1088,10 +1100,29 @@ const handler = async (req: Request): Promise<Response> => {
           console.error("Error fetching login history:", loginError);
         }
 
+        // Map detailed data with user emails
+        const vehicles = (vehiclesData || []).map((v: any) => ({
+          ...v,
+          user_email: userEmailMap.get(v.user_id) || null,
+        }));
+
+        const trailers = (trailersData || []).map((t: any) => ({
+          ...t,
+          user_email: userEmailMap.get(t.user_id) || null,
+        }));
+
+        const tours = (toursData || []).map((t: any) => ({
+          ...t,
+          user_email: userEmailMap.get(t.user_id) || null,
+        }));
+
         console.log("Company data fetched successfully:", {
           usersCount: companyUsers?.length || 0,
           totals: companyTotals,
           loginsCount: loginHistory?.length || 0,
+          vehiclesCount: vehicles.length,
+          trailersCount: trailers.length,
+          toursCount: tours.length,
         });
 
         return new Response(
@@ -1102,6 +1133,9 @@ const handler = async (req: Request): Promise<Response> => {
             userStats,
             companyTotals,
             loginHistory: loginHistory || [],
+            vehicles,
+            trailers,
+            tours,
           }),
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
