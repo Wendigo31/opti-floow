@@ -1,17 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
-  CreditCard,
   Package,
-  Settings2,
   Zap,
   Star,
   Crown,
-  Euro,
-  Plus,
-  Minus,
   Check,
   X,
-  TrendingUp,
   Users,
   Truck,
   FileText,
@@ -31,25 +25,12 @@ import {
   UserCog,
   Bookmark,
   Infinity,
-  Save,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  Info,
-  Edit3,
-  DollarSign,
+  TrendingUp,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { PRICING_PLANS, ADD_ONS, type AddOn, type PricingPlan } from '@/types/pricing';
 
@@ -57,21 +38,6 @@ interface PricingManagerProps {
   licenseId: string;
   planType: 'start' | 'pro' | 'enterprise';
   activeAddOns: string[];
-  customPricing?: {
-    basePrice?: number;
-    addonsTotal?: number;
-    billingPeriod?: 'monthly' | 'yearly';
-  };
-  onSave: (data: {
-    planType: string;
-    addOns: string[];
-    customPricing?: {
-      basePrice: number;
-      addonsTotal: number;
-      billingPeriod: 'monthly' | 'yearly';
-    };
-  }) => Promise<void>;
-  saving?: boolean;
 }
 
 const planIcons = {
@@ -115,560 +81,396 @@ const addonIconMap: Record<string, React.ElementType> = {
   GraduationCap: GraduationCap,
 };
 
+// All features to display in comparison
+const FEATURE_COMPARISON = [
+  { key: 'basic_calculator', label: 'Calcul de rentabilité', icon: 'Calculator' },
+  { key: 'itinerary_planning', label: 'Planification itinéraire', icon: 'Route' },
+  { key: 'dashboard_basic', label: 'Tableau de bord simplifié', icon: 'BarChart3' },
+  { key: 'dashboard_analytics', label: 'Tableau de bord analytique', icon: 'BarChart3' },
+  { key: 'forecast', label: 'Prévisionnel', icon: 'TrendingUp' },
+  { key: 'trip_history', label: 'Historique des trajets', icon: 'History' },
+  { key: 'saved_tours', label: 'Tournées sauvegardées', icon: 'Bookmark' },
+  { key: 'multi_drivers', label: 'Multi-conducteurs', icon: 'Users' },
+  { key: 'cost_analysis', label: 'Analyse des coûts avancée', icon: 'Calculator' },
+  { key: 'cost_analysis_basic', label: 'Analyse des coûts basique', icon: 'Calculator' },
+  { key: 'margin_alerts', label: 'Alertes de marge', icon: 'AlertTriangle' },
+  { key: 'auto_pricing', label: 'Tarification automatique avancée', icon: 'Calculator' },
+  { key: 'auto_pricing_basic', label: 'Tarification automatique', icon: 'Calculator' },
+  { key: 'pdf_export_basic', label: 'Export PDF basique', icon: 'FileText' },
+  { key: 'pdf_export_pro', label: 'Export PDF avancé', icon: 'FileText' },
+  { key: 'excel_export', label: 'Export Excel/CSV', icon: 'FileSpreadsheet' },
+  { key: 'client_analysis_basic', label: 'Analyse clients', icon: 'Users' },
+  { key: 'client_analysis', label: 'Analyse clients avancée', icon: 'Users' },
+  { key: 'ai_optimization', label: 'Optimisation IA', icon: 'Brain' },
+  { key: 'ai_pdf_analysis', label: 'Analyse IA des PDF', icon: 'Brain' },
+  { key: 'multi_agency', label: 'Multi-agences', icon: 'Building' },
+  { key: 'multi_users', label: 'Multi-utilisateurs', icon: 'Users' },
+  { key: 'tms_erp_integration', label: 'Intégration TMS/ERP', icon: 'Plug' },
+  { key: 'smart_quotes', label: 'Devis intelligents', icon: 'FileText' },
+  { key: 'fleet_basic', label: 'Gestion flotte basique', icon: 'Truck' },
+  { key: 'fleet_management', label: 'Gestion flotte avancée', icon: 'Truck' },
+  { key: 'dynamic_charts', label: 'Graphiques dynamiques', icon: 'BarChart3' },
+  { key: 'monthly_tracking', label: 'Suivi mensuel', icon: 'BarChart3' },
+];
+
 export function PricingManager({
   licenseId,
-  planType: initialPlanType,
-  activeAddOns: initialActiveAddOns,
-  customPricing,
-  onSave,
-  saving = false,
+  planType,
+  activeAddOns,
 }: PricingManagerProps) {
-  const [selectedPlan, setSelectedPlan] = useState(initialPlanType);
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>(initialActiveAddOns);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>(
-    customPricing?.billingPeriod || 'monthly'
-  );
-  const [customBasePrice, setCustomBasePrice] = useState<number | null>(
-    customPricing?.basePrice ?? null
-  );
-  const [hasChanges, setHasChanges] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['feature', 'limit', 'support']);
-
-  // Get current plan details
   const currentPlan = useMemo(
-    () => PRICING_PLANS.find((p) => p.id === selectedPlan)!,
-    [selectedPlan]
+    () => PRICING_PLANS.find((p) => p.id === planType)!,
+    [planType]
   );
 
-  // Filter add-ons by plan (show all but mark unavailable)
+  // Get all active features (from plan + add-ons)
+  const activeFeatures = useMemo(() => {
+    const planFeatures = new Set(currentPlan.features);
+    
+    // Add features from active add-ons
+    activeAddOns.forEach(addonId => {
+      const addon = ADD_ONS.find(a => a.id === addonId);
+      if (addon?.featureKey) {
+        planFeatures.add(addon.featureKey);
+      }
+    });
+    
+    return planFeatures;
+  }, [currentPlan, activeAddOns]);
+
+  // Check if feature is available in a plan
+  const isFeatureInPlan = (featureKey: string, plan: PricingPlan) => {
+    return plan.features.includes(featureKey);
+  };
+
+  // Check if feature is available as add-on for a plan
+  const isFeatureAddOnFor = (featureKey: string, planId: string) => {
+    return ADD_ONS.some(addon => 
+      addon.featureKey === featureKey && addon.availableFor.includes(planId as any)
+    );
+  };
+
+  // Group add-ons by category
   const addOnsByCategory = useMemo(() => {
-    const categories: Record<string, { available: AddOn[]; unavailable: AddOn[] }> = {
-      feature: { available: [], unavailable: [] },
-      limit: { available: [], unavailable: [] },
-      support: { available: [], unavailable: [] },
+    const categories: Record<string, AddOn[]> = {
+      feature: [],
+      limit: [],
+      support: [],
     };
 
     ADD_ONS.forEach((addon) => {
-      if (addon.availableFor.includes(selectedPlan)) {
-        categories[addon.category].available.push(addon);
-      } else {
-        categories[addon.category].unavailable.push(addon);
-      }
+      categories[addon.category].push(addon);
     });
 
-    // Sort by price descending for profitability
+    // Sort by price descending
     Object.values(categories).forEach((cat) => {
-      cat.available.sort((a, b) => b.monthlyPrice - a.monthlyPrice);
-      cat.unavailable.sort((a, b) => b.monthlyPrice - a.monthlyPrice);
+      cat.sort((a, b) => b.monthlyPrice - a.monthlyPrice);
     });
 
     return categories;
-  }, [selectedPlan]);
+  }, []);
 
-  // Calculate pricing
-  const pricing = useMemo(() => {
-    const baseMonthly = customBasePrice ?? currentPlan.monthlyPrice;
-    const baseYearly = customBasePrice ? customBasePrice * 10 : currentPlan.yearlyPrice;
-
-    const addonsMonthly = selectedAddOns.reduce((sum, id) => {
-      const addon = ADD_ONS.find((a) => a.id === id);
-      return sum + (addon?.monthlyPrice || 0);
-    }, 0);
-
-    const addonsYearly = selectedAddOns.reduce((sum, id) => {
-      const addon = ADD_ONS.find((a) => a.id === id);
-      return sum + (addon?.yearlyPrice || 0);
-    }, 0);
-
-    return {
-      baseMonthly,
-      baseYearly,
-      addonsMonthly,
-      addonsYearly,
-      totalMonthly: baseMonthly + addonsMonthly,
-      totalYearly: baseYearly + addonsYearly,
-      yearlySavings: (baseMonthly + addonsMonthly) * 12 - (baseYearly + addonsYearly),
-    };
-  }, [selectedPlan, selectedAddOns, customBasePrice, currentPlan]);
-
-  // Handlers
-  const handlePlanChange = (planId: string) => {
-    setSelectedPlan(planId as typeof selectedPlan);
-    // Reset add-ons not available for new plan
-    setSelectedAddOns((prev) =>
-      prev.filter((id) => ADD_ONS.find((a) => a.id === id)?.availableFor.includes(planId as any))
-    );
-    setHasChanges(true);
-  };
-
-  const toggleAddOn = (addonId: string) => {
-    setSelectedAddOns((prev) =>
-      prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
-    );
-    setHasChanges(true);
-  };
-
-  const handleReset = () => {
-    setSelectedPlan(initialPlanType);
-    setSelectedAddOns(initialActiveAddOns);
-    setBillingPeriod(customPricing?.billingPeriod || 'monthly');
-    setCustomBasePrice(customPricing?.basePrice ?? null);
-    setHasChanges(false);
-  };
-
-  const handleSave = async () => {
-    await onSave({
-      planType: selectedPlan,
-      addOns: selectedAddOns,
-      customPricing: {
-        basePrice: customBasePrice ?? currentPlan.monthlyPrice,
-        addonsTotal: pricing.addonsMonthly,
-        billingPeriod,
-      },
-    });
-    setHasChanges(false);
-  };
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    );
-  };
-
-  const PlanIcon = planIcons[selectedPlan];
+  const PlanIcon = planIcons[planType];
 
   return (
     <Card className="border-2">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className={cn('p-2.5 rounded-xl', planColors[selectedPlan].bg)}>
-              <PlanIcon className={cn('w-6 h-6', planColors[selectedPlan].text)} />
-            </div>
-            <div>
-              <CardTitle className="flex items-center gap-2 flex-wrap">
-                Tarification & Add-ons
-                <Badge variant="outline" className={cn('text-xs', planColors[selectedPlan].text)}>
-                  {currentPlan.name}
-                </Badge>
-              </CardTitle>
-              <CardDescription>Contrôle total sur le forfait et les options</CardDescription>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className={cn('p-2.5 rounded-xl', planColors[planType].bg)}>
+            <PlanIcon className={cn('w-6 h-6', planColors[planType].text)} />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {hasChanges && (
-              <Badge variant="secondary" className="bg-warning/20 text-warning">
-                Modifications non sauvegardées
+          <div>
+            <CardTitle className="flex items-center gap-2 flex-wrap">
+              Comparatif des fonctionnalités
+              <Badge variant="outline" className={cn('text-xs', planColors[planType].text)}>
+                {currentPlan.name}
               </Badge>
-            )}
-            <Button variant="outline" size="sm" onClick={handleReset} disabled={saving || !hasChanges}>
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Annuler
-            </Button>
-            <Button
-              size="sm"
-              variant="gradient"
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-            >
-              <Save className="w-4 h-4 mr-1" />
-              {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-            </Button>
+            </CardTitle>
+            <CardDescription>
+              Vue des fonctionnalités et add-ons selon les versions
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Pricing Summary Card */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" />
-              Résumé facturation
-            </h3>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => {
-                  setBillingPeriod('monthly');
-                  setHasChanges(true);
-                }}
-              >
-                Mensuel
-              </Button>
-              <Button
-                variant={billingPeriod === 'yearly' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => {
-                  setBillingPeriod('yearly');
-                  setHasChanges(true);
-                }}
-              >
-                Annuel
-                <Badge className="ml-1.5 bg-success/20 text-success text-[10px] px-1.5">-17%</Badge>
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 rounded-xl bg-background/50">
-              <p className="text-xs text-muted-foreground mb-1">Forfait de base</p>
-              <p className="text-2xl font-bold">
-                {billingPeriod === 'monthly' ? pricing.baseMonthly : pricing.baseYearly}€
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {billingPeriod === 'monthly' ? '/mois' : '/an'}
+        {/* Current plan status */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Forfait actuel</p>
+              <p className="text-xl font-bold flex items-center gap-2">
+                <PlanIcon className={cn('w-5 h-5', planColors[planType].text)} />
+                {currentPlan.name}
               </p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-success/5 border border-success/20">
-              <p className="text-xs text-success mb-1">Add-ons actifs ({selectedAddOns.length})</p>
-              <p className="text-2xl font-bold text-success">
-                +{billingPeriod === 'monthly' ? pricing.addonsMonthly : pricing.addonsYearly}€
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {billingPeriod === 'monthly' ? '/mois' : '/an'}
-              </p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-primary/5 border border-primary/20">
-              <p className="text-xs text-primary mb-1">Total facturé</p>
-              <p className="text-2xl font-bold text-primary">
-                {billingPeriod === 'monthly' ? pricing.totalMonthly : pricing.totalYearly}€
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {billingPeriod === 'monthly' ? '/mois' : '/an'}
-              </p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-background/50">
-              <p className="text-xs text-muted-foreground mb-1">CA annuel estimé</p>
-              <p className="text-2xl font-bold">
-                {billingPeriod === 'monthly'
-                  ? pricing.totalMonthly * 12
-                  : pricing.totalYearly}
-                €
-              </p>
-              {billingPeriod === 'yearly' && pricing.yearlySavings > 0 && (
-                <p className="text-xs text-success">
-                  Économie: {pricing.yearlySavings}€
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Custom price override */}
-          <div className="mt-4 pt-4 border-t flex items-center gap-4">
-            <div className="flex-1">
-              <Label htmlFor="customPrice" className="text-xs text-muted-foreground">
-                Prix de base personnalisé (optionnel)
-              </Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input
-                  id="customPrice"
-                  type="number"
-                  min="0"
-                  value={customBasePrice ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                    setCustomBasePrice(val);
-                    setHasChanges(true);
-                  }}
-                  placeholder={`${currentPlan.monthlyPrice}€ (défaut)`}
-                  className="w-32"
-                />
-                <span className="text-sm text-muted-foreground">€/mois</span>
-                {customBasePrice !== null && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setCustomBasePrice(null);
-                      setHasChanges(true);
-                    }}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                )}
-              </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Add-ons actifs</p>
+              <p className="text-xl font-bold text-success">{activeAddOns.length}</p>
             </div>
           </div>
         </div>
 
-        <Tabs defaultValue="plan" className="w-full">
+        <Tabs defaultValue="features" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="plan" className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              Forfait
+            <TabsTrigger value="features" className="flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Fonctionnalités
             </TabsTrigger>
             <TabsTrigger value="addons" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Add-ons
-              {selectedAddOns.length > 0 && (
-                <Badge className="bg-success/20 text-success text-xs">{selectedAddOns.length}</Badge>
+              {activeAddOns.length > 0 && (
+                <Badge className="bg-success/20 text-success text-xs">{activeAddOns.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
-          {/* Plan Selection Tab */}
-          <TabsContent value="plan" className="mt-0">
-            <div className="grid gap-4 md:grid-cols-3">
-              {PRICING_PLANS.map((plan) => {
-                const Icon = planIcons[plan.id];
-                const isSelected = selectedPlan === plan.id;
-                const colors = planColors[plan.id];
-
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => handlePlanChange(plan.id)}
-                    className={cn(
-                      'p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300',
-                      isSelected
-                        ? `${colors.border} ${colors.bg} shadow-lg`
-                        : 'border-border/50 hover:border-primary/30 bg-card'
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={cn('p-2 rounded-xl', isSelected ? colors.bg : 'bg-muted')}>
-                        <Icon className={cn('w-5 h-5', isSelected ? colors.text : 'text-muted-foreground')} />
+          {/* Features Comparison Tab */}
+          <TabsContent value="features" className="mt-0">
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-1">
+                {/* Header */}
+                <div className="grid grid-cols-4 gap-2 p-3 bg-muted/50 rounded-lg sticky top-0 z-10 border-b">
+                  <div className="font-semibold text-sm">Fonctionnalité</div>
+                  {PRICING_PLANS.map(plan => {
+                    const Icon = planIcons[plan.id];
+                    return (
+                      <div 
+                        key={plan.id} 
+                        className={cn(
+                          "text-center font-semibold text-sm flex items-center justify-center gap-1",
+                          plan.id === planType && planColors[plan.id].text
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {plan.id.toUpperCase()}
                       </div>
-                      {isSelected && <Check className={cn('w-5 h-5', colors.text)} />}
-                      {plan.popular && !isSelected && (
-                        <Badge className="bg-orange-500/20 text-orange-600 text-xs">Populaire</Badge>
-                      )}
-                    </div>
-                    <h4 className="font-bold text-base">{plan.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">{plan.tagline}</p>
-                    <div className="mt-3">
-                      {plan.isCustomPricing ? (
-                        <p className="text-lg font-bold">Sur devis</p>
-                      ) : (
-                        <>
-                          <p className="text-2xl font-bold">
-                            {plan.monthlyPrice}€<span className="text-sm font-normal">/mois</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            ou {plan.yearlyPrice}€/an (-{plan.yearlyDiscount}%)
-                          </p>
-                        </>
-                      )}
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-border/50">
-                      <p className="text-xs text-muted-foreground line-clamp-2">{plan.target}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
 
-            {/* Plan Limits Preview */}
-            <div className="mt-6 p-4 rounded-xl bg-muted/30 border">
-              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                Limites du forfait {currentPlan.name}
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                {Object.entries(currentPlan.limits).map(([key, value]) => {
-                  const labels: Record<string, string> = {
-                    maxVehicles: 'Véhicules',
-                    maxDrivers: 'Conducteurs',
-                    maxClients: 'Clients',
-                    maxSavedTours: 'Tournées',
-                    maxDailyCharges: 'Charges/jour',
-                    maxMonthlyCharges: 'Charges/mois',
-                    maxYearlyCharges: 'Charges/an',
-                  };
+                {/* Feature rows */}
+                {FEATURE_COMPARISON.map((feature) => {
+                  const IconComponent = addonIconMap[feature.icon] || Zap;
+                  const isActive = activeFeatures.has(feature.key);
+                  
                   return (
-                    <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-background/50">
-                      <span className="text-muted-foreground">{labels[key] || key}</span>
-                      <span className="font-semibold">{value === null ? '∞' : value}</span>
+                    <div 
+                      key={feature.key}
+                      className={cn(
+                        "grid grid-cols-4 gap-2 p-3 rounded-lg transition-colors",
+                        isActive ? "bg-success/5 border border-success/20" : "hover:bg-muted/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <IconComponent className={cn(
+                          "w-4 h-4 flex-shrink-0",
+                          isActive ? "text-success" : "text-muted-foreground"
+                        )} />
+                        <span className={cn(
+                          "text-sm",
+                          isActive && "font-medium text-foreground"
+                        )}>
+                          {feature.label}
+                        </span>
+                        {isActive && (
+                          <Badge className="bg-success/20 text-success text-[10px] px-1.5 py-0">
+                            Actif
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {PRICING_PLANS.map(plan => {
+                        const included = isFeatureInPlan(feature.key, plan);
+                        const asAddon = isFeatureAddOnFor(feature.key, plan.id);
+                        const isPlanActive = plan.id === planType;
+                        
+                        return (
+                          <div 
+                            key={plan.id} 
+                            className={cn(
+                              "flex items-center justify-center",
+                              isPlanActive && "font-semibold"
+                            )}
+                          >
+                            {included ? (
+                              <div className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
+                                isPlanActive 
+                                  ? "bg-success/20 text-success" 
+                                  : "bg-muted text-muted-foreground"
+                              )}>
+                                <Check className="w-3.5 h-3.5" />
+                                Inclus
+                              </div>
+                            ) : asAddon ? (
+                              <div className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
+                                isPlanActive 
+                                  ? "bg-primary/20 text-primary" 
+                                  : "bg-muted/50 text-muted-foreground"
+                              )}>
+                                <Package className="w-3.5 h-3.5" />
+                                Add-on
+                              </div>
+                            ) : (
+                              <X className="w-4 h-4 text-muted-foreground/40" />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </ScrollArea>
           </TabsContent>
 
           {/* Add-ons Tab */}
-          <TabsContent value="addons" className="mt-0 space-y-4">
-            <div className="flex items-start gap-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/30">
-              <Info className="w-4 h-4 text-blue-500 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-foreground/80">
-                  Les add-ons grisés ne sont pas disponibles pour le forfait{' '}
-                  <span className={cn('font-semibold', planColors[selectedPlan].text)}>
-                    {currentPlan.name}
-                  </span>
-                  . Changez de forfait pour y accéder.
-                </p>
+          <TabsContent value="addons" className="mt-0">
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-6">
+                {(['feature', 'limit', 'support'] as const).map((category) => {
+                  const addons = addOnsByCategory[category];
+                  const CategoryIcon = categoryIcons[category];
+                  const categoryLabels = {
+                    feature: 'Fonctionnalités',
+                    limit: 'Extensions de limites',
+                    support: 'Support & Services',
+                  };
+                  
+                  if (addons.length === 0) return null;
+
+                  return (
+                    <div key={category}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <CategoryIcon className="w-4 h-4 text-primary" />
+                        <h3 className="font-semibold text-sm">{categoryLabels[category]}</h3>
+                        <Badge variant="secondary" className="text-xs">{addons.length}</Badge>
+                      </div>
+                      
+                      {/* Header */}
+                      <div className="grid grid-cols-5 gap-2 p-2 bg-muted/50 rounded-lg mb-2 text-xs font-medium">
+                        <div className="col-span-2">Add-on</div>
+                        {PRICING_PLANS.map(plan => (
+                          <div key={plan.id} className="text-center">
+                            {plan.id.toUpperCase()}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add-on rows */}
+                      <div className="space-y-1">
+                        {addons.map((addon) => {
+                          const IconComponent = addonIconMap[addon.icon] || Package;
+                          const isActive = activeAddOns.includes(addon.id);
+                          
+                          return (
+                            <div 
+                              key={addon.id}
+                              className={cn(
+                                "grid grid-cols-5 gap-2 p-3 rounded-lg transition-colors",
+                                isActive 
+                                  ? "bg-success/10 border border-success/30" 
+                                  : "hover:bg-muted/30 border border-transparent"
+                              )}
+                            >
+                              <div className="col-span-2 flex items-start gap-2">
+                                <div className={cn(
+                                  "p-1.5 rounded-lg flex-shrink-0",
+                                  isActive ? "bg-success/20" : "bg-muted"
+                                )}>
+                                  <IconComponent className={cn(
+                                    "w-4 h-4",
+                                    isActive ? "text-success" : "text-muted-foreground"
+                                  )} />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={cn(
+                                      "text-sm font-medium truncate",
+                                      isActive && "text-success"
+                                    )}>
+                                      {addon.name}
+                                    </span>
+                                    {isActive && (
+                                      <Badge className="bg-success text-success-foreground text-[10px] px-1.5 py-0">
+                                        Actif
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                    {addon.description}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      {addon.monthlyPrice > 0 ? `${addon.monthlyPrice}€/mois` : `${addon.yearlyPrice}€ (one-time)`}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {PRICING_PLANS.map(plan => {
+                                const available = addon.availableFor.includes(plan.id);
+                                const isPlanActive = plan.id === planType;
+                                const isActiveForThisPlan = isPlanActive && isActive;
+                                
+                                return (
+                                  <div 
+                                    key={plan.id} 
+                                    className="flex items-center justify-center"
+                                  >
+                                    {available ? (
+                                      isActiveForThisPlan ? (
+                                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/20 text-success text-xs">
+                                          <Check className="w-3.5 h-3.5" />
+                                          Actif
+                                        </div>
+                                      ) : (
+                                        <Check className={cn(
+                                          "w-4 h-4",
+                                          isPlanActive ? planColors[plan.id].text : "text-muted-foreground"
+                                        )} />
+                                      )
+                                    ) : (
+                                      <X className="w-4 h-4 text-muted-foreground/40" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-
-            {/* Add-on Categories */}
-            {(['feature', 'limit', 'support'] as const).map((category) => {
-              const { available, unavailable } = addOnsByCategory[category];
-              const CategoryIcon = categoryIcons[category];
-              const categoryLabels = {
-                feature: 'Fonctionnalités',
-                limit: 'Extensions de limites',
-                support: 'Support & Services',
-              };
-              const isExpanded = expandedCategories.includes(category);
-              const activeInCategory = available.filter((a) => selectedAddOns.includes(a.id)).length;
-
-              return (
-                <Collapsible
-                  key={category}
-                  open={isExpanded}
-                  onOpenChange={() => toggleCategory(category)}
-                >
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-muted/50 transition-colors bg-muted/20 border">
-                    <div className="flex items-center gap-3">
-                      <CategoryIcon className="w-4 h-4 text-primary" />
-                      <span className="font-semibold text-sm">{categoryLabels[category]}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {available.length + unavailable.length}
-                      </Badge>
-                      {activeInCategory > 0 && (
-                        <Badge className="bg-success/20 text-success text-xs">
-                          {activeInCategory} actif(s)
-                        </Badge>
-                      )}
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {/* Available add-ons */}
-                      {available.map((addon) => (
-                        <AddOnCard
-                          key={addon.id}
-                          addon={addon}
-                          isActive={selectedAddOns.includes(addon.id)}
-                          onToggle={() => toggleAddOn(addon.id)}
-                          disabled={false}
-                        />
-                      ))}
-                      {/* Unavailable add-ons */}
-                      {unavailable.map((addon) => (
-                        <AddOnCard
-                          key={addon.id}
-                          addon={addon}
-                          isActive={false}
-                          onToggle={() => {}}
-                          disabled={true}
-                          unavailableFor={selectedPlan}
-                        />
-                      ))}
-                    </div>
-                    {available.length === 0 && unavailable.length === 0 && (
-                      <p className="text-center text-sm text-muted-foreground py-4">
-                        Aucun add-on dans cette catégorie
-                      </p>
-                    )}
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })}
+            </ScrollArea>
           </TabsContent>
         </Tabs>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 flex-wrap p-3 bg-muted/30 rounded-lg text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-success/20 border border-success/40" />
+            <span className="text-muted-foreground">Actif sur cette licence</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Inclus dans le forfait</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Disponible en add-on</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <X className="w-3.5 h-3.5 text-muted-foreground/40" />
+            <span className="text-muted-foreground">Non disponible</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
-  );
-}
-
-// Add-on Card Component
-function AddOnCard({
-  addon,
-  isActive,
-  onToggle,
-  disabled,
-  unavailableFor,
-}: {
-  addon: AddOn;
-  isActive: boolean;
-  onToggle: () => void;
-  disabled: boolean;
-  unavailableFor?: string;
-}) {
-  const IconComponent = addonIconMap[addon.icon] || Package;
-
-  return (
-    <div
-      onClick={!disabled ? onToggle : undefined}
-      className={cn(
-        'p-4 rounded-xl border-2 transition-all duration-200',
-        disabled
-          ? 'border-border/30 bg-muted/20 opacity-50 cursor-not-allowed'
-          : isActive
-          ? 'border-success bg-success/10 shadow-md cursor-pointer'
-          : 'border-border/50 hover:border-primary/40 hover:bg-muted/30 cursor-pointer'
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            'p-2.5 rounded-xl flex-shrink-0',
-            disabled ? 'bg-muted/50' : isActive ? 'bg-success/20' : 'bg-muted'
-          )}
-        >
-          <IconComponent
-            className={cn(
-              'w-5 h-5',
-              disabled ? 'text-muted-foreground/50' : isActive ? 'text-success' : 'text-muted-foreground'
-            )}
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h5 className={cn('font-semibold text-sm truncate', disabled && 'text-muted-foreground')}>
-              {addon.name}
-            </h5>
-            {!disabled && <Checkbox checked={isActive} onCheckedChange={onToggle} />}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{addon.description}</p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {addon.monthlyPrice === 0 ? (
-              <Badge variant="outline" className="text-xs border-success/50 text-success">
-                {addon.yearlyPrice}€ (one-time)
-              </Badge>
-            ) : (
-              <>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-xs',
-                    disabled ? 'border-muted text-muted-foreground' : 'border-primary/50 text-primary'
-                  )}
-                >
-                  +{addon.monthlyPrice}€/mois
-                </Badge>
-                <span className="text-xs text-muted-foreground">ou {addon.yearlyPrice}€/an</span>
-              </>
-            )}
-            {disabled && unavailableFor && (
-              <Badge variant="secondary" className="text-xs">
-                Non dispo. ({unavailableFor})
-              </Badge>
-            )}
-          </div>
-          {addon.availableFor.length < 3 && !disabled && (
-            <div className="mt-2">
-              <span className="text-[10px] text-muted-foreground">
-                Dispo. pour:{' '}
-                {addon.availableFor.map((p) => (
-                  <Badge key={p} variant="secondary" className="text-[10px] mr-1 px-1.5 py-0">
-                    {p}
-                  </Badge>
-                ))}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
