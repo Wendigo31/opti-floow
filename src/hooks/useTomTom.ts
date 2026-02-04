@@ -96,6 +96,12 @@ interface GeocodingResult {
   };
 }
 
+// Helper function to get current session token
+async function getAuthToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+}
+
 export function useTomTom() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
