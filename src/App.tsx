@@ -29,7 +29,7 @@ import Forecast from "./pages/Forecast";
 import Activation from "./pages/Activation";
 import NotFound from "./pages/NotFound";
 
-import Pricing from "./pages/Pricing";
+// Pricing removed - custom pricing handled externally
 
 import Admin from "./pages/Admin";
 import AIAnalysis from "./pages/AIAnalysis";
@@ -102,7 +102,7 @@ function LicensedAppContent() {
                 <Route path="/drivers" element={<Drivers />} />
                 <Route path="/vehicles" element={<Vehicles />} />
                 <Route path="/charges" element={<Charges />} />
-                <Route path="/pricing" element={<Pricing />} />
+                {/* Pricing page removed */}
                 
                 <Route path="/ai-analysis" element={<AIAnalysis />} />
                 <Route path="/vehicle-reports" element={<VehicleReports />} />

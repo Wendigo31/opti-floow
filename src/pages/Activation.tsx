@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, CreditCard, Users } from 'lucide-react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,11 +7,8 @@ import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PricingPlansPage } from '@/components/settings/PricingPlansPage';
 
 export default function Activation() {
-  const [showPricing, setShowPricing] = useState(false);
-  
   const activationSchema = z.object({
     code: z.string().min(1, 'Code licence requis'),
     email: z.string().email('Email invalide').min(1, 'Email requis')
@@ -52,11 +49,7 @@ export default function Activation() {
       setLoading(false);
     }
   };
-  
-  if (showPricing) {
-    return <PricingPlansPage onBack={() => setShowPricing(false)} />;
-  }
-  
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -155,14 +148,6 @@ export default function Activation() {
             </Button>
           </form>
 
-          {/* Pricing button */}
-          <div className="mt-4">
-            <Button variant="outline" className="w-full" onClick={() => setShowPricing(true)}>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Voir les forfaits
-            </Button>
-          </div>
-
           {/* Help Section */}
           <div className="mt-6 pt-6 border-t border-border">
             <Accordion type="single" collapsible className="w-full">
@@ -195,7 +180,7 @@ export default function Activation() {
                     <Button variant="outline" size="sm" className="w-full mt-1" asChild>
                       <a href="https://optiflow.fr/tarifs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                         <ExternalLink className="w-4 h-4" />
-                        Voir les tarifs
+                        Contactez-nous
                       </a>
                     </Button>
                   </div>
