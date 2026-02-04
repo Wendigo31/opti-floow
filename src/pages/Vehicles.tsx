@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense, useRef } from 'react';
+import { useState, useMemo, lazy, Suspense, useRef, useCallback, useEffect } from 'react';
 import { 
   Truck, 
   Plus, 
@@ -39,10 +39,11 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { cn } from '@/lib/utils';
@@ -104,8 +105,11 @@ export default function Vehicles() {
   const { vehicle: vehicleParams, setCharges } = useApp();
   const { hasFeature, planType } = useLicense();
   const { getVehicleInfo, getTrailerInfo, isOwnData, isCompanyMember } = useCompanyData();
-  const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers, setTrailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
+  
+  // Use cloud hooks instead of localStorage for team sharing
+  const { vehicles, loading: vehiclesLoading, createVehicle, updateVehicle, deleteVehicle } = useCloudVehicles();
+  const { trailers, loading: trailersLoading, createTrailer, updateTrailer, deleteTrailer } = useCloudTrailers();
+  
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -288,7 +292,7 @@ export default function Vehicles() {
     ));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isAdding) {
       const now = new Date().toISOString();
       const newVehicle: Vehicle = {
@@ -323,18 +327,24 @@ export default function Vehicles() {
         isActive: true,
         notes: formData.notes || '',
       };
-      setVehicles([...vehicles, newVehicle]);
-      addVehicleCharges(newVehicle);
-      setIsAdding(false);
-      toast.success('Véhicule ajouté avec succès');
+      const success = await createVehicle(newVehicle);
+      if (success) {
+        addVehicleCharges(newVehicle);
+        setIsAdding(false);
+      }
     } else if (editingId) {
-      const updatedVehicle = { ...formData, id: editingId, updatedAt: new Date().toISOString() } as Vehicle;
-      setVehicles(vehicles.map(v => 
-        v.id === editingId ? updatedVehicle : v
-      ));
-      updateVehicleCharges(updatedVehicle);
-      setEditingId(null);
-      toast.success('Véhicule mis à jour');
+      const existingVehicle = vehicles.find(v => v.id === editingId);
+      const updatedVehicle = { 
+        ...existingVehicle,
+        ...formData, 
+        id: editingId, 
+        updatedAt: new Date().toISOString() 
+      } as Vehicle;
+      const success = await updateVehicle(updatedVehicle);
+      if (success) {
+        updateVehicleCharges(updatedVehicle);
+        setEditingId(null);
+      }
     }
     setFormData({});
   };
@@ -345,10 +355,11 @@ export default function Vehicles() {
     setFormData({});
   };
 
-  const handleDelete = (id: string) => {
-    setVehicles(vehicles.filter(v => v.id !== id));
-    removeVehicleCharges(id);
-    toast.success('Véhicule supprimé');
+  const handleDelete = async (id: string) => {
+    const success = await deleteVehicle(id);
+    if (success) {
+      removeVehicleCharges(id);
+    }
   };
 
   const addMaintenance = () => {
@@ -1400,15 +1411,17 @@ export default function Vehicles() {
     ));
   };
 
-  const handleSaveTrailer = (trailer: Trailer) => {
+  const handleSaveTrailer = async (trailer: Trailer) => {
     if (editingTrailer) {
-      setTrailers(trailers.map(t => t.id === trailer.id ? trailer : t));
-      updateTrailerCharges(trailer);
-      toast.success('Remorque mise à jour');
+      const success = await updateTrailer(trailer);
+      if (success) {
+        updateTrailerCharges(trailer);
+      }
     } else {
-      setTrailers([...trailers, trailer]);
-      addTrailerCharges(trailer);
-      toast.success('Remorque ajoutée');
+      const success = await createTrailer(trailer);
+      if (success) {
+        addTrailerCharges(trailer);
+      }
     }
     setEditingTrailer(null);
   };
@@ -1418,10 +1431,11 @@ export default function Vehicles() {
     setTrailerDialogOpen(true);
   };
 
-  const handleDeleteTrailer = (id: string) => {
-    setTrailers(trailers.filter(t => t.id !== id));
-    removeTrailerCharges(id);
-    toast.success('Remorque supprimée');
+  const handleDeleteTrailer = async (id: string) => {
+    const success = await deleteTrailer(id);
+    if (success) {
+      removeTrailerCharges(id);
+    }
   };
 
   // Synchronize all depreciation charges for vehicles and trailers
@@ -1830,7 +1844,10 @@ export default function Vehicles() {
           });
 
         if (importedVehicles.length > 0) {
-          setVehicles([...vehicles, ...importedVehicles]);
+          // Use cloud hooks for import
+          for (const vehicle of importedVehicles) {
+            await createVehicle(vehicle);
+          }
           vehiclesImported = importedVehicles.length;
         }
       }
@@ -1881,7 +1898,10 @@ export default function Vehicles() {
           });
 
         if (importedTrailers.length > 0) {
-          setTrailers([...trailers, ...importedTrailers]);
+          // Use cloud hooks for import
+          for (const trailer of importedTrailers) {
+            await createTrailer(trailer);
+          }
           trailersImported = importedTrailers.length;
         }
       }

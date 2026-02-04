@@ -71,8 +71,8 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     setIsSyncing(true);
     
     try {
-      // Fetch all data from cloud in parallel
-      await Promise.all([
+      // Fetch all data from cloud in parallel with error handling for each
+      const results = await Promise.allSettled([
         fetchVehicles(),
         fetchTrailers(),
         fetchDrivers(),
@@ -83,11 +83,30 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
         fetchQuotes(),
       ]);
       
+      // Check for any rejected promises
+      const errors: SyncError[] = [];
+      const tableNames = ['vehicles', 'trailers', 'drivers', 'charges', 'clients', 'tours', 'trips', 'quotes'];
+      
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          errors.push({
+            table: tableNames[index],
+            message: result.reason?.message || 'Erreur de synchronisation',
+            timestamp: new Date(),
+          });
+        }
+      });
+      
       if (isMountedRef.current) {
         setLastSyncAt(new Date());
-        setSyncErrors([]);
+        if (errors.length > 0) {
+          setSyncErrors(prev => [...prev.slice(-4), ...errors.slice(0, 5 - prev.length)]);
+        } else {
+          setSyncErrors([]);
+        }
       }
     } catch (error: any) {
+      console.error('[DataSync] Sync error:', error);
       if (isMountedRef.current) {
         setSyncErrors(prev => [...prev.slice(-4), {
           table: 'global',

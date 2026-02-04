@@ -10,6 +10,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { UpdateNotification } from "./components/layout/UpdateNotification";
 import { DataSyncProvider } from "./components/DataSyncProvider";
 import { CloudSessionProvider } from "./components/CloudSessionProvider";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useLicense } from "./hooks/useLicense";
 import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
@@ -163,14 +164,16 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-      <UpdateNotification />
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+        <UpdateNotification />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
