@@ -672,6 +672,62 @@ export type Database = {
         }
         Relationships: []
       }
+      favorite_addresses: {
+        Row: {
+          address: string
+          category: string | null
+          city: string | null
+          created_at: string
+          created_by_name: string | null
+          id: string
+          lat: number
+          license_id: string | null
+          lon: number
+          name: string
+          postal_code: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          created_by_name?: string | null
+          id?: string
+          lat: number
+          license_id?: string | null
+          lon: number
+          name: string
+          postal_code?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          created_by_name?: string | null
+          id?: string
+          lat?: number
+          license_id?: string | null
+          lon?: number
+          name?: string
+          postal_code?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_addresses_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_addons: {
         Row: {
           activated_at: string | null

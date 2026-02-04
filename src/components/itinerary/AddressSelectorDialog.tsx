@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Building2, Star, Search, MapPin, Check, Truck, Package, Mail, Box, Plus, X, MapPinned } from 'lucide-react';
+import { Building2, Star, Search, MapPin, Check, Truck, Package, Mail, Box, Plus, X, MapPinned, Trash2, Users, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TRANSPORT_COMPANIES, COMPANY_CATEGORIES, type TransportCompanyAddress } from '@/data/transportCompanies';
-import { useFavoriteAddresses, type FavoriteAddress } from '@/hooks/useFavoriteAddresses';
+import { useCloudFavoriteAddresses, type CloudFavoriteAddress } from '@/hooks/useCloudFavoriteAddresses';
 import { useAddressAutocomplete } from '@/hooks/useAddressAutocomplete';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-
 interface AddressSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,7 +66,8 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('companies');
-  const { favorites, addFavorite } = useFavoriteAddresses();
+  const { favorites, loading: favoritesLoading, addFavorite, removeFavorite } = useCloudFavoriteAddresses();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // For custom address
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -113,7 +113,7 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
       fav.name.toLowerCase().includes(search.toLowerCase()) ||
       fav.address.toLowerCase().includes(search.toLowerCase()) ||
       (fav.city?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (fav.postalCode || '').includes(search)
+      (fav.postal_code || '').includes(search)
     );
   }, [favorites, search]);
 
@@ -124,10 +124,17 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
     setSearch('');
   };
 
-  const handleSelectFavorite = (favorite: FavoriteAddress) => {
+  const handleSelectFavorite = (favorite: CloudFavoriteAddress) => {
     onSelect(favorite.address, { lat: favorite.lat, lon: favorite.lon });
     onOpenChange(false);
     setSearch('');
+  };
+
+  const handleDeleteFavorite = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    await removeFavorite(id);
+    setDeletingId(null);
   };
 
   const handleAddressSearch = async (query: string) => {
@@ -171,9 +178,9 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
             lat: details.lat,
             lon: details.lng,
             city: details.addressComponents.city,
-            postalCode: details.addressComponents.postalCode,
+            postal_code: details.addressComponents.postalCode,
           });
-          toast({ title: "Adresse ajoutée aux favoris" });
+          setShowCustomForm(false);
           setShowCustomForm(false);
           setCustomName('');
           setCustomAddress('');
@@ -357,41 +364,71 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
           </TabsContent>
 
           <TabsContent value="favorites" className="flex-1 mt-4">
-            <ScrollArea className="h-[370px] pr-4">
-              <div className="space-y-2">
-                {filteredFavorites.map((favorite) => (
-                  <button
-                    key={favorite.id}
-                    onClick={() => handleSelectFavorite(favorite)}
-                    className="w-full p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent/50 text-left transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                          <span className="font-medium text-foreground">{favorite.name}</span>
+            {favoritesLoading ? (
+              <div className="flex items-center justify-center h-[370px]">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ScrollArea className="h-[370px] pr-4">
+                <div className="space-y-2">
+                  {filteredFavorites.length > 0 && (
+                    <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Adresses partagées avec toute l'équipe</span>
+                    </div>
+                  )}
+                  {filteredFavorites.map((favorite) => (
+                    <div
+                      key={favorite.id}
+                      className="group relative w-full p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent/50 text-left transition-colors cursor-pointer"
+                      onClick={() => handleSelectFavorite(favorite)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                            <span className="font-medium text-foreground">{favorite.name}</span>
+                            {favorite.created_by_name && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {favorite.created_by_name}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{favorite.address}</p>
+                          {(favorite.postal_code || favorite.city) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              <span className="font-medium">{favorite.postal_code}</span> {favorite.city}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{favorite.address}</p>
-                        {(favorite.postalCode || favorite.city) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            <span className="font-medium">{favorite.postalCode}</span> {favorite.city}
-                          </p>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => handleDeleteFavorite(e, favorite.id)}
+                          disabled={deletingId === favorite.id}
+                        >
+                          {deletingId === favorite.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
                       </div>
                     </div>
-                  </button>
-                ))}
-                {filteredFavorites.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Star className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="font-medium">Aucune adresse favorite</p>
-                    <p className="text-sm mt-1">
-                      Ajoutez des adresses via l'onglet "Ajouter"
-                    </p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                  ))}
+                  {filteredFavorites.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Star className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p className="font-medium">Aucune adresse favorite</p>
+                      <p className="text-sm mt-1">
+                        Ajoutez des adresses via l'onglet "Ajouter"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            )}
           </TabsContent>
 
           <TabsContent value="custom" className="flex-1 mt-4">
