@@ -40,16 +40,13 @@ import { cn } from '@/lib/utils';
 import { 
   LicenseFeatures, 
   PLAN_DEFAULTS, 
-  PRICING_PLANS,
-  ADD_ONS,
   FEATURE_CATEGORIES as FULL_FEATURE_CATEGORIES,
-  type AddOn,
 } from '@/types/features';
 
 interface FeatureEditorProps {
   planType: 'start' | 'pro' | 'enterprise';
   currentFeatures: Partial<LicenseFeatures> | null;
-  activeAddOns?: string[];
+  activeAddOns?: string[]; // Keep for compatibility but unused
   onSave: (features: Partial<LicenseFeatures>, addOns: string[]) => Promise<void>;
   saving?: boolean;
 }
@@ -122,9 +119,8 @@ export function FeatureEditor({
   saving = false 
 }: FeatureEditorProps) {
   const defaults = PLAN_DEFAULTS[planType];
-  const plan = PRICING_PLANS.find(p => p.id === planType)!;
-  // Show ALL add-ons regardless of plan type - admin should be able to manage everything
-  const availableAddOns = ADD_ONS;
+  // Add-ons system disabled - custom pricing handled externally
+  const availableAddOns: never[] = [];
   
   const [features, setFeatures] = useState<Partial<LicenseFeatures>>(() => ({
     ...defaults,
@@ -185,11 +181,8 @@ export function FeatureEditor({
 
   const PlanIcon = planIcons[planType];
 
-  // Calculate addon pricing
-  const addonsMonthlyTotal = selectedAddOns.reduce((sum, id) => {
-    const addon = ADD_ONS.find(a => a.id === id);
-    return sum + (addon?.monthlyPrice || 0);
-  }, 0);
+  // Add-ons pricing calculation disabled
+  const addonsMonthlyTotal = 0;
 
   // Count modifications - use all features from all categories
   const allFeatures = FULL_FEATURE_CATEGORIES.flatMap(cat => cat.features);
@@ -247,39 +240,12 @@ export function FeatureEditor({
           </div>
         </div>
 
-        {/* Pricing summary */}
-        <div className="mt-4 p-4 bg-muted/30 rounded-lg border">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground">Forfait de base</p>
-              <p className="text-lg font-bold">{plan.monthlyPrice}€<span className="text-xs font-normal">/mois</span></p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Add-ons actifs</p>
-              <p className="text-lg font-bold text-success">+{addonsMonthlyTotal}€<span className="text-xs font-normal">/mois</span></p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total mensuel</p>
-              <p className="text-lg font-bold text-primary">{plan.monthlyPrice + addonsMonthlyTotal}€<span className="text-xs font-normal">/mois</span></p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total annuel</p>
-              <p className="text-lg font-bold">{Math.round((plan.monthlyPrice + addonsMonthlyTotal) * 10)}€<span className="text-xs font-normal">/an (-17%)</span></p>
-            </div>
-          </div>
-        </div>
+        {/* Pricing summary removed - custom pricing handled externally */}
       </CardHeader>
       
       <CardContent>
-        <Tabs defaultValue="addons" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="addons" className="flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Add-ons
-              {selectedAddOns.length > 0 && (
-                <Badge variant="secondary" className="text-xs ml-1 bg-success/20 text-success">{selectedAddOns.length}</Badge>
-              )}
-            </TabsTrigger>
+        <Tabs defaultValue="features" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="features" className="flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Fonctionnalités
@@ -296,85 +262,7 @@ export function FeatureEditor({
             </TabsTrigger>
           </TabsList>
 
-          {/* ADD-ONS TAB */}
-          <TabsContent value="addons" className="mt-0 space-y-4">
-            <div className="flex items-start gap-2 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-              <Info className="w-4 h-4 text-blue-500 mt-0.5" />
-              <p className="text-sm text-foreground/80">
-                Les add-ons permettent d'ajouter des fonctionnalités premium à cette licence. 
-                Le prix s'ajoute au forfait de base.
-              </p>
-            </div>
-
-            {availableAddOns.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Aucun add-on disponible.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Feature Add-ons */}
-                {availableAddOns.filter(a => a.category === 'feature').length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-primary" />
-                      Fonctionnalités supplémentaires
-                    </h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {availableAddOns.filter(a => a.category === 'feature').map((addon) => (
-                        <AddonCard 
-                          key={addon.id} 
-                          addon={addon} 
-                          isActive={selectedAddOns.includes(addon.id)}
-                          onToggle={() => handleAddonToggle(addon.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Limit Add-ons */}
-                {availableAddOns.filter(a => a.category === 'limit').length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-orange-500" />
-                      Extensions de limites
-                    </h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {availableAddOns.filter(a => a.category === 'limit').map((addon) => (
-                        <AddonCard 
-                          key={addon.id} 
-                          addon={addon} 
-                          isActive={selectedAddOns.includes(addon.id)}
-                          onToggle={() => handleAddonToggle(addon.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Support Add-ons */}
-                {availableAddOns.filter(a => a.category === 'support').length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Headphones className="w-4 h-4 text-green-500" />
-                      Support & Services
-                    </h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {availableAddOns.filter(a => a.category === 'support').map((addon) => (
-                        <AddonCard 
-                          key={addon.id} 
-                          addon={addon} 
-                          isActive={selectedAddOns.includes(addon.id)}
-                          onToggle={() => handleAddonToggle(addon.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
+          {/* ADD-ONS TAB removed - custom pricing handled externally */}
 
           {/* FEATURES TAB */}
           <TabsContent value="features" className="mt-0 space-y-3">
@@ -543,66 +431,4 @@ export function FeatureEditor({
   );
 }
 
-// Addon Card Component
-function AddonCard({ 
-  addon, 
-  isActive, 
-  onToggle 
-}: { 
-  addon: AddOn; 
-  isActive: boolean; 
-  onToggle: () => void;
-}) {
-  const IconComponent = addonIcons[addon.icon] || Package;
-  
-  return (
-    <div 
-      onClick={onToggle}
-      className={cn(
-        "p-4 rounded-lg border-2 cursor-pointer transition-all",
-        isActive 
-          ? "border-success bg-success/10 shadow-md" 
-          : "border-border hover:border-primary/50 hover:bg-muted/50"
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div className={cn(
-          "p-2 rounded-lg",
-          isActive ? "bg-success/20" : "bg-muted"
-        )}>
-          <IconComponent className={cn(
-            "w-5 h-5",
-            isActive ? "text-success" : "text-muted-foreground"
-          )} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h5 className="font-medium text-sm truncate">{addon.name}</h5>
-            <Checkbox checked={isActive} onCheckedChange={onToggle} />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {addon.description}
-          </p>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline" className={cn(
-              "text-xs",
-              addon.monthlyPrice === 0 
-                ? "border-success/50 text-success" 
-                : "border-primary/50 text-primary"
-            )}>
-              {addon.monthlyPrice === 0 
-                ? `${addon.yearlyPrice}€ (one-time)` 
-                : `+${addon.monthlyPrice}€/mois`
-              }
-            </Badge>
-            {addon.monthlyPrice > 0 && (
-              <span className="text-xs text-muted-foreground">
-                ou {addon.yearlyPrice}€/an
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// AddonCard component removed - pricing handled externally

@@ -8,7 +8,6 @@ import {
   Navigation,
   BarChart3,
   UserCircle,
-  CreditCard,
   Lock,
   TrendingUp,
   Truck,
@@ -68,7 +67,6 @@ const NAV_LABELS = {
   clients: 'Clients',
   settings: 'Paramètres',
   team: 'Équipe',
-  pricing: 'Tarifs',
 };
 
 // Type for nav items
@@ -118,7 +116,6 @@ const navGroups: { label: string; items: NavItemConfig[] }[] = [
       { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
       { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' },
       { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
-      { to: '/pricing', icon: CreditCard, labelKey: 'pricing', directionOnly: true },
     ]
   },
 ];

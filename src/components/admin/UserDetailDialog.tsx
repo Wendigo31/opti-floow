@@ -59,7 +59,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ADD_ONS, AddOn, getAddOnsForPlan } from '@/types/pricing';
+// Pricing/Add-ons imports removed - custom pricing handled externally
 import { CreateCompanyDialog } from './CreateCompanyDialog';
 import type { PlanType } from '@/hooks/useLicense';
 
@@ -738,89 +738,10 @@ export function UserDetailDialog({
                   <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : addonsEditMode ? (
-                // Edit Mode - Show all available add-ons
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Sélectionnez les add-ons à activer pour cette licence ({license?.plan_type || 'pro'})
-                  </p>
-                  {ADD_ONS.map((addon) => {
-                    const isSelected = selectedAddons.includes(addon.id);
-                    const isAvailable = addon.availableFor.includes((license?.plan_type as 'start' | 'pro' | 'enterprise') || 'pro');
-                    
-                    return (
-                      <Card 
-                        key={addon.id} 
-                        className={`cursor-pointer transition-all ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5' 
-                            : isAvailable 
-                              ? 'hover:border-muted-foreground/50' 
-                              : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        onClick={() => isAvailable && toggleAddonSelection(addon.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <div className={`p-2 rounded-lg ${isSelected ? 'bg-primary/20' : 'bg-muted'}`}>
-                                <Sparkles className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{addon.name}</span>
-                                  {isSelected && (
-                                    <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
-                                      <CheckCircle className="w-3 h-3 mr-1" />
-                                      Sélectionné
-                                    </Badge>
-                                  )}
-                                  {!isAvailable && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Non disponible
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {addon.description}
-                                </p>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <DollarSign className="w-3 h-3" />
-                                    {formatCurrency(addon.monthlyPrice)}/mois
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">
-                                    {addon.category === 'feature' ? 'Fonctionnalité' : 
-                                     addon.category === 'limit' ? 'Limite' : 
-                                     addon.category === 'support' ? 'Support' : 'Autre'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
-                            }`}>
-                              {isSelected && <CheckCircle className="w-3 h-3 text-primary-foreground" />}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-
-                  {/* Total mensuel prévu */}
-                  <Card className="border-dashed border-primary/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total add-ons sélectionnés</span>
-                        <span className="font-semibold text-lg text-primary">
-                          {formatCurrency(selectedAddons.reduce((sum, id) => {
-                            const addon = ADD_ONS.find(a => a.id === id);
-                            return sum + (addon?.monthlyPrice || 0);
-                          }, 0))}/mois
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>La gestion des add-ons est désactivée.</p>
+                  <p className="text-sm">La tarification est gérée sur mesure.</p>
                 </div>
               ) : addons.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -831,7 +752,7 @@ export function UserDetailDialog({
               ) : (
                 <div className="space-y-3">
                   {addons.map((addon) => {
-                    const addonInfo = ADD_ONS.find(a => a.id === addon.addon_id);
+                    const addonInfo = null; // ADD_ONS removed - custom pricing
                     return (
                       <Card key={addon.id} className={addon.is_active ? 'border-primary/30 bg-primary/5' : 'opacity-60'}>
                         <CardContent className="p-4">
@@ -1206,10 +1127,7 @@ export function UserDetailDialog({
                       if (!details) return null;
                       
                       if (details.addOns) {
-                        const addOnNames = (details.addOns as string[]).map(id => {
-                          const addon = ADD_ONS.find(a => a.id === id);
-                          return addon?.name || id;
-                        });
+                        const addOnNames = (details.addOns as string[]);
                         return addOnNames.length > 0 
                           ? `Add-ons: ${addOnNames.join(', ')}`
                           : 'Tous les add-ons désactivés';

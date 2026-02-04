@@ -1,14 +1,5 @@
 // Feature definitions for granular plan management
-// Re-exports from new pricing system for backward compatibility
-import { 
-  PRICING_PLANS, 
-  ADD_ONS, 
-  FEATURE_DEFINITIONS as NEW_FEATURE_DEFINITIONS,
-  getPlanById,
-  type PricingPlan,
-  type AddOn,
-  type PlanLimits,
-} from './pricing';
+// Pricing system removed - custom pricing handled externally
 
 export interface LicenseFeatures {
   // Core features (Start)
@@ -144,30 +135,7 @@ export interface FeatureDefinition {
   addonPrice?: { monthly: number; yearly: number };
 }
 
-// Helper to convert new pricing system to old format
-function convertPlanToFeatures(planId: 'start' | 'pro' | 'enterprise'): Partial<LicenseFeatures> {
-  const plan = getPlanById(planId);
-  const features: Partial<LicenseFeatures> = {};
-  
-  // Set all boolean features based on plan features array
-  NEW_FEATURE_DEFINITIONS.forEach(f => {
-    const key = f.key as keyof LicenseFeatures;
-    if (typeof (features as any)[key] !== 'number') {
-      (features as any)[key] = plan.features.includes(f.key);
-    }
-  });
-  
-  // Set limits
-  features.max_vehicles = plan.limits.maxVehicles;
-  features.max_drivers = plan.limits.maxDrivers;
-  features.max_clients = plan.limits.maxClients;
-  features.max_saved_tours = plan.limits.maxSavedTours;
-  features.max_daily_charges = plan.limits.maxDailyCharges;
-  features.max_monthly_charges = plan.limits.maxMonthlyCharges;
-  features.max_yearly_charges = plan.limits.maxYearlyCharges;
-  
-  return features;
-}
+// convertPlanToFeatures function removed - pricing system disabled
 
 // Default features by plan - Generated from new pricing system
 export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<LicenseFeatures>> = {
@@ -392,8 +360,7 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
   },
 };
 
-// Re-export pricing system for easy access
-export { PRICING_PLANS, ADD_ONS, getPlanById, type PricingPlan, type AddOn, type PlanLimits };
+// Pricing system re-exports removed - custom pricing handled externally
 
 // Feature categories for admin UI - reorganized for better clarity
 export const FEATURE_CATEGORIES: FeatureCategory[] = [
