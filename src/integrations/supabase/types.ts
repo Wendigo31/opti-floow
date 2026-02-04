@@ -1817,6 +1817,10 @@ export type Database = {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
       }
+      can_view_financial_data: {
+        Args: { p_license_id: string }
+        Returns: boolean
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       create_access_request: {
         Args: { p_message?: string; p_requested_features: string[] }
@@ -1829,6 +1833,37 @@ export type Database = {
           id: string
           is_active: boolean
           is_current_user: boolean
+          role: string
+        }[]
+      }
+      get_drivers_with_salary_check: {
+        Args: never
+        Returns: {
+          base_salary: number
+          can_view_salary: boolean
+          created_at: string
+          driver_data: Json
+          driver_type: string
+          hourly_rate: number
+          id: string
+          license_id: string
+          local_id: string
+          name: string
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_safe_invitations: {
+        Args: { p_license_id: string }
+        Returns: {
+          accepted_at: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          is_expired: boolean
           role: string
         }[]
       }
