@@ -173,9 +173,9 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Code licence</span>
-                    <Badge variant="outline" className="font-mono">
-                      {licenseData?.code || 'Non disponible'}
+                    <span className="text-muted-foreground">Statut</span>
+                    <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                      Active
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -185,12 +185,6 @@ export default function Settings() {
                         ? new Date(licenseData.activatedAt).toLocaleDateString('fr-FR')
                         : 'Non disponible'}
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Statut</span>
-                    <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
-                      Active
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>

@@ -52,23 +52,26 @@ export function useClients() {
       
       // Fetch license ID and company members for creator lookup
       const userLicenseId = await getUserLicenseId();
+      
+      // Fetch members in the same call to avoid state dependency issues
+      let currentMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
+      
       if (userLicenseId) {
         const { data: members } = await supabase
           .from('company_users')
           .select('user_id, email, display_name, is_active')
           .eq('license_id', userLicenseId);
         
-        const newMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
         members?.forEach(m => {
           if (m.user_id) {
-            newMembersMap.set(m.user_id, { 
+            currentMembersMap.set(m.user_id, { 
               email: m.email, 
               displayName: m.display_name || undefined,
               isActive: m.is_active ?? true
             });
           }
         });
-        setMembersMap(newMembersMap);
+        setMembersMap(currentMembersMap);
       }
 
       // Fetch clients (RLS handles company-level access)
@@ -79,9 +82,9 @@ export function useClients() {
 
       if (clientsError) throw clientsError;
 
-      // Map to local format with creator info
+      // Map to local format with creator info - use currentMembersMap directly
       const mappedClients: ClientWithCreator[] = (clientsData || []).map(c => {
-        const memberInfo = membersMap.get(c.user_id);
+        const memberInfo = currentMembersMap.get(c.user_id);
         return {
           id: c.id,
           name: c.name,
@@ -136,7 +139,7 @@ export function useClients() {
     } finally {
       setLoading(false);
     }
-  }, [membersMap]);
+  }, []); // Remove membersMap dependency to prevent infinite loop
 
   const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<ClientWithCreator | null> => {
     try {
