@@ -36,6 +36,7 @@ export function useAddressAutocomplete() {
       setLoading(true);
       try {
         // Use Google Places Autocomplete via edge function
+        // supabase.functions.invoke automatically includes the auth token
         const { data, error } = await supabase.functions.invoke('google-places-search', {
           body: { query }
         });
@@ -78,6 +79,7 @@ export function useAddressAutocomplete() {
     };
   } | null> => {
     try {
+      // supabase.functions.invoke automatically includes the auth token
       const { data, error } = await supabase.functions.invoke('google-place-details', {
         body: { placeId }
       });
