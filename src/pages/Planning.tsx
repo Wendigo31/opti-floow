@@ -33,7 +33,7 @@
    const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
    const [isSelectionMode, setIsSelectionMode] = useState(false);
  
-  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, duplicateToNextWeeks, applyVehicleToTour } = usePlanning();
+  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, duplicateToNextWeeks, applyVehicleToTour } = usePlanning();
    const { vehicles, fetchVehicles } = useCloudVehicles();
    const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
    const { clients } = useClients();
@@ -507,28 +507,12 @@
          clients={clients}
           weekStartDate={currentWeekStart}
          onImport={async (entries) => {
-            let allOk = true;
-
-            for (const entry of entries) {
-              const ok = await createTour(entry, 4);
-              if (!ok) allOk = false;
-            }
-
-            // After import, jump to the imported start week so users immediately see the result.
-            const importedStart = entries?.[0]?.start_date;
-            if (importedStart) {
-              const importedWeekStart = startOfWeek(parseISO(importedStart), { weekStartsOn: 1 });
-              setCurrentWeekStart(importedWeekStart);
-              const startDate = format(importedWeekStart, 'yyyy-MM-dd');
-              const endDate = format(addDays(importedWeekStart, 6), 'yyyy-MM-dd');
-              fetchEntries(startDate, endDate);
-            } else {
-              // Fallback: refresh current week
-              const startDate = format(currentWeekStart, 'yyyy-MM-dd');
-              const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-              fetchEntries(startDate, endDate);
-            }
-            return allOk;
+             // Excel import: create entries ONLY on the displayed week days that are checked in Excel.
+             const ok = await importExcelPlanningWeek(entries, currentWeekStart);
+             const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+             const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+             fetchEntries(startDate, endDate);
+             return ok;
          }}
        />
      </div>
