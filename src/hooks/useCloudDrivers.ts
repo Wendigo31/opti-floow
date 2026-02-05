@@ -7,6 +7,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
+const CACHE_KEY_CDD = 'optiflow_cdd_drivers_cache';
 
 function getCachedCdiDrivers(): Driver[] {
   try {
@@ -24,9 +25,18 @@ function getCachedInterimDrivers(): Driver[] {
   }
 }
 
-function setCachedDrivers(cdi: Driver[], interim: Driver[]) {
+function getCachedCddDrivers(): Driver[] {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_KEY_CDD) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function setCachedDrivers(cdi: Driver[], cdd: Driver[], interim: Driver[]) {
   try {
     localStorage.setItem(CACHE_KEY_CDI, JSON.stringify(cdi));
+    localStorage.setItem(CACHE_KEY_CDD, JSON.stringify(cdd));
     localStorage.setItem(CACHE_KEY_INTERIM, JSON.stringify(interim));
   } catch (e) {
     console.error('Failed to cache drivers:', e);
@@ -36,6 +46,7 @@ function setCachedDrivers(cdi: Driver[], interim: Driver[]) {
 export function useCloudDrivers() {
   const { licenseId, authUserId } = useLicenseContext();
   const [cdiDrivers, setCdiDrivers] = useState<Driver[]>(() => getCachedCdiDrivers());
+  const [cddDrivers, setCddDrivers] = useState<Driver[]>(() => getCachedCddDrivers());
   const [interimDrivers, setInterimDrivers] = useState<Driver[]>(() => getCachedInterimDrivers());
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -43,11 +54,16 @@ export function useCloudDrivers() {
 
   // Keep latest state in refs so realtime handlers don't rely on stale closures
   const cdiDriversRef = useRef<Driver[]>(cdiDrivers);
+  const cddDriversRef = useRef<Driver[]>(cddDrivers);
   const interimDriversRef = useRef<Driver[]>(interimDrivers);
 
   useEffect(() => {
     cdiDriversRef.current = cdiDrivers;
   }, [cdiDrivers]);
+
+  useEffect(() => {
+    cddDriversRef.current = cddDrivers;
+  }, [cddDrivers]);
 
   useEffect(() => {
     interimDriversRef.current = interimDrivers;
@@ -58,6 +74,7 @@ export function useCloudDrivers() {
     
     if (!authUserId || !licenseId) {
       setCdiDrivers(getCachedCdiDrivers());
+      setCddDrivers(getCachedCddDrivers());
       setInterimDrivers(getCachedInterimDrivers());
       return;
     }
@@ -75,6 +92,7 @@ export function useCloudDrivers() {
       if (error) throw error;
 
       const cdi: Driver[] = [];
+      const cdd: Driver[] = [];
       const interim: Driver[] = [];
       
       (data || []).forEach(row => {
@@ -82,6 +100,8 @@ export function useCloudDrivers() {
         if (driverData) {
           if (row.driver_type === 'interim') {
             interim.push(driverData);
+          } else if (row.driver_type === 'cdd') {
+            cdd.push(driverData);
           } else {
             cdi.push(driverData);
           }
@@ -89,14 +109,17 @@ export function useCloudDrivers() {
       });
 
       setCdiDrivers(cdi);
+      setCddDrivers(cdd);
       setInterimDrivers(interim);
-      setCachedDrivers(cdi, interim);
+      setCachedDrivers(cdi, cdd, interim);
     } catch (error) {
       console.error('Error fetching drivers:', error);
       const cachedCdi = getCachedCdiDrivers();
+      const cachedCdd = getCachedCddDrivers();
       const cachedInterim = getCachedInterimDrivers();
-      if (cachedCdi.length > 0 || cachedInterim.length > 0) {
+      if (cachedCdi.length > 0 || cachedCdd.length > 0 || cachedInterim.length > 0) {
         setCdiDrivers(cachedCdi);
+        setCddDrivers(cachedCdd);
         setInterimDrivers(cachedInterim);
         toast.warning('Mode hors-ligne : données du cache');
       }
@@ -134,7 +157,15 @@ export function useCloudDrivers() {
                   const exists = prev.find(d => d.id === data.id);
                   const updated = exists ? prev.map(d => d.id === data.id ? data : d) : [data, ...prev];
                   interimDriversRef.current = updated;
-                  setCachedDrivers(cdiDriversRef.current, updated);
+                  setCachedDrivers(cdiDriversRef.current, cddDriversRef.current, updated);
+                  return updated;
+                });
+              } else if (type === 'cdd') {
+                setCddDrivers(prev => {
+                  const exists = prev.find(d => d.id === data.id);
+                  const updated = exists ? prev.map(d => d.id === data.id ? data : d) : [data, ...prev];
+                  cddDriversRef.current = updated;
+                  setCachedDrivers(cdiDriversRef.current, updated, interimDriversRef.current);
                   return updated;
                 });
               } else {
@@ -142,7 +173,7 @@ export function useCloudDrivers() {
                   const exists = prev.find(d => d.id === data.id);
                   const updated = exists ? prev.map(d => d.id === data.id ? data : d) : [data, ...prev];
                   cdiDriversRef.current = updated;
-                  setCachedDrivers(updated, interimDriversRef.current);
+                  setCachedDrivers(updated, cddDriversRef.current, interimDriversRef.current);
                   return updated;
                 });
               }
@@ -152,13 +183,19 @@ export function useCloudDrivers() {
             setCdiDrivers(prev => {
               const updated = prev.filter(d => d.id !== localId);
               cdiDriversRef.current = updated;
-              setCachedDrivers(updated, interimDriversRef.current);
+              setCachedDrivers(updated, cddDriversRef.current, interimDriversRef.current);
+              return updated;
+            });
+            setCddDrivers(prev => {
+              const updated = prev.filter(d => d.id !== localId);
+              cddDriversRef.current = updated;
+              setCachedDrivers(cdiDriversRef.current, updated, interimDriversRef.current);
               return updated;
             });
             setInterimDrivers(prev => {
               const updated = prev.filter(d => d.id !== localId);
               interimDriversRef.current = updated;
-              setCachedDrivers(cdiDriversRef.current, updated);
+              setCachedDrivers(cdiDriversRef.current, cddDriversRef.current, updated);
               return updated;
             });
           }
@@ -187,7 +224,7 @@ export function useCloudDrivers() {
     }
   }, [licenseId, authUserId, fetchDrivers]);
 
-  const createDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
+  const createDriver = useCallback(async (driver: Driver, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -204,7 +241,7 @@ export function useCloudDrivers() {
           license_id: currentLicenseId,
           local_id: driver.id,
           name: driver.name,
-          driver_type: isInterim ? 'interim' : 'cdi',
+          driver_type: driverType,
           base_salary: driver.baseSalary,
           hourly_rate: driver.hourlyRate,
           driver_data: JSON.parse(JSON.stringify(driver)),
@@ -212,18 +249,25 @@ export function useCloudDrivers() {
 
       if (error) throw error;
 
-      if (isInterim) {
+      if (driverType === 'interim') {
         setInterimDrivers(prev => {
           const updated = [driver, ...prev];
           interimDriversRef.current = updated;
-          setCachedDrivers(cdiDriversRef.current, updated);
+          setCachedDrivers(cdiDriversRef.current, cddDriversRef.current, updated);
+          return updated;
+        });
+      } else if (driverType === 'cdd') {
+        setCddDrivers(prev => {
+          const updated = [driver, ...prev];
+          cddDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated, interimDriversRef.current);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = [driver, ...prev];
           cdiDriversRef.current = updated;
-          setCachedDrivers(updated, interimDriversRef.current);
+          setCachedDrivers(updated, cddDriversRef.current, interimDriversRef.current);
           return updated;
         });
       }
@@ -236,7 +280,7 @@ export function useCloudDrivers() {
     }
   }, []);
 
-  const updateDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
+  const updateDriver = useCallback(async (driver: Driver, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
       const currentLicenseId = await getLicenseId();
 
@@ -244,7 +288,7 @@ export function useCloudDrivers() {
         .from('user_drivers')
         .update({
           name: driver.name,
-          driver_type: isInterim ? 'interim' : 'cdi',
+          driver_type: driverType,
           base_salary: driver.baseSalary,
           hourly_rate: driver.hourlyRate,
           driver_data: JSON.parse(JSON.stringify(driver)),
@@ -255,18 +299,25 @@ export function useCloudDrivers() {
 
       if (error) throw error;
 
-      if (isInterim) {
+      if (driverType === 'interim') {
         setInterimDrivers(prev => {
           const updated = prev.map(d => d.id === driver.id ? driver : d);
           interimDriversRef.current = updated;
-          setCachedDrivers(cdiDriversRef.current, updated);
+          setCachedDrivers(cdiDriversRef.current, cddDriversRef.current, updated);
+          return updated;
+        });
+      } else if (driverType === 'cdd') {
+        setCddDrivers(prev => {
+          const updated = prev.map(d => d.id === driver.id ? driver : d);
+          cddDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated, interimDriversRef.current);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = prev.map(d => d.id === driver.id ? driver : d);
           cdiDriversRef.current = updated;
-          setCachedDrivers(updated, interimDriversRef.current);
+          setCachedDrivers(updated, cddDriversRef.current, interimDriversRef.current);
           return updated;
         });
       }
@@ -279,7 +330,7 @@ export function useCloudDrivers() {
     }
   }, []);
 
-  const deleteDriver = useCallback(async (id: string, isInterim: boolean = false): Promise<boolean> => {
+  const deleteDriver = useCallback(async (id: string, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -347,18 +398,25 @@ export function useCloudDrivers() {
         return false;
       }
 
-      if (isInterim) {
+      if (driverType === 'interim') {
         setInterimDrivers(prev => {
           const updated = prev.filter(d => d.id !== id);
           interimDriversRef.current = updated;
-          setCachedDrivers(cdiDriversRef.current, updated);
+          setCachedDrivers(cdiDriversRef.current, cddDriversRef.current, updated);
+          return updated;
+        });
+      } else if (driverType === 'cdd') {
+        setCddDrivers(prev => {
+          const updated = prev.filter(d => d.id !== id);
+          cddDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated, interimDriversRef.current);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = prev.filter(d => d.id !== id);
           cdiDriversRef.current = updated;
-          setCachedDrivers(updated, interimDriversRef.current);
+          setCachedDrivers(updated, cddDriversRef.current, interimDriversRef.current);
           return updated;
         });
       }
@@ -373,6 +431,7 @@ export function useCloudDrivers() {
 
   return {
     cdiDrivers,
+    cddDrivers,
     interimDrivers,
     loading,
     fetchDrivers,

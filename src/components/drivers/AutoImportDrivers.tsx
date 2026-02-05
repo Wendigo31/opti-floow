@@ -66,7 +66,8 @@ import { useRef } from 'react';
              continue;
            }
  
-           const success = await createDriver(driver as Driver, driver.isInterim);
+          const driverType: 'cdi' | 'cdd' | 'interim' = driver.isInterim ? 'interim' : (driver.contractType === 'cdd' ? 'cdd' : 'cdi');
+          const success = await createDriver(driver as Driver, driverType);
            if (success) {
              importedCount++;
              setCount(importedCount);

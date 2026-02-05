@@ -6,7 +6,7 @@ import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Buil
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { parseExcelFile } from '@/utils/excelImport';
  import { parseDriversExcel, convertToDrivers, type ParsedDriverRow, type ExtendedParsedDriver } from '@/utils/driversExcelImport';
-import { downloadDriversTemplate } from '@/utils/excelTemplates';
+import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
  
  interface ImportDriversDialogProps {
@@ -98,7 +98,7 @@ import { downloadDriversTemplate } from '@/utils/excelTemplates';
  
          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           {/* Download template button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button 
               variant="outline" 
               size="sm" 
@@ -106,7 +106,16 @@ import { downloadDriversTemplate } from '@/utils/excelTemplates';
               className="gap-2"
             >
               <Download className="w-4 h-4" />
-              Télécharger le modèle Excel
+              Modèle CDI/CDD
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={downloadInterimDriversTemplate}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Modèle Intérimaires
             </Button>
           </div>
 
