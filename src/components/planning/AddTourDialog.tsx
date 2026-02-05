@@ -1,4 +1,6 @@
- import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSavedTours } from '@/hooks/useSavedTours';
+import type { SavedTour } from '@/types/savedTour';
  import {
    Dialog,
    DialogContent,
@@ -10,7 +12,6 @@
  import { Input } from '@/components/ui/input';
  import { Label } from '@/components/ui/label';
  import { Textarea } from '@/components/ui/textarea';
- import { Checkbox } from '@/components/ui/checkbox';
  import { Switch } from '@/components/ui/switch';
  import {
    Select,
@@ -19,7 +20,14 @@
    SelectTrigger,
    SelectValue,
  } from '@/components/ui/select';
- import { Plus, UserPlus, Save } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-react';
  import { dayLabels, fullDayLabels } from '@/types/planning';
  import type { TourInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
@@ -67,6 +75,10 @@
    const [showRelay, setShowRelay] = useState(false);
    const [weeksAhead, setWeeksAhead] = useState(4);
    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSavedTours, setShowSavedTours] = useState(false);
+  
+  // Load saved tours
+  const { tours: savedTours, loading: loadingSavedTours } = useSavedTours();
  
    const toggleDay = (dayIndex: number) => {
      setFormData(prev => ({
@@ -91,6 +103,26 @@
      }));
    };
  
+  const loadFromSavedTour = (tour: SavedTour) => {
+    setFormData(prev => ({
+      ...prev,
+      tour_name: tour.name,
+      client_id: tour.client_id || null,
+      driver_id: tour.driver_ids?.[0] || null,
+      vehicle_id: tour.vehicle_id || prev.vehicle_id,
+      origin_address: tour.origin_address || null,
+      destination_address: tour.destination_address || null,
+      notes: tour.notes || null,
+      relay_driver_id: tour.driver_ids?.[1] || null,
+    }));
+    
+    if (tour.driver_ids && tour.driver_ids.length > 1) {
+      setShowRelay(true);
+    }
+    
+    setShowSavedTours(false);
+  };
+
    const handleSubmit = async (e: React.FormEvent) => {
      e.preventDefault();
      if (!formData.tour_name || !formData.vehicle_id || formData.recurring_days.length === 0) {
@@ -138,6 +170,70 @@
          </DialogHeader>
  
          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Load from saved tours */}
+            <Collapsible open={showSavedTours} onOpenChange={setShowSavedTours}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Charger depuis une tournée enregistrée
+                    {savedTours.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {savedTours.length}
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showSavedTours ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="border rounded-lg p-2 bg-muted/30">
+                  {loadingSavedTours ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">Chargement...</span>
+                    </div>
+                  ) : savedTours.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Aucune tournée enregistrée
+                    </p>
+                  ) : (
+                    <ScrollArea className="h-48">
+                      <div className="space-y-1">
+                        {savedTours.map((tour) => (
+                          <button
+                            key={tour.id}
+                            type="button"
+                            onClick={() => loadFromSavedTour(tour)}
+                            className="w-full text-left p-2 rounded hover:bg-accent transition-colors"
+                          >
+                            <div className="font-medium text-sm">{tour.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {tour.origin_address} → {tour.destination_address}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                {tour.distance_km} km
+                              </span>
+                              {tour.driver_ids && tour.driver_ids.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {tour.driver_ids.length} conducteurs
+                                </Badge>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
            {/* Tour name and Vehicle */}
            <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
