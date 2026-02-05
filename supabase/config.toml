@@ -1,4 +1,16 @@
 project_id = "zlesqkxvydmljcctnrez"
 
+[functions.google-maps-key]
+verify_jwt = false
+
+[functions.google-directions]
+verify_jwt = false
+
+[functions.google-places-search]
+verify_jwt = false
+
+[functions.google-place-details]
+verify_jwt = false
+
 [functions.predict-costs]
 verify_jwt = false
