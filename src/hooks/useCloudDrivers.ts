@@ -154,6 +154,13 @@ export function useCloudDrivers() {
     };
   }, [licenseId, cdiDrivers, interimDrivers]);
 
+  // Auto-fetch when licenseId becomes available
+  useEffect(() => {
+    if (licenseId && authUserId) {
+      fetchDrivers();
+    }
+  }, [licenseId, authUserId, fetchDrivers]);
+
   const createDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

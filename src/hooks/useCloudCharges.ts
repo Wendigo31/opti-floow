@@ -113,6 +113,13 @@ export function useCloudCharges() {
     };
   }, [licenseId]);
 
+  // Auto-fetch when licenseId becomes available
+  useEffect(() => {
+    if (licenseId && authUserId) {
+      fetchCharges();
+    }
+  }, [licenseId, authUserId, fetchCharges]);
+
   const createCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

@@ -31,6 +31,8 @@ import { useDataSyncActions } from '@/components/DataSyncProvider';
 import { useTeam } from '@/hooks/useTeam';
 import { MobileNav } from './MobileNav';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CloudSyncIndicator } from '@/components/shared/CloudSyncIndicator';
+import { useCloudDataSafe } from '@/hooks/useCloudDataSafe';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -56,6 +58,8 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const isOnline = useNetworkStatus();
   const { currentUserRole, currentUserInfo } = useTeam();
   const isMobile = useIsMobile();
+  const cloudSyncState = useCloudDataSafe();
+
   const { 
     forceSync, 
     isSyncing, 
@@ -170,6 +174,14 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-3">
             {/* SINGLE SYNC BUTTON with Popover */}
+            {/* Cloud Sync Indicator - Shows real-time activity */}
+            <CloudSyncIndicator
+              isConnected={cloudSyncState.isConnected}
+              isLoading={cloudSyncState.isLoading}
+              recentActivity={cloudSyncState.recentActivity}
+            />
+            
+            {/* Local Sync Button with Popover */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
