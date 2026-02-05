@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { FixedCharge } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 const CACHE_KEY = 'optiflow_charges_cache';
 
@@ -138,19 +138,16 @@ export function useCloudCharges() {
 
   const createCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
         return false;
       }
-
-      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_charges')
         .insert([{
-          user_id: user.id,
-          license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
           local_id: charge.id,
           name: charge.name,
           amount: charge.amount,
@@ -174,11 +171,14 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   const updateCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_charges')
@@ -191,7 +191,7 @@ export function useCloudCharges() {
           charge_data: JSON.parse(JSON.stringify(charge)),
           synced_at: new Date().toISOString(),
         })
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', charge.id);
 
       if (error) throw error;
@@ -208,16 +208,19 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_charges')
         .delete()
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', id);
 
       if (error) throw error;
@@ -234,7 +237,7 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   return {
     charges,
