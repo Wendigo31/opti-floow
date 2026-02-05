@@ -1,0 +1,238 @@
+ import { useState, useEffect, useMemo } from 'react';
+ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+ import { Button } from '@/components/ui/button';
+ import { Badge } from '@/components/ui/badge';
+ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from 'lucide-react';
+ import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
+ import { fr } from 'date-fns/locale';
+ import { usePlanning } from '@/hooks/usePlanning';
+ import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+ import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+ import { useClients } from '@/hooks/useClients';
+ import { PlanningEntryDialog } from '@/components/planning/PlanningEntryDialog';
+ import { PlanningCell } from '@/components/planning/PlanningCell';
+ import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
+ import type { Vehicle } from '@/types/vehicle';
+ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+ 
+ export default function Planning() {
+   const [currentWeekStart, setCurrentWeekStart] = useState(() => 
+     startOfWeek(new Date(), { weekStartsOn: 1 })
+   );
+   const [selectedEntry, setSelectedEntry] = useState<PlanningEntry | null>(null);
+   const [isDialogOpen, setIsDialogOpen] = useState(false);
+   const [newEntryDefaults, setNewEntryDefaults] = useState<Partial<PlanningEntryInput>>({});
+ 
+   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry } = usePlanning();
+   const { vehicles, fetchVehicles } = useCloudVehicles();
+   const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
+   const { clients } = useClients();
+ 
+   const allDrivers = useMemo(() => [...cdiDrivers, ...interimDrivers], [cdiDrivers, interimDrivers]);
+ 
+   // Only show active vehicles of type "tracteur"
+   const tractions = useMemo(() => 
+     vehicles.filter(v => v.isActive && v.type === 'tracteur'),
+     [vehicles]
+   );
+ 
+   // Generate week days
+   const weekDays = useMemo(() => {
+     return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+   }, [currentWeekStart]);
+ 
+   // Fetch data on mount and week change
+   useEffect(() => {
+     const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+     const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+     fetchEntries(startDate, endDate);
+   }, [currentWeekStart, fetchEntries]);
+ 
+   useEffect(() => {
+     fetchVehicles();
+     fetchDrivers();
+   }, [fetchVehicles, fetchDrivers]);
+ 
+   const handlePreviousWeek = () => setCurrentWeekStart(prev => subWeeks(prev, 1));
+   const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1));
+   const handleToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+ 
+   const handleCellClick = (vehicle: Vehicle, date: Date) => {
+     setSelectedEntry(null);
+     setNewEntryDefaults({
+       vehicle_id: vehicle.id,
+       planning_date: format(date, 'yyyy-MM-dd'),
+     });
+     setIsDialogOpen(true);
+   };
+ 
+   const handleEntryClick = (entry: PlanningEntry) => {
+     setSelectedEntry(entry);
+     setNewEntryDefaults({});
+     setIsDialogOpen(true);
+   };
+ 
+   const handleSave = async (input: PlanningEntryInput) => {
+     if (selectedEntry) {
+       await updateEntry(selectedEntry.id, input);
+     } else {
+       await createEntry(input);
+     }
+     setIsDialogOpen(false);
+     setSelectedEntry(null);
+   };
+ 
+   const handleDelete = async () => {
+     if (selectedEntry) {
+       await deleteEntry(selectedEntry.id);
+       setIsDialogOpen(false);
+       setSelectedEntry(null);
+     }
+   };
+ 
+   // Get entries for a specific vehicle and date
+   const getEntriesForCell = (vehicleId: string, date: Date) => {
+     const dateStr = format(date, 'yyyy-MM-dd');
+     return entries.filter(e => e.vehicle_id === vehicleId && e.planning_date === dateStr);
+   };
+ 
+   // Get client name helper
+   const getClientName = (clientId: string | null) => {
+     if (!clientId) return null;
+     const client = clients.find(c => c.id === clientId);
+     return client?.name || client?.company || null;
+   };
+ 
+   // Get driver name helper
+   const getDriverName = (driverId: string | null) => {
+     if (!driverId) return null;
+     const driver = allDrivers.find(d => d.id === driverId);
+     return driver?.name || null;
+   };
+ 
+   return (
+     <div className="space-y-4 h-full flex flex-col">
+       <div className="flex items-center justify-between flex-shrink-0">
+         <div>
+           <h1 className="text-2xl font-bold">Planning</h1>
+           <p className="text-muted-foreground">
+             Gérez les missions de vos tractions
+           </p>
+         </div>
+         
+         <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" onClick={handleToday}>
+             Aujourd'hui
+           </Button>
+           <Button variant="outline" size="icon" onClick={handlePreviousWeek}>
+             <ChevronLeft className="h-4 w-4" />
+           </Button>
+           <div className="min-w-[200px] text-center font-medium">
+             <span className="flex items-center justify-center gap-2">
+               <CalendarIcon className="h-4 w-4" />
+               {format(currentWeekStart, "'Semaine du' d MMMM yyyy", { locale: fr })}
+             </span>
+           </div>
+           <Button variant="outline" size="icon" onClick={handleNextWeek}>
+             <ChevronRight className="h-4 w-4" />
+           </Button>
+         </div>
+       </div>
+ 
+       <Card className="flex-1 overflow-hidden">
+         <CardContent className="p-0 h-full">
+           {loading ? (
+             <div className="flex items-center justify-center h-64">
+               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+             </div>
+           ) : tractions.length === 0 ? (
+             <div className="flex flex-col items-center justify-center h-64 text-center p-4">
+               <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
+               <h3 className="font-medium text-lg">Aucune traction configurée</h3>
+               <p className="text-muted-foreground text-sm mt-1">
+                 Ajoutez des véhicules de type "Tracteur" dans l'onglet Véhicules pour les voir ici.
+               </p>
+             </div>
+           ) : (
+             <ScrollArea className="h-full">
+               <div className="min-w-[900px]">
+                 {/* Header row with days */}
+                 <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                   <div className="p-3 font-medium border-r">
+                     Traction
+                   </div>
+                   {weekDays.map((day, i) => {
+                     const isToday = isSameDay(day, new Date());
+                     return (
+                       <div 
+                         key={i} 
+                         className={`p-3 text-center border-r last:border-r-0 ${isToday ? 'bg-primary/10' : ''}`}
+                       >
+                         <div className="font-medium">
+                           {format(day, 'EEEE', { locale: fr })}
+                         </div>
+                         <div className={`text-sm ${isToday ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                           {format(day, 'd MMM', { locale: fr })}
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+ 
+                 {/* Rows for each traction */}
+                 {tractions.map((vehicle) => (
+                   <div 
+                     key={vehicle.id} 
+                     className="grid grid-cols-[200px_repeat(7,1fr)] border-b last:border-b-0"
+                   >
+                     {/* Vehicle info */}
+                     <div className="p-3 border-r bg-muted/30 flex flex-col justify-center">
+                       <div className="font-medium truncate" title={vehicle.name}>
+                         {vehicle.name}
+                       </div>
+                       <div className="text-xs text-muted-foreground">
+                         {vehicle.licensePlate}
+                       </div>
+                     </div>
+ 
+                     {/* Cells for each day */}
+                     {weekDays.map((day, i) => {
+                       const cellEntries = getEntriesForCell(vehicle.id, day);
+                       const isToday = isSameDay(day, new Date());
+                       
+                       return (
+                         <PlanningCell
+                           key={i}
+                           date={day}
+                           entries={cellEntries}
+                           isToday={isToday}
+                           onCellClick={() => handleCellClick(vehicle, day)}
+                           onEntryClick={handleEntryClick}
+                           getClientName={getClientName}
+                           getDriverName={getDriverName}
+                         />
+                       );
+                     })}
+                   </div>
+                 ))}
+               </div>
+               <ScrollBar orientation="horizontal" />
+             </ScrollArea>
+           )}
+         </CardContent>
+       </Card>
+ 
+       <PlanningEntryDialog
+         open={isDialogOpen}
+         onOpenChange={setIsDialogOpen}
+         entry={selectedEntry}
+         defaultValues={newEntryDefaults}
+         clients={clients}
+         drivers={allDrivers}
+         vehicles={tractions}
+         onSave={handleSave}
+         onDelete={selectedEntry ? handleDelete : undefined}
+       />
+     </div>
+   );
+ }

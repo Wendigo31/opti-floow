@@ -39,6 +39,7 @@ import Settings from "./pages/Settings";
 import MyRestrictions from "./pages/MyRestrictions";
 import Team from "./pages/Team";
 import Install from "./pages/Install";
+ import Planning from "./pages/Planning";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -107,6 +108,7 @@ function LicensedAppContent() {
                 <Route path="/ai-analysis" element={<AIAnalysis />} />
                 <Route path="/vehicle-reports" element={<VehicleReports />} />
                 <Route path="/tours" element={<Tours />} />
+                 <Route path="/planning" element={<Planning />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/my-restrictions" element={<MyRestrictions />} />
                 <Route path="/team" element={<Team />} />
