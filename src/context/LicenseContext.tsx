@@ -23,6 +23,11 @@ interface UserLicenseData {
   role: TeamRole | null;
 }
 
+function getLicenseIdFromUserMetadata(user: { user_metadata?: any } | null | undefined): string | null {
+  const raw = user?.user_metadata?.license_id;
+  return typeof raw === 'string' && raw.length > 0 ? raw : null;
+}
+
 async function fetchUserLicenseDataFromDB(userId: string): Promise<UserLicenseData> {
   // Check cache first
   if (cachedLicenseId && Date.now() - cacheTimestamp < CACHE_TTL) {
@@ -60,6 +65,12 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       setUserRole(null);
       return null;
     }
+
+    // Hydrate early from session metadata to avoid transient nulls.
+    const metaLicenseId = getLicenseIdFromUserMetadata(user);
+    if (metaLicenseId) {
+      setLicenseId(metaLicenseId);
+    }
     
     const data = await fetchUserLicenseDataFromDB(user.id);
     setLicenseId(data.licenseId);
@@ -81,6 +92,12 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         setAuthUserId(user?.id || null);
 
         if (user) {
+          // Hydrate early from session metadata to avoid transient nulls.
+          const metaLicenseId = getLicenseIdFromUserMetadata(user);
+          if (metaLicenseId) {
+            setLicenseId(metaLicenseId);
+          }
+
           const data = await fetchUserLicenseDataFromDB(user.id);
           if (!isMounted) return;
           setLicenseId(data.licenseId);
@@ -110,6 +127,13 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
           }
         }
         setAuthUserId(user.id);
+
+        // Hydrate early from session metadata to avoid transient nulls.
+        const metaLicenseId = getLicenseIdFromUserMetadata(user);
+        if (metaLicenseId) {
+          setLicenseId(metaLicenseId);
+        }
+
         const data = await fetchUserLicenseDataFromDB(user.id);
         setLicenseId(data.licenseId);
         setUserRole(data.role);
