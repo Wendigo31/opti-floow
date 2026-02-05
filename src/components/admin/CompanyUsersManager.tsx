@@ -76,7 +76,7 @@ interface License {
   email: string;
   company_name?: string;
   plan_type: string;
-  max_users: number;
+  max_users: number | null;
 }
 
 interface Props {
@@ -282,10 +282,11 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
       // Check max users limit
       const license = licenses.find(l => l.id === selectedLicenseId);
-      if (license && companyUsers.length >= license.max_users) {
+      const effectiveMax = license ? getEffectiveMaxUsers(license) : null;
+      if (effectiveMax != null && companyUsers.length >= effectiveMax) {
         toast({
           title: 'Limite atteinte',
-          description: `Cette société est limitée à ${license.max_users} utilisateur(s)`,
+          description: `Cette société est limitée à ${effectiveMax} utilisateur(s)`,
           variant: 'destructive',
         });
         setIsAddingUser(false);
@@ -468,6 +469,17 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
 
   const selectedLicense = licenses.find(l => l.id === selectedLicenseId);
 
+  const getEffectiveMaxUsers = (license: License): number | null => {
+    // Enterprise is unlimited, even if an old record still has max_users = 1
+    if ((license.plan_type || '').toLowerCase() === 'enterprise') return null;
+    if (license.max_users == null) return null;
+    if (license.max_users === 999) return null;
+    return license.max_users;
+  };
+
+  const effectiveMaxUsers = selectedLicense ? getEffectiveMaxUsers(selectedLicense) : null;
+  const isAtUserLimit = effectiveMaxUsers != null && companyUsers.length >= effectiveMaxUsers;
+
   const refreshCompanyUsers = async () => {
     if (!selectedLicenseId) return;
     setIsLoading(true);
@@ -565,7 +577,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold">
-                    {companyUsers.length} / {selectedLicense.max_users === 999 ? '∞' : selectedLicense.max_users}
+                    {companyUsers.length} / {effectiveMaxUsers == null ? '∞' : effectiveMaxUsers}
                   </p>
                   <p className="text-xs text-muted-foreground">utilisateurs</p>
                 </div>
@@ -574,7 +586,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
               <Button
                 size="sm"
                 onClick={() => setShowAddDialog(true)}
-                disabled={selectedLicense.max_users != null && selectedLicense.max_users !== 999 && companyUsers.length >= selectedLicense.max_users}
+                disabled={isAtUserLimit}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Ajouter un utilisateur

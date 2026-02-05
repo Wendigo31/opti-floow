@@ -363,6 +363,23 @@ const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploit
   }
 };
 
+// Keep license.max_users consistent with the app's 3-tier plans.
+// - start: single user
+// - pro: small team
+// - enterprise: unlimited (represented as 999 in the admin UI)
+const getDefaultMaxUsersForPlan = (planType: string): number => {
+  const normalized = (planType || 'start').toLowerCase().trim();
+  switch (normalized) {
+    case 'enterprise':
+      return 999;
+    case 'pro':
+      return 3;
+    case 'start':
+    default:
+      return 1;
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("validate-license function called");
 
@@ -624,7 +641,11 @@ const handler = async (req: Request): Promise<Response> => {
 
       const { error } = await supabase
         .from("licenses")
-        .update({ plan_type: planType })
+        .update({
+          plan_type: planType,
+          // Fix historical bug where enterprise licenses could keep max_users=1, blocking team features in admin UI.
+          max_users: getDefaultMaxUsersForPlan(planType),
+        })
         .eq("id", licenseId);
 
       if (error) {
@@ -769,6 +790,7 @@ const handler = async (req: Request): Promise<Response> => {
           company_identifier: companyIdentifier?.trim() || null,
           email: email.trim().toLowerCase(),
           plan_type: planType || 'start',
+          max_users: getDefaultMaxUsersForPlan(planType || 'start'),
           first_name: firstName || null,
           last_name: lastName || null,
           company_name: companyName || null,
