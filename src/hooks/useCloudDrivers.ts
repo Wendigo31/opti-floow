@@ -345,17 +345,14 @@ export function useCloudDrivers() {
 
   const deleteDriver = useCallback(async (id: string, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      // Use context values directly (avoid slow auth.getUser() calls)
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement, veuillez réessayer.');
+        console.error('[useCloudDrivers] deleteDriver: no authUserId or licenseId');
         return false;
       }
 
-      const currentLicenseId = licenseId || await getLicenseId();
-      if (!currentLicenseId) {
-        toast.error('Licence introuvable');
-        return false;
-      }
+      const currentLicenseId = licenseId;
 
       // Try direct delete first. When RLS blocks the operation, PostgREST may
       // return success with count=0 and no error.
@@ -365,13 +362,16 @@ export function useCloudDrivers() {
         .eq('license_id', currentLicenseId)
         .eq('local_id', id);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('[useCloudDrivers] deleteDriver error:', deleteError);
+        throw deleteError;
+      }
 
       // If nothing was deleted, we may be hitting a silent RLS denial.
       // For Direction users, fallback to a server-verified deletion helper.
       if (count === 0) {
         const { data: isOwner, error: ownerError } = await supabase
-          .rpc('is_company_owner', { p_license_id: currentLicenseId, p_user_id: user.id });
+          .rpc('is_company_owner', { p_license_id: currentLicenseId, p_user_id: authUserId });
 
         if (ownerError) {
           console.warn('Unable to check owner role:', ownerError);
@@ -440,7 +440,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [licenseId]);
+  }, [authUserId, licenseId]);
 
   return {
     cdiDrivers,
