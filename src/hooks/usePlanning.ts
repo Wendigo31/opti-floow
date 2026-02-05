@@ -4,7 +4,7 @@
  import { toast } from 'sonner';
  import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
  import type { RealtimeChannel } from '@supabase/supabase-js';
- import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
+import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
  
  export function usePlanning() {
    const { licenseId, authUserId } = useLicenseContext();
@@ -373,6 +373,80 @@
        return false;
      }
     }, [licenseId]);
+
+    const importExcelPlanningWeek = useCallback(
+      async (tours: TourInput[], weekStartDate: Date): Promise<boolean> => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            toast.error('Vous devez être connecté');
+            return false;
+          }
+
+          const currentLicenseId = licenseId || await getLicenseId();
+          if (!currentLicenseId) {
+            toast.error('Licence introuvable');
+            return false;
+          }
+
+          const monday = startOfWeek(weekStartDate, { weekStartsOn: 1 });
+          const weekStartStr = format(monday, 'yyyy-MM-dd');
+
+          const rows = tours.flatMap((t) => {
+            const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
+            const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+            return validDays.map((dayIdx) => {
+              const date = addDays(monday, dayIdx);
+              return {
+                user_id: user.id,
+                license_id: currentLicenseId,
+                planning_date: format(date, 'yyyy-MM-dd'),
+                start_time: t.start_time || null,
+                end_time: t.end_time || null,
+                client_id: t.client_id || null,
+                driver_id: t.driver_id || null,
+                // Excel import starts as "Non assigné"
+                vehicle_id: (t as unknown as { vehicle_id?: string | null }).vehicle_id || null,
+                mission_order: t.mission_order || null,
+                origin_address: t.origin_address || null,
+                destination_address: t.destination_address || null,
+                notes: t.notes || null,
+                status: 'planned' as const,
+                tour_name: t.tour_name,
+                recurring_days: validDays,
+                is_all_year: false,
+                start_date: weekStartStr,
+                end_date: null,
+                relay_driver_id: t.relay_driver_id || null,
+                relay_location: t.relay_location || null,
+                relay_time: t.relay_time || null,
+                parent_tour_id: null,
+              };
+            });
+          });
+
+          if (rows.length === 0) {
+            toast.error('Aucune mission à importer (jours non cochés ?)');
+            return false;
+          }
+
+          // Insert in chunks to avoid payload limits on large files
+          const CHUNK_SIZE = 500;
+          for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+            const chunk = rows.slice(i, i + CHUNK_SIZE);
+            const { error } = await supabase.from('planning_entries').insert(chunk);
+            if (error) throw error;
+          }
+
+          return true;
+        } catch (error) {
+          console.error('Error importing planning from Excel:', error);
+          toast.error("Erreur lors de l'import Excel");
+          return false;
+        }
+      },
+      [licenseId]
+    );
  
    // Duplicate entries to following weeks
     const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
@@ -454,6 +528,7 @@
      getEntriesForDate,
      getEntriesForVehicle,
      createTour,
+      importExcelPlanningWeek,
      duplicateToNextWeeks,
     applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
       try {
