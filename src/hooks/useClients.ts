@@ -16,7 +16,7 @@ export interface ClientWithCreator extends LocalClient {
   is_former_member?: boolean;
 }
 
- import { useLicenseContext, getLicenseId as getContextLicenseId } from '@/context/LicenseContext';
+ import { useLicenseContext } from '@/context/LicenseContext';
 
 export function useClients() {
   const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
@@ -136,21 +136,25 @@ export function useClients() {
   const fetchClientsRef = useRef<() => Promise<void>>();
   useEffect(() => { fetchClientsRef.current = fetchClients; }, [fetchClients]);
 
-  const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<ClientWithCreator | null> => {
+  const createClient = useCallback(async (
+    input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>,
+    options?: { silent?: boolean }
+  ): Promise<ClientWithCreator | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      // Use context values directly for speed (avoid repeated auth.getUser calls)
+      if (!authUserId || !contextLicenseId) {
+        if (!options?.silent) {
+          toast.error('Session en cours de chargement, veuillez réessayer.');
+        }
+        console.error('[useClients] createClient: no authUserId or contextLicenseId');
         return null;
       }
-
-      const licenseId = await getContextLicenseId();
 
       const { data, error } = await supabase
         .from('clients')
         .insert({
-          user_id: user.id,
-          license_id: licenseId,
+          user_id: authUserId,
+          license_id: contextLicenseId,
           name: input.name,
           company: input.company,
           email: input.email,
@@ -164,9 +168,12 @@ export function useClients() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useClients] createClient insert error:', error);
+        throw error;
+      }
 
-      const memberInfo = membersMap.get(user.id);
+      const memberInfo = membersMap.get(authUserId);
       const newClient: ClientWithCreator = {
         id: data.id,
         name: data.name,
@@ -182,7 +189,7 @@ export function useClients() {
         updated_at: data.updated_at,
         user_id: data.user_id,
         license_id: data.license_id || undefined,
-        creator_email: memberInfo?.email || user.email || undefined,
+        creator_email: memberInfo?.email || undefined,
         creator_display_name: memberInfo?.displayName,
         is_own: true,
         is_former_member: false,
@@ -190,14 +197,18 @@ export function useClients() {
 
       setClients(prev => [newClient, ...prev]);
       clientsRef.current = [newClient, ...clientsRef.current];
-      toast.success('Client ajouté');
+      if (!options?.silent) {
+        toast.success('Client ajouté');
+      }
       return newClient;
     } catch (error) {
       console.error('Error creating client:', error);
-      toast.error('Erreur lors de la création');
+      if (!options?.silent) {
+        toast.error('Erreur lors de la création');
+      }
       return null;
     }
-  }, [membersMap]);
+  }, [authUserId, contextLicenseId, membersMap]);
 
   const updateClient = useCallback(async (id: string, updates: Partial<LocalClient>): Promise<boolean> => {
     try {
