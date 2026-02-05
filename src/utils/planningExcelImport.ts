@@ -30,6 +30,44 @@
    recurring_days: number[]; // 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam, 6=Dim
    day_drivers: Record<number, string>; // conducteur spécifique par jour
  }
+
+/**
+ * Map an Excel header to internal day index.
+ * Internal convention: 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam, 6=Dim
+ */
+function getDayIdxFromHeader(header: string): number | null {
+  const h = (header || '').toString().toLowerCase().trim();
+  if (!h) return null;
+
+  // Full FR names (our template)
+  if (h.includes('lundi')) return 0;
+  if (h.includes('mardi')) return 1;
+  if (h.includes('mercredi')) return 2;
+  if (h.includes('jeudi')) return 3;
+  if (h.includes('vendredi')) return 4;
+  if (h.includes('samedi')) return 5;
+  if (h.includes('dimanche')) return 6;
+
+  // Abbreviations FR
+  if (/\blun\b/.test(h)) return 0;
+  if (/\bmar\b/.test(h)) return 1;
+  if (/\bmer\b/.test(h)) return 2;
+  if (/\bjeu\b/.test(h)) return 3;
+  if (/\bven\b/.test(h)) return 4;
+  if (/\bsam\b/.test(h)) return 5;
+  if (/\bdim\b/.test(h)) return 6;
+
+  // Date-like headers: "Sun 18 Jan 26", "Mon 19 Jan 26", etc.
+  if (/\bsun\b/.test(h)) return 6;
+  if (/\bmon\b/.test(h)) return 0;
+  if (/\btue\b/.test(h)) return 1;
+  if (/\bwed\b/.test(h)) return 2;
+  if (/\bthu\b/.test(h)) return 3;
+  if (/\bfri\b/.test(h)) return 4;
+  if (/\bsat\b/.test(h)) return 5;
+
+  return null;
+}
  
  /**
   * Parse addresses from "VILLE1 - VILLE2" or "VILLE1 / VILLE2" format
@@ -175,25 +213,24 @@
     h.includes('heure arrivee')
   );
    
-   // Find day columns (look for date patterns or day names)
-   const dayColumns: number[] = [];
-   headers.forEach((h, idx) => {
-     // Match date patterns like "Sun 18 Jan 26", "Mon 19 Jan 26"
-     if (/\b(sun|mon|tue|wed|thu|fri|sat)\b/i.test(h)) {
-       dayColumns.push(idx);
-     }
-   });
+    // Find day columns (robust: supports full names, abbreviations and date-like headers)
+    const dayColumns: Array<{ colIdx: number; dayIdx: number }> = [];
+    headers.forEach((h, idx) => {
+      const dayIdx = getDayIdxFromHeader(h);
+      if (dayIdx !== null) {
+        dayColumns.push({ colIdx: idx, dayIdx });
+      }
+    });
    
-   // If no date columns found, look for weekday patterns in French
-   if (dayColumns.length === 0) {
-     headers.forEach((h, idx) => {
-       if (/\b(dim|lun|mar|mer|jeu|ven|sam)\b/i.test(h)) {
-         dayColumns.push(idx);
-       }
-     });
-   }
-   
-   console.log('Column indices:', { clientIdx, ligneIdx, titulaireIdx, odmIdx, startTimeIdx, endTimeIdx, dayColumns });
+    console.log('Column indices:', {
+      clientIdx,
+      ligneIdx,
+      titulaireIdx,
+      odmIdx,
+      startTimeIdx,
+      endTimeIdx,
+      dayColumns: dayColumns.map(d => ({ col: d.colIdx, day: d.dayIdx })),
+    });
    
    const entries: ParsedPlanningEntry[] = [];
    
@@ -220,23 +257,21 @@
      const recurring_days: number[] = [];
      const day_drivers: Record<number, string> = {};
      
-     // Map day columns to our day indices (0=Lun, 1=Mar, etc.)
-     // The Excel seems to have Sun, Mon, Tue, Wed, Thu, Fri, Sat order
-     const dayMapping = [6, 0, 1, 2, 3, 4, 5]; // Sun=6, Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5
-     
-     dayColumns.forEach((colIdx, arrayIdx) => {
-       const cellValue = (row[colIdx] || '').toString();
-       if (isDayActive(cellValue)) {
-         const dayIdx = dayMapping[arrayIdx % 7];
-         if (!recurring_days.includes(dayIdx)) {
-           recurring_days.push(dayIdx);
-         }
-         const driverForDay = extractDriverFromCell(cellValue);
-         if (driverForDay) {
-           day_drivers[dayIdx] = driverForDay;
-         }
-       }
-     });
+      // Map each day column to our internal day index (0=Lun ... 6=Dim)
+      dayColumns.forEach(({ colIdx, dayIdx }) => {
+        const cellValue = (row[colIdx] || '').toString();
+        if (!isDayActive(cellValue)) return;
+
+        if (!recurring_days.includes(dayIdx)) {
+          recurring_days.push(dayIdx);
+        }
+
+        // If the cell contains a real driver name (not just "X"), keep it.
+        const driverForDay = extractDriverFromCell(cellValue);
+        if (driverForDay && driverForDay.toLowerCase() !== 'x') {
+          day_drivers[dayIdx] = driverForDay;
+        }
+      });
      
      // Sort recurring days
      recurring_days.sort((a, b) => a - b);
