@@ -251,15 +251,32 @@ export function useCloudDrivers() {
 
   const deleteDriver = useCallback(async (id: string, isInterim: boolean = false): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Vous devez être connecté');
+        return false;
+      }
 
-      const { error } = await supabase
+      const currentLicenseId = await getLicenseId();
+      if (!currentLicenseId) {
+        toast.error('Licence introuvable');
+        return false;
+      }
+
+      const { data: deletedRows, error } = await supabase
         .from('user_drivers')
         .delete()
         .eq('license_id', currentLicenseId)
-        .eq('local_id', id);
+        .eq('local_id', id)
+        .select('id');
 
       if (error) throw error;
+
+      // If RLS blocks the operation, PostgREST may return 0 deleted rows without an error.
+      if (!deletedRows || deletedRows.length === 0) {
+        toast.error('Suppression refusée (droits insuffisants ou session expirée)');
+        return false;
+      }
 
       if (isInterim) {
         setInterimDrivers(prev => {
