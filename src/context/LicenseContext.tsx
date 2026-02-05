@@ -48,6 +48,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initRef = useRef(false);
+  const isInitializing = useRef(true);
 
   const refreshLicenseId = useCallback(async (): Promise<string | null> => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +97,6 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
-      setAuthUserId(user?.id || null);
 
       if (user) {
         // Clear cache on sign in to get fresh data
@@ -104,17 +104,26 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
           cachedLicenseId = null;
           cachedRole = null;
           cacheTimestamp = 0;
+          // Only set loading during auth state changes, not initial load
+          if (!isInitializing.current) {
+            setIsLoading(true);
+          }
         }
+        setAuthUserId(user.id);
         const data = await fetchUserLicenseDataFromDB(user.id);
         setLicenseId(data.licenseId);
         setUserRole(data.role);
+        setIsLoading(false);
       } else {
         cachedLicenseId = null;
         cachedRole = null;
         cacheTimestamp = 0;
         setLicenseId(null);
         setUserRole(null);
+        setAuthUserId(null);
+        setIsLoading(false);
       }
+      isInitializing.current = false;
     });
 
     return () => {
