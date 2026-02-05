@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 export interface CompanySettings {
   id: string;
@@ -21,50 +22,37 @@ export interface CompanySettings {
   updated_at: string;
 }
 
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  return data?.license_id || null;
-}
-
 export function useCompanySettings() {
+  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [licenseId, setLicenseId] = useState<string | null>(contextLicenseId);
   const [canEdit, setCanEdit] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
+
+  // Sync licenseId from context
+  useEffect(() => {
+    setLicenseId(contextLicenseId);
+  }, [contextLicenseId]);
 
   // Fetch settings on mount
   useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted || !user) {
+      if (!authUserId) {
         setLoading(false);
         return;
       }
 
       try {
-        const lid = await getUserLicenseId();
-        if (!isMounted) return;
-        setLicenseId(lid);
-
         // Check if user can edit (is owner/admin or direction/responsable)
-        if (lid) {
+        if (contextLicenseId) {
           const { data: companyUser } = await supabase
             .from('company_users')
             .select('role')
-            .eq('user_id', user.id)
-            .eq('license_id', lid)
+            .eq('user_id', authUserId)
+            .eq('license_id', contextLicenseId)
             .eq('is_active', true)
             .maybeSingle();
 
@@ -76,11 +64,11 @@ export function useCompanySettings() {
         // Fetch company settings
         let query = supabase.from('company_settings').select('*');
 
-        if (lid) {
+        if (contextLicenseId) {
           // Try to get company settings first, then personal
-          query = query.or(`license_id.eq.${lid},user_id.eq.${user.id}`);
+          query = query.or(`license_id.eq.${contextLicenseId},user_id.eq.${authUserId}`);
         } else {
-          query = query.eq('user_id', user.id);
+          query = query.eq('user_id', authUserId);
         }
 
         const { data, error } = await query.order('license_id', { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
@@ -102,7 +90,7 @@ export function useCompanySettings() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authUserId, contextLicenseId]);
 
   // Setup realtime subscription for company-wide sync
   useEffect(() => {
@@ -144,9 +132,8 @@ export function useCompanySettings() {
       return false;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('Vous devez être connecté');
+    if (!authUserId) {
+      toast.error('Session en cours de chargement...');
       return false;
     }
 
@@ -165,7 +152,7 @@ export function useCompanySettings() {
         const { data, error } = await supabase
           .from('company_settings')
           .insert({
-            user_id: user.id,
+            user_id: authUserId,
             license_id: licenseId,
             ...updates,
           })
@@ -183,7 +170,7 @@ export function useCompanySettings() {
       toast.error('Erreur lors de la sauvegarde');
       return false;
     }
-  }, [settings, licenseId, canEdit]);
+  }, [authUserId, settings, licenseId, canEdit]);
 
   return {
     settings,

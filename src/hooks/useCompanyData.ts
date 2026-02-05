@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 interface SyncedDataInfo {
   localId: string;
@@ -26,6 +27,7 @@ interface CompanyDataInfo {
 }
 
 export function useCompanyData() {
+  const { authUserId } = useLicenseContext();
   const [companyData, setCompanyData] = useState<CompanyDataInfo>({
     vehicles: new Map(),
     drivers: new Map(),
@@ -38,8 +40,7 @@ export function useCompanyData() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCompanyData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!authUserId) {
       setIsLoading(false);
       return;
     }
@@ -49,7 +50,7 @@ export function useCompanyData() {
       const { data: companyUser } = await supabase
         .from('company_users')
         .select('license_id, licenses(company_name)')
-        .eq('user_id', user.id)
+        .eq('user_id', authUserId)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -60,7 +61,7 @@ export function useCompanyData() {
           charges: new Map(),
           trailers: new Map(),
           tours: new Map(),
-          currentUserId: user.id,
+        currentUserId: authUserId,
           isCompanyMember: false,
         });
         setIsLoading(false);
@@ -187,7 +188,7 @@ export function useCompanyData() {
         charges: chargesMap,
         trailers: trailersMap,
         tours: toursMap,
-        currentUserId: user.id,
+        currentUserId: authUserId,
         isCompanyMember: true,
         companyName: (companyUser.licenses as any)?.company_name,
         licenseId: companyUser.license_id,
@@ -197,11 +198,13 @@ export function useCompanyData() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUserId]);
 
   useEffect(() => {
-    fetchCompanyData();
-  }, [fetchCompanyData]);
+    if (authUserId) {
+      fetchCompanyData();
+    }
+  }, [authUserId, fetchCompanyData]);
 
   // Helper functions
   const getVehicleInfo = useCallback((localId: string): SyncedDataInfo | undefined => {

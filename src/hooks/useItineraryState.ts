@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 interface Position {
   lat: number;
@@ -146,28 +147,31 @@ async function getUserDisplayName(userId: string): Promise<string | null> {
  * All team members can see each other's current work in real-time
  */
 export function useItineraryState() {
+  const { authUserId } = useLicenseContext();
   const [state, setState] = useState<ItineraryState>(defaultState);
   const [teamSessions, setTeamSessions] = useState<TeamMemberSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(authUserId);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
 
+  // Sync currentUserId from context
+  useEffect(() => {
+    setCurrentUserId(authUserId);
+  }, [authUserId]);
+
   // Load state from cloud
   const loadState = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setCurrentUserId(user.id);
+    if (!authUserId) {
+      setIsLoading(false);
+      return;
+    }
 
+    try {
       const { data, error } = await supabase
         .from('active_itinerary_sessions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUserId)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -184,14 +188,13 @@ export function useItineraryState() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUserId]);
 
   // Load team sessions
   const loadTeamSessions = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!authUserId) return;
 
+    try {
       const { data, error } = await supabase
         .from('active_itinerary_sessions')
         .select('*')
@@ -212,7 +215,7 @@ export function useItineraryState() {
           destinationAddress: db.destination_address || '',
           stops: Array.isArray(db.stops) ? db.stops : [],
           lastActivityAt: db.last_activity_at,
-          isCurrentUser: db.user_id === user.id,
+          isCurrentUser: db.user_id === authUserId,
         };
       });
 
@@ -220,13 +223,15 @@ export function useItineraryState() {
     } catch (e) {
       console.error('Error loading team sessions:', e);
     }
-  }, []);
+  }, [authUserId]);
 
   // Initial load
   useEffect(() => {
-    loadState();
-    loadTeamSessions();
-  }, [loadState, loadTeamSessions]);
+    if (authUserId) {
+      loadState();
+      loadTeamSessions();
+    }
+  }, [authUserId, loadState, loadTeamSessions]);
 
   // Subscribe to realtime updates for team sessions
   useEffect(() => {
@@ -253,16 +258,14 @@ export function useItineraryState() {
   // Save state to cloud (debounced)
   const saveState = useCallback(async (newState: ItineraryState) => {
     if (!isInitializedRef.current) return;
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!authUserId) return;
 
-      const licenseId = await getUserLicenseId(user.id);
-      const displayName = await getUserDisplayName(user.id);
+    try {
+      const licenseId = await getUserLicenseId(authUserId);
+      const displayName = await getUserDisplayName(authUserId);
 
       const upsertData = {
-        user_id: user.id,
+        user_id: authUserId,
         license_id: licenseId,
         display_name: displayName,
         origin_address: newState.originAddress,
@@ -291,7 +294,7 @@ export function useItineraryState() {
     } catch (e) {
       console.error('Error saving itinerary state:', e);
     }
-  }, []);
+  }, [authUserId]);
 
   // Debounced save
   const debouncedSave = useCallback((newState: ItineraryState) => {
@@ -313,19 +316,17 @@ export function useItineraryState() {
 
   const clearState = useCallback(async () => {
     setState(defaultState);
-    
+    if (!authUserId) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
       await supabase
         .from('active_itinerary_sessions')
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', authUserId);
     } catch (e) {
       console.error('Error clearing itinerary state:', e);
     }
-  }, []);
+  }, [authUserId]);
 
   // Cleanup on unmount
   useEffect(() => {

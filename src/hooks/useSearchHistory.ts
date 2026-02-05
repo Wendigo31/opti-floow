@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 interface Position {
   lat: number;
@@ -60,35 +61,20 @@ function dbToEntry(db: DbSearchHistory): SearchHistoryEntry {
   };
 }
 
-async function getUserLicenseId(userId: string): Promise<string | null> {
-  try {
-    const { data } = await supabase
-      .from('company_users')
-      .select('license_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .limit(1)
-      .single();
-    return data?.license_id || null;
-  } catch {
-    return null;
-  }
-}
-
 export function useSearchHistory() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch history from cloud
   const fetchHistory = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setHistory([]);
-        setIsLoading(false);
-        return;
-      }
+    if (!authUserId) {
+      setHistory([]);
+      setIsLoading(false);
+      return;
+    }
 
+    try {
       const { data, error } = await supabase
         .from('search_history')
         .select('*')
@@ -107,11 +93,13 @@ export function useSearchHistory() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUserId]);
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    if (authUserId) {
+      fetchHistory();
+    }
+  }, [authUserId, fetchHistory]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -142,8 +130,7 @@ export function useSearchHistory() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!authUserId) return null;
 
       // Check for duplicate in the last 5 minutes
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -167,12 +154,9 @@ export function useSearchHistory() {
         return existing[0].id;
       }
 
-      // Get license_id
-      const licenseId = await getUserLicenseId(user.id);
-
       // Insert new entry using raw insert to avoid type issues with new table
       const insertData = {
-        user_id: user.id,
+        user_id: authUserId,
         license_id: licenseId,
         origin_address: entry.originAddress,
         origin_lat: entry.originPosition?.lat || null,
@@ -202,7 +186,7 @@ export function useSearchHistory() {
       console.error('Error adding search history:', e);
       return null;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   // Mark a search as calculated
   const markAsCalculated = useCallback(async (searchId: string) => {
@@ -255,18 +239,17 @@ export function useSearchHistory() {
 
   // Clear all history
   const clearHistory = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!authUserId) return;
 
+    try {
       await supabase
         .from('search_history')
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', authUserId);
     } catch (e) {
       console.error('Error clearing search history:', e);
     }
-  }, []);
+  }, [authUserId]);
 
   // Get uncalculated searches
   const uncalculatedSearches = history.filter(entry => !entry.calculated);

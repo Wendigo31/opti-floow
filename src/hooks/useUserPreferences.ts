@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 export interface UserPreferences {
   id: string;
@@ -44,12 +45,24 @@ const getPreferencesTable = () => {
 };
 
 export function useUserPreferences() {
+  const { authUserId } = useLicenseContext();
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(authUserId);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(authUserId);
+
+  // Sync userId from context
+  useEffect(() => {
+    if (authUserId && authUserId !== currentUserIdRef.current) {
+      resetState();
+      fetchPreferences(authUserId);
+    } else if (!authUserId && currentUserIdRef.current) {
+      resetState();
+      setLoading(false);
+    }
+  }, [authUserId]);
 
   // Reset state when user changes
   const resetState = useCallback(() => {
@@ -117,23 +130,9 @@ export function useUserPreferences() {
   }, [preferences]);
 
   // Listen for auth state changes to detect user switching
+  // This effect is now just for initial fetch and sign-out handling
   useEffect(() => {
     let isMounted = true;
-
-    // Initial fetch
-    const initFetch = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!isMounted) return;
-
-      if (user) {
-        await fetchPreferences(user.id);
-      } else {
-        resetState();
-        setLoading(false);
-      }
-    };
-
-    void initFetch();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -144,15 +143,6 @@ export function useUserPreferences() {
       if (event === 'SIGNED_OUT') {
         resetState();
         setLoading(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) {
-          // Check if user has actually changed
-          if (currentUserIdRef.current !== session.user.id) {
-            console.log('[UserPreferences] User changed, resetting state');
-            resetState();
-            await fetchPreferences(session.user.id);
-          }
-        }
       }
     });
 
@@ -160,7 +150,7 @@ export function useUserPreferences() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchPreferences, resetState]);
+  }, [resetState]);
 
   // Setup realtime subscription for cross-device sync
   useEffect(() => {
