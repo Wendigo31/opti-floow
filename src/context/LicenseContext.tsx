@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TeamRole } from '@/types/team';
 
 interface LicenseContextValue {
   licenseId: string | null;
   authUserId: string | null;
+  userRole: TeamRole | null;
   isLoading: boolean;
   refreshLicenseId: () => Promise<string | null>;
 }
@@ -12,30 +14,38 @@ const LicenseContext = createContext<LicenseContextValue | undefined>(undefined)
 
 // In-memory cache to avoid redundant DB queries
 let cachedLicenseId: string | null = null;
+let cachedRole: string | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-async function fetchLicenseIdFromDB(userId: string): Promise<string | null> {
+interface UserLicenseData {
+  licenseId: string | null;
+  role: TeamRole | null;
+}
+
+async function fetchUserLicenseDataFromDB(userId: string): Promise<UserLicenseData> {
   // Check cache first
   if (cachedLicenseId && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return cachedLicenseId;
+    return { licenseId: cachedLicenseId, role: cachedRole as TeamRole | null };
   }
 
   const { data } = await supabase
     .from('company_users')
-    .select('license_id')
+    .select('license_id, role')
     .eq('user_id', userId)
     .eq('is_active', true)
     .maybeSingle();
 
   cachedLicenseId = data?.license_id || null;
+  cachedRole = data?.role || null;
   cacheTimestamp = Date.now();
-  return cachedLicenseId;
+  return { licenseId: cachedLicenseId, role: cachedRole as TeamRole | null };
 }
 
 export function LicenseProvider({ children }: { children: ReactNode }) {
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initRef = useRef(false);
 
@@ -43,14 +53,17 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       cachedLicenseId = null;
+      cachedRole = null;
       cacheTimestamp = 0;
       setLicenseId(null);
+      setUserRole(null);
       return null;
     }
     
-    const lid = await fetchLicenseIdFromDB(user.id);
-    setLicenseId(lid);
-    return lid;
+    const data = await fetchUserLicenseDataFromDB(user.id);
+    setLicenseId(data.licenseId);
+    setUserRole(data.role);
+    return data.licenseId;
   }, []);
 
   useEffect(() => {
@@ -67,9 +80,10 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         setAuthUserId(user?.id || null);
 
         if (user) {
-          const lid = await fetchLicenseIdFromDB(user.id);
+          const data = await fetchUserLicenseDataFromDB(user.id);
           if (!isMounted) return;
-          setLicenseId(lid);
+          setLicenseId(data.licenseId);
+          setUserRole(data.role);
         }
       } finally {
         if (isMounted) {
@@ -88,14 +102,18 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         // Clear cache on sign in to get fresh data
         if (event === 'SIGNED_IN') {
           cachedLicenseId = null;
+          cachedRole = null;
           cacheTimestamp = 0;
         }
-        const lid = await fetchLicenseIdFromDB(user.id);
-        setLicenseId(lid);
+        const data = await fetchUserLicenseDataFromDB(user.id);
+        setLicenseId(data.licenseId);
+        setUserRole(data.role);
       } else {
         cachedLicenseId = null;
+        cachedRole = null;
         cacheTimestamp = 0;
         setLicenseId(null);
+        setUserRole(null);
       }
     });
 
@@ -106,7 +124,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <LicenseContext.Provider value={{ licenseId, authUserId, isLoading, refreshLicenseId }}>
+    <LicenseContext.Provider value={{ licenseId, authUserId, userRole, isLoading, refreshLicenseId }}>
       {children}
     </LicenseContext.Provider>
   );
@@ -124,11 +142,13 @@ export function useLicenseContext() {
 export async function getLicenseId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return fetchLicenseIdFromDB(user.id);
+  const data = await fetchUserLicenseDataFromDB(user.id);
+  return data.licenseId;
 }
 
 // Clear cache utility (for logout, etc.)
 export function clearLicenseCache() {
   cachedLicenseId = null;
+  cachedRole = null;
   cacheTimestamp = 0;
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useTeam } from '@/hooks/useTeam';
 import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext } from '@/context/LicenseContext';
 import { 
   getRoleConfig, 
   normalizeRole, 
@@ -95,8 +95,9 @@ interface ExploitationMetricSettings {
 }
 
 export function useRolePermissions(): RolePermissions {
-  const { currentUserRole, isLoading, licenseId } = useTeam();
+  const { userRole, licenseId, isLoading: contextLoading } = useLicenseContext();
   const [metricSettings, setMetricSettings] = useState<ExploitationMetricSettings | null>(null);
+  const [isMetricLoading, setIsMetricLoading] = useState(false);
   
   // Fetch exploitation metric settings if user is exploitation role
   useEffect(() => {
@@ -104,6 +105,7 @@ export function useRolePermissions(): RolePermissions {
       if (!licenseId) return;
       
       try {
+        setIsMetricLoading(true);
         const { data, error } = await supabase
           .from('exploitation_metric_settings')
           .select('*')
@@ -120,14 +122,18 @@ export function useRolePermissions(): RolePermissions {
         }
       } catch (err) {
         console.error('Error in fetchMetricSettings:', err);
+      } finally {
+        setIsMetricLoading(false);
       }
     };
     
     fetchMetricSettings();
   }, [licenseId]);
+
+  const isLoading = contextLoading || isMetricLoading;
   
   const permissions = useMemo<RolePermissions>(() => {
-    const normalizedRole = normalizeRole(currentUserRole);
+    const normalizedRole = normalizeRole(userRole);
     const config = getRoleConfig(normalizedRole);
     
     const isDirection = normalizedRole === 'direction';
@@ -196,7 +202,7 @@ export function useRolePermissions(): RolePermissions {
       canExportFinancialReports: canSeeFinancials,
       canExportOperationalReports: true,
     };
-  }, [currentUserRole, isLoading, metricSettings]);
+  }, [userRole, isLoading, metricSettings]);
   
   return permissions;
 }
