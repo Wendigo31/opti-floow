@@ -166,9 +166,28 @@ function containsDriverKeyword(text: string): boolean {
      if (headerRowIndex === -1) continue;
      
      // Find relevant column indices
-     const nameIdx = headers.findIndex(h => h === 'nom' || h.includes('nom complet'));
-     const firstNameIdx = headers.findIndex(h => h === 'prénom' || h === 'prenom');
-     const lastNameIdx = headers.findIndex(h => h === 'nom de famille' || (h === 'nom' && firstNameIdx >= 0));
+      // First, check for separate first/last name columns
+      const firstNameIdx = headers.findIndex(h => 
+        h === 'prénom' || h === 'prenom' || h === 'firstname' || h === 'first name'
+      );
+      
+      // If we have a firstName column, look for a separate lastName column
+      // The "nom" column is the last name when there's also a "prénom" column
+      let lastNameIdx = -1;
+      let nameIdx = -1;
+      
+      if (firstNameIdx >= 0) {
+        // We have a prénom column, so "nom" should be the last name
+        lastNameIdx = headers.findIndex(h => 
+          h === 'nom' || h === 'nom de famille' || h === 'lastname' || h === 'last name'
+        );
+      } else {
+        // No prénom column, look for a combined name column
+        nameIdx = headers.findIndex(h => 
+          h === 'nom' || h.includes('nom complet') || h === 'nom prénom' || h === 'nom prenom'
+        );
+      }
+      
      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
      const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
      const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type'));
@@ -176,7 +195,9 @@ function containsDriverKeyword(text: string): boolean {
      const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
      const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
      
-     console.log('Found columns:', { nameIdx, firstNameIdx, phoneIdx, positionIdx, contractIdx });
+      if (import.meta.env.DEV) {
+        console.log('Driver columns:', { nameIdx, firstNameIdx, lastNameIdx, phoneIdx, positionIdx });
+      }
      
      // Process data rows
      for (let i = headerRowIndex + 1; i < rawData.length; i++) {
@@ -202,14 +223,24 @@ function containsDriverKeyword(text: string): boolean {
        let firstName = '';
        let lastName = '';
        
-       if (nameIdx >= 0 && row[nameIdx]) {
+        if (firstNameIdx >= 0 && lastNameIdx >= 0) {
+          // Separate columns for first name and last name
+          firstName = titleCase(String(row[firstNameIdx] || '').trim());
+          lastName = titleCase(String(row[lastNameIdx] || '').trim());
+          fullName = `${firstName} ${lastName}`.trim();
+        } else if (nameIdx >= 0 && row[nameIdx]) {
+          // Combined name column
          const parsed = parseDriverName(String(row[nameIdx]));
          fullName = parsed.fullName;
          firstName = parsed.firstName;
          lastName = parsed.lastName;
-       } else if (firstNameIdx >= 0 || lastNameIdx >= 0) {
-         firstName = firstNameIdx >= 0 ? titleCase(String(row[firstNameIdx] || '').trim()) : '';
-         lastName = lastNameIdx >= 0 ? titleCase(String(row[lastNameIdx] || '').trim()) : '';
+        } else if (firstNameIdx >= 0) {
+          // Only first name column
+          firstName = titleCase(String(row[firstNameIdx] || '').trim());
+          fullName = firstName;
+        } else if (lastNameIdx >= 0) {
+          // Only last name column
+          lastName = titleCase(String(row[lastNameIdx] || '').trim());
          fullName = `${firstName} ${lastName}`.trim();
        }
        
