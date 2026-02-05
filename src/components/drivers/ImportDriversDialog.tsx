@@ -70,16 +70,19 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
      if (preview.length === 0) return;
  
      setImporting(true);
-     
+    console.log('[ImportDrivers] Starting import of', preview.length, 'drivers');
+
      try {
        const drivers = convertToDrivers(preview);
+      console.log('[ImportDrivers] Converted drivers:', drivers.length);
        const count = await onImport(drivers);
-       
+      console.log('[ImportDrivers] Import completed, count:', count);
+
        toast.success(`${count} conducteur(s) importé(s) avec succès`);
         handleClose();
      } catch (err) {
-       console.error('Error importing:', err);
-       toast.error('Erreur lors de l\'import');
+      console.error('[ImportDrivers] Error importing:', err);
+      toast.error('Erreur lors de l\'import');
      } finally {
        setImporting(false);
      }

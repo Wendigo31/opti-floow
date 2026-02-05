@@ -303,43 +303,52 @@ export default function Drivers() {
     return baseCost;
   };
 
-   const handleImportDrivers = async (importedDrivers: ExtendedParsedDriver[]): Promise<number> => {
-     let count = 0;
-     
-     for (const driver of importedDrivers) {
+  const handleImportDrivers = async (importedDrivers: ExtendedParsedDriver[]): Promise<number> => {
+    console.log('[Drivers] handleImportDrivers called with', importedDrivers.length, 'drivers');
+    
+    // Convert all drivers first
+    const driversToCreate = importedDrivers.map(driver => {
       const driverType: 'cdi' | 'cdd' | 'interim' = driver.isInterim ? 'interim' : (driver.contractType === 'cdd' ? 'cdd' : 'cdi');
-       
-       // Convert to app driver format
-       const newDriver: ExtendedDriver = {
-         id: driver.id,
-         name: driver.name,
-         baseSalary: driver.baseSalary,
-         hourlyRate: driver.hourlyRate,
-         hoursPerDay: driver.hoursPerDay,
-         patronalCharges: driver.patronalCharges,
-         mealAllowance: driver.mealAllowance,
-         overnightAllowance: driver.overnightAllowance,
-         workingDaysPerMonth: driver.workingDaysPerMonth,
-         sundayBonus: driver.sundayBonus,
-         nightBonus: driver.nightBonus,
-         seniorityBonus: driver.seniorityBonus,
+      const newDriver: ExtendedDriver = {
+        id: driver.id,
+        name: driver.name,
+        baseSalary: driver.baseSalary,
+        hourlyRate: driver.hourlyRate,
+        hoursPerDay: driver.hoursPerDay,
+        patronalCharges: driver.patronalCharges,
+        mealAllowance: driver.mealAllowance,
+        overnightAllowance: driver.overnightAllowance,
+        workingDaysPerMonth: driver.workingDaysPerMonth,
+        sundayBonus: driver.sundayBonus,
+        nightBonus: driver.nightBonus,
+        seniorityBonus: driver.seniorityBonus,
         isInterim: driverType === 'interim',
-         interimAgency: driver.interimAgency || '',
-         interimHourlyRate: 15,
-         interimCoefficient: 1.85,
-         scheduleType: 'day',
-       };
-       
-       // Save to cloud
-      const success = await createCloudDriver(newDriver as Driver, driverType);
-       if (success) {
-         count++;
-         // Cloud state is updated via realtime subscription - no local update needed
-       }
-     }
-     
-     return count;
-   };
+        interimAgency: driver.interimAgency || '',
+        interimHourlyRate: 15,
+        interimCoefficient: 1.85,
+        scheduleType: 'day',
+      };
+      return { driver: newDriver as Driver, type: driverType };
+    });
+
+    // Process in parallel batches of 5 for better performance
+    const BATCH_SIZE = 5;
+    let count = 0;
+    
+    for (let i = 0; i < driversToCreate.length; i += BATCH_SIZE) {
+      const batch = driversToCreate.slice(i, i + BATCH_SIZE);
+      console.log(`[Drivers] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(driversToCreate.length / BATCH_SIZE)}`);
+      
+      const results = await Promise.all(
+        batch.map(({ driver, type }) => createCloudDriver(driver, type))
+      );
+      
+      count += results.filter(Boolean).length;
+    }
+    
+    console.log('[Drivers] Import completed, total:', count);
+    return count;
+  };
  
   // Cast cloud drivers to ExtendedDriver for UI
   const cdiDrivers = cloudCdiDrivers as ExtendedDriver[];
