@@ -311,9 +311,9 @@
                 </div>
 
                 {/* Row for unassigned entries */}
-                <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-orange-500/5">
-                  <div className="p-3 border-r bg-orange-500/10 flex flex-col justify-center">
-                    <div className="font-medium text-orange-600 dark:text-orange-400">
+                 <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-accent/10">
+                   <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
+                     <div className="font-medium text-accent-foreground">
                       Non assigné
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -430,9 +430,9 @@
 
                 {/* Row for unassigned entries at the bottom */}
                 {unassignedEntries.length > 0 && (
-                  <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-orange-500/5">
-                    <div className="p-3 border-r bg-orange-500/10 flex flex-col justify-center">
-                      <div className="font-medium text-orange-600 dark:text-orange-400">
+                   <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-accent/10">
+                     <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
+                       <div className="font-medium text-accent-foreground">
                         Non assigné
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -512,10 +512,20 @@
               if (!ok) allOk = false;
             }
 
-           // Refetch entries
-           const startDate = format(currentWeekStart, 'yyyy-MM-dd');
-           const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-           fetchEntries(startDate, endDate);
+            // After import, jump to the imported start week so users immediately see the result.
+            const importedStart = entries?.[0]?.start_date;
+            if (importedStart) {
+              const importedWeekStart = startOfWeek(parseISO(importedStart), { weekStartsOn: 1 });
+              setCurrentWeekStart(importedWeekStart);
+              const startDate = format(importedWeekStart, 'yyyy-MM-dd');
+              const endDate = format(addDays(importedWeekStart, 6), 'yyyy-MM-dd');
+              fetchEntries(startDate, endDate);
+            } else {
+              // Fallback: refresh current week
+              const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+              const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+              fetchEntries(startDate, endDate);
+            }
             return allOk;
          }}
        />
