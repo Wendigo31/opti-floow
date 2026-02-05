@@ -399,27 +399,19 @@ export function useCloudDrivers() {
         return false;
       }
 
-      const { error: deleteError, count } = await supabase
+      // First try direct delete
+      const { error: deleteError } = await supabase
         .from('user_drivers')
-        .delete({ count: 'exact' })
+        .delete()
         .eq('license_id', lid)
         .eq('local_id', id);
 
       if (deleteError) {
         console.error('[useCloudDrivers] deleteDriver error:', deleteError);
-        throw deleteError;
-      }
-
-      if (count === 0) {
-        const { data: isOwner, error: ownerError } = await supabase
-          .rpc('is_company_owner', { p_license_id: lid, p_user_id: uid });
-
-        if (ownerError) {
-          console.warn('Unable to check owner role:', ownerError);
-        }
-
-        if (isOwner) {
-          const { data: deletedByFn, error: fnError } = await supabase
+        
+        // If direct delete fails due to RLS, try the security definer function
+        if (deleteError.code === '42501' || deleteError.message?.includes('policy')) {
+          const { error: fnError } = await supabase
             .rpc('delete_company_driver', { p_license_id: lid, p_local_id: id });
 
           if (fnError) {
@@ -427,30 +419,12 @@ export function useCloudDrivers() {
             toast.error('Suppression refusée');
             return false;
           }
-
-          if (!deletedByFn) {
-            toast.error('Conducteur introuvable');
-            return false;
-          }
+        } else {
+          throw deleteError;
         }
       }
 
-      const { data: stillThere, error: verifyError } = await supabase
-        .from('user_drivers')
-        .select('id')
-        .eq('license_id', lid)
-        .eq('local_id', id)
-        .maybeSingle();
-
-      if (verifyError) {
-        console.warn('Unable to verify driver deletion:', verifyError);
-      }
-
-      if (stillThere) {
-        toast.error('Suppression refusée (droits insuffisants)');
-        return false;
-      }
-
+      // Update local state immediately
       if (driverType === 'interim') {
         setInterimDrivers(prev => {
           const updated = prev.filter(d => d.id !== id);
