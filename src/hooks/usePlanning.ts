@@ -25,6 +25,8 @@ export interface ExcelTourInput {
   relay_location?: string | null;
   relay_time?: string | null;
   sector_manager?: string | null;
+  /** Driver ID per day index (0=Mon...6=Sun) - overrides driver_id for specific days */
+  day_driver_ids?: Record<number, string>;
 }
  
  export function usePlanning() {
@@ -418,6 +420,8 @@ export interface ExcelTourInput {
             const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
             return validDays.map((dayIdx) => {
               const date = addDays(monday, dayIdx);
+              // Use day-specific driver if available, otherwise fall back to global driver_id
+              const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
               return {
                 user_id: user.id,
                 license_id: currentLicenseId,
@@ -425,7 +429,7 @@ export interface ExcelTourInput {
                 start_time: t.start_time || null,
                 end_time: t.end_time || null,
                 client_id: t.client_id || null,
-                driver_id: t.driver_id || null,
+                driver_id: driverForDay,
                 // Excel import starts as "Non assigné"
                 vehicle_id: t.vehicle_id || null,
                 mission_order: t.mission_order || null,

@@ -131,6 +131,7 @@ import { format } from 'date-fns';
             is_all_year: false,
             start_date: format(weekStartDate, 'yyyy-MM-dd'),
            sector_manager: t.sector_manager || null,
+          day_driver_ids: t.day_driver_ids,
          }));
 
       if (validInputs.length === 0) {
