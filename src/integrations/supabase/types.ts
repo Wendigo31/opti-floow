@@ -1055,6 +1055,78 @@ export type Database = {
           },
         ]
       }
+      planning_entries: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          destination_address: string | null
+          driver_id: string | null
+          end_time: string | null
+          id: string
+          license_id: string | null
+          mission_order: string | null
+          notes: string | null
+          origin_address: string | null
+          planning_date: string
+          start_time: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          destination_address?: string | null
+          driver_id?: string | null
+          end_time?: string | null
+          id?: string
+          license_id?: string | null
+          mission_order?: string | null
+          notes?: string | null
+          origin_address?: string | null
+          planning_date: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          destination_address?: string | null
+          driver_id?: string | null
+          end_time?: string | null
+          id?: string
+          license_id?: string | null
+          mission_order?: string | null
+          notes?: string | null
+          origin_address?: string | null
+          planning_date?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_entries_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           client_id: string | null

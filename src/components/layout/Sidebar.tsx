@@ -14,7 +14,8 @@ import {
   Route,
   Settings,
   EyeOff,
-  UsersRound
+   UsersRound,
+   CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
@@ -59,6 +60,7 @@ const NAV_LABELS = {
   calculator: 'Calculateur',
   itinerary: 'Itinéraire',
   tours: 'Tournées',
+   planning: 'Planning',
   dashboard: 'Analyse',
   forecast: 'Prévisionnel',
   vehicles: 'Véhicules',
@@ -93,6 +95,7 @@ const navGroups: { label: string; items: NavItemConfig[] }[] = [
     label: 'Gestion',
     items: [
       { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
+       { to: '/planning', icon: CalendarDays, labelKey: 'planning', requiredPlan: 'pro' },
       { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
     ]
   },
