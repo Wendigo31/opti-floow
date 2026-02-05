@@ -431,10 +431,19 @@ export interface ExcelTourInput {
         try {
           suspendRealtimeRef.current = true;
 
-          if (!authUserId || !licenseId) {
-            if (!contextLoading) {
-              toast.error('Session non initialisée. Veuillez recharger la page.');
-            }
+          // Use context values, fallback to direct auth if needed (handles race conditions)
+          let uid = authUserId;
+          let lid = licenseId;
+
+          if (!uid || !lid) {
+            const { data: { user } } = await supabase.auth.getUser();
+            const fallbackLicenseId = await getLicenseId();
+            uid = user?.id || null;
+            lid = fallbackLicenseId;
+          }
+
+          if (!uid || !lid) {
+            toast.error('Session non initialisée. Veuillez vous reconnecter.');
             return false;
           }
 
@@ -451,8 +460,8 @@ export interface ExcelTourInput {
               const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
               const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
               return {
-                user_id: authUserId,
-                license_id: licenseId,
+                user_id: uid,
+                license_id: lid,
                 planning_date: format(date, 'yyyy-MM-dd'),
                 start_time: t.start_time || null,
                 end_time: t.end_time || null,
@@ -486,17 +495,33 @@ export interface ExcelTourInput {
 
           // Insert in chunks to avoid payload limits on large files
           const CHUNK_SIZE = 200;
+          const totalChunks = Math.ceil(rows.length / CHUNK_SIZE);
+          
+          // Show progress toast for large imports
+          const toastId = rows.length > 200 ? toast.loading(`Import en cours... (0/${totalChunks} lots)`) : null;
+
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
+            const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+
+            // Update progress toast
+            if (toastId) {
+              toast.loading(`Import en cours... (${chunkNum}/${totalChunks} lots)`, { id: toastId });
+            }
 
             // Execute the insert
             const res = await withTimeout(
               () => supabase.from('planning_entries').insert(chunk) as any,
-              45_000,
-              `Import Excel (lot ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(rows.length / CHUNK_SIZE)})`
+              60_000,
+              `Import Excel (lot ${chunkNum}/${totalChunks})`
             );
             const { error } = res as { error: unknown | null };
             if (error) throw error;
+          }
+
+          // Dismiss progress toast
+          if (toastId) {
+            toast.dismiss(toastId);
           }
 
           return true;
@@ -509,7 +534,7 @@ export interface ExcelTourInput {
           suspendRealtimeRef.current = false;
         }
       },
-      [authUserId, licenseId]
+      [authUserId, licenseId, contextLoading]
     );
 
     const deleteTourInWeek = useCallback(async (tourName: string, weekStartDate: Date): Promise<boolean> => {
