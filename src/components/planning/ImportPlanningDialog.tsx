@@ -1,20 +1,14 @@
  import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Download, Check, AlertCircle, Loader2, CalendarIcon, Users, FileText } from 'lucide-react';
+import { Upload, FileSpreadsheet, Download, Check, AlertCircle, Loader2, FileText } from 'lucide-react';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
  import { ScrollArea } from '@/components/ui/scroll-area';
- import { Label } from '@/components/ui/label';
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
  import { parseExcelFile } from '@/utils/excelImport';
  import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
 import { downloadPlanningTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
  import { dayLabels } from '@/types/planning';
  import type { TourInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
@@ -43,8 +37,6 @@ import { cn } from '@/lib/utils';
    const [importing, setImporting] = useState(false);
    const [preview, setPreview] = useState<ParsedPlanningEntry[]>([]);
    const [error, setError] = useState<string | null>(null);
-   const [defaultVehicleId, setDefaultVehicleId] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date>(new Date());
    const fileInputRef = useRef<HTMLInputElement>(null);
  
    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,20 +79,13 @@ import { cn } from '@/lib/utils';
        const clientMap = new Map(clients.map(c => [c.name, c.id]));
        const driverMap = new Map(drivers.map(d => [d.name, d.id]));
        
-        // Use null if no vehicle selected or 'none'
-        const vehicleIdToUse = defaultVehicleId && defaultVehicleId !== 'none' ? defaultVehicleId : null;
-
-         if (!vehicleIdToUse) {
-           toast.message('Aucune traction sélectionnée : les missions seront importées dans "Non assigné".');
-         }
-        
        // Convert to TourInput format
        const tourInputs = convertToTourInputs(
          preview,
          clientMap,
          driverMap,
-          vehicleIdToUse,
-        format(startDate, 'yyyy-MM-dd')
+        null, // No default vehicle - entries go to "Non assigné"
+        format(new Date(), 'yyyy-MM-dd') // Use today as start date
        );
        
        // Filter out entries with no meaningful data and add required fields
@@ -109,10 +94,10 @@ import { cn } from '@/lib/utils';
            .map(t => ({
            ...t,
            tour_name: t.tour_name!,
-            vehicle_id: t.vehicle_id || vehicleIdToUse,
+          vehicle_id: null, // Always null - user will assign later
            recurring_days: t.recurring_days || [0, 1, 2, 3, 4],
            is_all_year: false,
-          start_date: format(startDate, 'yyyy-MM-dd'),
+          start_date: format(new Date(), 'yyyy-MM-dd'),
          })) as TourInput[];
 
       if (validInputs.length === 0) {
@@ -142,7 +127,6 @@ import { cn } from '@/lib/utils';
      setFile(null);
      setPreview([]);
      setError(null);
-     setDefaultVehicleId('');
      onOpenChange(false);
    };
  
@@ -215,52 +199,11 @@ import { cn } from '@/lib/utils';
              </div>
            )}
  
-           {/* Configuration */}
+           {/* Info banner */}
            {preview.length > 0 && (
-             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-               <div className="space-y-2">
-                  <Label>Véhicule par défaut (optionnel)</Label>
-                 <Select value={defaultVehicleId} onValueChange={setDefaultVehicleId}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Sélectionner un véhicule" />
-                   </SelectTrigger>
-                   <SelectContent>
-                      <SelectItem value="none">Aucun (à définir plus tard)</SelectItem>
-                     {vehicles.map((v) => (
-                       <SelectItem key={v.id} value={v.id}>
-                         {v.name} ({v.licensePlate})
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-               <div className="space-y-2">
-                 <Label>Date de début</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(date) => date && setStartDate(date)}
-                        initialFocus
-                        locale={fr}
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-               </div>
+             <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+               <p>Les missions seront importées dans <strong className="text-foreground">"Non assigné"</strong>.</p>
+               <p className="mt-1">Cliquez ensuite sur chaque mission pour définir le véhicule.</p>
              </div>
            )}
  

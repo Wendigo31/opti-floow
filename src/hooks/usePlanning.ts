@@ -455,5 +455,34 @@
      getEntriesForVehicle,
      createTour,
      duplicateToNextWeeks,
+    applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
+      try {
+        const currentLicenseId = licenseId || await getLicenseId();
+        if (!currentLicenseId) {
+          toast.error('Licence introuvable');
+          return false;
+        }
+
+        const { error } = await supabase
+          .from('planning_entries')
+          .update({ vehicle_id: vehicleId, updated_at: new Date().toISOString() })
+          .eq('license_id', currentLicenseId)
+          .eq('tour_name', tourName);
+
+        if (error) throw error;
+
+        // Update local state
+        setEntries(prev => prev.map(e => 
+          e.tour_name === tourName ? { ...e, vehicle_id: vehicleId, updated_at: new Date().toISOString() } : e
+        ));
+
+        toast.success(`Véhicule appliqué à toutes les missions "${tourName}"`);
+        return true;
+      } catch (error) {
+        console.error('Error applying vehicle to tour:', error);
+        toast.error('Erreur lors de l\'application du véhicule');
+        return false;
+      }
+    },
    };
  }
