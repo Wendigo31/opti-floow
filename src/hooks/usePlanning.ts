@@ -1,6 +1,6 @@
  import { useState, useCallback, useEffect, useRef } from 'react';
  import { supabase } from '@/integrations/supabase/client';
- import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
+import { useLicenseContext } from '@/context/LicenseContext';
  import { toast } from 'sonner';
  import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
  import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -210,23 +210,16 @@ export interface ExcelTourInput {
  
     const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {
-       const { data: { user } } = await supabase.auth.getUser();
-       if (!user) {
-         toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
          return null;
        }
- 
-        const currentLicenseId = licenseId || await getLicenseId();
-        if (!currentLicenseId) {
-          toast.error('Licence introuvable');
-          return null;
-        }
  
        const { data, error } = await supabase
          .from('planning_entries')
          .insert({
-           user_id: user.id,
-           license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
            planning_date: input.planning_date,
            start_time: input.start_time || null,
            end_time: input.end_time || null,
@@ -293,7 +286,7 @@ export interface ExcelTourInput {
        toast.error('Erreur lors de la création');
        return null;
      }
-    }, [licenseId]);
+    }, [authUserId, licenseId]);
  
    const updateEntry = useCallback(async (id: string, updates: Partial<PlanningEntryInput>): Promise<boolean> => {
      try {
@@ -350,19 +343,13 @@ export interface ExcelTourInput {
    }, [entries]);
  
    // Create a recurring tour with entries for selected days
-    const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
+   const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
      try {
-       const { data: { user } } = await supabase.auth.getUser();
-       if (!user) {
-         toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
          return false;
        }
  
-        const currentLicenseId = licenseId || await getLicenseId();
-        if (!currentLicenseId) {
-          toast.error('Licence introuvable');
-          return false;
-        }
        const startDate = parseISO(input.start_date);
        const endDate = input.end_date ? parseISO(input.end_date) : (input.is_all_year ? addWeeks(startDate, 52) : addWeeks(startDate, weeksAhead));
        
@@ -387,8 +374,8 @@ export interface ExcelTourInput {
        
        // Create entries for all dates
        const entriesToInsert = datesToCreate.map(date => ({
-         user_id: user.id,
-         license_id: currentLicenseId,
+        user_id: authUserId,
+        license_id: licenseId,
          planning_date: date,
          start_time: input.start_time || null,
          end_time: input.end_time || null,
@@ -423,22 +410,15 @@ export interface ExcelTourInput {
        toast.error('Erreur lors de la création de la tournée');
        return false;
      }
-    }, [licenseId]);
+   }, [authUserId, licenseId]);
 
     const importExcelPlanningWeek = useCallback(
       async (tours: ExcelTourInput[], weekStartDate: Date): Promise<boolean> => {
         try {
           suspendRealtimeRef.current = true;
 
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            toast.error('Vous devez être connecté');
-            return false;
-          }
-
-          const currentLicenseId = licenseId || await getLicenseId();
-          if (!currentLicenseId) {
-            toast.error('Licence introuvable');
+          if (!authUserId || !licenseId) {
+            toast.error('Session en cours de chargement...');
             return false;
           }
 
@@ -455,8 +435,8 @@ export interface ExcelTourInput {
               const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
               const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
               return {
-                user_id: user.id,
-                license_id: currentLicenseId,
+                user_id: authUserId,
+                license_id: licenseId,
                 planning_date: format(date, 'yyyy-MM-dd'),
                 start_time: t.start_time || null,
                 end_time: t.end_time || null,
@@ -513,14 +493,13 @@ export interface ExcelTourInput {
           suspendRealtimeRef.current = false;
         }
       },
-      [licenseId]
+      [authUserId, licenseId]
     );
 
     const deleteTourInWeek = useCallback(async (tourName: string, weekStartDate: Date): Promise<boolean> => {
       try {
-        const currentLicenseId = licenseId || await getLicenseId();
-        if (!currentLicenseId) {
-          toast.error('Licence introuvable');
+        if (!licenseId) {
+          toast.error('Session en cours de chargement...');
           return false;
         }
 
@@ -531,7 +510,7 @@ export interface ExcelTourInput {
         const { error } = await supabase
           .from('planning_entries')
           .delete()
-          .eq('license_id', currentLicenseId)
+          .eq('license_id', licenseId)
           .eq('tour_name', tourName)
           .gte('planning_date', startStr)
           .lte('planning_date', endStr);
@@ -553,20 +532,13 @@ export interface ExcelTourInput {
     }, [licenseId]);
  
    // Duplicate entries to following weeks
-    const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
+   const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
      try {
-       const { data: { user } } = await supabase.auth.getUser();
-       if (!user) {
-         toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
          return false;
        }
  
-        const currentLicenseId = licenseId || await getLicenseId();
-        if (!currentLicenseId) {
-          toast.error('Licence introuvable');
-          return false;
-        }
-       
        // Get entries to duplicate
        const entriesToDuplicate = entries.filter(e => entryIds.includes(e.id));
        
@@ -583,8 +555,8 @@ export interface ExcelTourInput {
          for (let week = 1; week <= numWeeks; week++) {
            const newDate = addWeeks(entryDate, week);
            newEntries.push({
-             user_id: user.id,
-             license_id: currentLicenseId,
+            user_id: authUserId,
+            license_id: licenseId,
              planning_date: format(newDate, 'yyyy-MM-dd'),
              start_time: entry.start_time,
              end_time: entry.end_time,
@@ -620,7 +592,7 @@ export interface ExcelTourInput {
        toast.error('Erreur lors de la duplication');
        return false;
      }
-    }, [entries, licenseId]);
+   }, [authUserId, entries, licenseId]);
  
    return {
      entries,
@@ -637,16 +609,15 @@ export interface ExcelTourInput {
      duplicateToNextWeeks,
     applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
       try {
-        const currentLicenseId = licenseId || await getLicenseId();
-        if (!currentLicenseId) {
-          toast.error('Licence introuvable');
+        if (!licenseId) {
+          toast.error('Session en cours de chargement...');
           return false;
         }
 
         const { error } = await supabase
           .from('planning_entries')
           .update({ vehicle_id: vehicleId, updated_at: new Date().toISOString() })
-          .eq('license_id', currentLicenseId)
+          .eq('license_id', licenseId)
           .eq('tour_name', tourName);
 
         if (error) throw error;
