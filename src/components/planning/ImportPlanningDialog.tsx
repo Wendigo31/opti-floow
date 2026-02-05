@@ -57,6 +57,9 @@ import { format } from 'date-fns';
      setLoading(true);
  
      try {
+      // Use setTimeout to allow UI to update before heavy parsing
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
        const workbook = await parseExcelFile(selectedFile);
        const data = parsePlanningExcel(workbook);
        

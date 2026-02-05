@@ -186,7 +186,7 @@ function extractDayCellText(cellValue: string | undefined): string {
    // Convert to array of arrays to handle complex headers
    const rawData = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
    
-   if (rawData.length < 3) return [];
+   if (rawData.length < 2) return [];
    
    // Find header row (usually row 8 in this format, index 7)
    let headerRowIndex = -1;
@@ -201,9 +201,9 @@ function extractDayCellText(cellValue: string | undefined): string {
      }
    }
    
+   // If no header row found, assume first row is header
    if (headerRowIndex === -1) {
-     console.error('Could not find header row');
-     return [];
+     headerRowIndex = 0;
    }
    
    const headers = rawData[headerRowIndex].map(h => (h || '').toString().toLowerCase().trim());
@@ -233,25 +233,19 @@ function extractDayCellText(cellValue: string | undefined): string {
     h.includes('responsable') || h.includes('secteur') || h.includes('manager')
   );
    
-    // Find day columns (robust: supports full names, abbreviations and date-like headers)
-    const dayColumns: Array<{ colIdx: number; dayIdx: number }> = [];
-    headers.forEach((h, idx) => {
-      const dayIdx = getDayIdxFromHeader(h);
-      if (dayIdx !== null) {
-        dayColumns.push({ colIdx: idx, dayIdx });
-      }
-    });
+   // Find day columns (robust: supports full names, abbreviations and date-like headers)
+   const dayColumns: Array<{ colIdx: number; dayIdx: number }> = [];
+   headers.forEach((h, idx) => {
+     const dayIdx = getDayIdxFromHeader(h);
+     if (dayIdx !== null) {
+       dayColumns.push({ colIdx: idx, dayIdx });
+     }
+   });
    
-    console.log('Column indices:', {
-      clientIdx,
-      ligneIdx,
-      titulaireIdx,
-      odmIdx,
-      startTimeIdx,
-      endTimeIdx,
-     sectorManagerIdx,
-      dayColumns: dayColumns.map(d => ({ col: d.colIdx, day: d.dayIdx })),
-    });
+   // Debug log only in dev
+   if (import.meta.env.DEV) {
+     console.log('Planning Excel columns:', { clientIdx, ligneIdx, titulaireIdx, odmIdx, dayColumns: dayColumns.length });
+   }
    
    const entries: ParsedPlanningEntry[] = [];
    
@@ -270,7 +264,9 @@ function extractDayCellText(cellValue: string | undefined): string {
      
      // Skip empty or header-like rows
      if (!client && !ligne) continue;
-     if (ligne.toLowerCase().includes('information')) continue;
+     // Skip rows that look like section headers
+     const ligneLower = ligne.toLowerCase();
+     if (ligneLower.includes('information') || ligneLower.includes('total') || ligneLower.includes('sous-total')) continue;
      
      // Parse addresses from ligne
      const { origin, destination } = parseAddresses(ligne);
@@ -280,15 +276,15 @@ function extractDayCellText(cellValue: string | undefined): string {
      const recurring_days: number[] = [0, 1, 2, 3, 4, 5];
     const day_cells: Record<number, string> = {};
      
-      // Parse raw day cell text from Excel day columns (notes/placeholders)
-     dayColumns.forEach(({ colIdx, dayIdx }) => {
-       if (dayIdx === 6) return; // never import Sunday
-       const raw = (row[colIdx] || '').toString();
-       const v = extractDayCellText(raw);
-       if (!v) return;
-       if (v.toLowerCase() === 'x') return;
+     // Parse raw day cell text from Excel day columns (notes/placeholders)
+     for (const { colIdx, dayIdx } of dayColumns) {
+       if (dayIdx === 6) continue; // never import Sunday
+       const raw = row[colIdx];
+       if (!raw) continue;
+       const v = extractDayCellText(raw.toString());
+       if (!v || v.toLowerCase() === 'x') continue;
        day_cells[dayIdx] = v;
-     });
+     }
      
      // Only add if we have meaningful data
      if (client || ligne || odm) {
@@ -302,8 +298,8 @@ function extractDayCellText(cellValue: string | undefined): string {
          start_time: parseTime(startTime),
          end_time: parseTime(endTime),
          recurring_days,
-          day_cells,
-          sector_manager: sectorManager || null,
+        day_cells,
+        sector_manager: sectorManager || null,
        });
      }
    }
