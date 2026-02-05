@@ -29,6 +29,7 @@
    end_time: string | null;
    recurring_days: number[]; // 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam, 6=Dim
    day_drivers: Record<number, string>; // conducteur spécifique par jour
+  sector_manager: string | null; // Responsable de secteur
  }
 
 /**
@@ -212,6 +213,10 @@ function getDayIdxFromHeader(header: string): number | null {
     h.includes('heure arrivée') ||
     h.includes('heure arrivee')
   );
+
+  const sectorManagerIdx = headers.findIndex(h => 
+    h.includes('responsable') || h.includes('secteur') || h.includes('manager')
+  );
    
     // Find day columns (robust: supports full names, abbreviations and date-like headers)
     const dayColumns: Array<{ colIdx: number; dayIdx: number }> = [];
@@ -229,6 +234,7 @@ function getDayIdxFromHeader(header: string): number | null {
       odmIdx,
       startTimeIdx,
       endTimeIdx,
+     sectorManagerIdx,
       dayColumns: dayColumns.map(d => ({ col: d.colIdx, day: d.dayIdx })),
     });
    
@@ -245,6 +251,7 @@ function getDayIdxFromHeader(header: string): number | null {
      const odm = odmIdx >= 0 ? (row[odmIdx] || '').toString().trim() : '';
      const startTime = startTimeIdx >= 0 ? (row[startTimeIdx] || '').toString() : '';
      const endTime = endTimeIdx >= 0 ? (row[endTimeIdx] || '').toString() : '';
+    const sectorManager = sectorManagerIdx >= 0 ? (row[sectorManagerIdx] || '').toString().trim() : '';
      
      // Skip empty or header-like rows
      if (!client && !ligne) continue;
@@ -289,6 +296,7 @@ function getDayIdxFromHeader(header: string): number | null {
          end_time: parseTime(endTime),
          recurring_days,
          day_drivers,
+       sector_manager: sectorManager || null,
        });
      }
    }
@@ -305,7 +313,7 @@ function getDayIdxFromHeader(header: string): number | null {
    driverMap: Map<string, string>, // driver name -> driver id
   defaultVehicleId: string | null,
    startDate: string
- ): Partial<TourInput>[] {
+): (Partial<TourInput> & { sector_manager?: string | null })[] {
    return parsedEntries.map(entry => {
      // Try to match client
      let client_id: string | null = null;
@@ -344,6 +352,7 @@ function getDayIdxFromHeader(header: string): number | null {
        origin_address: entry.origin_address || null,
        destination_address: entry.destination_address || null,
        mission_order: entry.mission_order || null,
+      sector_manager: entry.sector_manager,
      };
    });
  }

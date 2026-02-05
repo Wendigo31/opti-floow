@@ -55,6 +55,7 @@
     'ODM (Ordre de Mission)',
     'Horaire début',
     'Horaire fin',
+   'Responsable de secteur',
     'Lundi',
     'Mardi',
     'Mercredi',
@@ -65,11 +66,11 @@
    ];
  
    const sampleData = [
-    ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'X', 'X', '', 'X', 'X', '', ''],
-    ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'X', '', 'X', '', 'X', '', ''],
-    ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', '', 'X', 'X', 'X', '', '', ''],
-    ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'X', 'X', 'X', 'X', 'X', '', ''],
-    ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', '', '', 'X', 'X', 'X', 'X', ''],
+    ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'Paul RESPONSABLE', 'X', 'X', '', 'X', 'X', '', ''],
+    ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'Marie CHEF', 'X', '', 'X', '', 'X', '', ''],
+    ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', 'Paul RESPONSABLE', '', 'X', 'X', 'X', '', '', ''],
+    ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'Jean MANAGER', 'X', 'X', 'X', 'X', 'X', '', ''],
+    ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', 'Marie CHEF', '', '', 'X', 'X', 'X', 'X', ''],
    ];
  
    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
@@ -82,6 +83,7 @@
     { wch: 35 }, // ODM
     { wch: 12 }, // Horaire début
     { wch: 12 }, // Horaire fin
+   { wch: 22 }, // Responsable de secteur
      { wch: 8 },  // Lundi
      { wch: 8 },  // Mardi
      { wch: 10 }, // Mercredi
@@ -107,11 +109,12 @@
     ['- ODM: Ordre de mission ou notes'],
     ['- Horaire début: Heure de départ (format: 06h00 ou 06:00)'],
     ['- Horaire fin: Heure d\'arrivée (format: 14h00 ou 14:00)'],
+   ['- Responsable de secteur: Nom du responsable pour filtrer les tractions'],
      ['- Jours de la semaine: Mettre "X" pour indiquer les jours de récurrence'],
      [''],
      ['Conseils:'],
-     ['- Les conducteurs doivent être créés avant l\'import du planning'],
-     ['- Les clients existants seront automatiquement associés'],
+    ['- Les conducteurs doivent être créés avant l\'import'],
+    ['- Les clients seront automatiquement créés s\'ils n\'existent pas'],
     ['- Si aucun véhicule n\'est sélectionné, les missions apparaîtront dans "Non assigné"'],
    ];
  
