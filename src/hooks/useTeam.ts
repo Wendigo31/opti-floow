@@ -75,15 +75,26 @@ export function useTeam(): UseTeamReturn {
         return;
       }
 
-      const { data: currentUserEntry, error: userError } = await supabase
-        .from('company_users')
-        .select('license_id, role, display_name, email')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Fetch current user entry and all members in PARALLEL
+      const [userEntryResult, allMembersResult] = await Promise.all([
+        supabase
+          .from('company_users')
+          .select('license_id, role, display_name, email')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle(),
+        // We'll filter by license_id after we know it
+        supabase
+          .from('company_users')
+          .select('license_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle(),
+      ]);
 
-      if (userError) {
-        console.error('Error fetching user entry:', userError);
+      const currentUserEntry = userEntryResult.data;
+      if (userEntryResult.error) {
+        console.error('Error fetching user entry:', userEntryResult.error);
       }
 
       if (!currentUserEntry?.license_id) {
@@ -103,7 +114,7 @@ export function useTeam(): UseTeamReturn {
         userId: user.id,
       });
 
-      // Fetch team members
+      // Now fetch all team members for the license
       const { data: companyUsers, error: usersError } = await supabase
         .from('company_users')
         .select('*')

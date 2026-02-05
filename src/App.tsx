@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useLicense } from "./hooks/useLicense";
 import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
+import { useDataPrefetch } from "./hooks/useDataPrefetch";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
 // Calculator imported via CalculatorWithHistory
@@ -70,6 +71,7 @@ function GlobalShortcuts({ children }: { children: React.ReactNode }) {
 // Composant wrapper pour les notifications temps réel
 function RealtimeNotificationsWrapper({ children }: { children: React.ReactNode }) {
   useRealtimeNotifications();
+  useDataPrefetch(); // Prefetch all data in parallel on startup
   return <>{children}</>;
 }
 

@@ -71,7 +71,7 @@ export function useCloudDrivers() {
 
   const fetchDrivers = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
-    
+
     if (!authUserId || !licenseId) {
       setCdiDrivers(getCachedCdiDrivers());
       setCddDrivers(getCachedCddDrivers());
@@ -83,6 +83,7 @@ export function useCloudDrivers() {
     setLoading(true);
 
     try {
+      // Single optimized query - no need for getUser() since we have authUserId
       const { data, error } = await supabase
         .from('user_drivers')
         .select('driver_data, driver_type')
@@ -94,7 +95,7 @@ export function useCloudDrivers() {
       const cdi: Driver[] = [];
       const cdd: Driver[] = [];
       const interim: Driver[] = [];
-      
+
       (data || []).forEach(row => {
         const driverData = row.driver_data as unknown as Driver;
         if (driverData) {
