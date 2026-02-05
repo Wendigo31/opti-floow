@@ -41,6 +41,18 @@ export function useCloudDrivers() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fetchInProgressRef = useRef(false);
 
+  // Keep latest state in refs so realtime handlers don't rely on stale closures
+  const cdiDriversRef = useRef<Driver[]>(cdiDrivers);
+  const interimDriversRef = useRef<Driver[]>(interimDrivers);
+
+  useEffect(() => {
+    cdiDriversRef.current = cdiDrivers;
+  }, [cdiDrivers]);
+
+  useEffect(() => {
+    interimDriversRef.current = interimDrivers;
+  }, [interimDrivers]);
+
   const fetchDrivers = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
     
@@ -117,14 +129,16 @@ export function useCloudDrivers() {
                 setInterimDrivers(prev => {
                   const exists = prev.find(d => d.id === data.id);
                   const updated = exists ? prev.map(d => d.id === data.id ? data : d) : [data, ...prev];
-                  setCachedDrivers(cdiDrivers, updated);
+                  interimDriversRef.current = updated;
+                  setCachedDrivers(cdiDriversRef.current, updated);
                   return updated;
                 });
               } else {
                 setCdiDrivers(prev => {
                   const exists = prev.find(d => d.id === data.id);
                   const updated = exists ? prev.map(d => d.id === data.id ? data : d) : [data, ...prev];
-                  setCachedDrivers(updated, interimDrivers);
+                  cdiDriversRef.current = updated;
+                  setCachedDrivers(updated, interimDriversRef.current);
                   return updated;
                 });
               }
@@ -133,18 +147,25 @@ export function useCloudDrivers() {
             const localId = (payload.old as any).local_id;
             setCdiDrivers(prev => {
               const updated = prev.filter(d => d.id !== localId);
-              setCachedDrivers(updated, interimDrivers);
+              cdiDriversRef.current = updated;
+              setCachedDrivers(updated, interimDriversRef.current);
               return updated;
             });
             setInterimDrivers(prev => {
               const updated = prev.filter(d => d.id !== localId);
-              setCachedDrivers(cdiDrivers, updated);
+              interimDriversRef.current = updated;
+              setCachedDrivers(cdiDriversRef.current, updated);
               return updated;
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // After (re)subscribe, refresh to reconcile any missed events while offline/unsubscribed
+        if (status === 'SUBSCRIBED' && authUserId) {
+          void fetchDrivers();
+        }
+      });
 
     return () => {
       if (channelRef.current) {
@@ -152,7 +173,7 @@ export function useCloudDrivers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, cdiDrivers, interimDrivers]);
+  }, [licenseId, authUserId, fetchDrivers]);
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {
@@ -189,13 +210,15 @@ export function useCloudDrivers() {
       if (isInterim) {
         setInterimDrivers(prev => {
           const updated = [driver, ...prev];
-          setCachedDrivers(cdiDrivers, updated);
+          interimDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = [driver, ...prev];
-          setCachedDrivers(updated, interimDrivers);
+          cdiDriversRef.current = updated;
+          setCachedDrivers(updated, interimDriversRef.current);
           return updated;
         });
       }
@@ -206,7 +229,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [cdiDrivers, interimDrivers]);
+  }, []);
 
   const updateDriver = useCallback(async (driver: Driver, isInterim: boolean = false): Promise<boolean> => {
     try {
@@ -230,13 +253,15 @@ export function useCloudDrivers() {
       if (isInterim) {
         setInterimDrivers(prev => {
           const updated = prev.map(d => d.id === driver.id ? driver : d);
-          setCachedDrivers(cdiDrivers, updated);
+          interimDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = prev.map(d => d.id === driver.id ? driver : d);
-          setCachedDrivers(updated, interimDrivers);
+          cdiDriversRef.current = updated;
+          setCachedDrivers(updated, interimDriversRef.current);
           return updated;
         });
       }
@@ -247,7 +272,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [cdiDrivers, interimDrivers]);
+  }, []);
 
   const deleteDriver = useCallback(async (id: string, isInterim: boolean = false): Promise<boolean> => {
     try {
@@ -281,13 +306,15 @@ export function useCloudDrivers() {
       if (isInterim) {
         setInterimDrivers(prev => {
           const updated = prev.filter(d => d.id !== id);
-          setCachedDrivers(cdiDrivers, updated);
+          interimDriversRef.current = updated;
+          setCachedDrivers(cdiDriversRef.current, updated);
           return updated;
         });
       } else {
         setCdiDrivers(prev => {
           const updated = prev.filter(d => d.id !== id);
-          setCachedDrivers(updated, interimDrivers);
+          cdiDriversRef.current = updated;
+          setCachedDrivers(updated, interimDriversRef.current);
           return updated;
         });
       }
@@ -298,7 +325,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [cdiDrivers, interimDrivers]);
+  }, []);
 
   return {
     cdiDrivers,
