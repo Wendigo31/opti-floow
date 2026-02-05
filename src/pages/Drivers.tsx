@@ -18,7 +18,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  import { ImportDriversDialog } from '@/components/drivers/ImportDriversDialog';
  import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
-import { AutoImportDrivers } from '@/components/drivers/AutoImportDrivers';
 
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
@@ -44,8 +43,6 @@ export default function Drivers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [showAutoImport, setShowAutoImport] = useState(true);
-  const [autoImportFile] = useState('/personnel_import.xlsx');
   
   // Store interim drivers separately
   const [interimDrivers, setInterimDrivers] = useLocalStorage<ExtendedDriver[]>('optiflow_interim_drivers', []);
@@ -732,17 +729,6 @@ export default function Drivers() {
          </Button>
         </div>
       </div>
-
-      {/* Auto Import Alert */}
-      {showAutoImport && autoImportFile && (
-        <AutoImportDrivers 
-          fileUrl={autoImportFile}
-          onComplete={(count) => {
-            console.log('Import complete:', count);
-          }}
-          onDismiss={() => setShowAutoImport(false)}
-        />
-      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
