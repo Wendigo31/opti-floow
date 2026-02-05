@@ -287,13 +287,15 @@ export function useCloudDrivers() {
         return false;
       }
 
-      const currentLicenseId = await getLicenseId();
+      const currentLicenseId = licenseId || await getLicenseId();
       if (!currentLicenseId) {
         toast.error('Licence introuvable');
         return false;
       }
 
-      const { data: deletedRows, error } = await supabase
+      // Do not rely on DELETE response payload: depending on RLS, PostgREST may
+      // return an empty array even when the delete actually succeeded.
+      const { error } = await supabase
         .from('user_drivers')
         .delete()
         .eq('license_id', currentLicenseId)
@@ -302,9 +304,20 @@ export function useCloudDrivers() {
 
       if (error) throw error;
 
-      // If RLS blocks the operation, PostgREST may return 0 deleted rows without an error.
-      if (!deletedRows || deletedRows.length === 0) {
-        toast.error('Suppression refusée (droits insuffisants ou session expirée)');
+      // Verify deletion (covers RLS silent failures / filter mismatch)
+      const { data: stillThere, error: verifyError } = await supabase
+        .from('user_drivers')
+        .select('id')
+        .eq('license_id', currentLicenseId)
+        .eq('local_id', id)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.warn('Unable to verify driver deletion:', verifyError);
+      }
+
+      if (stillThere) {
+        toast.error('Suppression refusée (droits insuffisants)');
         return false;
       }
 
@@ -330,7 +343,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   return {
     cdiDrivers,
