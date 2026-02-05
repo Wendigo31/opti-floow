@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target } from 'lucide-react';
+import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target, FileSpreadsheet } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useClients, type ClientWithCreator } from '@/hooks/useClients';
 import type { LocalClientReport } from '@/types/local';
@@ -17,6 +17,7 @@ import { SharedTractionsDialog } from '@/components/clients/SharedTractionsDialo
 import { ToxicClientsAnalysis } from '@/components/clients/ToxicClientsAnalysis';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { FeatureGate } from '@/components/license/FeatureGate';
+import { ImportClientsDialog } from '@/components/clients/ImportClientsDialog';
 
 export default function Clients() {
   const { toast } = useToast();
@@ -33,6 +34,7 @@ export default function Clients() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('clients');
   const [sharedTractionsOpen, setSharedTractionsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '', company: '', email: '', phone: '',
@@ -126,6 +128,32 @@ export default function Clients() {
 
   const tourSearchResults = searchMode === 'tours' ? getClientsByTourSearch() : [];
 
+  const handleImportClients = async (clients: Array<{
+    name: string;
+    company?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    postal_code?: string;
+    siret?: string;
+    notes?: string;
+  }>) => {
+    for (const client of clients) {
+      await createClient({
+        name: client.name,
+        company: client.company || null,
+        email: client.email || null,
+        phone: client.phone || null,
+        address: client.address || null,
+        city: client.city || null,
+        postal_code: client.postal_code || null,
+        siret: client.siret || null,
+        notes: client.notes || null,
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -134,6 +162,10 @@ export default function Clients() {
           <p className="text-muted-foreground">Gérez votre portefeuille clients</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Importer Excel
+          </Button>
           <Button variant="outline" onClick={() => setSharedTractionsOpen(true)}>
             <Link2 className="w-4 h-4 mr-2" />
             Relais multi-clients
@@ -407,6 +439,11 @@ export default function Clients() {
       <SharedTractionsDialog
         open={sharedTractionsOpen}
         onOpenChange={setSharedTractionsOpen}
+      />
+      <ImportClientsDialog 
+        open={importOpen} 
+        onOpenChange={setImportOpen} 
+        onImport={handleImportClients}
       />
     </div>
   );
