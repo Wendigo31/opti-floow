@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Upload, Package, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Edit2, Building2, Shield, Car, FileText, Wrench, MoreHorizontal, Check, X, Calendar, CalendarDays, CalendarRange, Copy, Lock, Upload, Package, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
 import type { FixedCharge } from '@/types';
@@ -39,7 +40,19 @@ const periodicityLabels = {
 };
 
 export default function Charges() {
-  const { charges, setCharges, settings } = useApp();
+  // Local context only for settings
+  const { settings } = useApp();
+  
+  // Cloud charges hook for shared data sync
+  const {
+    charges,
+    loading: chargesLoading,
+    fetchCharges,
+    createCharge: createCloudCharge,
+    updateCharge: updateCloudCharge,
+    deleteCharge: deleteCloudCharge,
+  } = useCloudCharges();
+  
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
   const { isDirection, isLoading: isTeamLoading } = useTeam();
   const navigate = useNavigate();
@@ -49,6 +62,13 @@ export default function Charges() {
   const [formData, setFormData] = useState<Partial<FixedCharge>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [presetsDialogOpen, setPresetsDialogOpen] = useState(false);
+  
+  // Fetch charges on mount if not already loaded
+  useEffect(() => {
+    if (charges.length === 0 && !chargesLoading) {
+      fetchCharges();
+    }
+  }, []);
   
   // Only direction role can view and modify charges
   const canViewCharges = isDirection;
@@ -111,7 +131,7 @@ export default function Charges() {
     setFormData(charge);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isAdding) {
       const newCharge: FixedCharge = {
         id: Date.now().toString(),
@@ -121,15 +141,12 @@ export default function Charges() {
         periodicity: formData.periodicity as 'daily' | 'monthly' | 'yearly' || 'monthly',
         category: formData.category as FixedCharge['category'] || 'other',
       };
-      setCharges([...charges, newCharge]);
+      await createCloudCharge(newCharge);
       setIsAdding(false);
       setAddingPeriodicity(null);
     } else if (editingId) {
-      setCharges(charges.map(c => 
-        c.id === editingId 
-          ? { ...c, ...formData } as FixedCharge
-          : c
-      ));
+      const updatedCharge = { ...charges.find(c => c.id === editingId), ...formData, id: editingId } as FixedCharge;
+      await updateCloudCharge(updatedCharge);
       setEditingId(null);
     }
     setFormData({});
@@ -142,8 +159,8 @@ export default function Charges() {
     setFormData({});
   };
 
-  const handleDelete = (id: string) => {
-    setCharges(charges.filter(c => c.id !== id));
+  const handleDelete = async (id: string) => {
+    await deleteCloudCharge(id);
   };
 
   const handleDuplicate = (charge: FixedCharge) => {
@@ -152,21 +169,24 @@ export default function Charges() {
       id: Date.now().toString(),
       name: `${charge.name} (copie)`,
     };
-    setCharges([...charges, duplicatedCharge]);
+    void createCloudCharge(duplicatedCharge);
   };
 
-  const handleImportCharges = (importedCharges: Partial<FixedCharge>[]) => {
-    const newCharges = importedCharges.map((c, index) => ({
-      id: `imported_${Date.now()}_${index}`,
-      name: c.name || 'Charge importée',
-      amount: c.amount || 0,
-      isHT: c.isHT ?? false,
-      periodicity: c.periodicity || 'monthly' as const,
-      category: c.category || 'other' as const,
-    }));
-    
-    setCharges([...charges, ...newCharges]);
-    toast.success(`${newCharges.length} charge(s) importée(s)`);
+  const handleImportCharges = async (importedCharges: Partial<FixedCharge>[]) => {
+    // Create charges one by one in cloud
+    for (let index = 0; index < importedCharges.length; index++) {
+      const c = importedCharges[index];
+      const newCharge: FixedCharge = {
+        id: `imported_${Date.now()}_${index}`,
+        name: c.name || 'Charge importée',
+        amount: c.amount || 0,
+        isHT: c.isHT ?? false,
+        periodicity: (c.periodicity || 'monthly') as 'daily' | 'monthly' | 'yearly',
+        category: (c.category || 'other') as FixedCharge['category'],
+      };
+      await createCloudCharge(newCharge);
+    }
+    toast.success(`${importedCharges.length} charge(s) importée(s)`);
   };
 
   const renderForm = () => (
@@ -359,7 +379,23 @@ export default function Charges() {
   };
 
   // Show access denied message for non-direction users
-  if (!isTeamLoading && !canViewCharges) {
+  if (isTeamLoading || chargesLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Gestion des charges fixes</h1>
+            <p className="text-muted-foreground mt-1">Chargement...</p>
+          </div>
+        </div>
+        <div className="glass-card p-12 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+  
+  if (!canViewCharges) {
     return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

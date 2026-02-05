@@ -25,6 +25,8 @@ import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLicense } from '@/hooks/useLicense';
 import { cn } from '@/lib/utils';
@@ -65,7 +67,13 @@ const widgetLabels: Record<string, string> = {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { drivers, charges, settings } = useApp();
+  const { settings } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
+  
   const { tours, fetchTours, loading: toursLoading } = useSavedTours();
   const { planType } = useLicense();
   

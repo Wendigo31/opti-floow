@@ -63,6 +63,22 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const isMountedRef = useRef(true);
   const hasSyncedRef = useRef(false);
 
+  // Clear legacy local storage caches on first cloud sync
+  useEffect(() => {
+    const CACHE_CLEARED_KEY = 'optiflow_cache_cleared_v2';
+    const cacheClearedFlag = localStorage.getItem(CACHE_CLEARED_KEY);
+    if (!cacheClearedFlag && licenseId) {
+      // Clear old cache keys to force cloud sync
+      localStorage.removeItem('optiflow_drivers_cache');
+      localStorage.removeItem('optiflow_interim_drivers_cache');
+      localStorage.removeItem('optiflow_charges_cache');
+      localStorage.removeItem('optiflow_vehicles_cache');
+      localStorage.removeItem('optiflow_trailers_cache');
+      localStorage.setItem(CACHE_CLEARED_KEY, 'true');
+      console.log('[DataSync] Cleared legacy caches for cloud sync');
+    }
+  }, [licenseId]);
+
   // Force sync all cloud data
   const forceSync = useCallback(async () => {
     if (!isMountedRef.current || !authUserId || !licenseId) return;

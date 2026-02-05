@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useTeam } from '@/hooks/useTeam';
@@ -36,27 +38,17 @@ interface MonthlyWorkingDays {
 }
 
 export default function Forecast() {
-  const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
+  const { trip, vehicle, selectedDriverIds, settings } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
+  
   const { isDirection, isLoading: isTeamLoading } = useTeam();
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
-
-  // Only Direction can access this page
-  if (!isTeamLoading && !isDirection) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-          <Lock className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h2 className="text-xl font-semibold text-foreground">Accès restreint</h2>
-        <p className="text-muted-foreground text-center max-w-md">
-          Le prévisionnel est réservé aux utilisateurs avec le rôle Direction.
-          Contactez votre administrateur pour obtenir l'accès.
-        </p>
-      </div>
-    );
-  }
 
   const [period, setPeriod] = useState<PeriodType>('3');
   const [filterClient, setFilterClient] = useState<string>('all');
@@ -158,6 +150,22 @@ export default function Forecast() {
   }, [forecastData]);
 
   const avgMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
+
+  // Only Direction can access this page - guard AFTER all hooks
+  if (!isTeamLoading && !isDirection) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+          <Lock className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground">Accès restreint</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Le prévisionnel est réservé aux utilisateurs avec le rôle Direction.
+          Contactez votre administrateur pour obtenir l'accès.
+        </p>
+      </div>
+    );
+  }
 
   const toggleCharge = (chargeId: string) => {
     setSelectedChargeIds(prev => 
