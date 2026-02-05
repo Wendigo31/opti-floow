@@ -36,7 +36,7 @@ export function useCloudCharges() {
 
   const fetchCharges = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
-    
+
     if (!authUserId || !licenseId) {
       setCharges(getCachedCharges());
       return;
@@ -46,6 +46,7 @@ export function useCloudCharges() {
     setLoading(true);
 
     try {
+      // Single optimized query - no need for getUser() since we have authUserId
       const { data, error } = await supabase
         .from('user_charges')
         .select('charge_data')

@@ -33,52 +33,46 @@ export function useClients() {
 
   const fetchClients = useCallback(async () => {
     if (fetchInProgressRef.current) return;
-    
+
+    // Use context values instead of separate DB calls
+    if (!authUserId || !contextLicenseId) {
+      return;
+    }
+
     fetchInProgressRef.current = true;
     setLoading(true);
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        fetchInProgressRef.current = false;
-        return;
-      }
-      
-      // Fetch license ID and company members for creator lookup
-      const userLicenseId = await getContextLicenseId();
-      
-      // Fetch members in the same call to avoid state dependency issues
-      let currentMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
-      
-      if (userLicenseId) {
-        const { data: members } = await supabase
+      // Fetch members and clients in PARALLEL for better performance
+      const [membersResult, clientsResult] = await Promise.all([
+        supabase
           .from('company_users')
           .select('user_id, email, display_name, is_active')
-          .eq('license_id', userLicenseId);
-        
-        members?.forEach(m => {
-          if (m.user_id) {
-            currentMembersMap.set(m.user_id, { 
-              email: m.email, 
-              displayName: m.display_name || undefined,
-              isActive: m.is_active ?? true
-            });
-          }
-        });
-        setMembersMap(currentMembersMap);
-      }
+          .eq('license_id', contextLicenseId),
+        supabase
+          .from('clients')
+          .select('*')
+          .eq('license_id', contextLicenseId)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      // Fetch clients (RLS handles company-level access)
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Process members
+      const currentMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
+      membersResult.data?.forEach(m => {
+        if (m.user_id) {
+          currentMembersMap.set(m.user_id, {
+            email: m.email,
+            displayName: m.display_name || undefined,
+            isActive: m.is_active ?? true
+          });
+        }
+      });
+      setMembersMap(currentMembersMap);
 
-      if (clientsError) throw clientsError;
+      if (clientsResult.error) throw clientsResult.error;
 
-      // Map to local format with creator info - use currentMembersMap directly
-      const mappedClients: ClientWithCreator[] = (clientsData || []).map(c => {
+      // Map to local format with creator info
+      const mappedClients: ClientWithCreator[] = (clientsResult.data || []).map(c => {
         const memberInfo = currentMembersMap.get(c.user_id);
         return {
           id: c.id,
@@ -97,7 +91,7 @@ export function useClients() {
           license_id: c.license_id || undefined,
           creator_email: memberInfo?.email,
           creator_display_name: memberInfo?.displayName,
-          is_own: c.user_id === user.id,
+          is_own: c.user_id === authUserId,
           is_former_member: memberInfo ? !memberInfo.isActive : false,
         };
       });
@@ -105,7 +99,7 @@ export function useClients() {
       setClients(mappedClients);
       clientsRef.current = mappedClients;
 
-      // Fetch addresses
+      // Fetch addresses separately (can be done after initial render)
       const clientIds = mappedClients.map(c => c.id);
       if (clientIds.length > 0) {
         const { data: addressesData } = await supabase
@@ -136,7 +130,7 @@ export function useClients() {
       setLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, []); // Remove membersMap dependency to prevent infinite loop
+  }, [authUserId, contextLicenseId]);
 
   // Store fetchClients in ref to avoid subscription churn
   const fetchClientsRef = useRef<() => Promise<void>>();
