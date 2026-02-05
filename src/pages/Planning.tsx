@@ -45,6 +45,18 @@
      vehicles.filter(v => v.isActive && v.type === 'tracteur'),
      [vehicles]
    );
+
+  // Get entries without a vehicle assigned
+  const unassignedEntries = useMemo(() => 
+    entries.filter(e => !e.vehicle_id),
+    [entries]
+  );
+
+  // Check if we have unassigned entries for a specific date
+  const getUnassignedEntriesForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return unassignedEntries.filter(e => e.planning_date === dateStr);
+  };
  
    // Generate week days
    const weekDays = useMemo(() => {
@@ -145,6 +157,16 @@
      const dateStr = format(date, 'yyyy-MM-dd');
      return entries.filter(e => e.vehicle_id === vehicleId && e.planning_date === dateStr);
    };
+
+  // Handle click on unassigned cell
+  const handleUnassignedCellClick = (date: Date) => {
+    if (isSelectionMode) return;
+    setSelectedEntry(null);
+    setNewEntryDefaults({
+      planning_date: format(date, 'yyyy-MM-dd'),
+    });
+    setIsDialogOpen(true);
+  };
  
    // Get client name helper
    const getClientName = (clientId: string | null) => {
@@ -263,21 +285,83 @@
                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
              </div>
            ) : tractions.length === 0 ? (
-             <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-               <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="font-medium text-lg">Aucun tracteur disponible</h3>
-               <p className="text-muted-foreground text-sm mt-1">
-                  Ajoutez des véhicules de type "Tracteur" dans l'onglet Véhicules pour planifier des missions.
-               </p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => window.location.href = '/vehicles'}
-                >
-                  Aller aux Véhicules
-                </Button>
-             </div>
-           ) : (
+            <ScrollArea className="h-full">
+              <div className="min-w-[900px]">
+                {/* Header row with days */}
+                <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                  <div className="p-3 font-medium border-r">
+                    Traction
+                  </div>
+                  {weekDays.map((day, i) => {
+                    const isToday = isSameDay(day, new Date());
+                    return (
+                      <div 
+                        key={i} 
+                        className={`p-3 text-center border-r last:border-r-0 ${isToday ? 'bg-primary/10' : ''}`}
+                      >
+                        <div className="font-medium">
+                          {format(day, 'EEEE', { locale: fr })}
+                        </div>
+                        <div className={`text-sm ${isToday ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                          {format(day, 'd MMM', { locale: fr })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Row for unassigned entries */}
+                <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-orange-500/5">
+                  <div className="p-3 border-r bg-orange-500/10 flex flex-col justify-center">
+                    <div className="font-medium text-orange-600 dark:text-orange-400">
+                      Non assigné
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Sans véhicule
+                    </div>
+                  </div>
+
+                  {weekDays.map((day, i) => {
+                    const cellEntries = getUnassignedEntriesForDate(day);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    return (
+                      <PlanningCell
+                        key={i}
+                        date={day}
+                        entries={cellEntries}
+                        isToday={isToday}
+                        onCellClick={() => handleUnassignedCellClick(day)}
+                        onEntryClick={handleEntryClick}
+                        getClientName={getClientName}
+                        getDriverName={getDriverName}
+                        getRelayDriverName={getRelayDriverName}
+                        isSelectionMode={isSelectionMode}
+                        selectedEntryIds={selectedEntryIds}
+                        onToggleSelection={toggleEntrySelection}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Message to add vehicles */}
+                <div className="p-4 text-center text-muted-foreground border-t">
+                  <p className="text-sm">
+                    Ajoutez des véhicules de type "Tracteur" pour organiser vos missions par véhicule.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => window.location.href = '/vehicles'}
+                  >
+                    Aller aux Véhicules
+                  </Button>
+                </div>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          ) : (
              <ScrollArea className="h-full">
                <div className="min-w-[900px]">
                  {/* Header row with days */}
@@ -343,6 +427,42 @@
                      })}
                    </div>
                  ))}
+
+                {/* Row for unassigned entries at the bottom */}
+                {unassignedEntries.length > 0 && (
+                  <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-orange-500/5">
+                    <div className="p-3 border-r bg-orange-500/10 flex flex-col justify-center">
+                      <div className="font-medium text-orange-600 dark:text-orange-400">
+                        Non assigné
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {unassignedEntries.length} mission(s)
+                      </div>
+                    </div>
+
+                    {weekDays.map((day, i) => {
+                      const cellEntries = getUnassignedEntriesForDate(day);
+                      const isToday = isSameDay(day, new Date());
+                      
+                      return (
+                        <PlanningCell
+                          key={i}
+                          date={day}
+                          entries={cellEntries}
+                          isToday={isToday}
+                          onCellClick={() => handleUnassignedCellClick(day)}
+                          onEntryClick={handleEntryClick}
+                          getClientName={getClientName}
+                          getDriverName={getDriverName}
+                          getRelayDriverName={getRelayDriverName}
+                          isSelectionMode={isSelectionMode}
+                          selectedEntryIds={selectedEntryIds}
+                          onToggleSelection={toggleEntrySelection}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
                </div>
                <ScrollBar orientation="horizontal" />
              </ScrollArea>
