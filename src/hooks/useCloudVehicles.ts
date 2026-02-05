@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Vehicle } from '@/types/vehicle';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 // Local storage key for offline cache
 const CACHE_KEY = 'optiflow_vehicles_cache';
@@ -145,19 +145,16 @@ export function useCloudVehicles() {
 
   const createVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
         return false;
       }
-
-      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_vehicles')
         .insert([{
-          user_id: user.id,
-          license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
           local_id: vehicle.id,
           name: vehicle.name,
           license_plate: vehicle.licensePlate,
@@ -187,11 +184,14 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   const updateVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_vehicles')
@@ -209,7 +209,7 @@ export function useCloudVehicles() {
           vehicle_data: JSON.parse(JSON.stringify(vehicle)),
           synced_at: new Date().toISOString(),
         })
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', vehicle.id);
 
       if (error) throw error;
@@ -226,16 +226,19 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   const deleteVehicle = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_vehicles')
         .delete()
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', id);
 
       if (error) throw error;
@@ -252,7 +255,7 @@ export function useCloudVehicles() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   return {
     vehicles,
