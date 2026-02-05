@@ -7,6 +7,40 @@ let isRevalidating = false;
 
 export type PlanType = 'start' | 'pro' | 'enterprise';
 
+function inferPlanTypeFromCustomFeatures(features?: Partial<LicenseFeatures> | null): PlanType | null {
+  if (!features) return null;
+
+  // ENTERPRISE signals
+  const enterpriseSignals: (keyof LicenseFeatures)[] = [
+    'ai_optimization',
+    'ai_pdf_analysis',
+    'multi_agency',
+    'tms_erp_integration',
+    'multi_users',
+    'unlimited_vehicles',
+    'client_analysis',
+    'smart_quotes',
+  ];
+  if (enterpriseSignals.some((k) => features[k] === true)) return 'enterprise';
+
+  // PRO signals
+  const proSignals: (keyof LicenseFeatures)[] = [
+    'itinerary_planning',
+    'saved_tours',
+    'trip_history',
+    'forecast',
+    'dashboard_analytics',
+    'excel_export',
+    'pdf_export_pro',
+    'auto_pricing_basic',
+    'monthly_tracking',
+    'client_analysis_basic',
+  ];
+  if (proSignals.some((k) => features[k] === true)) return 'pro';
+
+  return null;
+}
+
 // User-specific feature override
 interface UserFeatureOverride {
   feature_key: string;
@@ -178,6 +212,24 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'btn_map_preview',
     'btn_contact_support',
     'section_cost_breakdown',
+    // UI Components - CRUD buttons (START)
+    'btn_add_client',
+    'btn_add_vehicle',
+    'btn_add_driver',
+    'btn_add_charge',
+    'btn_add_trailer',
+    'btn_edit_client',
+    'btn_delete_client',
+    'btn_edit_vehicle',
+    'btn_delete_vehicle',
+    'btn_edit_driver',
+    'btn_delete_driver',
+    'btn_edit_charge',
+    'btn_delete_charge',
+    // UI Components - Stats sections (START)
+    'section_client_stats',
+    'section_vehicle_stats',
+    'section_driver_stats',
   ],
   pro: [
     // START features included
@@ -186,6 +238,24 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'cost_analysis_basic',
     'pdf_export_basic',
     'fleet_basic',
+    // UI Components - CRUD buttons (START)
+    'btn_add_client',
+    'btn_add_vehicle',
+    'btn_add_driver',
+    'btn_add_charge',
+    'btn_add_trailer',
+    'btn_edit_client',
+    'btn_delete_client',
+    'btn_edit_vehicle',
+    'btn_delete_vehicle',
+    'btn_edit_driver',
+    'btn_delete_driver',
+    'btn_edit_charge',
+    'btn_delete_charge',
+    // UI Components - Stats sections (START)
+    'section_client_stats',
+    'section_vehicle_stats',
+    'section_driver_stats',
     // PRO features unlocked
     'itinerary_planning',
     'saved_tours',
@@ -235,6 +305,9 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'section_cost_breakdown',
     'section_margin_alerts',
     'section_charts',
+    // UI Components - Add/Create buttons (PRO)
+    'btn_add_trip',
+    'btn_add_quote',
   ],
   enterprise: [
     // All PRO features
@@ -243,6 +316,24 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'cost_analysis_basic',
     'pdf_export_basic',
     'fleet_basic',
+    // UI Components - CRUD buttons (START)
+    'btn_add_client',
+    'btn_add_vehicle',
+    'btn_add_driver',
+    'btn_add_charge',
+    'btn_add_trailer',
+    'btn_edit_client',
+    'btn_delete_client',
+    'btn_edit_vehicle',
+    'btn_delete_vehicle',
+    'btn_edit_driver',
+    'btn_delete_driver',
+    'btn_edit_charge',
+    'btn_delete_charge',
+    // UI Components - Stats sections (START)
+    'section_client_stats',
+    'section_vehicle_stats',
+    'section_driver_stats',
     'itinerary_planning',
     'saved_tours',
     'trip_history',
@@ -303,6 +394,9 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'section_cost_breakdown',
     'section_margin_alerts',
     'section_charts',
+    // UI Components - Add/Create buttons (PRO)
+    'btn_add_trip',
+    'btn_add_quote',
   ],
 };
 
@@ -877,7 +971,8 @@ export function useLicense(): UseLicenseReturn {
     }
   }, []);
 
-  const planType: PlanType = licenseData?.planType || 'start';
+  const planType: PlanType =
+    licenseData?.planType || inferPlanTypeFromCustomFeatures(licenseData?.customFeatures) || 'start';
 
   // Check if a feature is enabled (user overrides > custom features > plan defaults)
   const hasFeature = useCallback((feature: FeatureKey): boolean => {
