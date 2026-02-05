@@ -120,6 +120,13 @@ export function useCloudVehicles() {
     };
   }, [licenseId]);
 
+  // Auto-fetch when licenseId becomes available
+  useEffect(() => {
+    if (licenseId && authUserId) {
+      fetchVehicles();
+    }
+  }, [licenseId, authUserId, fetchVehicles]);
+
   const createVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

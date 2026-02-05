@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { LicenseProvider } from "./context/LicenseContext";
+import { CloudDataProvider } from "./context/CloudDataContext";
 import { MainLayout } from "./components/layout/MainLayout";
 import { UpdateNotification } from "./components/layout/UpdateNotification";
 import { DataSyncProvider } from "./components/DataSyncProvider";
@@ -88,37 +89,39 @@ function LoadingScreen() {
 function LicensedAppContent() {
   return (
     <LicenseProvider>
-      <DataSyncProvider>
-        <CloudSessionProvider>
-          <RealtimeNotificationsWrapper>
-            <MainLayout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/calculator" element={<CalculatorWithHistory />} />
-                <Route path="/itinerary" element={<Itinerary />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/forecast" element={<Forecast />} />
-                <Route path="/history" element={<CalculatorWithHistory />} />
-                <Route path="/clients" element={<Clients />} />
-                <Route path="/drivers" element={<Drivers />} />
-                <Route path="/vehicles" element={<Vehicles />} />
-                <Route path="/charges" element={<Charges />} />
-                {/* Pricing page removed */}
-                
-                <Route path="/ai-analysis" element={<AIAnalysis />} />
-                <Route path="/vehicle-reports" element={<VehicleReports />} />
-                <Route path="/tours" element={<Tours />} />
-                 <Route path="/planning" element={<Planning />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/my-restrictions" element={<MyRestrictions />} />
-                <Route path="/team" element={<Team />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </MainLayout>
-          </RealtimeNotificationsWrapper>
-        </CloudSessionProvider>
-      </DataSyncProvider>
+      <CloudDataProvider>
+        <DataSyncProvider>
+          <CloudSessionProvider>
+            <RealtimeNotificationsWrapper>
+              <MainLayout>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/calculator" element={<CalculatorWithHistory />} />
+                  <Route path="/itinerary" element={<Itinerary />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/forecast" element={<Forecast />} />
+                  <Route path="/history" element={<CalculatorWithHistory />} />
+                  <Route path="/clients" element={<Clients />} />
+                  <Route path="/drivers" element={<Drivers />} />
+                  <Route path="/vehicles" element={<Vehicles />} />
+                  <Route path="/charges" element={<Charges />} />
+                  {/* Pricing page removed */}
+                  
+                  <Route path="/ai-analysis" element={<AIAnalysis />} />
+                  <Route path="/vehicle-reports" element={<VehicleReports />} />
+                  <Route path="/tours" element={<Tours />} />
+                  <Route path="/planning" element={<Planning />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/my-restrictions" element={<MyRestrictions />} />
+                  <Route path="/team" element={<Team />} />
+                  <Route path="/install" element={<Install />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </MainLayout>
+            </RealtimeNotificationsWrapper>
+          </CloudSessionProvider>
+        </DataSyncProvider>
+      </CloudDataProvider>
     </LicenseProvider>
   );
 }

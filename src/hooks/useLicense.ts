@@ -555,87 +555,91 @@ export function useLicense(): UseLicenseReturn {
               setLicenseData(data);
               setIsLicensed(true);
               broadcastLicenseUpdate(data);
-              setIsLoading(false);
-              return;
             }
 
-            const { data: checkResponse, error: checkError } = await supabase.functions.invoke('validate-license', {
-              body: { licenseCode: data.code, email: data.email, action: 'check' },
-            });
+            // Only proceed with check if not in re-validation
+            if (!isRevalidating) {
+              const { data: checkResponse, error: checkError } = await supabase.functions.invoke('validate-license', {
+                body: { licenseCode: data.code, email: data.email, action: 'check' },
+              });
 
-            if (checkError) {
-              console.error('License check error:', checkError);
-              // Network error - fall back to cache
-              if (cachedLicense) {
-                const expiresAt = new Date(cachedLicense.expiresAt);
-                if (expiresAt > new Date()) {
-                  console.log('Server error, using cached license');
-                  setLicenseData(cachedLicense.data);
-                  setIsLicensed(true);
-                  broadcastLicenseUpdate(cachedLicense.data);
-                  setIsLoading(false);
-                  return;
+              if (checkError) {
+                console.error('License check error:', checkError);
+                // Network error - fall back to cache
+                if (cachedLicense) {
+                  const expiresAt = new Date(cachedLicense.expiresAt);
+                  if (expiresAt > new Date()) {
+                    console.log('Server error, using cached license');
+                    setLicenseData(cachedLicense.data);
+                    setIsLicensed(true);
+                    broadcastLicenseUpdate(cachedLicense.data);
+                  }
                 }
+                // Keep the stored license as the source of truth if the server is temporarily unreachable
+                setLicenseData(data);
+                setIsLicensed(true);
+                broadcastLicenseUpdate(data);
+              } else if (checkResponse?.valid) {
+                // Update license data with fresh info from edge function
+                // IMPORTANT: Keep existing planType if server doesn't return one
+                const updatedData: LicenseData = {
+                  ...data,
+                  planType: checkResponse.licenseData?.planType || data.planType || 'start',
+                  firstName: checkResponse.licenseData?.firstName || undefined,
+                  lastName: checkResponse.licenseData?.lastName || undefined,
+                  companyName: checkResponse.licenseData?.companyName || undefined,
+                  siren: checkResponse.licenseData?.siren || undefined,
+                  companyStatus: checkResponse.licenseData?.companyStatus || undefined,
+                  employeeCount: checkResponse.licenseData?.employeeCount || undefined,
+                  address: checkResponse.licenseData?.address || undefined,
+                  city: checkResponse.licenseData?.city || undefined,
+                  postalCode: checkResponse.licenseData?.postalCode || undefined,
+                  // Admin-defined limits
+                  maxDrivers: checkResponse.licenseData?.maxDrivers ?? null,
+                  maxClients: checkResponse.licenseData?.maxClients ?? null,
+                  maxDailyCharges: checkResponse.licenseData?.maxDailyCharges ?? null,
+                  maxMonthlyCharges: checkResponse.licenseData?.maxMonthlyCharges ?? null,
+                  maxYearlyCharges: checkResponse.licenseData?.maxYearlyCharges ?? null,
+                  // Custom features from admin
+                  customFeatures: checkResponse.customFeatures || null,
+                  // User-specific feature overrides
+                  userFeatureOverrides: checkResponse.userFeatureOverrides || null,
+                  // Visibility settings
+                  showUserInfo: checkResponse.licenseData?.showUserInfo ?? true,
+                  showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
+                  showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
+                  showLicenseInfo: checkResponse.licenseData?.showLicenseInfo ?? true,
+                };
+                
+                // Update storage and cache
+                localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedData));
+                
+                // Update cache with new expiry
+                const now = new Date();
+                const expiresAt = new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+                const newCache: CachedLicense = {
+                  data: updatedData,
+                  lastValidated: now.toISOString(),
+                  expiresAt: expiresAt.toISOString(),
+                };
+                localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
+                
+                setLicenseData(updatedData);
+                setIsLicensed(true);
+                broadcastLicenseUpdate(updatedData);
+              } else {
+                // License deactivated or not found
+                localStorage.removeItem(LICENSE_STORAGE_KEY);
+                localStorage.removeItem(LICENSE_CACHE_KEY);
+                setIsLicensed(false);
+                setLicenseData(null);
+                broadcastLicenseUpdate(null);
               }
-              // Keep the stored license as the source of truth if the server is temporarily unreachable
+            } else {
+              // isRevalidating path - we already set state above, nothing more to do
               setLicenseData(data);
               setIsLicensed(true);
               broadcastLicenseUpdate(data);
-            } else if (checkResponse?.valid) {
-              // Update license data with fresh info from edge function
-              // IMPORTANT: Keep existing planType if server doesn't return one
-              const updatedData: LicenseData = {
-                ...data,
-                planType: checkResponse.licenseData?.planType || data.planType || 'start',
-                firstName: checkResponse.licenseData?.firstName || undefined,
-                lastName: checkResponse.licenseData?.lastName || undefined,
-                companyName: checkResponse.licenseData?.companyName || undefined,
-                siren: checkResponse.licenseData?.siren || undefined,
-                companyStatus: checkResponse.licenseData?.companyStatus || undefined,
-                employeeCount: checkResponse.licenseData?.employeeCount || undefined,
-                address: checkResponse.licenseData?.address || undefined,
-                city: checkResponse.licenseData?.city || undefined,
-                postalCode: checkResponse.licenseData?.postalCode || undefined,
-                // Admin-defined limits
-                maxDrivers: checkResponse.licenseData?.maxDrivers ?? null,
-                maxClients: checkResponse.licenseData?.maxClients ?? null,
-                maxDailyCharges: checkResponse.licenseData?.maxDailyCharges ?? null,
-                maxMonthlyCharges: checkResponse.licenseData?.maxMonthlyCharges ?? null,
-                maxYearlyCharges: checkResponse.licenseData?.maxYearlyCharges ?? null,
-                // Custom features from admin
-                customFeatures: checkResponse.customFeatures || null,
-                // User-specific feature overrides
-                userFeatureOverrides: checkResponse.userFeatureOverrides || null,
-                // Visibility settings
-                showUserInfo: checkResponse.licenseData?.showUserInfo ?? true,
-                showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
-                showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
-                showLicenseInfo: checkResponse.licenseData?.showLicenseInfo ?? true,
-              };
-              
-              // Update storage and cache
-              localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedData));
-              
-              // Update cache with new expiry
-              const now = new Date();
-              const expiresAt = new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
-              const newCache: CachedLicense = {
-                data: updatedData,
-                lastValidated: now.toISOString(),
-                expiresAt: expiresAt.toISOString(),
-              };
-              localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
-              
-              setLicenseData(updatedData);
-              setIsLicensed(true);
-              broadcastLicenseUpdate(updatedData);
-            } else {
-              // License deactivated or not found
-              localStorage.removeItem(LICENSE_STORAGE_KEY);
-              localStorage.removeItem(LICENSE_CACHE_KEY);
-              setIsLicensed(false);
-              setLicenseData(null);
-              broadcastLicenseUpdate(null);
             }
           } catch (networkError) {
             console.error('Network error during license check:', networkError);

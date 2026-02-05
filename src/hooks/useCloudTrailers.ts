@@ -113,6 +113,13 @@ export function useCloudTrailers() {
     };
   }, [licenseId]);
 
+  // Auto-fetch when licenseId becomes available
+  useEffect(() => {
+    if (licenseId && authUserId) {
+      fetchTrailers();
+    }
+  }, [licenseId, authUserId, fetchTrailers]);
+
   const createTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

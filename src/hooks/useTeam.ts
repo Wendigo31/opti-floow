@@ -34,7 +34,7 @@ interface UseTeamReturn {
 }
 
 export function useTeam(): UseTeamReturn {
-  const { planType: validatedPlanType, licenseData, isLoading: isLicenseLoading } = useLicense();
+  const { planType: validatedPlanType, isLoading: isLicenseLoading } = useLicense();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
@@ -49,8 +49,9 @@ export function useTeam(): UseTeamReturn {
 
   const licensePlanType: PlanType = validatedPlanType || 'start';
   const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
-  
-  const isLoading = isLicenseLoading || isTeamLoading;
+
+  // Only consider team loading, license loading shouldn't block team page
+  const isLoading = isTeamLoading;
 
   const maxUsers = licenseMaxUsers;
   const currentUserCount = members.filter(m => m.is_active).length;
