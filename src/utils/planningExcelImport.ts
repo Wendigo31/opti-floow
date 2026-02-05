@@ -313,7 +313,7 @@ function getDayIdxFromHeader(header: string): number | null {
    driverMap: Map<string, string>, // driver name -> driver id
   defaultVehicleId: string | null,
    startDate: string
-): (Partial<TourInput> & { sector_manager?: string | null })[] {
+): (Partial<TourInput> & { sector_manager?: string | null; day_driver_ids?: Record<number, string> })[] {
    return parsedEntries.map(entry => {
      // Try to match client
      let client_id: string | null = null;
@@ -339,6 +339,19 @@ function getDayIdxFromHeader(header: string): number | null {
        }
      }
      
+    // Match drivers per day
+    const day_driver_ids: Record<number, string> = {};
+    for (const [dayIdx, driverName] of Object.entries(entry.day_drivers)) {
+      if (!driverName) continue;
+      const driverLower = driverName.toLowerCase();
+      for (const [name, id] of driverMap.entries()) {
+        if (name.toLowerCase().includes(driverLower) || driverLower.includes(name.toLowerCase())) {
+          day_driver_ids[Number(dayIdx)] = id;
+          break;
+        }
+      }
+    }
+
      return {
        tour_name: entry.ligne || entry.client || 'Tournée importée',
       vehicle_id: defaultVehicleId || undefined,
@@ -353,6 +366,7 @@ function getDayIdxFromHeader(header: string): number | null {
        destination_address: entry.destination_address || null,
        mission_order: entry.mission_order || null,
       sector_manager: entry.sector_manager,
+      day_driver_ids: Object.keys(day_driver_ids).length > 0 ? day_driver_ids : undefined,
      };
    });
  }
