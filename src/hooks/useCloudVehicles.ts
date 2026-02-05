@@ -33,6 +33,10 @@ export function useCloudVehicles() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fetchInProgressRef = useRef(false);
 
+  // Keep latest state in ref to avoid stale closures in realtime handlers
+  const vehiclesRef = useRef<Vehicle[]>(vehicles);
+  useEffect(() => { vehiclesRef.current = vehicles; }, [vehicles]);
+
   const fetchVehicles = useCallback(async (): Promise<void> => {
     // Prevent concurrent fetches
     if (fetchInProgressRef.current) return;
@@ -96,6 +100,7 @@ export function useCloudVehicles() {
                 const updated = exists 
                   ? prev.map(v => v.id === vehicleData.id ? vehicleData : v)
                   : [vehicleData, ...prev];
+                vehiclesRef.current = updated;
                 setCachedVehicles(updated);
                 return updated;
               });
@@ -104,13 +109,19 @@ export function useCloudVehicles() {
             const localId = (payload.old as any).local_id;
             setVehicles(prev => {
               const updated = prev.filter(v => v.id !== localId);
+              vehiclesRef.current = updated;
               setCachedVehicles(updated);
               return updated;
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // After (re-)subscribe, reconcile any missed events
+        if (status === 'SUBSCRIBED' && authUserId) {
+          void fetchVehicles();
+        }
+      });
 
     return () => {
       if (channelRef.current) {
@@ -118,7 +129,7 @@ export function useCloudVehicles() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [licenseId, authUserId, fetchVehicles]);
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {

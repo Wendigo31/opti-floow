@@ -30,6 +30,10 @@ export function useCloudCharges() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fetchInProgressRef = useRef(false);
 
+  // Keep latest state in ref for stable realtime handlers
+  const chargesRef = useRef<FixedCharge[]>(charges);
+  useEffect(() => { chargesRef.current = charges; }, [charges]);
+
   const fetchCharges = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
     
@@ -89,6 +93,7 @@ export function useCloudCharges() {
               setCharges(prev => {
                 const exists = prev.find(c => c.id === data.id);
                 const updated = exists ? prev.map(c => c.id === data.id ? data : c) : [data, ...prev];
+                chargesRef.current = updated;
                 setCachedCharges(updated);
                 return updated;
               });
@@ -97,13 +102,18 @@ export function useCloudCharges() {
             const localId = (payload.old as any).local_id;
             setCharges(prev => {
               const updated = prev.filter(c => c.id !== localId);
+              chargesRef.current = updated;
               setCachedCharges(updated);
               return updated;
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED' && authUserId) {
+          void fetchCharges();
+        }
+      });
 
     return () => {
       if (channelRef.current) {
@@ -111,7 +121,7 @@ export function useCloudCharges() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [licenseId, authUserId, fetchCharges]);
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {

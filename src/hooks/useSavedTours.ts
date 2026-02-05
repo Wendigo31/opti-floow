@@ -199,6 +199,10 @@ export function useSavedTours() {
       )
       .subscribe((status) => {
         console.log('[Realtime] saved_tours subscription:', status);
+        // After (re-)subscribe, reconcile any missed events
+        if (status === 'SUBSCRIBED') {
+          void fetchTours();
+        }
       });
 
     return () => {
@@ -207,7 +211,7 @@ export function useSavedTours() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId]);
+  }, [licenseId, authUserId, fetchTours]);
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     const { data: { user } } = await supabase.auth.getUser();
