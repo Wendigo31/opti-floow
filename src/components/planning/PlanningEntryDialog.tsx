@@ -183,13 +183,13 @@
                <Label>Conducteur</Label>
                <Select
                  value={formData.driver_id || ''}
-                 onValueChange={(value) => setFormData(prev => ({ ...prev, driver_id: value || null }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, driver_id: value === 'none' ? null : (value || null) }))}
                >
                  <SelectTrigger>
                    <SelectValue placeholder="Sélectionner un conducteur" />
                  </SelectTrigger>
                  <SelectContent>
-                   <SelectItem value="">Aucun</SelectItem>
+                    <SelectItem value="none">Aucun</SelectItem>
                    {drivers.map((driver) => (
                      <SelectItem key={driver.id} value={driver.id}>
                        {driver.name}
@@ -203,13 +203,13 @@
                <Label>Client</Label>
                <Select
                  value={formData.client_id || ''}
-                 onValueChange={(value) => setFormData(prev => ({ ...prev, client_id: value || null }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, client_id: value === 'none' ? null : (value || null) }))}
                >
                  <SelectTrigger>
                    <SelectValue placeholder="Sélectionner un client" />
                  </SelectTrigger>
                  <SelectContent>
-                   <SelectItem value="">Aucun</SelectItem>
+                    <SelectItem value="none">Aucun</SelectItem>
                    {clients.map((client) => (
                      <SelectItem key={client.id} value={client.id}>
                        {client.name} {client.company && `(${client.company})`}
@@ -292,13 +292,13 @@
                    <Label>Conducteur relais</Label>
                    <Select
                      value={formData.relay_driver_id || ''}
-                     onValueChange={(value) => setFormData(prev => ({ ...prev, relay_driver_id: value || null }))}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, relay_driver_id: value === 'none' ? null : (value || null) }))}
                    >
                      <SelectTrigger>
                        <SelectValue placeholder="2ème conducteur" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="">Aucun</SelectItem>
+                        <SelectItem value="none">Aucun</SelectItem>
                        {drivers.filter(d => d.id !== formData.driver_id).map((driver) => (
                          <SelectItem key={driver.id} value={driver.id}>
                            {driver.name}
