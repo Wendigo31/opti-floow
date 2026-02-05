@@ -639,8 +639,25 @@ export default function Itinerary() {
       let highwayError: string | null = null;
       let nationalError: string | null = null;
 
-      try { highway = await calculateRoute(false); setHighwayRoute(highway); } catch (e) { highwayError = e instanceof Error ? e.message : 'Erreur'; }
-      try { national = await calculateRoute(true); setNationalRoute(national); } catch (e) { nationalError = e instanceof Error ? e.message : 'Erreur'; }
+      // Run highway + national in parallel for speed
+      const [hwResult, natResult] = await Promise.allSettled([
+        calculateRoute(false),
+        calculateRoute(true),
+      ]);
+
+      if (hwResult.status === 'fulfilled') {
+        highway = hwResult.value;
+        setHighwayRoute(highway);
+      } else {
+        highwayError = hwResult.reason instanceof Error ? hwResult.reason.message : 'Erreur';
+      }
+
+      if (natResult.status === 'fulfilled') {
+        national = natResult.value;
+        setNationalRoute(national);
+      } else {
+        nationalError = natResult.reason instanceof Error ? natResult.reason.message : 'Erreur';
+      }
 
       if (!highway && !national) throw new Error(`Impossible de calculer (${highwayError || 'erreur'} / ${nationalError || 'erreur'})`);
       if (highway && !national && nationalError) setError(`Nationale indisponible: ${nationalError}`);
