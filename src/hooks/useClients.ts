@@ -5,17 +5,7 @@ import { toast } from 'sonner';
 import type { LocalClient, LocalClientAddress } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-
-// Helper to wait for license context to be ready
-async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    const vals = getValues();
-    if (vals.authUserId && vals.licenseId) return vals;
-    await new Promise(r => setTimeout(r, 100));
-  }
-  return getValues();
-}
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 // Extended client with creator info
 export interface ClientWithCreator extends LocalClient {
@@ -26,8 +16,6 @@ export interface ClientWithCreator extends LocalClient {
   is_own?: boolean;
   is_former_member?: boolean;
 }
-
- import { useLicenseContext } from '@/context/LicenseContext';
 
 export function useClients() {
   const { licenseId: contextLicenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
@@ -153,19 +141,23 @@ export function useClients() {
     options?: { silent?: boolean }
   ): Promise<ClientWithCreator | null> => {
     try {
-      // Wait briefly for context to be ready (handles race conditions on page load)
+      // Use context values, fallback to direct auth if needed
       let uid = authUserId;
       let lid = contextLicenseId;
+      
       if (!uid || !lid) {
-        const ctx = await waitForContext(() => ({ authUserId, licenseId: contextLicenseId }), 3000);
-        uid = ctx.authUserId;
-        lid = ctx.licenseId;
+        // Fallback: fetch directly from auth
+        const { data: { user } } = await supabase.auth.getUser();
+        const fallbackLicenseId = await getLicenseId();
+        uid = user?.id || null;
+        lid = fallbackLicenseId;
       }
+      
       if (!uid || !lid) {
         if (!options?.silent) {
-          toast.error('Session non initialisée. Veuillez recharger la page.');
+          toast.error('Veuillez vous reconnecter');
         }
-        console.error('[useClients] createClient: no authUserId or licenseId after wait');
+        console.error('[useClients] createClient: no authUserId or licenseId');
         return null;
       }
 
