@@ -655,10 +655,10 @@ export default function Drivers() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="icon" variant="ghost" onClick={() => handleEdit(driver, isInterim)}>
+              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEdit(driver, isInterim); }}>
                 <Edit2 className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => handleDelete(driver.id, isInterim)}>
+              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleDelete(driver.id, isInterim); }}>
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
             </div>
@@ -911,10 +911,10 @@ export default function Drivers() {
                 />
               </TooltipProvider>
             )}
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(driver, isInterim)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(driver, isInterim); }}>
               <Edit2 className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(driver.id, isInterim)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDelete(driver.id, isInterim); }}>
               <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
           </div>
