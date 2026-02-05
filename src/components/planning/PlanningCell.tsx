@@ -144,6 +144,13 @@
                    📋 {entry.mission_order}
                  </div>
                )}
+
+                {/* Notes preview (used for day-cell placeholders from Excel) */}
+                {!isSelectionMode && !entry.mission_order && entry.notes && (
+                  <div className="mt-1 text-[10px] opacity-70 line-clamp-2" title={entry.notes}>
+                    📝 {entry.notes}
+                  </div>
+                )}
                
                {/* Addresses preview */}
                {!isSelectionMode && (entry.origin_address || entry.destination_address) && (

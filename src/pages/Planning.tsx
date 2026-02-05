@@ -37,7 +37,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
    const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
    const [isSelectionMode, setIsSelectionMode] = useState(false);
  
-  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, duplicateToNextWeeks, applyVehicleToTour } = usePlanning();
+  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, deleteTourInWeek, duplicateToNextWeeks, applyVehicleToTour } = usePlanning();
    const { vehicles, fetchVehicles } = useCloudVehicles();
    const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
    const { clients } = useClients();
@@ -514,6 +514,9 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
          onSave={handleSave}
          onDelete={selectedEntry ? handleDelete : undefined}
         onApplyVehicleToTour={applyVehicleToTour}
+          onDeleteTourInWeek={selectedEntry?.tour_name ? (tourName) => {
+            void deleteTourInWeek(tourName, currentWeekStart);
+          } : undefined}
        />
        
        <AddTourDialog
