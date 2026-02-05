@@ -6,22 +6,6 @@
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 
-function withTimeout<T>(promise: PromiseLike<T>, ms: number, timeoutMessage: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(timeoutMessage)), ms);
-    promise.then(
-      (value) => {
-        window.clearTimeout(timer);
-        resolve(value);
-      },
-      (err) => {
-        window.clearTimeout(timer);
-        reject(err);
-      }
-    );
-  });
-}
-
 export interface ExcelTourInput {
   tour_name: string;
   vehicle_id?: string | null;
@@ -485,19 +469,16 @@ export interface ExcelTourInput {
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
 
-            // Safety timeout: prevents the UI from spinning forever if a request hangs.
-            const { error } = await withTimeout(
-              supabase.from('planning_entries').insert(chunk),
-              60_000,
-              "Timeout lors de l'import (requête trop longue)."
-            );
+            // Execute the insert
+            const { error } = await supabase.from('planning_entries').insert(chunk);
             if (error) throw error;
           }
 
           return true;
         } catch (error) {
           console.error('Error importing planning from Excel:', error);
-          toast.error("Erreur lors de l'import Excel");
+          const errMsg = error instanceof Error ? error.message : "Erreur lors de l'import Excel";
+          toast.error(errMsg);
           return false;
         } finally {
           suspendRealtimeRef.current = false;
