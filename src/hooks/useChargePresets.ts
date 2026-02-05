@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { FixedCharge } from '@/types';
 import { toast } from 'sonner';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 export interface ChargePreset {
   id: string;
@@ -14,39 +15,20 @@ export interface ChargePreset {
   license_id?: string;
 }
 
-// Helper to get user's license_id
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-    
-  return data?.license_id || null;
-}
-
 export function useChargePresets() {
+  const { licenseId, authUserId } = useLicenseContext();
   const [presets, setPresets] = useState<ChargePreset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-
-  // Fetch license ID on mount
-  useEffect(() => {
-    getUserLicenseId().then(setLicenseId);
-  }, []);
 
   const fetchPresets = useCallback(async () => {
+    if (!authUserId) {
+      setPresets([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setPresets([]);
-        return;
-      }
 
       const { data, error } = await supabase
         .from('charge_presets')
@@ -73,11 +55,13 @@ export function useChargePresets() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authUserId]);
 
   useEffect(() => {
-    fetchPresets();
-  }, [fetchPresets]);
+    if (authUserId) {
+      fetchPresets();
+    }
+  }, [authUserId, fetchPresets]);
 
   // Subscribe to realtime changes
   useEffect(() => {
@@ -103,20 +87,17 @@ export function useChargePresets() {
 
   const createPreset = useCallback(async (name: string, charges: FixedCharge[], description?: string): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
         return false;
       }
-
-      const currentLicenseId = await getUserLicenseId();
 
       const insertData = {
         name,
         description: description || null,
         charges: charges as unknown as Record<string, unknown>[],
-        created_by: user.id,
-        license_id: currentLicenseId,
+        created_by: authUserId,
+        license_id: licenseId,
       };
 
       const { error } = await supabase
@@ -133,7 +114,7 @@ export function useChargePresets() {
       toast.error('Erreur lors de la création du preset');
       return false;
     }
-  }, [fetchPresets]);
+  }, [authUserId, licenseId, fetchPresets]);
 
   const updatePreset = useCallback(async (id: string, updates: Partial<Pick<ChargePreset, 'name' | 'description' | 'charges'>>): Promise<boolean> => {
     try {

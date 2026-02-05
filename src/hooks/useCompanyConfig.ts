@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 export type ConfigType = 'license_cache' | 'sync_state' | 'user_preferences';
 
@@ -28,42 +29,32 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
   configType,
   defaultValue = {} as T,
 }: UseCompanyConfigOptions) {
+  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
   const [config, setConfig] = useState<T>(defaultValue as T);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(1);
   const configIdRef = useRef<string | null>(null);
-  const licenseIdRef = useRef<string | null>(null);
+  const licenseIdRef = useRef<string | null>(contextLicenseId);
+
+  // Sync licenseIdRef from context
+  useEffect(() => {
+    licenseIdRef.current = contextLicenseId;
+  }, [contextLicenseId]);
 
   // Fetch config from cloud
   const fetchConfig = useCallback(async () => {
+    if (!authUserId || !contextLicenseId) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Get user's license_id
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('license_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!companyUser?.license_id) {
-        setIsLoading(false);
-        return;
-      }
-
-      licenseIdRef.current = companyUser.license_id;
-
       // Fetch config for this license and type
       const { data, error: fetchError } = await supabase
         .from('company_config')
         .select('*')
-        .eq('license_id', companyUser.license_id)
+        .eq('license_id', contextLicenseId)
         .eq('config_type', configType)
         .maybeSingle();
 
@@ -82,28 +73,27 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
     } finally {
       setIsLoading(false);
     }
-  }, [configType]);
+  }, [authUserId, contextLicenseId, configType]);
 
   // Save config to cloud
   const saveConfig = useCallback(async (newConfig: T | ((prev: T) => T)) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !licenseIdRef.current) {
-        console.warn('Cannot save config: no user or license');
-        return false;
-      }
+    if (!authUserId || !contextLicenseId) {
+      console.warn('Cannot save config: no user or license');
+      return false;
+    }
 
+    try {
       const resolvedConfig = typeof newConfig === 'function' 
         ? newConfig(config) 
         : newConfig;
 
       // Upsert config - use type assertion for Supabase types
       const upsertPayload = {
-        license_id: licenseIdRef.current,
+        license_id: contextLicenseId,
         config_type: configType,
         config_data: resolvedConfig,
         version: version + 1,
-        updated_by: user.id,
+        updated_by: authUserId,
         updated_at: new Date().toISOString(),
       } as any;
 
@@ -150,12 +140,14 @@ export function useCompanyConfig<T extends Record<string, unknown>>({
       setError(err.message);
       return false;
     }
-  }, [config, configType, version]);
+  }, [authUserId, contextLicenseId, config, configType, version]);
 
   // Initial fetch
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    if (authUserId && contextLicenseId) {
+      fetchConfig();
+    }
+  }, [authUserId, contextLicenseId, fetchConfig]);
 
   // Subscribe to realtime updates - use ref to avoid version dependency loop
   const versionRef = useRef(version);

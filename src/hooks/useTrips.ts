@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLicenseContext, getLicenseId as getContextLicenseId } from '@/context/LicenseContext';
+import { useLicenseContext } from '@/context/LicenseContext';
 import { toast } from 'sonner';
 import type { LocalTrip } from '@/types/local';
-import { generateId } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -21,17 +20,15 @@ export function useTrips() {
   const fetchTrips = useCallback(async () => {
     if (fetchInProgressRef.current) return;
     
+    if (!authUserId) {
+      setLoading(false);
+      return;
+    }
+
     fetchInProgressRef.current = true;
     setLoading(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        fetchInProgressRef.current = false;
-        return;
-      }
-
       // Fetch trips (RLS handles company-level access)
       const { data, error } = await supabase
         .from('trips')
@@ -79,7 +76,7 @@ export function useTrips() {
       setLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, []);
+  }, [authUserId]);
 
   // Store fetchTrips in ref to avoid subscription churn
   const fetchTripsRef = useRef<() => Promise<void>>();
@@ -87,19 +84,16 @@ export function useTrips() {
 
   const createTrip = useCallback(async (input: Omit<LocalTrip, 'id' | 'created_at' | 'updated_at'>): Promise<LocalTrip | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
         return null;
       }
-
-      const currentLicenseId = await getContextLicenseId();
 
       const { data, error } = await supabase
         .from('trips')
         .insert({
-          user_id: user.id,
-          license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
           client_id: input.client_id,
           origin_address: input.origin_address,
           destination_address: input.destination_address,
@@ -169,7 +163,7 @@ export function useTrips() {
       toast.error('Erreur lors de l\'enregistrement');
       return null;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   const updateTrip = useCallback(async (id: string, updates: Partial<LocalTrip>): Promise<boolean> => {
     try {

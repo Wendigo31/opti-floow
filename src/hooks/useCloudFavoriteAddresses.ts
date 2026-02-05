@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 export interface CloudFavoriteAddress {
   id: string;
@@ -18,40 +19,37 @@ export interface CloudFavoriteAddress {
 }
 
 export function useCloudFavoriteAddresses() {
+  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
   const [favorites, setFavorites] = useState<CloudFavoriteAddress[]>([]);
   const [loading, setLoading] = useState(true);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [licenseId, setLicenseId] = useState<string | null>(contextLicenseId);
+  const [userId, setUserId] = useState<string | null>(authUserId);
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Get user and license info
+  // Sync from context
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      setUserId(user.id);
-      setUserDisplayName(user.email || null);
+    setLicenseId(contextLicenseId);
+    setUserId(authUserId);
+  }, [contextLicenseId, authUserId]);
 
-      // Get license_id from company_users
+  // Get display name for current user
+  useEffect(() => {
+    if (!authUserId) return;
+
+    const fetchDisplayName = async () => {
       const { data: companyUser } = await supabase
         .from('company_users')
-        .select('license_id, display_name')
-        .eq('user_id', user.id)
+        .select('display_name, email')
+        .eq('user_id', authUserId)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (companyUser) {
-        setLicenseId(companyUser.license_id);
-        if (companyUser.display_name) {
-          setUserDisplayName(companyUser.display_name);
-        }
-      }
+      setUserDisplayName(companyUser?.display_name || companyUser?.email || null);
     };
 
-    fetchUserInfo();
-  }, []);
+    fetchDisplayName();
+  }, [authUserId]);
 
   const fetchFavorites = useCallback(async () => {
     if (!licenseId) {

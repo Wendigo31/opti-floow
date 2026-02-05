@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Trailer } from '@/types/trailer';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 const CACHE_KEY = 'optiflow_trailers_cache';
 
@@ -137,19 +137,16 @@ export function useCloudTrailers() {
 
   const createTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      if (!authUserId || !licenseId) {
+        toast.error('Session en cours de chargement...');
         return false;
       }
-
-      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_trailers')
         .insert([{
-          user_id: user.id,
-          license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
           local_id: trailer.id,
           name: trailer.name,
           license_plate: trailer.licensePlate,
@@ -176,11 +173,14 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   const updateTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_trailers')
@@ -196,7 +196,7 @@ export function useCloudTrailers() {
           trailer_data: JSON.parse(JSON.stringify(trailer)),
           synced_at: new Date().toISOString(),
         })
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', trailer.id);
 
       if (error) throw error;
@@ -213,16 +213,19 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   const deleteTrailer = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const currentLicenseId = await getLicenseId();
+      if (!licenseId) {
+        toast.error('Session en cours de chargement...');
+        return false;
+      }
 
       const { error } = await supabase
         .from('user_trailers')
         .delete()
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', licenseId)
         .eq('local_id', id);
 
       if (error) throw error;
@@ -239,7 +242,7 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, []);
+  }, [licenseId]);
 
   return {
     trailers,
