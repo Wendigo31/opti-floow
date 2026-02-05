@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
- import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload } from 'lucide-react';
+ import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Driver } from '@/types';
 import { cn } from '@/lib/utils';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -54,6 +56,8 @@ export default function Drivers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'name' | 'contract' | 'cost'>('name');
   
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudInterimDrivers.length;
@@ -690,6 +694,142 @@ export default function Drivers() {
     return result;
   }, [interimDrivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
 
+  // Sorted drivers
+  const sortedCdiDrivers = useMemo(() => {
+    const drivers = [...filteredCdiDrivers];
+    switch (sortBy) {
+      case 'name':
+        return drivers.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      case 'contract':
+        return drivers.sort((a, b) => {
+          const aType = a.scheduleType || 'day';
+          const bType = b.scheduleType || 'day';
+          return aType.localeCompare(bType);
+        });
+      case 'cost':
+        return drivers.sort((a, b) => calculateEmployerCost(b) - calculateEmployerCost(a));
+      default:
+        return drivers;
+    }
+  }, [filteredCdiDrivers, sortBy]);
+
+  const sortedInterimDrivers = useMemo(() => {
+    const drivers = [...filteredInterimDrivers];
+    switch (sortBy) {
+      case 'name':
+        return drivers.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      case 'contract':
+        return drivers.sort((a, b) => {
+          const aAgency = a.interimAgency || '';
+          const bAgency = b.interimAgency || '';
+          return aAgency.localeCompare(bAgency, 'fr');
+        });
+      case 'cost':
+        return drivers.sort((a, b) => calculateEmployerCost(b) - calculateEmployerCost(a));
+      default:
+        return drivers;
+    }
+  }, [filteredInterimDrivers, sortBy]);
+
+  const renderDriverRow = (driver: ExtendedDriver, isInterim: boolean) => {
+    const driverInfo = getDriverInfo(driver.id);
+    const isShared = !!driverInfo?.licenseId;
+    const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
+    
+    return (
+      <TableRow key={driver.id} className={cn(
+        selectedDriverIds.includes(driver.id) && "bg-primary/5"
+      )}>
+        <TableCell>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center",
+              isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
+            )}>
+              {isInterim ? (
+                <Users2 className="w-4 h-4 text-orange-400" />
+              ) : (
+                <User className="w-4 h-4 text-purple-400" />
+              )}
+            </div>
+            <div>
+              <p className="font-medium">{driver.name}</p>
+              {driver.scheduleType && driver.scheduleType !== 'day' && (
+                <span className={cn(
+                  "text-xs px-1.5 py-0.5 rounded-full",
+                  driver.scheduleType === 'night' ? "bg-indigo-500/20 text-indigo-400" : "bg-amber-500/20 text-amber-400"
+                )}>
+                  {driver.scheduleType === 'night' ? 'Nuit' : 'Mixte'}
+                </span>
+              )}
+            </div>
+          </div>
+        </TableCell>
+        <TableCell>
+          {isInterim ? (
+            <span className="text-sm text-muted-foreground">{driver.interimAgency || 'Intérim'}</span>
+          ) : (
+            <span className="text-sm">CDI</span>
+          )}
+        </TableCell>
+        <TableCell>
+          {isInterim 
+            ? formatCurrency(driver.interimHourlyRate || 0)
+            : formatCurrency(driver.hourlyRate || 0)
+          }/h
+        </TableCell>
+        <TableCell>{driver.hoursPerDay || 10}h</TableCell>
+        <TableCell>{driver.workingDaysPerMonth} j/mois</TableCell>
+        <TableCell className="text-right font-medium text-primary">
+          {formatCurrency(calculateEmployerCost(driver))}
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1 justify-end">
+            {isCompanyMember && (
+              <TooltipProvider>
+                <SharedDataBadge 
+                  isShared={isShared}
+                  isOwn={isOwn}
+                  isFormerMember={driverInfo?.isFormerMember}
+                  createdBy={driverInfo?.displayName}
+                  createdByEmail={driverInfo?.userEmail}
+                  compact
+                />
+              </TooltipProvider>
+            )}
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(driver, isInterim)}>
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(driver.id, isInterim)}>
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderDriversTable = (drivers: ExtendedDriver[], isInterim: boolean) => (
+    <div className="glass-card overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Conducteur</TableHead>
+            <TableHead>{isInterim ? 'Agence' : 'Contrat'}</TableHead>
+            <TableHead>Taux horaire</TableHead>
+            <TableHead>Heures/jour</TableHead>
+            <TableHead>Jours/mois</TableHead>
+            <TableHead className="text-right">Coût mensuel</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {drivers.map(driver => renderDriverRow(driver, isInterim))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -731,6 +871,35 @@ export default function Drivers() {
             className="pl-10"
           />
         </div>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger className="w-[180px]">
+            <ArrowUpDown className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Trier par" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Alphabétique</SelectItem>
+            <SelectItem value="contract">Contrat / Agence</SelectItem>
+            <SelectItem value="cost">Coût mensuel</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-1 border rounded-md p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
         {isCompanyMember && (
           <DataOwnershipFilter
             value={ownershipFilter}
@@ -765,10 +934,14 @@ export default function Drivers() {
           {/* Add Form */}
           {isAdding && activeTab === 'cdi' && renderForm()}
 
-          {/* CDI Drivers List */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredCdiDrivers.map((driver, index) => renderDriverCard(driver, index, false))}
-          </div>
+          {/* CDI Drivers List or Table */}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {sortedCdiDrivers.map((driver, index) => renderDriverCard(driver, index, false))}
+            </div>
+          ) : (
+            sortedCdiDrivers.length > 0 && renderDriversTable(sortedCdiDrivers, false)
+          )}
 
           {cdiDrivers.length === 0 && !isAdding && (
             <div className="glass-card p-12 text-center">
@@ -789,10 +962,14 @@ export default function Drivers() {
           {/* Add Form */}
           {isAdding && activeTab === 'interim' && renderForm()}
 
-          {/* Interim Drivers List */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredInterimDrivers.map((driver, index) => renderDriverCard(driver, index, true))}
-          </div>
+          {/* Interim Drivers List or Table */}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {sortedInterimDrivers.map((driver, index) => renderDriverCard(driver, index, true))}
+            </div>
+          ) : (
+            sortedInterimDrivers.length > 0 && renderDriversTable(sortedInterimDrivers, true)
+          )}
 
           {interimDrivers.length === 0 && !isAdding && (
             <div className="glass-card p-12 text-center">
