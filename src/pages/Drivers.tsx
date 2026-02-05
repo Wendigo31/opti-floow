@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
- import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
+ import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Driver } from '@/types';
 import { cn } from '@/lib/utils';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -19,6 +20,10 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
  import { useApp } from '@/context/AppContext';
+import { DriverAssignmentDialog } from '@/components/drivers/DriverAssignmentDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
@@ -30,6 +35,9 @@ interface ExtendedDriver extends Driver {
   nightStartHour?: number;
   nightEndHour?: number;
   nightBonusPercent?: number;
+  assignedClientId?: string;
+  assignedCity?: string;
+  assignedTourIds?: string[];
 }
 
 export default function Drivers() {
@@ -48,6 +56,7 @@ export default function Drivers() {
   
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
+  const { licenseId } = useLicenseContext();
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -58,10 +67,79 @@ export default function Drivers() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'contract' | 'cost'>('name');
+  const [checkedDriverIds, setCheckedDriverIds] = useState<Set<string>>(new Set());
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudInterimDrivers.length;
   const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
+
+  // Toggle driver selection
+  const toggleDriverCheck = (id: string) => {
+    setCheckedDriverIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Select all visible drivers
+  const selectAllVisible = () => {
+    const allIds = activeTab === 'cdi' 
+      ? sortedCdiDrivers.map(d => d.id)
+      : sortedInterimDrivers.map(d => d.id);
+    setCheckedDriverIds(new Set(allIds));
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setCheckedDriverIds(new Set());
+  };
+
+  // Handle assignment
+  const handleAssignment = async (assignment: {
+    type: 'client' | 'city' | 'tour';
+    clientId?: string;
+    city?: string;
+    tourIds?: string[];
+  }) => {
+    if (!licenseId) return;
+    
+    const driverIds = Array.from(checkedDriverIds);
+    
+    try {
+      // Update each driver with the assignment
+      for (const driverId of driverIds) {
+        const updateData: Record<string, any> = {
+          synced_at: new Date().toISOString(),
+        };
+        
+        if (assignment.type === 'client') {
+          updateData.assigned_client_id = assignment.clientId;
+        } else if (assignment.type === 'city') {
+          updateData.assigned_city = assignment.city;
+        } else if (assignment.type === 'tour') {
+          updateData.assigned_tour_ids = assignment.tourIds;
+        }
+        
+        await supabase
+          .from('user_drivers')
+          .update(updateData)
+          .eq('license_id', licenseId)
+          .eq('local_id', driverId);
+      }
+      
+      toast.success(`${driverIds.length} conducteur${driverIds.length > 1 ? 's' : ''} assigné${driverIds.length > 1 ? 's' : ''}`);
+      clearSelection();
+    } catch (error) {
+      console.error('Error assigning drivers:', error);
+      toast.error('Erreur lors de l\'assignation');
+    }
+  };
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -503,7 +581,8 @@ export default function Drivers() {
         key={driver.id}
         className={cn(
           "glass-card p-6 opacity-0 animate-slide-up",
-          selectedDriverIds.includes(driver.id) && "ring-2 ring-primary/50"
+          selectedDriverIds.includes(driver.id) && "ring-2 ring-primary/50",
+          checkedDriverIds.has(driver.id) && "ring-2 ring-primary"
         )}
         style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
       >
@@ -513,6 +592,11 @@ export default function Drivers() {
           <>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={checkedDriverIds.has(driver.id)}
+                  onCheckedChange={() => toggleDriverCheck(driver.id)}
+                  className="mr-1"
+                />
                 <div className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center",
                   isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
@@ -551,6 +635,12 @@ export default function Drivers() {
                       : `${formatCurrency(driver.baseSalary)} brut/mois`
                     }
                 </p>
+                {(driver as ExtendedDriver).assignedCity && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    {(driver as ExtendedDriver).assignedCity}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-2">
@@ -738,10 +828,15 @@ export default function Drivers() {
     
     return (
       <TableRow key={driver.id} className={cn(
-        selectedDriverIds.includes(driver.id) && "bg-primary/5"
+        selectedDriverIds.includes(driver.id) && "bg-primary/5",
+        checkedDriverIds.has(driver.id) && "bg-primary/10"
       )}>
         <TableCell>
           <div className="flex items-center gap-3">
+            <Checkbox
+              checked={checkedDriverIds.has(driver.id)}
+              onCheckedChange={() => toggleDriverCheck(driver.id)}
+            />
             <div className={cn(
               "w-8 h-8 rounded-lg flex items-center justify-center",
               isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
@@ -814,7 +909,31 @@ export default function Drivers() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Conducteur</TableHead>
+            <TableHead className="w-[300px]">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={drivers.length > 0 && drivers.every(d => checkedDriverIds.has(d.id))}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      const ids = drivers.map(d => d.id);
+                      setCheckedDriverIds(prev => {
+                        const next = new Set(prev);
+                        ids.forEach(id => next.add(id));
+                        return next;
+                      });
+                    } else {
+                      const ids = drivers.map(d => d.id);
+                      setCheckedDriverIds(prev => {
+                        const next = new Set(prev);
+                        ids.forEach(id => next.delete(id));
+                        return next;
+                      });
+                    }
+                  }}
+                />
+                Conducteur
+              </div>
+            </TableHead>
             <TableHead>{isInterim ? 'Agence' : 'Contrat'}</TableHead>
             <TableHead>Taux horaire</TableHead>
             <TableHead>Heures/jour</TableHead>
@@ -908,6 +1027,31 @@ export default function Drivers() {
         )}
       </div>
 
+      {/* Selection Actions Bar */}
+      {checkedDriverIds.size > 0 && (
+        <div className="glass-card p-4 flex items-center justify-between animate-slide-up">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium">
+              {checkedDriverIds.size} conducteur{checkedDriverIds.size > 1 ? 's' : ''} sélectionné{checkedDriverIds.size > 1 ? 's' : ''}
+            </span>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="w-4 h-4 mr-1" />
+              Annuler
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={selectAllVisible}>
+              <CheckSquare className="w-4 h-4 mr-2" />
+              Tout sélectionner
+            </Button>
+            <Button onClick={() => setIsAssignDialogOpen(true)} className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              Assigner
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs CDI / Intérim */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'interim')}>
         <div className="flex items-center justify-between">
@@ -991,6 +1135,13 @@ export default function Drivers() {
          open={isImportDialogOpen}
          onOpenChange={setIsImportDialogOpen}
          onImport={handleImportDrivers}
+       />
+       
+       <DriverAssignmentDialog
+         open={isAssignDialogOpen}
+         onOpenChange={setIsAssignDialogOpen}
+         selectedDriverIds={Array.from(checkedDriverIds)}
+         onAssign={handleAssignment}
        />
     </div>
   );
