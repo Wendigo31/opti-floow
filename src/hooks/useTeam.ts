@@ -4,6 +4,7 @@ import type { CompanyUser, TeamRole, TeamMember } from '@/types/team';
 import { MAX_USERS_PER_PLAN } from '@/types/team';
 import type { PlanType } from '@/hooks/useLicense';
 import { useLicense } from '@/hooks/useLicense';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 // Current user info for session isolation
 interface CurrentUserInfo {
@@ -35,6 +36,7 @@ interface UseTeamReturn {
 
 export function useTeam(): UseTeamReturn {
   const { planType: validatedPlanType, isLoading: isLicenseLoading } = useLicense();
+  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
@@ -64,42 +66,32 @@ export function useTeam(): UseTeamReturn {
   const canManageTeam = isDirection && hasMultiUsers;
 
   // Fetch team data
-  const fetchTeam = useCallback(async () => {
+  const fetchTeam = useCallback(async (): Promise<void> => {
+    // Wait for context to be ready
+    if (!authUserId) {
+      setIsTeamLoading(false);
+      return;
+    }
+
     try {
       setIsTeamLoading(true);
       setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsTeamLoading(false);
-        return;
-      }
+      // Fetch current user entry
+      const { data: currentUserEntry, error: userEntryError } = await supabase
+        .from('company_users')
+        .select('license_id, role, display_name, email')
+        .eq('user_id', authUserId)
+        .eq('is_active', true)
+        .maybeSingle();
 
-      // Fetch current user entry and all members in PARALLEL
-      const [userEntryResult, allMembersResult] = await Promise.all([
-        supabase
-          .from('company_users')
-          .select('license_id, role, display_name, email')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .maybeSingle(),
-        // We'll filter by license_id after we know it
-        supabase
-          .from('company_users')
-          .select('license_id')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .maybeSingle(),
-      ]);
-
-      const currentUserEntry = userEntryResult.data;
-      if (userEntryResult.error) {
-        console.error('Error fetching user entry:', userEntryResult.error);
+      if (userEntryError) {
+        console.error('Error fetching user entry:', userEntryError);
       }
 
       if (!currentUserEntry?.license_id) {
         setCurrentUserRole(null);
-        setCurrentUserInfo({ displayName: null, email: user.email || null, userId: user.id });
+        setCurrentUserInfo({ displayName: null, email: null, userId: authUserId });
         setLicenseId(null);
         setIsTeamLoading(false);
         return;
@@ -110,8 +102,8 @@ export function useTeam(): UseTeamReturn {
       setCurrentUserRole(currentUserEntry.role as TeamRole);
       setCurrentUserInfo({
         displayName: currentUserEntry.display_name || null,
-        email: currentUserEntry.email || user.email || null,
-        userId: user.id,
+        email: currentUserEntry.email || null,
+        userId: authUserId,
       });
 
       // Now fetch all team members for the license
@@ -128,7 +120,7 @@ export function useTeam(): UseTeamReturn {
         const teamMembers: TeamMember[] = (companyUsers || []).map(cu => ({
           ...cu,
           role: cu.role as TeamRole,
-          isCurrentUser: cu.user_id === user.id,
+          isCurrentUser: cu.user_id === authUserId,
         }));
         setMembers(teamMembers);
       }
@@ -138,11 +130,13 @@ export function useTeam(): UseTeamReturn {
     } finally {
       setIsTeamLoading(false);
     }
-  }, []);
+  }, [authUserId]);
 
   useEffect(() => {
-    fetchTeam();
-  }, [fetchTeam]);
+    if (authUserId) {
+      fetchTeam();
+    }
+  }, [authUserId, fetchTeam]);
 
   // Add member directly (no invitation flow)
   const addMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
@@ -163,12 +157,11 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: 'Aucune licence trouvée' };
     }
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { success: false, error: 'Non authentifié' };
-      }
+    if (!authUserId) {
+      return { success: false, error: 'Non authentifié' };
+    }
 
+    try {
       // Check if already a member
       const { data: existingMember } = await supabase
         .from('company_users')
@@ -189,7 +182,7 @@ export function useTeam(): UseTeamReturn {
           email: email.toLowerCase(),
           role,
           display_name: displayName?.trim() || null,
-          invited_by: user.id,
+          invited_by: authUserId,
           invited_at: new Date().toISOString(),
           is_active: true,
         });
@@ -205,7 +198,7 @@ export function useTeam(): UseTeamReturn {
       console.error('Error in addMember:', e);
       return { success: false, error: 'Erreur inattendue' };
     }
-  }, [canManageTeam, canAddMore, maxUsers, licenseId, fetchTeam]);
+  }, [authUserId, canManageTeam, canAddMore, maxUsers, licenseId, fetchTeam]);
 
   const updateMemberRole = useCallback(async (memberId: string, role: TeamRole): Promise<{ success: boolean; error?: string }> => {
     if (!canManageTeam) {
