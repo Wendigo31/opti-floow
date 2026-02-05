@@ -36,6 +36,7 @@ export function useClients() {
 
     // Use context values instead of separate DB calls
     if (!authUserId || !contextLicenseId) {
+      setLoading(false);
       return;
     }
 
@@ -344,10 +345,10 @@ export function useClients() {
 
   // Initial fetch
   useEffect(() => {
-    if (authUserId) {
+    if (authUserId && contextLicenseId) {
       fetchClients();
     }
-  }, [authUserId, fetchClients]);
+  }, [authUserId, contextLicenseId, fetchClients]);
 
   return {
     clients,
