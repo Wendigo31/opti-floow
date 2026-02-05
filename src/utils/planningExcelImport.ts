@@ -159,8 +159,21 @@
    const ligneIdx = headers.findIndex(h => h === 'ligne' && !h.includes('chauffeur'));
    const titulaireIdx = headers.findIndex(h => h.includes('titulaire') || h.includes('chauffeur'));
    const odmIdx = headers.findIndex(h => h.includes('commentaire') || h.includes('odm'));
-   const startTimeIdx = headers.findIndex(h => h.includes('horaire') && h.includes('début'));
-   const endTimeIdx = headers.findIndex(h => h.includes('horaire') && h.includes('fin'));
+  const startTimeIdx = headers.findIndex(h => 
+    (h.includes('horaire') && h.includes('début')) || 
+    (h.includes('horaire') && h.includes('debut')) ||
+    h === 'horaire début' ||
+    h === 'horaire debut' ||
+    h.includes('heure début') ||
+    h.includes('heure debut')
+  );
+  const endTimeIdx = headers.findIndex(h => 
+    (h.includes('horaire') && h.includes('fin')) ||
+    h === 'horaire fin' ||
+    h.includes('heure fin') ||
+    h.includes('heure arrivée') ||
+    h.includes('heure arrivee')
+  );
    
    // Find day columns (look for date patterns or day names)
    const dayColumns: number[] = [];
