@@ -4,18 +4,7 @@ import { toast } from 'sonner';
 import type { SavedTour, SaveTourInput, TourStop } from '@/types/savedTour';
 import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useLicenseContext } from '@/context/LicenseContext';
-
-// Helper to wait for license context to be ready
-async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    const vals = getValues();
-    if (vals.authUserId && vals.licenseId) return vals;
-    await new Promise(r => setTimeout(r, 100));
-  }
-  return getValues();
-}
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
 // Helper to convert database row to SavedTour
 function mapDbToSavedTour(row: any): SavedTour {
@@ -181,16 +170,19 @@ export function useSavedTours() {
   }, [licenseId, authUserId]); // Minimal dependencies to prevent subscription churn
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
-    // Wait briefly for context to be ready (handles race conditions on page load)
+    // Use context values, fallback to direct auth if needed
     let uid = authUserId;
     let lid = licenseId;
+    
     if (!uid || !lid) {
-      const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
-      uid = ctx.authUserId;
-      lid = ctx.licenseId;
+      const { data: { user } } = await supabase.auth.getUser();
+      const fallbackLicenseId = await getLicenseId();
+      uid = user?.id || null;
+      lid = fallbackLicenseId;
     }
+    
     if (!uid || !lid) {
-      toast.error('Session non initialisée. Veuillez recharger la page.');
+      toast.error('Veuillez vous reconnecter');
       return null;
     }
 

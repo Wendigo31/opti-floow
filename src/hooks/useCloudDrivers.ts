@@ -5,17 +5,6 @@ import type { Driver } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
-// Helper to wait for license context to be ready
-async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    const vals = getValues();
-    if (vals.authUserId && vals.licenseId) return vals;
-    await new Promise(r => setTimeout(r, 100));
-  }
-  return getValues();
-}
-
 const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
 const CACHE_KEY_CDD = 'optiflow_cdd_drivers_cache';
@@ -62,6 +51,18 @@ export function useCloudDrivers() {
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fetchInProgressRef = useRef(false);
+  
+  // Keep latest context values in refs for async operations
+  const authUserIdRef = useRef<string | null>(authUserId);
+  const licenseIdRef = useRef<string | null>(licenseId);
+  
+  useEffect(() => {
+    authUserIdRef.current = authUserId;
+  }, [authUserId]);
+  
+  useEffect(() => {
+    licenseIdRef.current = licenseId;
+  }, [licenseId]);
 
   // Keep latest state in refs so realtime handlers don't rely on stale closures
   const cdiDriversRef = useRef<Driver[]>(cdiDrivers);
@@ -242,21 +243,42 @@ export function useCloudDrivers() {
     options?: { silent?: boolean }
   ): Promise<boolean> => {
     try {
-      // Wait briefly for context to be ready (handles race conditions on page load)
-      let uid = authUserId;
-      let lid = licenseId;
-      if (!uid || !lid) {
-        const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
-        uid = ctx.authUserId;
-        lid = ctx.licenseId;
-      }
+      // Use refs to get latest values (handles race conditions)
+      const uid = authUserIdRef.current || authUserId;
+      const lid = licenseIdRef.current || licenseId;
+      
       if (!uid || !lid) {
         if (!options?.silent) {
-          toast.error('Session non initialisée. Veuillez recharger la page.');
+          console.warn('[useCloudDrivers] createDriver: context not ready, retrying via getLicenseId');
+          // Fallback: fetch license directly from DB
+          const fallbackLicenseId = await getLicenseId();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (fallbackLicenseId && user) {
+            return createDriverInternal(driver, driverType, user.id, fallbackLicenseId, options);
+          }
+          toast.error('Veuillez vous reconnecter');
         }
         return false;
       }
 
+      return createDriverInternal(driver, driverType, uid, lid, options);
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      if (!options?.silent) {
+        toast.error('Erreur lors de la création');
+      }
+      return false;
+    }
+  }, [authUserId, licenseId]);
+
+  const createDriverInternal = useCallback(async (
+    driver: Driver,
+    driverType: 'cdi' | 'cdd' | 'interim',
+    uid: string,
+    lid: string,
+    options?: { silent?: boolean }
+  ): Promise<boolean> => {
+    try {
       const { error } = await supabase
         .from('user_drivers')
         .insert([{
@@ -271,8 +293,7 @@ export function useCloudDrivers() {
         }]);
 
       if (error) throw error;
-
-      // For bulk imports, avoid spamming local state updates/toasts.
+      
       if (options?.silent) {
         return true;
       }
@@ -362,23 +383,26 @@ export function useCloudDrivers() {
 
   const deleteDriver = useCallback(async (id: string, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
-      // Use context values directly (avoid slow auth.getUser() calls)
-      if (!authUserId || !licenseId) {
-        if (!contextLoading) {
-          toast.error('Session non initialisée. Veuillez recharger la page.');
-        }
-        console.error('[useCloudDrivers] deleteDriver: no authUserId or licenseId');
+      // Use refs to get latest values
+      let uid = authUserIdRef.current || authUserId;
+      let lid = licenseIdRef.current || licenseId;
+      
+      if (!uid || !lid) {
+        // Fallback: fetch from auth
+        const { data: { user } } = await supabase.auth.getUser();
+        lid = await getLicenseId();
+        uid = user?.id || null;
+      }
+
+      if (!uid || !lid) {
+        toast.error('Veuillez vous reconnecter');
         return false;
       }
 
-      const currentLicenseId = licenseId;
-
-      // Try direct delete first. When RLS blocks the operation, PostgREST may
-      // return success with count=0 and no error.
       const { error: deleteError, count } = await supabase
         .from('user_drivers')
         .delete({ count: 'exact' })
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', lid)
         .eq('local_id', id);
 
       if (deleteError) {
@@ -386,11 +410,9 @@ export function useCloudDrivers() {
         throw deleteError;
       }
 
-      // If nothing was deleted, we may be hitting a silent RLS denial.
-      // For Direction users, fallback to a server-verified deletion helper.
       if (count === 0) {
         const { data: isOwner, error: ownerError } = await supabase
-          .rpc('is_company_owner', { p_license_id: currentLicenseId, p_user_id: authUserId });
+          .rpc('is_company_owner', { p_license_id: lid, p_user_id: uid });
 
         if (ownerError) {
           console.warn('Unable to check owner role:', ownerError);
@@ -398,7 +420,7 @@ export function useCloudDrivers() {
 
         if (isOwner) {
           const { data: deletedByFn, error: fnError } = await supabase
-            .rpc('delete_company_driver', { p_license_id: currentLicenseId, p_local_id: id });
+            .rpc('delete_company_driver', { p_license_id: lid, p_local_id: id });
 
           if (fnError) {
             console.error('Direction delete_company_driver failed:', fnError);
@@ -413,11 +435,10 @@ export function useCloudDrivers() {
         }
       }
 
-      // Final verification (covers RLS silent failures / filter mismatch)
       const { data: stillThere, error: verifyError } = await supabase
         .from('user_drivers')
         .select('id')
-        .eq('license_id', currentLicenseId)
+        .eq('license_id', lid)
         .eq('local_id', id)
         .maybeSingle();
 
@@ -459,7 +480,7 @@ export function useCloudDrivers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [authUserId, licenseId]);
+  }, [authUserId, licenseId, contextLoading]);
 
   return {
     cdiDrivers,
