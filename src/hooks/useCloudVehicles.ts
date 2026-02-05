@@ -77,6 +77,10 @@ export function useCloudVehicles() {
     }
   }, [authUserId, licenseId]);
 
+  // Store fetchVehicles in ref to avoid subscription churn
+  const fetchVehiclesRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchVehiclesRef.current = fetchVehicles; }, [fetchVehicles]);
+
   // Realtime subscription - only when licenseId is available
   useEffect(() => {
     if (!licenseId) return;
@@ -117,9 +121,10 @@ export function useCloudVehicles() {
         }
       )
       .subscribe((status) => {
+        console.log('[Realtime] vehicles subscription:', status);
         // After (re-)subscribe, reconcile any missed events
-        if (status === 'SUBSCRIBED' && authUserId) {
-          void fetchVehicles();
+        if (status === 'SUBSCRIBED') {
+          void fetchVehiclesRef.current?.();
         }
       });
 
@@ -129,7 +134,7 @@ export function useCloudVehicles() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, fetchVehicles]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {

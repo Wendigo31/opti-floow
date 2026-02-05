@@ -158,6 +158,10 @@ export function useSavedTours() {
     }
   }, [fetchToursCore]);
 
+  // Store fetchTours in ref to avoid subscription churn
+  const fetchToursRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchToursRef.current = fetchTours; }, [fetchTours]);
+
   // Auto-fetch tours when user is authenticated
   useEffect(() => {
     if (authUserId) {
@@ -215,7 +219,7 @@ export function useSavedTours() {
         console.log('[Realtime] saved_tours subscription:', status);
         // After (re-)subscribe, reconcile any missed events
         if (status === 'SUBSCRIBED') {
-          void fetchTours();
+          void fetchToursRef.current?.();
         }
       });
 
@@ -225,7 +229,7 @@ export function useSavedTours() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, fetchTours]);
+  }, [licenseId, authUserId]); // Minimal dependencies to prevent subscription churn
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     const { data: { user } } = await supabase.auth.getUser();

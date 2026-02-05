@@ -16,7 +16,7 @@
    // Keep latest state in ref for realtime handlers
    const entriesRef = useRef<PlanningEntry[]>(entries);
    useEffect(() => { entriesRef.current = entries; }, [entries]);
- 
+
    const fetchEntries = useCallback(async (startDate?: string, endDate?: string): Promise<void> => {
      if (fetchInProgressRef.current) return;
      
@@ -85,6 +85,10 @@
      }
    }, [authUserId, licenseId]);
  
+  // Store fetchEntries in ref to avoid subscription churn
+  const fetchEntriesRef = useRef<(startDate?: string, endDate?: string) => Promise<void>>();
+  useEffect(() => { fetchEntriesRef.current = fetchEntries; }, [fetchEntries]);
+
    // Realtime subscription
    useEffect(() => {
      if (!licenseId) return;
@@ -133,8 +137,8 @@
        .subscribe((status) => {
          console.log('[Realtime] planning subscription:', status);
          // Reconcile on subscribe to catch any missed events
-         if (status === 'SUBSCRIBED' && authUserId) {
-           void fetchEntries();
+        if (status === 'SUBSCRIBED') {
+          void fetchEntriesRef.current?.();
          }
        });
  
@@ -144,7 +148,7 @@
          channelRef.current = null;
        }
      };
-   }, [licenseId, authUserId, fetchEntries]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
  
    // Auto-fetch when licenseId becomes available
    useEffect(() => {

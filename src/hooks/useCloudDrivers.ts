@@ -106,6 +106,10 @@ export function useCloudDrivers() {
     }
   }, [authUserId, licenseId]);
 
+  // Store fetchDrivers in ref to avoid subscription churn
+  const fetchDriversRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
+
   // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
@@ -161,9 +165,10 @@ export function useCloudDrivers() {
         }
       )
       .subscribe((status) => {
-        // After (re)subscribe, refresh to reconcile any missed events while offline/unsubscribed
-        if (status === 'SUBSCRIBED' && authUserId) {
-          void fetchDrivers();
+        console.log('[Realtime] drivers subscription:', status);
+        // After (re)subscribe, refresh to reconcile any missed events
+        if (status === 'SUBSCRIBED') {
+          void fetchDriversRef.current?.();
         }
       });
 
@@ -173,7 +178,7 @@ export function useCloudDrivers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, fetchDrivers]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {

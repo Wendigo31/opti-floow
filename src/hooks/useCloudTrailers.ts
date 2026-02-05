@@ -72,6 +72,10 @@ export function useCloudTrailers() {
     }
   }, [authUserId, licenseId]);
 
+  // Store fetchTrailers in ref to avoid subscription churn
+  const fetchTrailersRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchTrailersRef.current = fetchTrailers; }, [fetchTrailers]);
+
   // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
@@ -110,8 +114,9 @@ export function useCloudTrailers() {
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED' && authUserId) {
-          void fetchTrailers();
+        console.log('[Realtime] trailers subscription:', status);
+        if (status === 'SUBSCRIBED') {
+          void fetchTrailersRef.current?.();
         }
       });
 
@@ -121,7 +126,7 @@ export function useCloudTrailers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, fetchTrailers]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {
