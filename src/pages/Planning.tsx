@@ -212,14 +212,22 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
    const getDriverName = (driverId: string | null) => {
      if (!driverId) return null;
      const driver = allDrivers.find(d => d.id === driverId);
-     return driver?.name || null;
+    // Prefer "Prénom Nom" format when firstName/lastName available
+    if (driver?.firstName && driver?.lastName) {
+      return `${driver.firstName} ${driver.lastName}`;
+    }
+    return driver?.name || null;
    };
  
    // Get relay driver name helper
    const getRelayDriverName = (driverId: string | null) => {
      if (!driverId) return null;
      const driver = allDrivers.find(d => d.id === driverId);
-     return driver?.name || null;
+    // Prefer "Prénom Nom" format when firstName/lastName available
+    if (driver?.firstName && driver?.lastName) {
+      return `${driver.firstName} ${driver.lastName}`;
+    }
+    return driver?.name || null;
    };
  
    return (

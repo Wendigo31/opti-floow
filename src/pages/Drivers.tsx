@@ -867,7 +867,11 @@ export default function Drivers() {
     // Filter by search
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim();
-      result = result.filter(d => d.name.toLowerCase().includes(search));
+      result = result.filter(d => 
+        d.name.toLowerCase().includes(search) ||
+        (d.firstName && d.firstName.toLowerCase().includes(search)) ||
+        (d.lastName && d.lastName.toLowerCase().includes(search))
+      );
     }
     
     // Filter by ownership
@@ -890,7 +894,11 @@ export default function Drivers() {
     // Filter by search
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim();
-      result = result.filter(d => d.name.toLowerCase().includes(search));
+      result = result.filter(d => 
+        d.name.toLowerCase().includes(search) ||
+        (d.firstName && d.firstName.toLowerCase().includes(search)) ||
+        (d.lastName && d.lastName.toLowerCase().includes(search))
+      );
     }
     
     // Filter by ownership
@@ -913,7 +921,11 @@ export default function Drivers() {
     // Filter by search
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim();
-      result = result.filter(d => d.name.toLowerCase().includes(search));
+      result = result.filter(d => 
+        d.name.toLowerCase().includes(search) ||
+        (d.firstName && d.firstName.toLowerCase().includes(search)) ||
+        (d.lastName && d.lastName.toLowerCase().includes(search))
+      );
     }
     
     // Filter by ownership
