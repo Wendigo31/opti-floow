@@ -261,27 +261,20 @@ function getDayIdxFromHeader(header: string): number | null {
      const { origin, destination } = parseAddresses(ligne);
      
      // Determine which days are active and who drives each day
-     const recurring_days: number[] = [];
+      // Always import the full week (Mon=0 to Sun=6)
+      const recurring_days: number[] = [0, 1, 2, 3, 4, 5, 6];
      const day_drivers: Record<number, string> = {};
      
-      // Map each day column to our internal day index (0=Lun ... 6=Dim)
+       // Parse driver names from Excel day columns (only for assignment, not for day creation)
       dayColumns.forEach(({ colIdx, dayIdx }) => {
         const cellValue = (row[colIdx] || '').toString();
-        if (!isDayActive(cellValue)) return;
-
-        if (!recurring_days.includes(dayIdx)) {
-          recurring_days.push(dayIdx);
-        }
-
-        // If the cell contains a real driver name (not just "X"), keep it.
+         
+         // Extract driver name if present (skip empty cells and markers like "X")
         const driverForDay = extractDriverFromCell(cellValue);
-        if (driverForDay && driverForDay.toLowerCase() !== 'x') {
+         if (driverForDay && driverForDay.length > 1 && driverForDay.toLowerCase() !== 'x') {
           day_drivers[dayIdx] = driverForDay;
         }
       });
-     
-     // Sort recurring days
-     recurring_days.sort((a, b) => a - b);
      
      // Only add if we have meaningful data
      if (client || ligne || odm) {
