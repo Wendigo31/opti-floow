@@ -574,7 +574,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
               <Button
                 size="sm"
                 onClick={() => setShowAddDialog(true)}
-                disabled={companyUsers.length >= selectedLicense.max_users && selectedLicense.max_users !== 999}
+                disabled={selectedLicense.max_users != null && selectedLicense.max_users !== 999 && companyUsers.length >= selectedLicense.max_users}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Ajouter un utilisateur
