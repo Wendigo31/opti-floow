@@ -72,8 +72,8 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
    };
  
    const handleImport = async () => {
-     if (preview.length === 0 || !defaultVehicleId) {
-       toast.error('Veuillez sélectionner un véhicule par défaut');
+      if (preview.length === 0) {
+        toast.error('Aucune donnée à importer');
        return;
      }
  
@@ -84,12 +84,15 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
        const clientMap = new Map(clients.map(c => [c.name, c.id]));
        const driverMap = new Map(drivers.map(d => [d.name, d.id]));
        
+        // Use null if no vehicle selected or 'none'
+        const vehicleIdToUse = defaultVehicleId && defaultVehicleId !== 'none' ? defaultVehicleId : null;
+        
        // Convert to TourInput format
        const tourInputs = convertToTourInputs(
          preview,
          clientMap,
          driverMap,
-         defaultVehicleId,
+          vehicleIdToUse,
          startDate
        );
        
@@ -99,7 +102,7 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
          .map(t => ({
            ...t,
            tour_name: t.tour_name!,
-           vehicle_id: t.vehicle_id || defaultVehicleId,
+            vehicle_id: t.vehicle_id || vehicleIdToUse,
            recurring_days: t.recurring_days || [0, 1, 2, 3, 4],
            is_all_year: false,
            start_date: startDate,
@@ -193,12 +196,13 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
            {preview.length > 0 && (
              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
                <div className="space-y-2">
-                 <Label>Véhicule par défaut *</Label>
+                  <Label>Véhicule par défaut (optionnel)</Label>
                  <Select value={defaultVehicleId} onValueChange={setDefaultVehicleId}>
                    <SelectTrigger>
                      <SelectValue placeholder="Sélectionner un véhicule" />
                    </SelectTrigger>
                    <SelectContent>
+                      <SelectItem value="none">Aucun (à définir plus tard)</SelectItem>
                      {vehicles.map((v) => (
                        <SelectItem key={v.id} value={v.id}>
                          {v.name} ({v.licensePlate})
@@ -321,7 +325,7 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
            </Button>
            <Button 
              onClick={handleImport} 
-             disabled={preview.length === 0 || !defaultVehicleId || importing}
+              disabled={preview.length === 0 || importing}
            >
              {importing ? (
                <Loader2 className="w-4 h-4 mr-1 animate-spin" />

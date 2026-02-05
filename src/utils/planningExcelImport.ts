@@ -255,7 +255,7 @@
    parsedEntries: ParsedPlanningEntry[],
    clientMap: Map<string, string>, // client name -> client id
    driverMap: Map<string, string>, // driver name -> driver id
-   defaultVehicleId: string,
+  defaultVehicleId: string | null,
    startDate: string
  ): Partial<TourInput>[] {
    return parsedEntries.map(entry => {
@@ -285,7 +285,7 @@
      
      return {
        tour_name: entry.ligne || entry.client || 'Tournée importée',
-       vehicle_id: defaultVehicleId,
+      vehicle_id: defaultVehicleId || undefined,
        client_id,
        driver_id,
        recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4],
