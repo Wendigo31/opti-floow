@@ -384,7 +384,14 @@ export default function Drivers() {
     }
 
     // Refresh once at the end to reconcile (and to show imported drivers even in silent mode).
-    await fetchDrivers();
+    try {
+      // NOTE: fetchDrivers can hang indefinitely on bad network conditions.
+      // We guard it so the import dialog can always finish and close.
+      await withTimeout(fetchDrivers(), 20_000, 'fetchDrivers');
+    } catch (e) {
+      console.warn('[Drivers] fetchDrivers timeout/error after import:', e);
+      toast.warning('Import terminé, mais le rafraîchissement a pris trop de temps. Rechargez la page si nécessaire.');
+    }
 
     console.log('[Drivers] Import completed, total:', { count, failures });
 
