@@ -51,23 +51,25 @@
    const headers = [
      'Client',
      'Ligne (Origine - Destination)',
-     'Titulaire / Conducteur',
-     'Commentaire / ODM',
-     'Lundi',
-     'Mardi',
-     'Mercredi',
-     'Jeudi',
-     'Vendredi',
-     'Samedi',
-     'Dimanche'
+    'Titulaire / Conducteur', 
+    'ODM (Ordre de Mission)',
+    'Horaire début',
+    'Horaire fin',
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi',
+    'Dimanche'
    ];
  
    const sampleData = [
-     ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente - Départ 6h00', 'X', 'X', '', 'X', 'X', '', ''],
-     ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', 'X', '', 'X', '', 'X', '', ''],
-     ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV 8h00 - Quai 5', '', 'X', 'X', 'X', '', '', ''],
-     ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', 'X', 'X', 'X', 'X', 'X', '', ''],
-     ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '', '', 'X', 'X', 'X', 'X', ''],
+    ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'X', 'X', '', 'X', 'X', '', ''],
+    ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'X', '', 'X', '', 'X', '', ''],
+    ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', '', 'X', 'X', 'X', '', '', ''],
+    ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'X', 'X', 'X', 'X', 'X', '', ''],
+    ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', '', '', 'X', 'X', 'X', 'X', ''],
    ];
  
    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
@@ -77,7 +79,9 @@
      { wch: 20 }, // Client
      { wch: 30 }, // Ligne
      { wch: 20 }, // Titulaire
-     { wch: 35 }, // Commentaire
+    { wch: 35 }, // ODM
+    { wch: 12 }, // Horaire début
+    { wch: 12 }, // Horaire fin
      { wch: 8 },  // Lundi
      { wch: 8 },  // Mardi
      { wch: 10 }, // Mercredi
@@ -100,13 +104,15 @@
      ['- Titulaire: Nom du conducteur (doit correspondre à un conducteur existant)'],
      [''],
      ['Colonnes optionnelles:'],
-     ['- Commentaire / ODM: Ordre de mission ou notes'],
+    ['- ODM: Ordre de mission ou notes'],
+    ['- Horaire début: Heure de départ (format: 06h00 ou 06:00)'],
+    ['- Horaire fin: Heure d\'arrivée (format: 14h00 ou 14:00)'],
      ['- Jours de la semaine: Mettre "X" pour indiquer les jours de récurrence'],
      [''],
      ['Conseils:'],
-     ['- Ajoutez les heures dans le commentaire (ex: "Départ 6h00")'],
      ['- Les conducteurs doivent être créés avant l\'import du planning'],
      ['- Les clients existants seront automatiquement associés'],
+    ['- Si aucun véhicule n\'est sélectionné, les missions apparaîtront dans "Non assigné"'],
    ];
  
    const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
