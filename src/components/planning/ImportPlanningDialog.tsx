@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
  import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
 import { downloadPlanningTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
  import { dayLabels } from '@/types/planning';
@@ -90,9 +90,9 @@ import { cn } from '@/lib/utils';
         // Use null if no vehicle selected or 'none'
         const vehicleIdToUse = defaultVehicleId && defaultVehicleId !== 'none' ? defaultVehicleId : null;
 
-        if (!vehicleIdToUse) {
-          toast.warning('Aucune traction sélectionnée : les missions importées ne s\'afficheront pas tant qu\'elles ne seront pas affectées à un tracteur.');
-        }
+         if (!vehicleIdToUse) {
+           toast.message('Aucune traction sélectionnée : les missions seront importées dans "Non assigné".');
+         }
         
        // Convert to TourInput format
        const tourInputs = convertToTourInputs(
