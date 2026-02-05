@@ -2,7 +2,7 @@
  import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
- import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Copy, Check } from 'lucide-react';
+ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Copy, Check, Upload } from 'lucide-react';
  import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
  import { fr } from 'date-fns/locale';
  import { usePlanning } from '@/hooks/usePlanning';
@@ -13,6 +13,7 @@
  import { PlanningCell } from '@/components/planning/PlanningCell';
  import { AddTourDialog } from '@/components/planning/AddTourDialog';
  import { DuplicateWeeksDialog } from '@/components/planning/DuplicateWeeksDialog';
+ import { ImportPlanningDialog } from '@/components/planning/ImportPlanningDialog';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
  import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -27,6 +28,7 @@
    const [isDialogOpen, setIsDialogOpen] = useState(false);
    const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
    const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
    const [newEntryDefaults, setNewEntryDefaults] = useState<Partial<PlanningEntryInput>>({});
    const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
    const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -184,6 +186,16 @@
            >
              <Plus className="h-4 w-4" />
              Ajouter une tournée
+           </Button>
+           
+           <Button 
+             variant="outline" 
+             size="sm" 
+             onClick={() => setIsImportDialogOpen(true)}
+             className="gap-2"
+           >
+             <Upload className="h-4 w-4" />
+             Importer Excel
            </Button>
            
            <div className="h-6 w-px bg-border mx-2" />
@@ -357,6 +369,24 @@
          onOpenChange={setIsDuplicateDialogOpen}
          selectedCount={selectedEntryIds.size}
          onDuplicate={handleDuplicate}
+       />
+       
+       <ImportPlanningDialog
+         open={isImportDialogOpen}
+         onOpenChange={setIsImportDialogOpen}
+         vehicles={tractions}
+         drivers={allDrivers}
+         clients={clients}
+         onImport={async (entries) => {
+           for (const entry of entries) {
+             await createTour(entry, 4);
+           }
+           // Refetch entries
+           const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+           const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+           fetchEntries(startDate, endDate);
+           return true;
+         }}
        />
      </div>
    );
