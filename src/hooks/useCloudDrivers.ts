@@ -225,21 +225,26 @@ export function useCloudDrivers() {
     }
   }, [licenseId, authUserId, fetchDrivers]);
 
-  const createDriver = useCallback(async (driver: Driver, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
+  const createDriver = useCallback(async (
+    driver: Driver,
+    driverType: 'cdi' | 'cdd' | 'interim' = 'cdi',
+    options?: { silent?: boolean }
+  ): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Vous devez être connecté');
+      // IMPORTANT: in bulk operations, repeatedly calling auth.getUser() and
+      // resolving licenseId can be extremely slow. Prefer context values.
+      if (!authUserId || !licenseId) {
+        if (!options?.silent) {
+          toast.error('Session en cours de chargement, veuillez réessayer.');
+        }
         return false;
       }
-
-      const currentLicenseId = await getLicenseId();
 
       const { error } = await supabase
         .from('user_drivers')
         .insert([{
-          user_id: user.id,
-          license_id: currentLicenseId,
+          user_id: authUserId,
+          license_id: licenseId,
           local_id: driver.id,
           name: driver.name,
           driver_type: driverType,
@@ -249,6 +254,11 @@ export function useCloudDrivers() {
         }]);
 
       if (error) throw error;
+
+      // For bulk imports, avoid spamming local state updates/toasts.
+      if (options?.silent) {
+        return true;
+      }
 
       if (driverType === 'interim') {
         setInterimDrivers(prev => {
@@ -276,10 +286,12 @@ export function useCloudDrivers() {
       return true;
     } catch (error) {
       console.error('Error creating driver:', error);
-      toast.error('Erreur lors de la création');
+      if (!options?.silent) {
+        toast.error('Erreur lors de la création');
+      }
       return false;
     }
-  }, []);
+  }, [authUserId, licenseId]);
 
   const updateDriver = useCallback(async (driver: Driver, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
