@@ -6,6 +6,17 @@ import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useLicenseContext } from '@/context/LicenseContext';
 
+// Helper to wait for license context to be ready
+async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const vals = getValues();
+    if (vals.authUserId && vals.licenseId) return vals;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getValues();
+}
+
 // Helper to convert database row to SavedTour
 function mapDbToSavedTour(row: any): SavedTour {
   return {
@@ -170,17 +181,23 @@ export function useSavedTours() {
   }, [licenseId, authUserId]); // Minimal dependencies to prevent subscription churn
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
-    if (!authUserId || !licenseId) {
-      if (!contextLoading) {
-        toast.error('Session non initialisée. Veuillez recharger la page.');
-      }
+    // Wait briefly for context to be ready (handles race conditions on page load)
+    let uid = authUserId;
+    let lid = licenseId;
+    if (!uid || !lid) {
+      const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
+      uid = ctx.authUserId;
+      lid = ctx.licenseId;
+    }
+    if (!uid || !lid) {
+      toast.error('Session non initialisée. Veuillez recharger la page.');
       return null;
     }
 
     try {
       const tourData = {
-        user_id: authUserId,
-        license_id: licenseId,
+        user_id: uid,
+        license_id: lid,
         client_id: input.client_id || null,
         name: input.name,
         origin_address: input.origin_address,

@@ -214,8 +214,14 @@ export function FeatureGate({
   mode = 'hide',
   className
 }: FeatureGateProps) {
-  const { hasFeature, planType } = useLicense();
+  const { hasFeature, planType, isLoading } = useLicense();
   const navigate = useNavigate();
+
+  // CRITICAL: During license loading, allow children to render to avoid UI "flash of locked".
+  // If the license is still loading, don't block the feature.
+  if (isLoading) {
+    return <>{children}</>;
+  }
 
   if (hasFeature(feature)) {
     return <>{children}</>;

@@ -5,6 +5,17 @@ import type { Driver } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
+// Helper to wait for license context to be ready
+async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const vals = getValues();
+    if (vals.authUserId && vals.licenseId) return vals;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getValues();
+}
+
 const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
 const CACHE_KEY_CDD = 'optiflow_cdd_drivers_cache';
@@ -231,11 +242,17 @@ export function useCloudDrivers() {
     options?: { silent?: boolean }
   ): Promise<boolean> => {
     try {
-      // IMPORTANT: in bulk operations, repeatedly calling auth.getUser() and
-      // resolving licenseId can be extremely slow. Prefer context values.
-      if (!authUserId || !licenseId) {
-        if (!options?.silent && !contextLoading) {
-          toast.error('Session en cours de chargement, veuillez réessayer.');
+      // Wait briefly for context to be ready (handles race conditions on page load)
+      let uid = authUserId;
+      let lid = licenseId;
+      if (!uid || !lid) {
+        const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
+        uid = ctx.authUserId;
+        lid = ctx.licenseId;
+      }
+      if (!uid || !lid) {
+        if (!options?.silent) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
         }
         return false;
       }
@@ -243,8 +260,8 @@ export function useCloudDrivers() {
       const { error } = await supabase
         .from('user_drivers')
         .insert([{
-          user_id: authUserId,
-          license_id: licenseId,
+          user_id: uid,
+          license_id: lid,
           local_id: driver.id,
           name: driver.name,
           driver_type: driverType,
