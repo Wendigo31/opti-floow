@@ -157,7 +157,7 @@
      }
    }, [licenseId, authUserId, fetchEntries]);
  
-   const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
+    const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) {
@@ -165,7 +165,11 @@
          return null;
        }
  
-       const currentLicenseId = await getLicenseId();
+        const currentLicenseId = licenseId || await getLicenseId();
+        if (!currentLicenseId) {
+          toast.error('Licence introuvable');
+          return null;
+        }
  
        const { data, error } = await supabase
          .from('planning_entries')
@@ -238,7 +242,7 @@
        toast.error('Erreur lors de la création');
        return null;
      }
-   }, []);
+    }, [licenseId]);
  
    const updateEntry = useCallback(async (id: string, updates: Partial<PlanningEntryInput>): Promise<boolean> => {
      try {
@@ -295,7 +299,7 @@
    }, [entries]);
  
    // Create a recurring tour with entries for selected days
-   const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
+    const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
      try {
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) {
@@ -303,7 +307,11 @@
          return false;
        }
  
-       const currentLicenseId = await getLicenseId();
+        const currentLicenseId = licenseId || await getLicenseId();
+        if (!currentLicenseId) {
+          toast.error('Licence introuvable');
+          return false;
+        }
        const startDate = parseISO(input.start_date);
        const endDate = input.end_date ? parseISO(input.end_date) : (input.is_all_year ? addWeeks(startDate, 52) : addWeeks(startDate, weeksAhead));
        
@@ -335,7 +343,7 @@
          end_time: input.end_time || null,
          client_id: input.client_id || null,
          driver_id: input.driver_id || null,
-         vehicle_id: input.vehicle_id,
+          vehicle_id: input.vehicle_id || null,
          mission_order: input.mission_order || null,
          origin_address: input.origin_address || null,
          destination_address: input.destination_address || null,
@@ -364,10 +372,10 @@
        toast.error('Erreur lors de la création de la tournée');
        return false;
      }
-   }, []);
+    }, [licenseId]);
  
    // Duplicate entries to following weeks
-   const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
+    const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
      try {
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) {
@@ -375,7 +383,11 @@
          return false;
        }
  
-       const currentLicenseId = await getLicenseId();
+        const currentLicenseId = licenseId || await getLicenseId();
+        if (!currentLicenseId) {
+          toast.error('Licence introuvable');
+          return false;
+        }
        
        // Get entries to duplicate
        const entriesToDuplicate = entries.filter(e => entryIds.includes(e.id));
@@ -430,7 +442,7 @@
        toast.error('Erreur lors de la duplication');
        return false;
      }
-   }, [entries]);
+    }, [entries, licenseId]);
  
    return {
      entries,

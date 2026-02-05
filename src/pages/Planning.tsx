@@ -385,14 +385,18 @@
          drivers={allDrivers}
          clients={clients}
          onImport={async (entries) => {
-           for (const entry of entries) {
-             await createTour(entry, 4);
-           }
+            let allOk = true;
+
+            for (const entry of entries) {
+              const ok = await createTour(entry, 4);
+              if (!ok) allOk = false;
+            }
+
            // Refetch entries
            const startDate = format(currentWeekStart, 'yyyy-MM-dd');
            const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
            fetchEntries(startDate, endDate);
-           return true;
+            return allOk;
          }}
        />
      </div>

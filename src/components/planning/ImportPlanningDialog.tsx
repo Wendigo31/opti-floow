@@ -86,6 +86,10 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
        
         // Use null if no vehicle selected or 'none'
         const vehicleIdToUse = defaultVehicleId && defaultVehicleId !== 'none' ? defaultVehicleId : null;
+
+        if (!vehicleIdToUse) {
+          toast.warning('Aucune traction sélectionnée : les missions importées ne s\'afficheront pas tant qu\'elles ne seront pas affectées à un tracteur.');
+        }
         
        // Convert to TourInput format
        const tourInputs = convertToTourInputs(
@@ -99,7 +103,7 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
        // Filter out entries with no meaningful data and add required fields
        const validInputs = tourInputs
          .filter(t => t.tour_name && t.recurring_days && t.recurring_days.length > 0)
-         .map(t => ({
+           .map(t => ({
            ...t,
            tour_name: t.tour_name!,
             vehicle_id: t.vehicle_id || vehicleIdToUse,
@@ -107,15 +111,22 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
            is_all_year: false,
            start_date: startDate,
          })) as TourInput[];
-       
-       let successCount = 0;
-       for (const input of validInputs) {
-         const success = await onImport([input]);
-         if (success) successCount++;
-       }
-       
-       toast.success(`${successCount} tournée(s) importée(s) avec succès`);
-       handleClose();
+
+      if (validInputs.length === 0) {
+        toast.error('Aucune tournée valide à importer');
+        return;
+      }
+
+      // Batch import: one call, one refetch (handled by parent)
+      const success = await onImport(validInputs);
+
+      if (!success) {
+        toast.error('Import incomplet : certaines tournées n\'ont pas pu être créées');
+        return;
+      }
+
+      toast.success(`${validInputs.length} tournée(s) importée(s) avec succès`);
+      handleClose();
      } catch (err) {
        console.error('Error importing:', err);
        toast.error('Erreur lors de l\'import');
@@ -133,7 +144,16 @@ import { downloadPlanningTemplate } from '@/utils/excelTemplates';
    };
  
    return (
-     <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            onOpenChange(true);
+            return;
+          }
+          handleClose();
+        }}
+      >
        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
          <DialogHeader>
            <DialogTitle className="flex items-center gap-2">
