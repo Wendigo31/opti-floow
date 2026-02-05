@@ -11,12 +11,20 @@
    const [entries, setEntries] = useState<PlanningEntry[]>([]);
    const [loading, setLoading] = useState(false);
    const channelRef = useRef<RealtimeChannel | null>(null);
+   const fetchInProgressRef = useRef(false);
+ 
+   // Keep latest state in ref for realtime handlers
+   const entriesRef = useRef<PlanningEntry[]>(entries);
+   useEffect(() => { entriesRef.current = entries; }, [entries]);
  
    const fetchEntries = useCallback(async (startDate?: string, endDate?: string): Promise<void> => {
+     if (fetchInProgressRef.current) return;
+     
      if (!authUserId || !licenseId) {
        return;
      }
  
+     fetchInProgressRef.current = true;
      setLoading(true);
  
      try {
@@ -67,11 +75,13 @@
        }));
  
        setEntries(mappedEntries);
+       entriesRef.current = mappedEntries;
      } catch (error) {
        console.error('Error fetching planning entries:', error);
        toast.error('Erreur lors du chargement du planning');
      } finally {
        setLoading(false);
+       fetchInProgressRef.current = false;
      }
    }, [authUserId, licenseId]);
  
@@ -96,21 +106,37 @@
              const newEntry = payload.new as PlanningEntry;
              setEntries(prev => {
                if (prev.find(e => e.id === newEntry.id)) return prev;
-               return [...prev, newEntry].sort((a, b) => 
+               const updated = [...prev, newEntry].sort((a, b) => 
                  a.planning_date.localeCompare(b.planning_date) || 
                  (a.start_time || '').localeCompare(b.start_time || '')
                );
+               entriesRef.current = updated;
+               return updated;
              });
            } else if (payload.eventType === 'UPDATE') {
              const updated = payload.new as PlanningEntry;
-             setEntries(prev => prev.map(e => e.id === updated.id ? updated : e));
+             setEntries(prev => {
+               const newList = prev.map(e => e.id === updated.id ? updated : e);
+               entriesRef.current = newList;
+               return newList;
+             });
            } else if (payload.eventType === 'DELETE') {
              const deletedId = (payload.old as { id: string }).id;
-             setEntries(prev => prev.filter(e => e.id !== deletedId));
+             setEntries(prev => {
+               const newList = prev.filter(e => e.id !== deletedId);
+               entriesRef.current = newList;
+               return newList;
+             });
            }
          }
        )
-       .subscribe();
+       .subscribe((status) => {
+         console.log('[Realtime] planning subscription:', status);
+         // Reconcile on subscribe to catch any missed events
+         if (status === 'SUBSCRIBED' && authUserId) {
+           void fetchEntries();
+         }
+       });
  
      return () => {
        if (channelRef.current) {
@@ -118,7 +144,14 @@
          channelRef.current = null;
        }
      };
-   }, [licenseId]);
+   }, [licenseId, authUserId, fetchEntries]);
+ 
+   // Auto-fetch when licenseId becomes available
+   useEffect(() => {
+     if (licenseId && authUserId) {
+       fetchEntries();
+     }
+   }, [licenseId, authUserId, fetchEntries]);
  
    const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {

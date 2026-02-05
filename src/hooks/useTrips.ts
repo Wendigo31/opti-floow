@@ -1,41 +1,34 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLicense } from '@/hooks/useLicense';
+import { useLicenseContext, getLicenseId as getContextLicenseId } from '@/context/LicenseContext';
 import { toast } from 'sonner';
 import type { LocalTrip } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Get user's license_id for company-level sync
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useTrips() {
-  useLicense(); // Hook must be called for licensing context
+  const { licenseId, authUserId } = useLicenseContext();
   const [trips, setTrips] = useState<LocalTrip[]>([]);
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const fetchInProgressRef = useRef(false);
+
+  // Keep latest state in ref for realtime handlers
+  const tripsRef = useRef<LocalTrip[]>(trips);
+  useEffect(() => { tripsRef.current = trips; }, [trips]);
 
   const fetchTrips = useCallback(async () => {
+    if (fetchInProgressRef.current) return;
+    
+    fetchInProgressRef.current = true;
     setLoading(true);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
+        fetchInProgressRef.current = false;
         return;
       }
 
@@ -78,11 +71,13 @@ export function useTrips() {
       }));
 
       setTrips(mappedTrips);
+      tripsRef.current = mappedTrips;
     } catch (error) {
       console.error('Error fetching trips:', error);
       toast.error('Erreur lors du chargement des trajets');
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, []);
 
@@ -94,13 +89,13 @@ export function useTrips() {
         return null;
       }
 
-      const licenseId = await getUserLicenseId();
+      const currentLicenseId = await getContextLicenseId();
 
       const { data, error } = await supabase
         .from('trips')
         .insert({
           user_id: user.id,
-          license_id: licenseId,
+          license_id: currentLicenseId,
           client_id: input.client_id,
           origin_address: input.origin_address,
           destination_address: input.destination_address,
@@ -162,6 +157,7 @@ export function useTrips() {
       };
 
       setTrips(prev => [newTrip, ...prev]);
+      tripsRef.current = [newTrip, ...tripsRef.current];
       toast.success('Trajet enregistré');
       return newTrip;
     } catch (error) {
@@ -216,11 +212,6 @@ export function useTrips() {
     return trips.filter(t => t.client_id === clientId);
   }, [trips]);
 
-  // Fetch license ID on mount
-  useEffect(() => {
-    getUserLicenseId().then(setLicenseId);
-  }, []);
-
   // Setup realtime subscription for company-level sync
   useEffect(() => {
     if (!licenseId) return;
@@ -271,7 +262,9 @@ export function useTrips() {
             };
             setTrips(prev => {
               if (prev.find(trip => trip.id === newTrip.id)) return prev;
-              return [newTrip, ...prev];
+              const updated = [newTrip, ...prev];
+              tripsRef.current = updated;
+              return updated;
             });
           } else if (payload.eventType === 'UPDATE') {
             const t = payload.new as any;
@@ -304,15 +297,27 @@ export function useTrips() {
               created_at: t.created_at,
               updated_at: t.updated_at,
             };
-            setTrips(prev => prev.map(trip => trip.id === updatedTrip.id ? updatedTrip : trip));
+            setTrips(prev => {
+              const updated = prev.map(trip => trip.id === updatedTrip.id ? updatedTrip : trip);
+              tripsRef.current = updated;
+              return updated;
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as any).id;
-            setTrips(prev => prev.filter(trip => trip.id !== deletedId));
+            setTrips(prev => {
+              const updated = prev.filter(trip => trip.id !== deletedId);
+              tripsRef.current = updated;
+              return updated;
+            });
           }
         }
       )
       .subscribe((status) => {
         console.log('[Realtime] trips subscription:', status);
+        // Reconcile on subscribe
+        if (status === 'SUBSCRIBED') {
+          void fetchTrips();
+        }
       });
 
     return () => {
@@ -321,12 +326,14 @@ export function useTrips() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [licenseId, fetchTrips]);
 
   // Initial fetch
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    if (authUserId) {
+      fetchTrips();
+    }
+  }, [authUserId, fetchTrips]);
 
   return {
     trips,
