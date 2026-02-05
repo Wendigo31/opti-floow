@@ -27,8 +27,9 @@
    mission_order: string;
    start_time: string | null;
    end_time: string | null;
-   recurring_days: number[]; // 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam, 6=Dim
-   day_drivers: Record<number, string>; // conducteur spécifique par jour
+  recurring_days: number[]; // 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam (Dim non importé)
+  /** Raw text in each day cell (driver name OR free text) per day index */
+  day_cells: Record<number, string>;
   sector_manager: string | null; // Responsable de secteur
  }
 
@@ -160,6 +161,20 @@ function getDayIdxFromHeader(header: string): number | null {
    
    return clean;
  }
+
+/**
+ * Extract user-entered day cell text.
+ * Keep it as-is as much as possible (these cells can contain notes / placeholders).
+ */
+function extractDayCellText(cellValue: string | undefined): string {
+  if (!cellValue) return '';
+  let clean = cellValue.toString().trim();
+  // Strip phone numbers only
+  clean = clean.replace(/\d{2}\s*\d{2}\s*\d{2}\s*\d{2}\s*\d{2}/g, '').trim();
+  // Common marker
+  clean = clean.replace(/chauffeur\s+brie?f[eé]/gi, '').trim();
+  return clean;
+}
  
  /**
   * Parse the uploaded Excel file for planning data
@@ -261,20 +276,19 @@ function getDayIdxFromHeader(header: string): number | null {
      const { origin, destination } = parseAddresses(ligne);
      
      // Determine which days are active and who drives each day
-      // Always import the full week (Mon=0 to Sun=6)
-      const recurring_days: number[] = [0, 1, 2, 3, 4, 5, 6];
-     const day_drivers: Record<number, string> = {};
+     // Always import Mon..Sat. Sunday is intentionally excluded.
+     const recurring_days: number[] = [0, 1, 2, 3, 4, 5];
+    const day_cells: Record<number, string> = {};
      
-       // Parse driver names from Excel day columns (only for assignment, not for day creation)
-      dayColumns.forEach(({ colIdx, dayIdx }) => {
-        const cellValue = (row[colIdx] || '').toString();
-         
-         // Extract driver name if present (skip empty cells and markers like "X")
-        const driverForDay = extractDriverFromCell(cellValue);
-         if (driverForDay && driverForDay.length > 1 && driverForDay.toLowerCase() !== 'x') {
-          day_drivers[dayIdx] = driverForDay;
-        }
-      });
+      // Parse raw day cell text from Excel day columns (notes/placeholders)
+     dayColumns.forEach(({ colIdx, dayIdx }) => {
+       if (dayIdx === 6) return; // never import Sunday
+       const raw = (row[colIdx] || '').toString();
+       const v = extractDayCellText(raw);
+       if (!v) return;
+       if (v.toLowerCase() === 'x') return;
+       day_cells[dayIdx] = v;
+     });
      
      // Only add if we have meaningful data
      if (client || ligne || odm) {
@@ -288,8 +302,8 @@ function getDayIdxFromHeader(header: string): number | null {
          start_time: parseTime(startTime),
          end_time: parseTime(endTime),
          recurring_days,
-         day_drivers,
-       sector_manager: sectorManager || null,
+          day_cells,
+          sector_manager: sectorManager || null,
        });
      }
    }
@@ -306,7 +320,10 @@ function getDayIdxFromHeader(header: string): number | null {
    driverMap: Map<string, string>, // driver name -> driver id
   defaultVehicleId: string | null,
    startDate: string
-): (Partial<TourInput> & { sector_manager?: string | null; day_driver_ids?: Record<number, string> })[] {
+): (Partial<TourInput> & {
+  sector_manager?: string | null;
+  day_notes?: Record<number, string>;
+})[] {
    return parsedEntries.map(entry => {
      // Try to match client
      let client_id: string | null = null;
@@ -332,25 +349,22 @@ function getDayIdxFromHeader(header: string): number | null {
        }
      }
      
-    // Match drivers per day
-    const day_driver_ids: Record<number, string> = {};
-    for (const [dayIdx, driverName] of Object.entries(entry.day_drivers)) {
-      if (!driverName) continue;
-      const driverLower = driverName.toLowerCase();
-      for (const [name, id] of driverMap.entries()) {
-        if (name.toLowerCase().includes(driverLower) || driverLower.includes(name.toLowerCase())) {
-          day_driver_ids[Number(dayIdx)] = id;
-          break;
-        }
-      }
-    }
+     // Day cells -> default notes per day (driver assignment is done manually in the grid)
+     const day_notes: Record<number, string> = {};
+     for (const [dayIdxRaw, text] of Object.entries(entry.day_cells || {})) {
+       const dayIdx = Number(dayIdxRaw);
+       if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 5) continue;
+       const v = (text || '').toString().trim();
+       if (!v) continue;
+       day_notes[dayIdx] = v;
+     }
 
      return {
        tour_name: entry.ligne || entry.client || 'Tournée importée',
       vehicle_id: defaultVehicleId || undefined,
        client_id,
        driver_id,
-       recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4],
+        recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4, 5],
        is_all_year: false,
        start_date: startDate,
        start_time: entry.start_time,
@@ -359,7 +373,7 @@ function getDayIdxFromHeader(header: string): number | null {
        destination_address: entry.destination_address || null,
        mission_order: entry.mission_order || null,
       sector_manager: entry.sector_manager,
-      day_driver_ids: Object.keys(day_driver_ids).length > 0 ? day_driver_ids : undefined,
+        day_notes: Object.keys(day_notes).length > 0 ? day_notes : undefined,
      };
    });
  }

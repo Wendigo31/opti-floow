@@ -121,17 +121,17 @@ import { format } from 'date-fns';
        );
        
        // Filter out entries with no meaningful data and add required fields
-       const validInputs = tourInputs
+        const validInputs = tourInputs
          .filter(t => t.tour_name && t.recurring_days && t.recurring_days.length > 0)
            .map((t): ExcelTourInput => ({
            ...t,
            tour_name: t.tour_name!,
           vehicle_id: null, // Always null - user will assign later
-           recurring_days: t.recurring_days || [0, 1, 2, 3, 4],
+            recurring_days: t.recurring_days || [0, 1, 2, 3, 4, 5],
             is_all_year: false,
             start_date: format(weekStartDate, 'yyyy-MM-dd'),
            sector_manager: t.sector_manager || null,
-          day_driver_ids: t.day_driver_ids,
+            day_notes: t.day_notes,
          }));
 
       if (validInputs.length === 0) {

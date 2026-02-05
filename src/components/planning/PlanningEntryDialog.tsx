@@ -36,6 +36,7 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
    onSave: (input: PlanningEntryInput) => void;
    onDelete?: () => void;
   onApplyVehicleToTour?: (vehicleId: string, tourName: string) => void;
+  onDeleteTourInWeek?: (tourName: string) => void;
  }
  
  export function PlanningEntryDialog({
@@ -49,6 +50,7 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
    onSave,
    onDelete,
   onApplyVehicleToTour,
+  onDeleteTourInWeek,
  }: PlanningEntryDialogProps) {
    const [formData, setFormData] = useState<PlanningEntryInput>({
      planning_date: '',
@@ -131,6 +133,30 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
    };
  
    const selectedVehicle = vehicles.find(v => v.id === formData.vehicle_id);
+
+  const handleClearCell = () => {
+    if (!entry) return;
+    onSave({
+      ...formData,
+      driver_id: null,
+      relay_driver_id: null,
+      relay_location: null,
+      relay_time: null,
+      // Clear Excel placeholders / content
+      notes: null,
+      mission_order: null,
+      status: 'planned',
+    });
+    onOpenChange(false);
+  };
+
+  const handleDeleteTourWeek = () => {
+    if (!entry?.tour_name || !onDeleteTourInWeek) return;
+    const ok = window.confirm(`Supprimer toute la traction "${entry.tour_name}" sur la semaine affichée ?`);
+    if (!ok) return;
+    onDeleteTourInWeek(entry.tour_name);
+    onOpenChange(false);
+  };
  
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
@@ -397,17 +423,26 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
            </div>
  
            <DialogFooter className="gap-2 sm:gap-0">
-             {onDelete && (
-               <Button
-                 type="button"
-                 variant="destructive"
-                 onClick={onDelete}
-                 className="mr-auto"
-               >
-                 <Trash2 className="h-4 w-4 mr-2" />
-                 Supprimer
-               </Button>
-             )}
+              <div className="mr-auto flex flex-wrap gap-2">
+                {entry && (
+                  <Button type="button" variant="outline" onClick={handleClearCell}>
+                    Vider la case
+                  </Button>
+                )}
+
+                {entry?.tour_name && onDeleteTourInWeek && (
+                  <Button type="button" variant="destructive" onClick={handleDeleteTourWeek}>
+                    Supprimer la traction (semaine)
+                  </Button>
+                )}
+
+                {onDelete && (
+                  <Button type="button" variant="destructive" onClick={onDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </Button>
+                )}
+              </div>
              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                Annuler
              </Button>

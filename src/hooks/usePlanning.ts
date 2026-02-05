@@ -6,6 +6,26 @@
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 
+function withTimeout<T>(work: () => Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`${label} : délai dépassé (${Math.round(ms / 1000)}s)`));
+    }, ms);
+
+    // Ensure we always deal with a real Promise (some query builders are thenables)
+    Promise.resolve()
+      .then(work)
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
+  });
+}
+
 export interface ExcelTourInput {
   tour_name: string;
   vehicle_id?: string | null;
@@ -27,6 +47,8 @@ export interface ExcelTourInput {
   sector_manager?: string | null;
   /** Driver ID per day index (0=Mon...6=Sun) - overrides driver_id for specific days */
   day_driver_ids?: Record<number, string>;
+  /** Default note text per day index (0=Mon...5=Sat) */
+  day_notes?: Record<number, string>;
 }
  
  export function usePlanning() {
@@ -425,11 +447,13 @@ export interface ExcelTourInput {
 
           const rows = tours.flatMap((t) => {
             const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
-            const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+            // Import Mon..Sat only (Sunday is manual/rare)
+            const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 5);
             return validDays.map((dayIdx) => {
               const date = addDays(monday, dayIdx);
               // Use day-specific driver if available, otherwise fall back to global driver_id
               const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
+              const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
               return {
                 user_id: user.id,
                 license_id: currentLicenseId,
@@ -443,7 +467,7 @@ export interface ExcelTourInput {
                 mission_order: t.mission_order || null,
                 origin_address: t.origin_address || null,
                 destination_address: t.destination_address || null,
-                notes: t.notes || null,
+                notes: notesForDay,
                 status: 'planned' as const,
                 tour_name: t.tour_name,
                 recurring_days: validDays,
@@ -465,12 +489,17 @@ export interface ExcelTourInput {
           }
 
           // Insert in chunks to avoid payload limits on large files
-          const CHUNK_SIZE = 500;
+          const CHUNK_SIZE = 200;
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
 
             // Execute the insert
-            const { error } = await supabase.from('planning_entries').insert(chunk);
+            const res = await withTimeout(
+              () => supabase.from('planning_entries').insert(chunk) as any,
+              45_000,
+              `Import Excel (lot ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(rows.length / CHUNK_SIZE)})`
+            );
+            const { error } = res as { error: unknown | null };
             if (error) throw error;
           }
 
@@ -486,6 +515,42 @@ export interface ExcelTourInput {
       },
       [licenseId]
     );
+
+    const deleteTourInWeek = useCallback(async (tourName: string, weekStartDate: Date): Promise<boolean> => {
+      try {
+        const currentLicenseId = licenseId || await getLicenseId();
+        if (!currentLicenseId) {
+          toast.error('Licence introuvable');
+          return false;
+        }
+
+        const monday = startOfWeek(weekStartDate, { weekStartsOn: 1 });
+        const startStr = format(monday, 'yyyy-MM-dd');
+        const endStr = format(addDays(monday, 6), 'yyyy-MM-dd');
+
+        const { error } = await supabase
+          .from('planning_entries')
+          .delete()
+          .eq('license_id', currentLicenseId)
+          .eq('tour_name', tourName)
+          .gte('planning_date', startStr)
+          .lte('planning_date', endStr);
+
+        if (error) throw error;
+
+        setEntries((prev) => prev.filter((e) => {
+          if (e.tour_name !== tourName) return true;
+          return e.planning_date < startStr || e.planning_date > endStr;
+        }));
+
+        toast.success(`Traction "${tourName}" supprimée sur la semaine`);
+        return true;
+      } catch (e) {
+        console.error('Error deleting tour in week:', e);
+        toast.error('Erreur lors de la suppression de la traction');
+        return false;
+      }
+    }, [licenseId]);
  
    // Duplicate entries to following weeks
     const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
@@ -568,6 +633,7 @@ export interface ExcelTourInput {
      getEntriesForVehicle,
      createTour,
       importExcelPlanningWeek,
+      deleteTourInWeek,
      duplicateToNextWeeks,
     applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
       try {
