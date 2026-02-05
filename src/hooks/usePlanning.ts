@@ -6,6 +6,22 @@
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 export interface ExcelTourInput {
   tour_name: string;
   vehicle_id?: string | null;
@@ -35,6 +51,10 @@ export interface ExcelTourInput {
    const [loading, setLoading] = useState(false);
    const channelRef = useRef<RealtimeChannel | null>(null);
    const fetchInProgressRef = useRef(false);
+
+  // When doing bulk inserts (Excel import), realtime INSERT events can flood the UI and make it look stuck.
+  // We temporarily suspend realtime handling during the import and rely on a single refetch after.
+  const suspendRealtimeRef = useRef(false);
  
    // Keep latest state in ref for realtime handlers
    const entriesRef = useRef<PlanningEntry[]>(entries);
@@ -128,6 +148,8 @@ export interface ExcelTourInput {
          },
          (payload) => {
            console.log('[Realtime] planning change:', payload.eventType);
+
+            if (suspendRealtimeRef.current) return;
            
            if (payload.eventType === 'INSERT') {
              const newEntry = payload.new as PlanningEntry;
@@ -400,6 +422,8 @@ export interface ExcelTourInput {
     const importExcelPlanningWeek = useCallback(
       async (tours: ExcelTourInput[], weekStartDate: Date): Promise<boolean> => {
         try {
+          suspendRealtimeRef.current = true;
+
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
             toast.error('Vous devez être connecté');
@@ -460,7 +484,13 @@ export interface ExcelTourInput {
           const CHUNK_SIZE = 500;
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
-            const { error } = await supabase.from('planning_entries').insert(chunk);
+
+            // Safety timeout: prevents the UI from spinning forever if a request hangs.
+            const { error } = await withTimeout(
+              supabase.from('planning_entries').insert(chunk),
+              60_000,
+              "Timeout lors de l'import (requête trop longue)."
+            );
             if (error) throw error;
           }
 
@@ -469,6 +499,8 @@ export interface ExcelTourInput {
           console.error('Error importing planning from Excel:', error);
           toast.error("Erreur lors de l'import Excel");
           return false;
+        } finally {
+          suspendRealtimeRef.current = false;
         }
       },
       [licenseId]
