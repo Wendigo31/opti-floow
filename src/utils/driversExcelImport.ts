@@ -111,12 +111,26 @@
    
    const driverKeywords = [
      'chauffeur', 'conducteur', 'routier', 'driver', 'spl', 'pl',
-     'super poids lourd', 'poids lourd', 'livreur'
+    'super poids lourd', 'poids lourd', 'livreur', 'super poids lourds',
+    'poids lourds', 'chauffeurs', 'conducteurs'
    ];
    
    return driverKeywords.some(kw => rowText.includes(kw));
  }
  
+/**
+ * Check if text contains driver keywords
+ */
+function containsDriverKeyword(text: string): boolean {
+  const lower = text.toLowerCase();
+  const keywords = [
+    'chauffeur', 'conducteur', 'routier', 'driver', 'spl', 'pl',
+    'super poids lourd', 'poids lourd', 'livreur', 'super poids lourds',
+    'poids lourds'
+  ];
+  return keywords.some(kw => lower.includes(kw));
+}
+
  /**
   * Parse the uploaded Excel file for driver data
   */
@@ -177,8 +191,11 @@
        let position = positionIdx >= 0 ? String(row[positionIdx] || '').trim() : '';
        const rowText = row.join(' ').toLowerCase();
        
-       // Only include if it's a driver/chauffeur
-       if (!isDriverRow(row, headers)) continue;
+      // Only include if it's a driver/chauffeur - be more lenient
+      const hasDriverKeyword = isDriverRow(row, headers);
+      const positionHasKeyword = containsDriverKeyword(position);
+      
+      if (!hasDriverKeyword && !positionHasKeyword) continue;
        
        // Extract name
        let fullName = '';
@@ -260,6 +277,21 @@
    return Array.from(uniqueDrivers.values());
  }
  
+/**
+ * Parse Excel from URL (for auto-import)
+ */
+export async function parseDriversFromUrl(url: string): Promise<ParsedDriverRow[]> {
+  try {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    return parseDriversExcel(workbook);
+  } catch (error) {
+    console.error('Error fetching/parsing Excel from URL:', error);
+    return [];
+  }
+}
+
  /**
   * Convert parsed rows to Driver objects ready for import
   */
