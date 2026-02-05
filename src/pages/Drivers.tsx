@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search } from 'lucide-react';
+ import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,9 @@ import { useCompanyData } from '@/hooks/useCompanyData';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { TooltipProvider } from '@/components/ui/tooltip';
+ import { ImportDriversDialog } from '@/components/drivers/ImportDriversDialog';
+ import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
+ import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
@@ -39,9 +42,13 @@ export default function Drivers() {
   const [activeTab, setActiveTab] = useState<'cdi' | 'interim'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
+   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   // Store interim drivers separately
   const [interimDrivers, setInterimDrivers] = useLocalStorage<ExtendedDriver[]>('optiflow_interim_drivers', []);
+   
+   // Cloud drivers hook for import
+   const { createDriver: createCloudDriver } = useCloudDrivers();
   
   const canAddDriver = checkLimit('maxDrivers', drivers.length + interimDrivers.length);
 
@@ -170,6 +177,50 @@ export default function Drivers() {
     return baseCost;
   };
 
+   const handleImportDrivers = async (importedDrivers: ExtendedParsedDriver[]): Promise<number> => {
+     let count = 0;
+     
+     for (const driver of importedDrivers) {
+       const isInterim = driver.isInterim;
+       
+       // Convert to app driver format
+       const newDriver: ExtendedDriver = {
+         id: driver.id,
+         name: driver.name,
+         baseSalary: driver.baseSalary,
+         hourlyRate: driver.hourlyRate,
+         hoursPerDay: driver.hoursPerDay,
+         patronalCharges: driver.patronalCharges,
+         mealAllowance: driver.mealAllowance,
+         overnightAllowance: driver.overnightAllowance,
+         workingDaysPerMonth: driver.workingDaysPerMonth,
+         sundayBonus: driver.sundayBonus,
+         nightBonus: driver.nightBonus,
+         seniorityBonus: driver.seniorityBonus,
+         isInterim,
+         interimAgency: driver.interimAgency || '',
+         interimHourlyRate: 15,
+         interimCoefficient: 1.85,
+         scheduleType: 'day',
+       };
+       
+       // Save to cloud
+       const success = await createCloudDriver(newDriver as Driver, isInterim);
+       if (success) {
+         count++;
+         
+         // Also update local state
+         if (isInterim) {
+           setInterimDrivers(prev => [...prev, newDriver]);
+         } else {
+           setDrivers(prev => [...prev, newDriver as Driver]);
+         }
+       }
+     }
+     
+     return count;
+   };
+ 
   const renderForm = () => {
     const isInterim = formData.isInterim || activeTab === 'interim';
     
@@ -672,6 +723,10 @@ export default function Drivers() {
               Débloquer plus de conducteurs
             </Button>
           )}
+         <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="gap-2">
+           <Upload className="w-4 h-4" />
+           Importer Excel
+         </Button>
         </div>
       </div>
 
@@ -764,6 +819,12 @@ export default function Drivers() {
           )}
         </TabsContent>
       </Tabs>
+       
+       <ImportDriversDialog
+         open={isImportDialogOpen}
+         onOpenChange={setIsImportDialogOpen}
+         onImport={handleImportDrivers}
+       />
     </div>
   );
 }
