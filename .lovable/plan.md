@@ -1,71 +1,102 @@
-# Plan de Renforcement de la Sécurité Backend
 
-## ✅ IMPLÉMENTATION TERMINÉE
+# Plan de correction de l'import Excel Planning
 
-**Date d'implémentation:** 2026-02-04
+## Problème identifié
 
----
-
-## Résumé des Corrections Appliquées
-
-### ✅ Phase 1 : Sécurisation des Fonctions RPC Admin
-- Révoqué les permissions PUBLIC sur les fonctions admin (`admin_add_company_user`, `admin_remove_company_user`, `admin_update_company_user_role`, `admin_toggle_company_user_active`)
-- Accordé les permissions uniquement au `service_role`
-
-### ✅ Phase 2 : Correction des Policies INSERT
-Sécurisé les policies INSERT avec vérification `auth.uid()` pour :
-- `access_requests`
-- `charge_presets`
-- `company_config`
-- `company_sync_events`
-- `company_users`
-- `exploitation_metric_settings`
-- `user_charges`
-- `user_drivers`
-
-### ✅ Phase 3 : Authentification des Edge Functions API
-Ajouté la vérification JWT via `getClaims()` à :
-- `google-maps-key/index.ts`
-- `tomtom-route/index.ts`
-- `tomtom-search/index.ts`
-- `tomtom-tolls/index.ts`
-- `truck-restrictions/index.ts`
-
-### ✅ Phase 4 : Prévention d'Élévation de Privilèges
-- Créé le trigger `prevent_role_escalation` pour empêcher la création/modification de rôles 'direction' par des utilisateurs normaux
-
-### ✅ Phase 5 : Audit Logging
-- Créé la fonction `log_sensitive_action()` et le trigger `audit_company_users` pour tracer les opérations sensibles sur `company_users`
+L'import actuel ne crée des missions QUE pour les jours où une cellule contient du texte (via `isDayActive()`). Tu veux au contraire :
+- **Toujours créer 7 missions** (Lun→Dim) pour chaque tournée importée
+- Assigner le conducteur uniquement si son nom apparaît dans la cellule du jour correspondant
+- Ignorer complètement le filtre `isDayActive()` pour la création des jours
 
 ---
 
-## Note: Warning Restant
+## Modifications à apporter
 
-⚠️ **Leaked Password Protection Disabled** - Cette configuration doit être activée manuellement dans les paramètres Supabase Auth. Ce n'est pas modifiable via code.
+### 1. Fichier `src/utils/planningExcelImport.ts`
+
+**Changement de logique dans `parsePlanningExcel()`** :
+
+Actuellement le code fait :
+```
+if (!isDayActive(cellValue)) return;  // ← On saute si vide
+recurring_days.push(dayIdx);
+```
+
+Nouvelle logique :
+- On ajoute **toujours tous les jours de 0 à 6** dans `recurring_days`
+- On ne garde `day_drivers[dayIdx]` que si la cellule contient un vrai nom de conducteur
+
+**Modification concrète** :
+- Remplacer la boucle `dayColumns.forEach(...)` par une logique qui :
+  1. Initialise `recurring_days = [0, 1, 2, 3, 4, 5, 6]` directement (toute la semaine)
+  2. Ne parse que les noms de conducteurs depuis les colonnes Excel pour remplir `day_drivers`
+
+### 2. Fichier `src/hooks/usePlanning.ts` (fonction `importExcelPlanningWeek`)
+
+**Vérification** : S'assurer que la création itère sur `recurring_days` (qui sera maintenant toujours `[0..6]`) pour générer les 7 missions.
+
+Actuellement le code :
+```typescript
+const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+return validDays.map((dayIdx) => { ... });
+```
+
+Ce code est correct et n'a pas besoin de modification.
 
 ---
 
-## Fichiers Modifiés
+## Résultat attendu
 
-### Edge Functions
-- `supabase/functions/google-maps-key/index.ts`
-- `supabase/functions/tomtom-route/index.ts`
-- `supabase/functions/tomtom-search/index.ts`
-- `supabase/functions/tomtom-tolls/index.ts`
-- `supabase/functions/truck-restrictions/index.ts`
-
-### Hooks Frontend
-- `src/hooks/useTomTom.ts` - Ajouté helper `getAuthToken()` (non utilisé car `supabase.functions.invoke` inclut automatiquement le token)
-- `src/hooks/useAddressAutocomplete.ts` - Confirmé que `supabase.functions.invoke` passe le token automatiquement
+| Avant | Après |
+|-------|-------|
+| 5 missions (Lun-Ven) car seules ces cellules contenaient du texte | 7 missions (Lun-Dim) systématiquement |
+| Conducteur ignoré si nom dans cellule | Conducteur assigné si nom dans cellule du jour |
 
 ---
 
-## Checklist de Validation Post-Implémentation
+## Détails techniques
 
-- [x] Migration SQL appliquée avec succès
-- [x] Edge functions déployées avec authentification
-- [x] Frontend utilise les appels authentifiés
-- [ ] Tester la connexion utilisateur
-- [ ] Tester l'ajout de membres d'équipe (direction uniquement)
-- [ ] Tester le calcul d'itinéraire TomTom
-- [ ] Tester la synchronisation des données entre utilisateurs
+### Fichier : `src/utils/planningExcelImport.ts`
+
+```text
+Lignes ~263-284 : Refonte de la boucle de parsing des jours
+
+AVANT:
+┌────────────────────────────────────────────┐
+│ dayColumns.forEach(...)                    │
+│   if (!isDayActive(cellValue)) return;     │
+│   recurring_days.push(dayIdx);             │
+│   ...                                      │
+└────────────────────────────────────────────┘
+
+APRÈS:
+┌────────────────────────────────────────────┐
+│ // Toujours la semaine complète            │
+│ recurring_days = [0, 1, 2, 3, 4, 5, 6];    │
+│                                            │
+│ // Parse les conducteurs depuis Excel      │
+│ dayColumns.forEach(...)                    │
+│   const driver = extractDriverFromCell();  │
+│   if (driver) day_drivers[dayIdx] = driver;│
+└────────────────────────────────────────────┘
+```
+
+### Comportement de l'import
+
+1. Lecture du fichier Excel
+2. Détection des colonnes "Lundi", "Mardi", etc.
+3. Pour chaque ligne de tournée :
+   - On force `recurring_days = [0, 1, 2, 3, 4, 5, 6]`
+   - On lit les noms de conducteurs dans chaque colonne jour
+   - On crée `day_drivers[dayIdx] = "Nom Conducteur"` si présent
+4. Dans `usePlanning.importExcelPlanningWeek()` :
+   - On crée 7 entrées `planning_entries` (une par jour)
+   - Chaque entrée a `driver_id` si `day_driver_ids[dayIdx]` existe, sinon `null`
+
+---
+
+## Impact sur l'interface
+
+- La ligne "Non assigné" contiendra les 7 missions de chaque tournée
+- Le nom du conducteur sera affiché dans chaque cellule s'il a été extrait de l'Excel
+- L'utilisateur pourra ensuite modifier les conducteurs jour par jour en cliquant sur les cellules
