@@ -309,6 +309,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
 const LICENSE_STORAGE_KEY = 'optiflow-license';
 const LICENSE_CACHE_KEY = 'optiflow-license-cache';
 const OFFLINE_VALIDITY_DAYS = 30;
+const CHECK_THROTTLE_MS = 2 * 60 * 1000; // Skip server check if validated < 2 minutes ago
 
 // Custom event to keep multiple useLicense() instances in sync (same tab)
 const LICENSE_EVENT = 'optiflow:license-updated';
@@ -559,6 +560,19 @@ export function useLicense(): UseLicenseReturn {
 
             // Only proceed with check if not in re-validation
             if (!isRevalidating) {
+              // Skip server check if we validated recently (< 2 minutes ago) — rely on cache
+              if (cachedLicense) {
+                const lastValidatedDate = new Date(cachedLicense.lastValidated);
+                if (Date.now() - lastValidatedDate.getTime() < CHECK_THROTTLE_MS) {
+                  console.log('[useLicense] Using cached license (validated recently)');
+                  setLicenseData(cachedLicense.data);
+                  setIsLicensed(true);
+                  broadcastLicenseUpdate(cachedLicense.data);
+                  setIsLoading(false);
+                  return;
+                }
+              }
+
               const { data: checkResponse, error: checkError } = await supabase.functions.invoke('validate-license', {
                 body: { licenseCode: data.code, email: data.email, action: 'check' },
               });
