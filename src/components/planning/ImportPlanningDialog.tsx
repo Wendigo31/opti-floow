@@ -9,6 +9,7 @@
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
  import { parseExcelFile } from '@/utils/excelImport';
  import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
+import { downloadPlanningTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
  import { format } from 'date-fns';
  import { dayLabels } from '@/types/planning';
@@ -142,6 +143,19 @@
          </DialogHeader>
  
          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          {/* Download template button */}
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={downloadPlanningTemplate}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Télécharger le modèle Excel
+            </Button>
+          </div>
+
            {/* Upload zone */}
            <div 
              className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"

@@ -1,11 +1,12 @@
  import { useState, useRef } from 'react';
- import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Building2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Building2, Download } from 'lucide-react';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { parseExcelFile } from '@/utils/excelImport';
  import { parseDriversExcel, convertToDrivers, type ParsedDriverRow, type ExtendedParsedDriver } from '@/utils/driversExcelImport';
+import { downloadDriversTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
  
  interface ImportDriversDialogProps {
@@ -96,6 +97,19 @@
          </DialogHeader>
  
          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          {/* Download template button */}
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={downloadDriversTemplate}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Télécharger le modèle Excel
+            </Button>
+          </div>
+
            {/* Upload zone */}
            <div 
              className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
