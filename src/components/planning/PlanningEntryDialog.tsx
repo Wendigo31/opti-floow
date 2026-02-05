@@ -17,7 +17,7 @@
    SelectTrigger,
    SelectValue,
  } from '@/components/ui/select';
- import { Trash2, Save } from 'lucide-react';
+ import { Trash2, Save, UserPlus } from 'lucide-react';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import { planningStatusLabels } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
@@ -59,7 +59,13 @@
      destination_address: null,
      notes: null,
      status: 'planned',
+     tour_name: null,
+     relay_driver_id: null,
+     relay_location: null,
+     relay_time: null,
    });
+   
+   const [showRelay, setShowRelay] = useState(false);
  
    useEffect(() => {
      if (entry) {
@@ -75,7 +81,12 @@
          destination_address: entry.destination_address,
          notes: entry.notes,
          status: entry.status,
+         tour_name: entry.tour_name,
+         relay_driver_id: entry.relay_driver_id,
+         relay_location: entry.relay_location,
+         relay_time: entry.relay_time,
        });
+       setShowRelay(!!entry.relay_driver_id);
      } else {
        setFormData({
          planning_date: defaultValues.planning_date || '',
@@ -89,7 +100,12 @@
          destination_address: defaultValues.destination_address || null,
          notes: defaultValues.notes || null,
          status: defaultValues.status || 'planned',
+         tour_name: defaultValues.tour_name || null,
+         relay_driver_id: defaultValues.relay_driver_id || null,
+         relay_location: defaultValues.relay_location || null,
+         relay_time: defaultValues.relay_time || null,
        });
+       setShowRelay(false);
      }
    }, [entry, defaultValues, open]);
  
@@ -204,6 +220,17 @@
              </div>
            </div>
  
+           {/* Tour name (optional) */}
+           <div className="space-y-2">
+             <Label htmlFor="tour_name">Nom de la tournée (optionnel)</Label>
+             <Input
+               id="tour_name"
+               value={formData.tour_name || ''}
+               onChange={(e) => setFormData(prev => ({ ...prev, tour_name: e.target.value || null }))}
+               placeholder="Ex: Navette Paris-Lyon"
+             />
+           </div>
+ 
            {/* Status */}
            <div className="space-y-2">
              <Label>Statut</Label>
@@ -244,6 +271,62 @@
                  placeholder="Ex: 456 Avenue de Lyon, 69001 Lyon"
                />
              </div>
+           </div>
+ 
+           {/* Relay Driver Toggle */}
+           <div className="space-y-3">
+             <Button
+               type="button"
+               variant="outline"
+               size="sm"
+               onClick={() => setShowRelay(!showRelay)}
+               className="gap-2"
+             >
+               <UserPlus className="h-4 w-4" />
+               {showRelay ? 'Masquer le relais' : 'Ajouter un relais'}
+             </Button>
+             
+             {showRelay && (
+               <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                 <div className="space-y-2">
+                   <Label>Conducteur relais</Label>
+                   <Select
+                     value={formData.relay_driver_id || ''}
+                     onValueChange={(value) => setFormData(prev => ({ ...prev, relay_driver_id: value || null }))}
+                   >
+                     <SelectTrigger>
+                       <SelectValue placeholder="2ème conducteur" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="">Aucun</SelectItem>
+                       {drivers.filter(d => d.id !== formData.driver_id).map((driver) => (
+                         <SelectItem key={driver.id} value={driver.id}>
+                           {driver.name}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="relay_time">Heure de relais</Label>
+                   <Input
+                     id="relay_time"
+                     type="time"
+                     value={formData.relay_time || ''}
+                     onChange={(e) => setFormData(prev => ({ ...prev, relay_time: e.target.value || null }))}
+                   />
+                 </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="relay_location">Lieu de relais</Label>
+                   <Input
+                     id="relay_location"
+                     value={formData.relay_location || ''}
+                     onChange={(e) => setFormData(prev => ({ ...prev, relay_location: e.target.value || null }))}
+                     placeholder="Ex: Aire de Mâcon"
+                   />
+                 </div>
+               </div>
+             )}
            </div>
  
            {/* Mission Order */}

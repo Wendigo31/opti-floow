@@ -1,8 +1,8 @@
- import { useState, useEffect, useMemo } from 'react';
+ import { useState, useEffect, useMemo, useCallback } from 'react';
  import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
- import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from 'lucide-react';
+ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Copy, Check } from 'lucide-react';
  import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
  import { fr } from 'date-fns/locale';
  import { usePlanning } from '@/hooks/usePlanning';
@@ -11,9 +11,13 @@
  import { useClients } from '@/hooks/useClients';
  import { PlanningEntryDialog } from '@/components/planning/PlanningEntryDialog';
  import { PlanningCell } from '@/components/planning/PlanningCell';
+ import { AddTourDialog } from '@/components/planning/AddTourDialog';
+ import { DuplicateWeeksDialog } from '@/components/planning/DuplicateWeeksDialog';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
  import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+ import { Checkbox } from '@/components/ui/checkbox';
+ import { toast } from 'sonner';
  
  export default function Planning() {
    const [currentWeekStart, setCurrentWeekStart] = useState(() => 
@@ -21,9 +25,13 @@
    );
    const [selectedEntry, setSelectedEntry] = useState<PlanningEntry | null>(null);
    const [isDialogOpen, setIsDialogOpen] = useState(false);
+   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
+   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
    const [newEntryDefaults, setNewEntryDefaults] = useState<Partial<PlanningEntryInput>>({});
+   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
+   const [isSelectionMode, setIsSelectionMode] = useState(false);
  
-   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry } = usePlanning();
+   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, duplicateToNextWeeks } = usePlanning();
    const { vehicles, fetchVehicles } = useCloudVehicles();
    const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
    const { clients } = useClients();
@@ -57,7 +65,30 @@
    const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1));
    const handleToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
  
+   const toggleSelectionMode = () => {
+     setIsSelectionMode(prev => !prev);
+     setSelectedEntryIds(new Set());
+   };
+ 
+   const toggleEntrySelection = useCallback((entryId: string) => {
+     setSelectedEntryIds(prev => {
+       const newSet = new Set(prev);
+       if (newSet.has(entryId)) {
+         newSet.delete(entryId);
+       } else {
+         newSet.add(entryId);
+       }
+       return newSet;
+     });
+   }, []);
+ 
+   const selectAllInWeek = () => {
+     const weekEntryIds = entries.map(e => e.id);
+     setSelectedEntryIds(new Set(weekEntryIds));
+   };
+ 
    const handleCellClick = (vehicle: Vehicle, date: Date) => {
+     if (isSelectionMode) return;
      setSelectedEntry(null);
      setNewEntryDefaults({
        vehicle_id: vehicle.id,
@@ -67,6 +98,10 @@
    };
  
    const handleEntryClick = (entry: PlanningEntry) => {
+     if (isSelectionMode) {
+       toggleEntrySelection(entry.id);
+       return;
+     }
      setSelectedEntry(entry);
      setNewEntryDefaults({});
      setIsDialogOpen(true);
@@ -90,6 +125,19 @@
      }
    };
  
+   const handleDuplicate = async (numWeeks: number) => {
+     const success = await duplicateToNextWeeks(Array.from(selectedEntryIds), numWeeks);
+     if (success) {
+       setSelectedEntryIds(new Set());
+       setIsSelectionMode(false);
+       // Refetch entries
+       const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+       const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+       fetchEntries(startDate, endDate);
+     }
+     return success;
+   };
+ 
    // Get entries for a specific vehicle and date
    const getEntriesForCell = (vehicleId: string, date: Date) => {
      const dateStr = format(date, 'yyyy-MM-dd');
@@ -110,6 +158,13 @@
      return driver?.name || null;
    };
  
+   // Get relay driver name helper
+   const getRelayDriverName = (driverId: string | null) => {
+     if (!driverId) return null;
+     const driver = allDrivers.find(d => d.id === driverId);
+     return driver?.name || null;
+   };
+ 
    return (
      <div className="space-y-4 h-full flex flex-col">
        <div className="flex items-center justify-between flex-shrink-0">
@@ -121,6 +176,56 @@
          </div>
          
          <div className="flex items-center gap-2">
+           <Button 
+             variant="default" 
+             size="sm" 
+             onClick={() => setIsTourDialogOpen(true)}
+             className="gap-2"
+           >
+             <Plus className="h-4 w-4" />
+             Ajouter une tournée
+           </Button>
+           
+           <div className="h-6 w-px bg-border mx-2" />
+           
+           {isSelectionMode && (
+             <>
+               <Button variant="outline" size="sm" onClick={selectAllInWeek}>
+                 Tout sélectionner
+               </Button>
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setIsDuplicateDialogOpen(true)}
+                 disabled={selectedEntryIds.size === 0}
+                 className="gap-2"
+               >
+                 <Copy className="h-4 w-4" />
+                 Dupliquer ({selectedEntryIds.size})
+               </Button>
+             </>
+           )}
+           <Button 
+             variant={isSelectionMode ? "secondary" : "outline"} 
+             size="sm" 
+             onClick={toggleSelectionMode}
+             className="gap-2"
+           >
+             {isSelectionMode ? (
+               <>
+                 <Check className="h-4 w-4" />
+                 Terminer
+               </>
+             ) : (
+               <>
+                 <Copy className="h-4 w-4" />
+                 Sélectionner
+               </>
+             )}
+           </Button>
+           
+           <div className="h-6 w-px bg-border mx-2" />
+           
            <Button variant="outline" size="sm" onClick={handleToday}>
              Aujourd'hui
            </Button>
@@ -210,6 +315,10 @@
                            onEntryClick={handleEntryClick}
                            getClientName={getClientName}
                            getDriverName={getDriverName}
+                             getRelayDriverName={getRelayDriverName}
+                             isSelectionMode={isSelectionMode}
+                             selectedEntryIds={selectedEntryIds}
+                             onToggleSelection={toggleEntrySelection}
                          />
                        );
                      })}
@@ -232,6 +341,22 @@
          vehicles={tractions}
          onSave={handleSave}
          onDelete={selectedEntry ? handleDelete : undefined}
+       />
+       
+       <AddTourDialog
+         open={isTourDialogOpen}
+         onOpenChange={setIsTourDialogOpen}
+         clients={clients}
+         drivers={allDrivers}
+         vehicles={tractions}
+         onSave={createTour}
+       />
+       
+       <DuplicateWeeksDialog
+         open={isDuplicateDialogOpen}
+         onOpenChange={setIsDuplicateDialogOpen}
+         selectedCount={selectedEntryIds.size}
+         onDuplicate={handleDuplicate}
        />
      </div>
    );

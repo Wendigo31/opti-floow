@@ -2,8 +2,9 @@
  import { supabase } from '@/integrations/supabase/client';
  import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
  import { toast } from 'sonner';
- import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
+ import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
  import type { RealtimeChannel } from '@supabase/supabase-js';
+ import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
  
  export function usePlanning() {
    const { licenseId, authUserId } = useLicenseContext();
@@ -54,6 +55,15 @@
          status: row.status as PlanningEntry['status'],
          created_at: row.created_at,
          updated_at: row.updated_at,
+         tour_name: row.tour_name,
+         recurring_days: row.recurring_days || [],
+         is_all_year: row.is_all_year || false,
+         start_date: row.start_date,
+         end_date: row.end_date,
+         relay_driver_id: row.relay_driver_id,
+         relay_location: row.relay_location,
+         relay_time: row.relay_time,
+         parent_tour_id: row.parent_tour_id,
        }));
  
        setEntries(mappedEntries);
@@ -136,6 +146,15 @@
            destination_address: input.destination_address || null,
            notes: input.notes || null,
            status: input.status || 'planned',
+           tour_name: input.tour_name || null,
+           recurring_days: input.recurring_days || [],
+           is_all_year: input.is_all_year || false,
+           start_date: input.start_date || null,
+           end_date: input.end_date || null,
+           relay_driver_id: input.relay_driver_id || null,
+           relay_location: input.relay_location || null,
+           relay_time: input.relay_time || null,
+           parent_tour_id: input.parent_tour_id || null,
          })
          .select()
          .single();
@@ -159,6 +178,15 @@
          status: data.status as PlanningEntry['status'],
          created_at: data.created_at,
          updated_at: data.updated_at,
+         tour_name: data.tour_name,
+         recurring_days: data.recurring_days || [],
+         is_all_year: data.is_all_year || false,
+         start_date: data.start_date,
+         end_date: data.end_date,
+         relay_driver_id: data.relay_driver_id,
+         relay_location: data.relay_location,
+         relay_time: data.relay_time,
+         parent_tour_id: data.parent_tour_id,
        };
  
        setEntries(prev => [...prev, newEntry].sort((a, b) => 
@@ -229,6 +257,144 @@
      return entries.filter(e => e.vehicle_id === vehicleId);
    }, [entries]);
  
+   // Create a recurring tour with entries for selected days
+   const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
+     try {
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) {
+         toast.error('Vous devez être connecté');
+         return false;
+       }
+ 
+       const currentLicenseId = await getLicenseId();
+       const startDate = parseISO(input.start_date);
+       const endDate = input.end_date ? parseISO(input.end_date) : (input.is_all_year ? addWeeks(startDate, 52) : addWeeks(startDate, weeksAhead));
+       
+       // Generate all dates for the tour
+       const datesToCreate: string[] = [];
+       let currentDate = startOfDay(startDate);
+       
+       while (isBefore(currentDate, endDate) || currentDate.getTime() === endDate.getTime()) {
+         // Convert JS getDay (0=Sun) to our format (0=Mon)
+         const dayOfWeek = (getDay(currentDate) + 6) % 7; // Convert: Sun=6, Mon=0, Tue=1, etc.
+         
+         if (input.recurring_days.includes(dayOfWeek)) {
+           datesToCreate.push(format(currentDate, 'yyyy-MM-dd'));
+         }
+         currentDate = addDays(currentDate, 1);
+       }
+       
+       if (datesToCreate.length === 0) {
+         toast.error('Aucune date ne correspond aux jours sélectionnés');
+         return false;
+       }
+       
+       // Create entries for all dates
+       const entriesToInsert = datesToCreate.map(date => ({
+         user_id: user.id,
+         license_id: currentLicenseId,
+         planning_date: date,
+         start_time: input.start_time || null,
+         end_time: input.end_time || null,
+         client_id: input.client_id || null,
+         driver_id: input.driver_id || null,
+         vehicle_id: input.vehicle_id,
+         mission_order: input.mission_order || null,
+         origin_address: input.origin_address || null,
+         destination_address: input.destination_address || null,
+         notes: input.notes || null,
+         status: 'planned' as const,
+         tour_name: input.tour_name,
+         recurring_days: input.recurring_days,
+         is_all_year: input.is_all_year,
+         start_date: input.start_date,
+         end_date: input.end_date || null,
+         relay_driver_id: input.relay_driver_id || null,
+         relay_location: input.relay_location || null,
+         relay_time: input.relay_time || null,
+       }));
+       
+       const { error } = await supabase
+         .from('planning_entries')
+         .insert(entriesToInsert);
+       
+       if (error) throw error;
+       
+       toast.success(`Tournée créée avec ${datesToCreate.length} entrées`);
+       return true;
+     } catch (error) {
+       console.error('Error creating tour:', error);
+       toast.error('Erreur lors de la création de la tournée');
+       return false;
+     }
+   }, []);
+ 
+   // Duplicate entries to following weeks
+   const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
+     try {
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) {
+         toast.error('Vous devez être connecté');
+         return false;
+       }
+ 
+       const currentLicenseId = await getLicenseId();
+       
+       // Get entries to duplicate
+       const entriesToDuplicate = entries.filter(e => entryIds.includes(e.id));
+       
+       if (entriesToDuplicate.length === 0) {
+         toast.error('Aucune entrée à dupliquer');
+         return false;
+       }
+       
+       const newEntries: any[] = [];
+       
+       for (const entry of entriesToDuplicate) {
+         const entryDate = parseISO(entry.planning_date);
+         
+         for (let week = 1; week <= numWeeks; week++) {
+           const newDate = addWeeks(entryDate, week);
+           newEntries.push({
+             user_id: user.id,
+             license_id: currentLicenseId,
+             planning_date: format(newDate, 'yyyy-MM-dd'),
+             start_time: entry.start_time,
+             end_time: entry.end_time,
+             client_id: entry.client_id,
+             driver_id: entry.driver_id,
+             vehicle_id: entry.vehicle_id,
+             mission_order: entry.mission_order,
+             origin_address: entry.origin_address,
+             destination_address: entry.destination_address,
+             notes: entry.notes,
+             status: 'planned',
+             tour_name: entry.tour_name,
+             recurring_days: entry.recurring_days,
+             is_all_year: entry.is_all_year,
+             relay_driver_id: entry.relay_driver_id,
+             relay_location: entry.relay_location,
+             relay_time: entry.relay_time,
+             parent_tour_id: entry.id,
+           });
+         }
+       }
+       
+       const { error } = await supabase
+         .from('planning_entries')
+         .insert(newEntries);
+       
+       if (error) throw error;
+       
+       toast.success(`${newEntries.length} entrées dupliquées sur ${numWeeks} semaine(s)`);
+       return true;
+     } catch (error) {
+       console.error('Error duplicating entries:', error);
+       toast.error('Erreur lors de la duplication');
+       return false;
+     }
+   }, [entries]);
+ 
    return {
      entries,
      loading,
@@ -238,5 +404,7 @@
      deleteEntry,
      getEntriesForDate,
      getEntriesForVehicle,
+     createTour,
+     duplicateToNextWeeks,
    };
  }

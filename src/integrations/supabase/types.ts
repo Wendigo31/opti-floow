@@ -1061,15 +1061,24 @@ export type Database = {
           created_at: string
           destination_address: string | null
           driver_id: string | null
+          end_date: string | null
           end_time: string | null
           id: string
+          is_all_year: boolean | null
           license_id: string | null
           mission_order: string | null
           notes: string | null
           origin_address: string | null
+          parent_tour_id: string | null
           planning_date: string
+          recurring_days: number[] | null
+          relay_driver_id: string | null
+          relay_location: string | null
+          relay_time: string | null
+          start_date: string | null
           start_time: string | null
           status: string
+          tour_name: string | null
           updated_at: string
           user_id: string
           vehicle_id: string | null
@@ -1079,15 +1088,24 @@ export type Database = {
           created_at?: string
           destination_address?: string | null
           driver_id?: string | null
+          end_date?: string | null
           end_time?: string | null
           id?: string
+          is_all_year?: boolean | null
           license_id?: string | null
           mission_order?: string | null
           notes?: string | null
           origin_address?: string | null
+          parent_tour_id?: string | null
           planning_date: string
+          recurring_days?: number[] | null
+          relay_driver_id?: string | null
+          relay_location?: string | null
+          relay_time?: string | null
+          start_date?: string | null
           start_time?: string | null
           status?: string
+          tour_name?: string | null
           updated_at?: string
           user_id: string
           vehicle_id?: string | null
@@ -1097,15 +1115,24 @@ export type Database = {
           created_at?: string
           destination_address?: string | null
           driver_id?: string | null
+          end_date?: string | null
           end_time?: string | null
           id?: string
+          is_all_year?: boolean | null
           license_id?: string | null
           mission_order?: string | null
           notes?: string | null
           origin_address?: string | null
+          parent_tour_id?: string | null
           planning_date?: string
+          recurring_days?: number[] | null
+          relay_driver_id?: string | null
+          relay_location?: string | null
+          relay_time?: string | null
+          start_date?: string | null
           start_time?: string | null
           status?: string
+          tour_name?: string | null
           updated_at?: string
           user_id?: string
           vehicle_id?: string | null
@@ -1123,6 +1150,13 @@ export type Database = {
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_entries_parent_tour_id_fkey"
+            columns: ["parent_tour_id"]
+            isOneToOne: false
+            referencedRelation: "planning_entries"
             referencedColumns: ["id"]
           },
         ]
