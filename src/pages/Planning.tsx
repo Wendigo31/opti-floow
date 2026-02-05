@@ -16,11 +16,15 @@
  import { ImportPlanningDialog } from '@/components/planning/ImportPlanningDialog';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
+import type { ExcelTourInput } from '@/hooks/usePlanning';
  import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
  import { Checkbox } from '@/components/ui/checkbox';
  import { toast } from 'sonner';
  
  export default function Planning() {
+  const { licenseId } = useLicenseContext();
    const [currentWeekStart, setCurrentWeekStart] = useState(() => 
      startOfWeek(new Date(), { weekStartsOn: 1 })
    );
@@ -39,6 +43,35 @@
    const { clients } = useClients();
  
    const allDrivers = useMemo(() => [...cdiDrivers, ...interimDrivers], [cdiDrivers, interimDrivers]);
+
+  /** Silent create client for import auto-creation */
+  const autoCreateClient = useCallback(async (name: string): Promise<string | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const currentLicenseId = licenseId || await getLicenseId();
+
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          user_id: user.id,
+          license_id: currentLicenseId,
+          name,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Auto-create client error:', error);
+        return null;
+      }
+      return data?.id || null;
+    } catch (e) {
+      console.error('Auto-create client exception:', e);
+      return null;
+    }
+  }, [licenseId]);
  
    // Only show active vehicles of type "tracteur"
    const tractions = useMemo(() => 
@@ -506,6 +539,7 @@
          drivers={allDrivers}
          clients={clients}
           weekStartDate={currentWeekStart}
+          onAutoCreateClient={autoCreateClient}
          onImport={async (entries) => {
              // Excel import: create entries ONLY on the displayed week days that are checked in Excel.
              const ok = await importExcelPlanningWeek(entries, currentWeekStart);

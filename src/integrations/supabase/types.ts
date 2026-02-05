@@ -1091,6 +1091,7 @@ export type Database = {
           relay_driver_id: string | null
           relay_location: string | null
           relay_time: string | null
+          sector_manager: string | null
           start_date: string | null
           start_time: string | null
           status: string
@@ -1118,6 +1119,7 @@ export type Database = {
           relay_driver_id?: string | null
           relay_location?: string | null
           relay_time?: string | null
+          sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
           status?: string
@@ -1145,6 +1147,7 @@ export type Database = {
           relay_driver_id?: string | null
           relay_location?: string | null
           relay_time?: string | null
+          sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
           status?: string

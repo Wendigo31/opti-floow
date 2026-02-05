@@ -6,11 +6,11 @@ import { Upload, FileSpreadsheet, Download, Check, AlertCircle, Loader2, FileTex
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { parseExcelFile } from '@/utils/excelImport';
  import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
+import type { ExcelTourInput } from '@/hooks/usePlanning';
 import { downloadPlanningTemplate } from '@/utils/excelTemplates';
  import { toast } from 'sonner';
 import { format } from 'date-fns';
  import { dayLabels } from '@/types/planning';
- import type { TourInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
  import type { Driver } from '@/types';
  import type { ClientWithCreator } from '@/hooks/useClients';
@@ -26,7 +26,9 @@ import { format } from 'date-fns';
    * We intentionally do NOT use the import day (today) to avoid empty weeks.
    */
   weekStartDate: Date;
-   onImport: (entries: TourInput[]) => Promise<boolean>;
+  onImport: (entries: ExcelTourInput[]) => Promise<boolean>;
+  /** Silent create client function (for auto-creating missing clients) */
+  onAutoCreateClient?: (name: string) => Promise<string | null>;
  }
  
  export function ImportPlanningDialog({
@@ -37,6 +39,7 @@ import { format } from 'date-fns';
    clients,
   weekStartDate,
    onImport,
+  onAutoCreateClient,
  }: ImportPlanningDialogProps) {
    const [file, setFile] = useState<File | null>(null);
    const [loading, setLoading] = useState(false);
@@ -81,10 +84,33 @@ import { format } from 'date-fns';
      setImporting(true);
      
      try {
-       // Build maps for matching
-       const clientMap = new Map(clients.map(c => [c.name, c.id]));
+       // Build initial maps for matching
+       const clientMap = new Map<string, string>();
+       clients.forEach(c => {
+         if (c.name) clientMap.set(c.name.toLowerCase().trim(), c.id);
+         if (c.company) clientMap.set(c.company.toLowerCase().trim(), c.id);
+       });
        const driverMap = new Map(drivers.map(d => [d.name, d.id]));
        
+       // Auto-create missing clients (silently)
+       const missingClients = new Set<string>();
+       for (const entry of preview) {
+         if (!entry.client) continue;
+         const clientLower = entry.client.toLowerCase().trim();
+         if (!clientMap.has(clientLower)) {
+           missingClients.add(entry.client);
+         }
+       }
+
+       if (missingClients.size > 0 && onAutoCreateClient) {
+         for (const clientName of missingClients) {
+           const newId = await onAutoCreateClient(clientName);
+           if (newId) {
+             clientMap.set(clientName.toLowerCase().trim(), newId);
+           }
+         }
+       }
+
        // Convert to TourInput format
         const tourInputs = convertToTourInputs(
          preview,
@@ -97,17 +123,19 @@ import { format } from 'date-fns';
        // Filter out entries with no meaningful data and add required fields
        const validInputs = tourInputs
          .filter(t => t.tour_name && t.recurring_days && t.recurring_days.length > 0)
-           .map(t => ({
+           .map((t): ExcelTourInput => ({
            ...t,
            tour_name: t.tour_name!,
           vehicle_id: null, // Always null - user will assign later
            recurring_days: t.recurring_days || [0, 1, 2, 3, 4],
             is_all_year: false,
             start_date: format(weekStartDate, 'yyyy-MM-dd'),
-         })) as TourInput[];
+           sector_manager: t.sector_manager || null,
+         }));
 
       if (validInputs.length === 0) {
         toast.error('Aucune tournée valide à importer');
+        setImporting(false);
         return;
       }
 

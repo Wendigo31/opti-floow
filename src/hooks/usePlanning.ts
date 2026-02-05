@@ -5,6 +5,27 @@
  import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
+
+export interface ExcelTourInput {
+  tour_name: string;
+  vehicle_id?: string | null;
+  client_id?: string | null;
+  driver_id?: string | null;
+  recurring_days: number[];
+  is_all_year: boolean;
+  start_date: string;
+  end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  origin_address?: string | null;
+  destination_address?: string | null;
+  mission_order?: string | null;
+  notes?: string | null;
+  relay_driver_id?: string | null;
+  relay_location?: string | null;
+  relay_time?: string | null;
+  sector_manager?: string | null;
+}
  
  export function usePlanning() {
    const { licenseId, authUserId } = useLicenseContext();
@@ -375,7 +396,7 @@ import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, is
     }, [licenseId]);
 
     const importExcelPlanningWeek = useCallback(
-      async (tours: TourInput[], weekStartDate: Date): Promise<boolean> => {
+      async (tours: ExcelTourInput[], weekStartDate: Date): Promise<boolean> => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
@@ -406,7 +427,7 @@ import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, is
                 client_id: t.client_id || null,
                 driver_id: t.driver_id || null,
                 // Excel import starts as "Non assigné"
-                vehicle_id: (t as unknown as { vehicle_id?: string | null }).vehicle_id || null,
+                vehicle_id: t.vehicle_id || null,
                 mission_order: t.mission_order || null,
                 origin_address: t.origin_address || null,
                 destination_address: t.destination_address || null,
@@ -421,6 +442,7 @@ import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, is
                 relay_location: t.relay_location || null,
                 relay_time: t.relay_time || null,
                 parent_tour_id: null,
+                sector_manager: t.sector_manager || null,
               };
             });
           });
