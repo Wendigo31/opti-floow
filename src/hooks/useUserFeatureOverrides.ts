@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useTeam } from '@/hooks/useTeam';
+import { useLicenseContext } from '@/context/LicenseContext';
 
 /**
  * Feature override types for granular permissions
@@ -51,15 +51,31 @@ interface UseUserFeatureOverridesReturn {
  * Other users may have specific features disabled by Direction
  */
 export function useUserFeatureOverrides(): UseUserFeatureOverridesReturn {
-  const { isDirection, members, currentUserInfo } = useTeam();
+  const { userRole, authUserId, licenseId } = useLicenseContext();
   const [overrides, setOverrides] = useState<Map<FeatureKey, boolean>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [companyUserId, setCompanyUserId] = useState<string | null>(null);
 
-  // Get current user's company_user_id
-  const currentCompanyUserId = useMemo(() => {
-    const currentMember = members.find(m => m.user_id === currentUserInfo.userId);
-    return currentMember?.id || null;
-  }, [members, currentUserInfo.userId]);
+  const isDirection = userRole === 'direction';
+
+  // Fetch company_user_id for current user
+  useEffect(() => {
+    const fetchCompanyUserId = async () => {
+      if (!authUserId || !licenseId) return;
+      
+      const { data } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('user_id', authUserId)
+        .eq('license_id', licenseId)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      setCompanyUserId(data?.id || null);
+    };
+    
+    fetchCompanyUserId();
+  }, [authUserId, licenseId]);
 
   // Fetch overrides for current user
   const fetchOverrides = useCallback(async () => {
@@ -70,7 +86,7 @@ export function useUserFeatureOverrides(): UseUserFeatureOverridesReturn {
       return;
     }
 
-    if (!currentCompanyUserId) {
+    if (!companyUserId) {
       setIsLoading(false);
       return;
     }
@@ -79,7 +95,7 @@ export function useUserFeatureOverrides(): UseUserFeatureOverridesReturn {
       const { data, error } = await supabase
         .from('user_feature_overrides')
         .select('*')
-        .eq('company_user_id', currentCompanyUserId);
+        .eq('company_user_id', companyUserId);
 
       if (error) {
         console.error('Error fetching feature overrides:', error);
@@ -98,11 +114,13 @@ export function useUserFeatureOverrides(): UseUserFeatureOverridesReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [isDirection, currentCompanyUserId]);
+  }, [isDirection, companyUserId]);
 
   useEffect(() => {
-    fetchOverrides();
-  }, [fetchOverrides]);
+    if (companyUserId || isDirection) {
+      fetchOverrides();
+    }
+  }, [companyUserId, isDirection, fetchOverrides]);
 
   // Check if user can access a specific feature
   // Returns true if:

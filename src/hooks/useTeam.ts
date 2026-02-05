@@ -36,16 +36,16 @@ interface UseTeamReturn {
 
 export function useTeam(): UseTeamReturn {
   const { planType: validatedPlanType, isLoading: isLicenseLoading } = useLicense();
-  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
+  const { licenseId: contextLicenseId, authUserId, userRole: contextUserRole } = useLicenseContext();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(contextUserRole);
   const [currentUserInfo, setCurrentUserInfo] = useState<CurrentUserInfo>({
     displayName: null,
     email: null,
     userId: null,
   });
-  const [licenseId, setLicenseId] = useState<string | null>(null);
+  const [licenseId, setLicenseId] = useState<string | null>(contextLicenseId);
   const [isTeamLoading, setIsTeamLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,11 +59,23 @@ export function useTeam(): UseTeamReturn {
   const currentUserCount = members.filter(m => m.is_active).length;
   const canAddMore = currentUserCount < maxUsers;
 
-  const isOwner = currentUserRole === 'direction';
-  const isAdmin = currentUserRole === 'direction';
-  const isDirection = currentUserRole === 'direction';
+  // Use context role as primary source, fallback to fetched role
+  const effectiveRole = currentUserRole || contextUserRole;
+  const isOwner = effectiveRole === 'direction';
+  const isAdmin = effectiveRole === 'direction';
+  const isDirection = effectiveRole === 'direction';
   const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
   const canManageTeam = isDirection && hasMultiUsers;
+
+  // Sync with context when it becomes available
+  useEffect(() => {
+    if (contextUserRole && !currentUserRole) {
+      setCurrentUserRole(contextUserRole);
+    }
+    if (contextLicenseId && !licenseId) {
+      setLicenseId(contextLicenseId);
+    }
+  }, [contextUserRole, contextLicenseId, currentUserRole, licenseId]);
 
   // Fetch team data
   const fetchTeam = useCallback(async (): Promise<void> => {
@@ -272,7 +284,7 @@ export function useTeam(): UseTeamReturn {
 
   return {
     members,
-    currentUserRole,
+    currentUserRole: effectiveRole,
     currentUserInfo,
     isOwner,
     isAdmin,
