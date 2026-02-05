@@ -227,3 +227,93 @@ export function downloadClientsTemplate(): void {
   const blob = generateClientsTemplate();
   downloadBlob(blob, 'modele_import_clients.xlsx');
 }
+
+/**
+ * Generate a sample Excel template for interim driver import
+ */
+export function generateInterimDriversTemplate(): Blob {
+  const headers = [
+    'Nom',
+    'Prénom',
+    'Téléphone',
+    'Email',
+    'Agence intérim',
+    'Taux horaire (€)',
+    'Coefficient',
+    'Heures/jour',
+    'Jours travaillés/mois',
+    'Type horaire',
+    'Notes'
+  ];
+
+  const sampleData = [
+    ['DUPONT', 'Jean', '06 12 34 56 78', 'jean.dupont@email.com', 'Manpower', '12.50', '1.85', '10', '21', 'Jour', 'Chauffeur SPL expérimenté'],
+    ['MARTIN', 'Pierre', '06 98 76 54 32', '', 'Adecco', '13.00', '1.90', '10', '21', 'Nuit', 'Disponible week-end'],
+    ['DURAND', 'Marie', '07 11 22 33 44', 'marie.d@email.com', 'Randstad', '12.00', '1.80', '8', '20', 'Jour', ''],
+    ['BERNARD', 'Lucas', '06 55 66 77 88', '', 'Synergie', '14.00', '2.00', '10', '22', 'Mixte', 'Longue distance'],
+    ['PETIT', 'Sophie', '06 44 33 22 11', '', 'Manpower', '11.50', '1.75', '10', '21', 'Jour', 'Permis EC'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+  
+  // Set column widths
+  ws['!cols'] = [
+    { wch: 15 }, // Nom
+    { wch: 15 }, // Prénom
+    { wch: 18 }, // Téléphone
+    { wch: 25 }, // Email
+    { wch: 15 }, // Agence
+    { wch: 15 }, // Taux horaire
+    { wch: 12 }, // Coefficient
+    { wch: 12 }, // Heures/jour
+    { wch: 18 }, // Jours travaillés
+    { wch: 12 }, // Type horaire
+    { wch: 30 }, // Notes
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Intérimaires');
+
+  // Add instructions sheet
+  const instructionsData = [
+    ['MODÈLE D\'IMPORT INTÉRIMAIRES'],
+    [''],
+    ['Ce modèle est spécifique aux conducteurs intérimaires.'],
+    [''],
+    ['Colonnes obligatoires:'],
+    ['- Nom: Nom de famille'],
+    ['- Prénom: Prénom'],
+    ['- Agence intérim: Nom de l\'agence (Manpower, Adecco, Randstad, etc.)'],
+    [''],
+    ['Colonnes recommandées:'],
+    ['- Taux horaire: Taux horaire brut en euros (défaut: 12.50€)'],
+    ['- Coefficient: Coefficient intérim (défaut: 1.85)'],
+    ['- Heures/jour: Nombre d\'heures par jour (défaut: 10h)'],
+    ['- Jours travaillés/mois: Nombre de jours travaillés par mois (défaut: 21)'],
+    [''],
+    ['Colonnes optionnelles:'],
+    ['- Téléphone: Numéro de téléphone'],
+    ['- Email: Adresse email'],
+    ['- Type horaire: Jour, Nuit, ou Mixte (défaut: Jour)'],
+    ['- Notes: Informations complémentaires'],
+    [''],
+    ['Calcul du coût:'],
+    ['Coût mensuel = Taux horaire × Coefficient × Heures/jour × Jours travaillés'],
+    ['Exemple: 12.50€ × 1.85 × 10h × 21j = 4 856.25€/mois'],
+  ];
+
+  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+  wsInstructions['!cols'] = [{ wch: 70 }];
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
+
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+/**
+ * Download interim drivers template
+ */
+export function downloadInterimDriversTemplate(): void {
+  const blob = generateInterimDriversTemplate();
+  downloadBlob(blob, 'modele_import_interimaires.xlsx');
+}

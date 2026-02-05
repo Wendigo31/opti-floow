@@ -48,9 +48,9 @@
    cdiDrivers: Driver[];
    interimDrivers: Driver[];
    driversLoading: boolean;
-   createDriver: (driver: Driver, isInterim?: boolean) => Promise<boolean>;
-   updateDriver: (driver: Driver, isInterim?: boolean) => Promise<boolean>;
-   deleteDriver: (id: string, isInterim?: boolean) => Promise<boolean>;
+  createDriver: (driver: Driver, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
+  updateDriver: (driver: Driver, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
+  deleteDriver: (id: string, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
  
    // Charges
    charges: FixedCharge[];
