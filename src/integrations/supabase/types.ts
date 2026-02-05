@@ -2019,6 +2019,10 @@ export type Database = {
         Args: { p_message?: string; p_requested_features: string[] }
         Returns: string
       }
+      delete_company_driver: {
+        Args: { p_license_id: string; p_local_id: string }
+        Returns: boolean
+      }
       get_company_members_safe: {
         Args: never
         Returns: {
