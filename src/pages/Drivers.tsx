@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone } from 'lucide-react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,6 +69,7 @@ export default function Drivers() {
   const [sortBy, setSortBy] = useState<'name' | 'contract' | 'cost'>('name');
   const [checkedDriverIds, setCheckedDriverIds] = useState<Set<string>>(new Set());
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudInterimDrivers.length;
@@ -98,6 +99,44 @@ export default function Drivers() {
   // Clear selection
   const clearSelection = () => {
     setCheckedDriverIds(new Set());
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (checkedDriverIds.size === 0) return;
+    
+    const confirmed = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer ${checkedDriverIds.size} conducteur${checkedDriverIds.size > 1 ? 's' : ''} ?`
+    );
+    
+    if (!confirmed) return;
+    
+    setIsDeletingBulk(true);
+    
+    try {
+      const driverIds = Array.from(checkedDriverIds);
+      let successCount = 0;
+      
+      for (const driverId of driverIds) {
+        // Check if it's an interim or CDI driver
+        const isInterim = cloudInterimDrivers.some(d => d.id === driverId);
+        const success = await deleteCloudDriver(driverId, isInterim);
+        if (success) successCount++;
+      }
+      
+      if (successCount === driverIds.length) {
+        toast.success(`${successCount} conducteur${successCount > 1 ? 's' : ''} supprimé${successCount > 1 ? 's' : ''}`);
+      } else {
+        toast.warning(`${successCount}/${driverIds.length} conducteurs supprimés`);
+      }
+      
+      clearSelection();
+    } catch (error) {
+      console.error('Error bulk deleting drivers:', error);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setIsDeletingBulk(false);
+    }
   };
 
   // Handle assignment
@@ -1066,6 +1105,19 @@ export default function Drivers() {
             <Button onClick={() => setIsAssignDialogOpen(true)} className="gap-2">
               <UserPlus className="w-4 h-4" />
               Assigner
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="gap-2"
+            >
+              {isDeletingBulk ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Supprimer
             </Button>
           </div>
         </div>
