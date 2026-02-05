@@ -317,7 +317,7 @@ function extractDayCellText(cellValue: string | undefined): string {
  export function convertToTourInputs(
    parsedEntries: ParsedPlanningEntry[],
    clientMap: Map<string, string>, // client name -> client id
-   driverMap: Map<string, string>, // driver name -> driver id
+  driverMap: Map<string, { id: string; firstName?: string; lastName?: string }>, // driver name -> driver data with firstName/lastName
   defaultVehicleId: string | null,
    startDate: string
 ): (Partial<TourInput> & {
@@ -337,13 +337,48 @@ function extractDayCellText(cellValue: string | undefined): string {
        }
      }
      
-     // Try to match driver
+    // Try to match driver (supports full name, last name only, or first+last name separately)
      let driver_id: string | null = null;
      if (entry.driver_name) {
-       const driverLower = entry.driver_name.toLowerCase();
-       for (const [name, id] of driverMap.entries()) {
-         if (name.toLowerCase().includes(driverLower) || driverLower.includes(name.toLowerCase())) {
-           driver_id = id;
+      const driverLower = entry.driver_name.toLowerCase().trim();
+      const driverParts = driverLower.split(/\s+/).filter(p => p.length > 0);
+      
+      for (const [name, driverData] of driverMap.entries()) {
+        const nameLower = name.toLowerCase();
+        const firstName = (driverData.firstName || '').toLowerCase().trim();
+        const lastName = (driverData.lastName || '').toLowerCase().trim();
+        
+        // Exact or partial match on full name
+        if (nameLower.includes(driverLower) || driverLower.includes(nameLower)) {
+          driver_id = driverData.id;
+          break;
+        }
+        
+        // Match on last name only (common: Excel has "DUPONT" but DB has "Jean Dupont")
+        if (lastName && lastName === driverLower) {
+          driver_id = driverData.id;
+          break;
+        }
+        
+        // Match on first name only (if unique enough)
+        if (firstName && firstName === driverLower && firstName.length >= 3) {
+          driver_id = driverData.id;
+          break;
+        }
+        
+        // Match on first name + last name separately
+        if (firstName && lastName && driverParts.length >= 2) {
+          const matchesFirst = driverParts.some(p => firstName.includes(p) || p.includes(firstName));
+          const matchesLast = driverParts.some(p => lastName.includes(p) || p.includes(lastName));
+          if (matchesFirst && matchesLast) {
+            driver_id = driverData.id;
+            break;
+          }
+        }
+        
+        // Partial match on last name (Excel has "DUP" for "DUPONT")
+        if (lastName && driverLower.length >= 3 && lastName.includes(driverLower)) {
+          driver_id = driverData.id;
            break;
          }
        }

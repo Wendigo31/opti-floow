@@ -90,7 +90,15 @@ import { format } from 'date-fns';
          if (c.name) clientMap.set(c.name.toLowerCase().trim(), c.id);
          if (c.company) clientMap.set(c.company.toLowerCase().trim(), c.id);
        });
-       const driverMap = new Map(drivers.map(d => [d.name, d.id]));
+      // Build driver map with firstName/lastName for improved matching
+      const driverMap = new Map<string, { id: string; firstName?: string; lastName?: string }>();
+      drivers.forEach(d => {
+        driverMap.set(d.name, {
+          id: d.id,
+          firstName: d.firstName,
+          lastName: d.lastName,
+        });
+      });
        
        // Auto-create missing clients (silently)
        const missingClients = new Set<string>();

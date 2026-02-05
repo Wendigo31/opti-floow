@@ -261,7 +261,9 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
                     <SelectItem value="none">Aucun</SelectItem>
                    {drivers.map((driver) => (
                      <SelectItem key={driver.id} value={driver.id}>
-                       {driver.name}
+                      {driver.firstName && driver.lastName
+                        ? `${driver.firstName} ${driver.lastName}`
+                        : driver.name}
                      </SelectItem>
                    ))}
                  </SelectContent>
@@ -370,7 +372,9 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
                         <SelectItem value="none">Aucun</SelectItem>
                        {drivers.filter(d => d.id !== formData.driver_id).map((driver) => (
                          <SelectItem key={driver.id} value={driver.id}>
-                           {driver.name}
+                          {driver.firstName && driver.lastName
+                            ? `${driver.firstName} ${driver.lastName}`
+                            : driver.name}
                          </SelectItem>
                        ))}
                      </SelectContent>
