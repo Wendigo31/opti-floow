@@ -24,7 +24,7 @@ function setCachedTrailers(trailers: Trailer[]) {
 }
 
 export function useCloudTrailers() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [trailers, setTrailers] = useState<Trailer[]>(() => getCachedTrailers());
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -138,7 +138,9 @@ export function useCloudTrailers() {
   const createTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 
@@ -178,7 +180,9 @@ export function useCloudTrailers() {
   const updateTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
       if (!licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 
@@ -218,7 +222,9 @@ export function useCloudTrailers() {
   const deleteTrailer = useCallback(async (id: string): Promise<boolean> => {
     try {
       if (!licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 

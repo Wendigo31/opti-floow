@@ -24,7 +24,7 @@ function setCachedCharges(charges: FixedCharge[]) {
 }
 
 export function useCloudCharges() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [charges, setCharges] = useState<FixedCharge[]>(() => getCachedCharges());
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -139,7 +139,9 @@ export function useCloudCharges() {
   const createCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 
@@ -176,7 +178,9 @@ export function useCloudCharges() {
   const updateCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
       if (!licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 
@@ -213,7 +217,9 @@ export function useCloudCharges() {
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
     try {
       if (!licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 

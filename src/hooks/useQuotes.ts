@@ -7,7 +7,7 @@ import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export function useQuotes() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [quotes, setQuotes] = useState<LocalQuote[]>([]);
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -85,7 +85,9 @@ export function useQuotes() {
 
     try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return null;
       }
 

@@ -52,7 +52,7 @@ export interface ExcelTourInput {
 }
  
  export function usePlanning() {
-   const { licenseId, authUserId } = useLicenseContext();
+   const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
    const [entries, setEntries] = useState<PlanningEntry[]>([]);
    const [loading, setLoading] = useState(false);
    const channelRef = useRef<RealtimeChannel | null>(null);
@@ -211,7 +211,9 @@ export interface ExcelTourInput {
     const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
          return null;
        }
  
@@ -346,7 +348,9 @@ export interface ExcelTourInput {
    const createTour = useCallback(async (input: TourInput, weeksAhead: number = 4): Promise<boolean> => {
      try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
          return false;
        }
  
@@ -418,7 +422,9 @@ export interface ExcelTourInput {
           suspendRealtimeRef.current = true;
 
           if (!authUserId || !licenseId) {
-            toast.error('Session en cours de chargement...');
+            if (!contextLoading) {
+              toast.error('Session non initialisée. Veuillez recharger la page.');
+            }
             return false;
           }
 
@@ -499,7 +505,9 @@ export interface ExcelTourInput {
     const deleteTourInWeek = useCallback(async (tourName: string, weekStartDate: Date): Promise<boolean> => {
       try {
         if (!licenseId) {
-          toast.error('Session en cours de chargement...');
+          if (!contextLoading) {
+            toast.error('Session non initialisée. Veuillez recharger la page.');
+          }
           return false;
         }
 
@@ -535,7 +543,9 @@ export interface ExcelTourInput {
    const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
      try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
          return false;
        }
  
@@ -610,7 +620,9 @@ export interface ExcelTourInput {
     applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
       try {
         if (!licenseId) {
-          toast.error('Session en cours de chargement...');
+          if (!contextLoading) {
+            toast.error('Session non initialisée. Veuillez recharger la page.');
+          }
           return false;
         }
 

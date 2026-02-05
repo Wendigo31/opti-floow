@@ -27,7 +27,7 @@ function setCachedVehicles(vehicles: Vehicle[]) {
 }
 
 export function useCloudVehicles() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getCachedVehicles());
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -146,7 +146,9 @@ export function useCloudVehicles() {
   const createVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 

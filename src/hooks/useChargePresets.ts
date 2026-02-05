@@ -16,7 +16,7 @@ export interface ChargePreset {
 }
 
 export function useChargePresets() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [presets, setPresets] = useState<ChargePreset[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,7 +88,9 @@ export function useChargePresets() {
   const createPreset = useCallback(async (name: string, charges: FixedCharge[], description?: string): Promise<boolean> => {
     try {
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement...');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         return false;
       }
 

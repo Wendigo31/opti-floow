@@ -18,7 +18,7 @@ function mapDbToSavedTour(row: any): SavedTour {
 }
 
 export function useSavedTours() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [tours, setTours] = useState<SavedTour[]>([]);
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -171,7 +171,9 @@ export function useSavedTours() {
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     if (!authUserId || !licenseId) {
-      toast.error('Session en cours de chargement...');
+      if (!contextLoading) {
+        toast.error('Session non initialisée. Veuillez recharger la page.');
+      }
       return null;
     }
 
