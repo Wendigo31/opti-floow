@@ -44,7 +44,7 @@ function setCachedDrivers(cdi: Driver[], cdd: Driver[], interim: Driver[]) {
 }
 
 export function useCloudDrivers() {
-  const { licenseId, authUserId } = useLicenseContext();
+  const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [cdiDrivers, setCdiDrivers] = useState<Driver[]>(() => getCachedCdiDrivers());
   const [cddDrivers, setCddDrivers] = useState<Driver[]>(() => getCachedCddDrivers());
   const [interimDrivers, setInterimDrivers] = useState<Driver[]>(() => getCachedInterimDrivers());
@@ -234,7 +234,7 @@ export function useCloudDrivers() {
       // IMPORTANT: in bulk operations, repeatedly calling auth.getUser() and
       // resolving licenseId can be extremely slow. Prefer context values.
       if (!authUserId || !licenseId) {
-        if (!options?.silent) {
+        if (!options?.silent && !contextLoading) {
           toast.error('Session en cours de chargement, veuillez réessayer.');
         }
         return false;
@@ -347,7 +347,9 @@ export function useCloudDrivers() {
     try {
       // Use context values directly (avoid slow auth.getUser() calls)
       if (!authUserId || !licenseId) {
-        toast.error('Session en cours de chargement, veuillez réessayer.');
+        if (!contextLoading) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
+        }
         console.error('[useCloudDrivers] deleteDriver: no authUserId or licenseId');
         return false;
       }

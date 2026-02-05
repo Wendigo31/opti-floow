@@ -23,7 +23,7 @@ export interface CompanySettings {
 }
 
 export function useCompanySettings() {
-  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
+  const { licenseId: contextLicenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [licenseId, setLicenseId] = useState<string | null>(contextLicenseId);
@@ -133,7 +133,9 @@ export function useCompanySettings() {
     }
 
     if (!authUserId) {
-      toast.error('Session en cours de chargement...');
+      if (!contextLoading) {
+        toast.error('Session non initialisée. Veuillez recharger la page.');
+      }
       return false;
     }
 

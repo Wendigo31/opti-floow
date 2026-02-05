@@ -19,7 +19,7 @@ export interface ClientWithCreator extends LocalClient {
  import { useLicenseContext } from '@/context/LicenseContext';
 
 export function useClients() {
-  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
+  const { licenseId: contextLicenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
   const [clients, setClients] = useState<ClientWithCreator[]>([]);
   const [addresses, setAddresses] = useState<LocalClientAddress[]>([]);
   const [loading, setLoading] = useState(false);
@@ -144,7 +144,7 @@ export function useClients() {
     try {
       // Use context values directly for speed (avoid repeated auth.getUser calls)
       if (!authUserId || !contextLicenseId) {
-        if (!options?.silent) {
+        if (!options?.silent && !contextLoading) {
           toast.error('Session en cours de chargement, veuillez réessayer.');
         }
         console.error('[useClients] createClient: no authUserId or contextLicenseId');
@@ -348,7 +348,7 @@ export function useClients() {
     if (authUserId && contextLicenseId) {
       fetchClients();
     }
-  }, [authUserId, contextLicenseId, fetchClients]);
+  }, [authUserId, contextLicenseId, fetchClients, contextLoading]);
 
   return {
     clients,
