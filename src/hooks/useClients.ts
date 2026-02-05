@@ -138,6 +138,10 @@ export function useClients() {
     }
   }, []); // Remove membersMap dependency to prevent infinite loop
 
+  // Store fetchClients in ref to avoid subscription churn
+  const fetchClientsRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchClientsRef.current = fetchClients; }, [fetchClients]);
+
   const createClient = useCallback(async (input: Omit<LocalClient, 'id' | 'created_at' | 'updated_at'>): Promise<ClientWithCreator | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -321,7 +325,7 @@ export function useClients() {
         console.log('[Realtime] clients subscription:', status);
         // Reconcile on subscribe
         if (status === 'SUBSCRIBED') {
-          void fetchClients();
+          void fetchClientsRef.current?.();
         }
       });
 
@@ -331,7 +335,7 @@ export function useClients() {
         channelRef.current = null;
       }
     };
-  }, [contextLicenseId, fetchClients]);
+  }, [contextLicenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Initial fetch
   useEffect(() => {

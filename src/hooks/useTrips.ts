@@ -81,6 +81,10 @@ export function useTrips() {
     }
   }, []);
 
+  // Store fetchTrips in ref to avoid subscription churn
+  const fetchTripsRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchTripsRef.current = fetchTrips; }, [fetchTrips]);
+
   const createTrip = useCallback(async (input: Omit<LocalTrip, 'id' | 'created_at' | 'updated_at'>): Promise<LocalTrip | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -316,7 +320,7 @@ export function useTrips() {
         console.log('[Realtime] trips subscription:', status);
         // Reconcile on subscribe
         if (status === 'SUBSCRIBED') {
-          void fetchTrips();
+          void fetchTripsRef.current?.();
         }
       });
 
@@ -326,7 +330,7 @@ export function useTrips() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, fetchTrips]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Initial fetch
   useEffect(() => {

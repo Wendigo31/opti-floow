@@ -71,6 +71,10 @@ export function useQuotes() {
     }
   }, []);
 
+  // Store fetchQuotes in ref to avoid subscription churn
+  const fetchQuotesRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchQuotesRef.current = fetchQuotes; }, [fetchQuotes]);
+
   const generateQuoteNumber = (): string => {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
@@ -275,7 +279,7 @@ export function useQuotes() {
         console.log('[Realtime] quotes subscription:', status);
         // Reconcile on subscribe
         if (status === 'SUBSCRIBED') {
-          void fetchQuotes();
+          void fetchQuotesRef.current?.();
         }
       });
 
@@ -285,7 +289,7 @@ export function useQuotes() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, fetchQuotes]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Initial fetch
   useEffect(() => {

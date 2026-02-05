@@ -72,6 +72,10 @@ export function useCloudCharges() {
     }
   }, [authUserId, licenseId]);
 
+  // Store fetchCharges in ref to avoid subscription churn
+  const fetchChargesRef = useRef<() => Promise<void>>();
+  useEffect(() => { fetchChargesRef.current = fetchCharges; }, [fetchCharges]);
+
   // Realtime subscription
   useEffect(() => {
     if (!licenseId) return;
@@ -110,8 +114,9 @@ export function useCloudCharges() {
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED' && authUserId) {
-          void fetchCharges();
+        console.log('[Realtime] charges subscription:', status);
+        if (status === 'SUBSCRIBED') {
+          void fetchChargesRef.current?.();
         }
       });
 
@@ -121,7 +126,7 @@ export function useCloudCharges() {
         channelRef.current = null;
       }
     };
-  }, [licenseId, authUserId, fetchCharges]);
+  }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {
