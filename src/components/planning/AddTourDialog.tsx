@@ -125,7 +125,7 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
 
    const handleSubmit = async (e: React.FormEvent) => {
      e.preventDefault();
-     if (!formData.tour_name || !formData.vehicle_id || formData.recurring_days.length === 0) {
+     if (!formData.tour_name || formData.recurring_days.length === 0) {
        return;
      }
      
@@ -235,35 +235,16 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
             </Collapsible>
 
            {/* Tour name and Vehicle */}
-           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-               <Label htmlFor="tour_name">Nom de la tournée *</Label>
-               <Input
-                 id="tour_name"
-                 value={formData.tour_name}
-                 onChange={(e) => setFormData(prev => ({ ...prev, tour_name: e.target.value }))}
-                 placeholder="Ex: Navette Paris-Lyon"
-                 required
-               />
-             </div>
-             <div className="space-y-2">
-               <Label>Traction *</Label>
-               <Select
-                 value={formData.vehicle_id}
-                 onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value }))}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Sélectionner une traction" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   {vehicles.map((vehicle) => (
-                     <SelectItem key={vehicle.id} value={vehicle.id}>
-                       {vehicle.name} ({vehicle.licensePlate})
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-             </div>
+           {/* Tour name */}
+           <div className="space-y-2">
+             <Label htmlFor="tour_name">Nom de la tournée *</Label>
+             <Input
+               id="tour_name"
+               value={formData.tour_name}
+               onChange={(e) => setFormData(prev => ({ ...prev, tour_name: e.target.value }))}
+               placeholder="Ex: Navette Paris-Lyon"
+               required
+             />
            </div>
  
            {/* Days selection */}
@@ -300,58 +281,6 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
              {formData.recurring_days.length === 0 && (
                <p className="text-xs text-destructive">Sélectionnez au moins un jour</p>
              )}
-           </div>
- 
-           {/* Duration */}
-           <div className="space-y-3">
-             <div className="flex items-center gap-4">
-               <div className="flex items-center gap-2">
-                 <Switch
-                   id="is_all_year"
-                   checked={formData.is_all_year}
-                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_all_year: checked }))}
-                 />
-                 <Label htmlFor="is_all_year">Toute l'année</Label>
-               </div>
-             </div>
-             
-             <div className="grid grid-cols-3 gap-4">
-               <div className="space-y-2">
-                 <Label htmlFor="start_date">Date de début *</Label>
-                 <Input
-                   id="start_date"
-                   type="date"
-                   value={formData.start_date}
-                   onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                   required
-                 />
-               </div>
-               {!formData.is_all_year && (
-                 <>
-                   <div className="space-y-2">
-                     <Label htmlFor="end_date">Date de fin</Label>
-                     <Input
-                       id="end_date"
-                       type="date"
-                       value={formData.end_date || ''}
-                       onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value || null }))}
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label htmlFor="weeks_ahead">Ou nb semaines</Label>
-                     <Input
-                       id="weeks_ahead"
-                       type="number"
-                       min={1}
-                       max={52}
-                       value={weeksAhead}
-                       onChange={(e) => setWeeksAhead(parseInt(e.target.value) || 4)}
-                       disabled={!!formData.end_date}
-                     />
-                   </div>
-                 </>
-               )}
-             </div>
            </div>
  
            {/* Time and Client/Driver */}
