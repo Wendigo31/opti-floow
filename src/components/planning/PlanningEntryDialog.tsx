@@ -10,6 +10,7 @@
  import { Input } from '@/components/ui/input';
  import { Label } from '@/components/ui/label';
  import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
  import {
    Select,
    SelectContent,
@@ -17,7 +18,7 @@
    SelectTrigger,
    SelectValue,
  } from '@/components/ui/select';
- import { Trash2, Save, UserPlus } from 'lucide-react';
+import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import { planningStatusLabels } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
@@ -34,6 +35,7 @@
    vehicles: Vehicle[];
    onSave: (input: PlanningEntryInput) => void;
    onDelete?: () => void;
+  onApplyVehicleToTour?: (vehicleId: string, tourName: string) => void;
  }
  
  export function PlanningEntryDialog({
@@ -46,6 +48,7 @@
    vehicles,
    onSave,
    onDelete,
+  onApplyVehicleToTour,
  }: PlanningEntryDialogProps) {
    const [formData, setFormData] = useState<PlanningEntryInput>({
      planning_date: '',
@@ -66,6 +69,13 @@
    });
    
    const [showRelay, setShowRelay] = useState(false);
+  const [applyToAllTour, setApplyToAllTour] = useState(false);
+  // Reset applyToAllTour when dialog opens
+  useEffect(() => {
+    if (open) {
+      setApplyToAllTour(false);
+    }
+  }, [open]);
  
    useEffect(() => {
      if (entry) {
@@ -111,6 +121,12 @@
  
    const handleSubmit = (e: React.FormEvent) => {
      e.preventDefault();
+    
+    // If user wants to apply vehicle to all entries of this tour
+    if (applyToAllTour && formData.vehicle_id && entry?.tour_name && onApplyVehicleToTour) {
+      onApplyVehicleToTour(formData.vehicle_id, entry.tour_name);
+    }
+    
      onSave(formData);
    };
  
@@ -158,18 +174,25 @@
              </div>
            </div>
  
-           {/* Vehicle (Traction), Driver, Client row */}
-           <div className="grid grid-cols-3 gap-4">
+           {/* Vehicle (Traction) section */}
+           <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
+             <div className="flex items-center gap-2">
+               <Truck className="h-4 w-4 text-primary" />
+               <Label className="font-medium">Traction</Label>
+               {!formData.vehicle_id && (
+                 <span className="text-xs text-muted-foreground">(Non assigné)</span>
+               )}
+             </div>
              <div className="space-y-2">
-               <Label>Traction *</Label>
                <Select
-                 value={formData.vehicle_id || ''}
-                 onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value || null }))}
+                 value={formData.vehicle_id || 'none'}
+                 onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value === 'none' ? null : value }))}
                >
                  <SelectTrigger>
-                   <SelectValue placeholder="Sélectionner une traction" />
+                   <SelectValue placeholder="Définir une traction" />
                  </SelectTrigger>
                  <SelectContent>
+                   <SelectItem value="none">Aucune (Non assigné)</SelectItem>
                    {vehicles.map((vehicle) => (
                      <SelectItem key={vehicle.id} value={vehicle.id}>
                        {vehicle.name} ({vehicle.licensePlate})
@@ -177,8 +200,28 @@
                    ))}
                  </SelectContent>
                </Select>
+               
+               {/* Checkbox to apply vehicle to all entries of this tour */}
+               {entry?.tour_name && formData.vehicle_id && onApplyVehicleToTour && (
+                 <div className="flex items-center space-x-2 pt-2">
+                   <Checkbox
+                     id="applyToAllTour"
+                     checked={applyToAllTour}
+                     onCheckedChange={(checked) => setApplyToAllTour(checked === true)}
+                   />
+                   <label
+                     htmlFor="applyToAllTour"
+                     className="text-sm text-muted-foreground cursor-pointer"
+                   >
+                     Appliquer à toutes les missions "{entry.tour_name}"
+                   </label>
+                 </div>
+               )}
              </div>
+           </div>
  
+           {/* Driver, Client row */}
+           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
                <Label>Conducteur</Label>
                <Select
@@ -368,7 +411,7 @@
              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                Annuler
              </Button>
-             <Button type="submit" disabled={!formData.planning_date || !formData.vehicle_id}>
+             <Button type="submit" disabled={!formData.planning_date}>
                <Save className="h-4 w-4 mr-2" />
                {entry ? 'Modifier' : 'Créer'}
              </Button>

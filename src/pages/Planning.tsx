@@ -33,7 +33,7 @@
    const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
    const [isSelectionMode, setIsSelectionMode] = useState(false);
  
-   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, duplicateToNextWeeks } = usePlanning();
+  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, duplicateToNextWeeks, applyVehicleToTour } = usePlanning();
    const { vehicles, fetchVehicles } = useCloudVehicles();
    const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
    const { clients } = useClients();
@@ -480,6 +480,7 @@
          vehicles={tractions}
          onSave={handleSave}
          onDelete={selectedEntry ? handleDelete : undefined}
+        onApplyVehicleToTour={applyVehicleToTour}
        />
        
        <AddTourDialog
