@@ -26,6 +26,18 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
    const [preview, setPreview] = useState<ParsedDriverRow[]>([]);
    const [error, setError] = useState<string | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const resetState = () => {
+    setFile(null);
+    setLoading(false);
+    setImporting(false);
+    setPreview([]);
+    setError(null);
+    // Allow re-selecting the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
  
    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
      const selectedFile = e.target.files?.[0];
@@ -64,7 +76,7 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
        const count = await onImport(drivers);
        
        toast.success(`${count} conducteur(s) importé(s) avec succès`);
-       handleClose();
+        handleClose();
      } catch (err) {
        console.error('Error importing:', err);
        toast.error('Erreur lors de l\'import');
@@ -73,18 +85,25 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
      }
    };
  
-   const handleClose = () => {
-     setFile(null);
-     setPreview([]);
-     setError(null);
-     onOpenChange(false);
-   };
+    const handleClose = () => {
+      resetState();
+      onOpenChange(false);
+    };
  
    const cdiCount = preview.filter(d => d.contractType === 'cdi' || d.contractType === 'cdd').length;
    const interimCount = preview.filter(d => d.contractType === 'interim').length;
  
    return (
-     <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            handleClose();
+          } else {
+            onOpenChange(true);
+          }
+        }}
+      >
        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
          <DialogHeader>
            <DialogTitle className="flex items-center gap-2">
