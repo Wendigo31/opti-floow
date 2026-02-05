@@ -1,4 +1,5 @@
  import { useEffect, useState } from 'react';
+import { useRef } from 'react';
  import { toast } from 'sonner';
  import { parseDriversFromUrl, convertToDrivers } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
@@ -18,12 +19,21 @@
    const [count, setCount] = useState(0);
    const [total, setTotal] = useState(0);
    const [error, setError] = useState<string | null>(null);
-   const { createDriver, cdiDrivers, interimDrivers } = useCloudDrivers();
+  const { createDriver, cdiDrivers, interimDrivers, loading } = useCloudDrivers();
+  const hasStartedRef = useRef(false);
+  const existingNamesRef = useRef<Set<string>>(new Set());
  
    useEffect(() => {
      let cancelled = false;
  
      async function importDrivers() {
+      // Prevent re-running if already started
+      if (hasStartedRef.current) return;
+      // Wait until drivers are loaded
+      if (loading) return;
+      
+      hasStartedRef.current = true;
+
        try {
          // Parse Excel file
          const parsed = await parseDriversFromUrl(fileUrl);
@@ -40,8 +50,8 @@
          setTotal(drivers.length);
          setStatus('importing');
  
-         // Check for existing drivers to avoid duplicates
-         const existingNames = new Set([
+        // Check for existing drivers to avoid duplicates (use snapshot)
+        existingNamesRef.current = new Set([
            ...cdiDrivers.map(d => d.name.toLowerCase()),
            ...interimDrivers.map(d => d.name.toLowerCase())
          ]);
@@ -52,7 +62,7 @@
            if (cancelled) return;
            
            // Skip if already exists
-           if (existingNames.has(driver.name.toLowerCase())) {
+            if (existingNamesRef.current.has(driver.name.toLowerCase())) {
              continue;
            }
  
@@ -83,11 +93,14 @@
      }
  
      importDrivers();
+    // Cleanup only - don't re-run on dependency changes
  
      return () => {
        cancelled = true;
      };
-   }, [fileUrl, createDriver, cdiDrivers, interimDrivers, onComplete]);
+  // Only depend on fileUrl - other dependencies are refs or stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileUrl, loading]);
  
    if (status === 'done') {
      return (

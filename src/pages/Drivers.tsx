@@ -5,12 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { useApp } from '@/context/AppContext';
 import type { Driver } from '@/types';
 import { cn } from '@/lib/utils';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
@@ -18,6 +16,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  import { ImportDriversDialog } from '@/components/drivers/ImportDriversDialog';
  import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+ import { useApp } from '@/context/AppContext';
 
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
@@ -32,7 +31,19 @@ interface ExtendedDriver extends Driver {
 }
 
 export default function Drivers() {
-  const { drivers, setDrivers, selectedDriverIds } = useApp();
+  // Use cloud drivers for shared data sync
+  const { 
+    cdiDrivers: cloudCdiDrivers, 
+    interimDrivers: cloudInterimDrivers, 
+    createDriver: createCloudDriver, 
+    updateDriver: updateCloudDriver,
+    deleteDriver: deleteCloudDriver,
+    loading: driversLoading 
+  } = useCloudDrivers();
+  
+  // Still need selectedDriverIds from context for calculator integration
+  const { selectedDriverIds } = useApp();
+  
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
   const navigate = useNavigate();
@@ -42,15 +53,11 @@ export default function Drivers() {
   const [activeTab, setActiveTab] = useState<'cdi' | 'interim'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
-   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
-  // Store interim drivers separately
-  const [interimDrivers, setInterimDrivers] = useLocalStorage<ExtendedDriver[]>('optiflow_interim_drivers', []);
-   
-   // Cloud drivers hook for import
-   const { createDriver: createCloudDriver } = useCloudDrivers();
-  
-  const canAddDriver = checkLimit('maxDrivers', drivers.length + interimDrivers.length);
+  // Combined driver count for limits
+  const totalDriverCount = cloudCdiDrivers.length + cloudInterimDrivers.length;
+  const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -81,12 +88,12 @@ export default function Drivers() {
     });
   };
 
-  const handleEdit = (driver: ExtendedDriver) => {
+  const handleEdit = (driver: ExtendedDriver, isInterim: boolean) => {
     setEditingId(driver.id);
-    setFormData(driver);
+    setFormData({ ...driver, isInterim });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const isInterim = formData.isInterim || activeTab === 'interim';
     
     if (isAdding) {
@@ -113,26 +120,17 @@ export default function Drivers() {
         nightBonusPercent: formData.nightBonusPercent || 25,
       };
       
-      if (isInterim) {
-        setInterimDrivers([...interimDrivers, newDriver]);
-      } else {
-        setDrivers([...drivers, newDriver as Driver]);
-      }
+      // Save to cloud
+      await createCloudDriver(newDriver as Driver, isInterim);
       setIsAdding(false);
     } else if (editingId) {
-      if (formData.isInterim) {
-        setInterimDrivers(interimDrivers.map(d => 
-          d.id === editingId 
-            ? { ...d, ...formData } as ExtendedDriver
-            : d
-        ));
-      } else {
-        setDrivers(drivers.map(d => 
-          d.id === editingId 
-            ? { ...d, ...formData } as Driver
-            : d
-        ));
-      }
+      // Find the existing driver to merge with formData
+      const existingDriver = isInterim 
+        ? cloudInterimDrivers.find(d => d.id === editingId)
+        : cloudCdiDrivers.find(d => d.id === editingId);
+      
+      const updatedDriver = { ...existingDriver, ...formData, id: editingId } as ExtendedDriver;
+      await updateCloudDriver(updatedDriver as Driver, isInterim);
       setEditingId(null);
     }
     setFormData({});
@@ -144,12 +142,8 @@ export default function Drivers() {
     setFormData({});
   };
 
-  const handleDelete = (id: string, isInterim: boolean) => {
-    if (isInterim) {
-      setInterimDrivers(interimDrivers.filter(d => d.id !== id));
-    } else {
-      setDrivers(drivers.filter(d => d.id !== id));
-    }
+  const handleDelete = async (id: string, isInterim: boolean) => {
+    await deleteCloudDriver(id, isInterim);
   };
 
   const calculateInterimCost = (driver: ExtendedDriver): number => {
@@ -208,19 +202,17 @@ export default function Drivers() {
        const success = await createCloudDriver(newDriver as Driver, isInterim);
        if (success) {
          count++;
-         
-         // Also update local state
-         if (isInterim) {
-           setInterimDrivers(prev => [...prev, newDriver]);
-         } else {
-           setDrivers(prev => [...prev, newDriver as Driver]);
-         }
+         // Cloud state is updated via realtime subscription - no local update needed
        }
      }
      
      return count;
    };
  
+  // Cast cloud drivers to ExtendedDriver for UI
+  const cdiDrivers = cloudCdiDrivers as ExtendedDriver[];
+  const interimDrivers = cloudInterimDrivers as ExtendedDriver[];
+
   const renderForm = () => {
     const isInterim = formData.isInterim || activeTab === 'interim';
     
@@ -511,7 +503,7 @@ export default function Drivers() {
         )}
         style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
       >
-        {editingId === driver.id ? (
+      {editingId === driver.id && formData.isInterim === isInterim ? (
           renderForm()
         ) : (
           <>
@@ -558,7 +550,7 @@ export default function Drivers() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="icon" variant="ghost" onClick={() => handleEdit(driver)}>
+              <Button size="icon" variant="ghost" onClick={() => handleEdit(driver, isInterim)}>
                 <Edit2 className="w-4 h-4" />
               </Button>
               <Button size="icon" variant="ghost" onClick={() => handleDelete(driver.id, isInterim)}>
@@ -653,7 +645,7 @@ export default function Drivers() {
 
   // Filter drivers based on search and ownership
   const filteredCdiDrivers = useMemo(() => {
-    let result = (drivers as ExtendedDriver[]).filter(d => !d.isInterim);
+    let result = cdiDrivers;
     
     // Filter by search
     if (searchTerm.trim()) {
@@ -673,7 +665,7 @@ export default function Drivers() {
     }
     
     return result;
-  }, [drivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
+  }, [cdiDrivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
 
   const filteredInterimDrivers = useMemo(() => {
     let result = interimDrivers;
@@ -697,8 +689,6 @@ export default function Drivers() {
     
     return result;
   }, [interimDrivers, searchTerm, ownershipFilter, isCompanyMember, getDriverInfo, isOwnData]);
-
-  const cdiDrivers = (drivers as ExtendedDriver[]).filter(d => !d.isInterim);
 
   return (
     <div className="space-y-8">
