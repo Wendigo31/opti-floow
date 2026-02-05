@@ -6,6 +6,17 @@ import type { LocalClient, LocalClientAddress } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+// Helper to wait for license context to be ready
+async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const vals = getValues();
+    if (vals.authUserId && vals.licenseId) return vals;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getValues();
+}
+
 // Extended client with creator info
 export interface ClientWithCreator extends LocalClient {
   user_id?: string;
@@ -142,20 +153,27 @@ export function useClients() {
     options?: { silent?: boolean }
   ): Promise<ClientWithCreator | null> => {
     try {
-      // Use context values directly for speed (avoid repeated auth.getUser calls)
-      if (!authUserId || !contextLicenseId) {
-        if (!options?.silent && !contextLoading) {
-          toast.error('Session en cours de chargement, veuillez réessayer.');
+      // Wait briefly for context to be ready (handles race conditions on page load)
+      let uid = authUserId;
+      let lid = contextLicenseId;
+      if (!uid || !lid) {
+        const ctx = await waitForContext(() => ({ authUserId, licenseId: contextLicenseId }), 3000);
+        uid = ctx.authUserId;
+        lid = ctx.licenseId;
+      }
+      if (!uid || !lid) {
+        if (!options?.silent) {
+          toast.error('Session non initialisée. Veuillez recharger la page.');
         }
-        console.error('[useClients] createClient: no authUserId or contextLicenseId');
+        console.error('[useClients] createClient: no authUserId or licenseId after wait');
         return null;
       }
 
       const { data, error } = await supabase
         .from('clients')
         .insert({
-          user_id: authUserId,
-          license_id: contextLicenseId,
+          user_id: uid,
+          license_id: lid,
           name: input.name,
           company: input.company,
           email: input.email,
@@ -175,6 +193,7 @@ export function useClients() {
       }
 
       const memberInfo = membersMap.get(authUserId);
+      const memberInfoActual = membersMap.get(uid);
       const newClient: ClientWithCreator = {
         id: data.id,
         name: data.name,
@@ -190,8 +209,8 @@ export function useClients() {
         updated_at: data.updated_at,
         user_id: data.user_id,
         license_id: data.license_id || undefined,
-        creator_email: memberInfo?.email || undefined,
-        creator_display_name: memberInfo?.displayName,
+        creator_email: memberInfoActual?.email || undefined,
+        creator_display_name: memberInfoActual?.displayName,
         is_own: true,
         is_former_member: false,
       };

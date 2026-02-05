@@ -5,6 +5,17 @@ import type { Vehicle } from '@/types/vehicle';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useLicenseContext } from '@/context/LicenseContext';
 
+// Helper to wait for license context to be ready
+async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const vals = getValues();
+    if (vals.authUserId && vals.licenseId) return vals;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getValues();
+}
+
 // Local storage key for offline cache
 const CACHE_KEY = 'optiflow_vehicles_cache';
 
@@ -145,18 +156,24 @@ export function useCloudVehicles() {
 
   const createVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
-      if (!authUserId || !licenseId) {
-        if (!contextLoading) {
+      // Wait briefly for context to be ready (handles race conditions on page load)
+      let uid = authUserId;
+      let lid = licenseId;
+      if (!uid || !lid) {
+        const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
+        uid = ctx.authUserId;
+        lid = ctx.licenseId;
+      }
+      if (!uid || !lid) {
           toast.error('Session non initialisée. Veuillez recharger la page.');
-        }
         return false;
       }
 
       const { error } = await supabase
         .from('user_vehicles')
         .insert([{
-          user_id: authUserId,
-          license_id: licenseId,
+          user_id: uid,
+          license_id: lid,
           local_id: vehicle.id,
           name: vehicle.name,
           license_plate: vehicle.licensePlate,
@@ -190,8 +207,14 @@ export function useCloudVehicles() {
 
   const updateVehicle = useCallback(async (vehicle: Vehicle): Promise<boolean> => {
     try {
-      if (!licenseId) {
-        toast.error('Session en cours de chargement...');
+      // Wait briefly for context to be ready
+      let lid = licenseId;
+      if (!lid) {
+        const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
+        lid = ctx.licenseId;
+      }
+      if (!lid) {
+        toast.error('Session non initialisée. Veuillez recharger la page.');
         return false;
       }
 
@@ -211,7 +234,7 @@ export function useCloudVehicles() {
           vehicle_data: JSON.parse(JSON.stringify(vehicle)),
           synced_at: new Date().toISOString(),
         })
-        .eq('license_id', licenseId)
+        .eq('license_id', lid)
         .eq('local_id', vehicle.id);
 
       if (error) throw error;

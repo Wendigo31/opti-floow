@@ -6,6 +6,17 @@ import { useLicenseContext } from '@/context/LicenseContext';
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 
+// Helper to wait for license context to be ready
+async function waitForContext(getValues: () => { authUserId: string | null; licenseId: string | null }, maxWaitMs = 3000): Promise<{ authUserId: string | null; licenseId: string | null }> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const vals = getValues();
+    if (vals.authUserId && vals.licenseId) return vals;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getValues();
+}
+
 function withTimeout<T>(work: () => Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => {
@@ -210,18 +221,24 @@ export interface ExcelTourInput {
  
     const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {
-      if (!authUserId || !licenseId) {
-        if (!contextLoading) {
+      // Wait briefly for context to be ready (handles race conditions on page load)
+      let uid = authUserId;
+      let lid = licenseId;
+      if (!uid || !lid) {
+        const ctx = await waitForContext(() => ({ authUserId, licenseId }), 3000);
+        uid = ctx.authUserId;
+        lid = ctx.licenseId;
+      }
+      if (!uid || !lid) {
           toast.error('Session non initialisée. Veuillez recharger la page.');
-        }
          return null;
        }
  
        const { data, error } = await supabase
          .from('planning_entries')
          .insert({
-          user_id: authUserId,
-          license_id: licenseId,
+          user_id: uid,
+          license_id: lid,
            planning_date: input.planning_date,
            start_time: input.start_time || null,
            end_time: input.end_time || null,
