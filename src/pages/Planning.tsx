@@ -505,6 +505,7 @@
          vehicles={tractions}
          drivers={allDrivers}
          clients={clients}
+          weekStartDate={currentWeekStart}
          onImport={async (entries) => {
             let allOk = true;
 

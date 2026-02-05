@@ -21,6 +21,11 @@ import { format } from 'date-fns';
    vehicles: Vehicle[];
    drivers: Driver[];
    clients: ClientWithCreator[];
+  /**
+   * Week reference used to anchor recurring days to actual dates.
+   * We intentionally do NOT use the import day (today) to avoid empty weeks.
+   */
+  weekStartDate: Date;
    onImport: (entries: TourInput[]) => Promise<boolean>;
  }
  
@@ -30,6 +35,7 @@ import { format } from 'date-fns';
    vehicles,
    drivers,
    clients,
+  weekStartDate,
    onImport,
  }: ImportPlanningDialogProps) {
    const [file, setFile] = useState<File | null>(null);
@@ -80,12 +86,12 @@ import { format } from 'date-fns';
        const driverMap = new Map(drivers.map(d => [d.name, d.id]));
        
        // Convert to TourInput format
-       const tourInputs = convertToTourInputs(
+        const tourInputs = convertToTourInputs(
          preview,
          clientMap,
          driverMap,
         null, // No default vehicle - entries go to "Non assigné"
-        format(new Date(), 'yyyy-MM-dd') // Use today as start date
+         format(weekStartDate, 'yyyy-MM-dd') // Anchor to displayed week start
        );
        
        // Filter out entries with no meaningful data and add required fields
@@ -96,8 +102,8 @@ import { format } from 'date-fns';
            tour_name: t.tour_name!,
           vehicle_id: null, // Always null - user will assign later
            recurring_days: t.recurring_days || [0, 1, 2, 3, 4],
-           is_all_year: false,
-          start_date: format(new Date(), 'yyyy-MM-dd'),
+            is_all_year: false,
+            start_date: format(weekStartDate, 'yyyy-MM-dd'),
          })) as TourInput[];
 
       if (validInputs.length === 0) {
