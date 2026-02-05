@@ -265,10 +265,17 @@
            ) : tractions.length === 0 ? (
              <div className="flex flex-col items-center justify-center h-64 text-center p-4">
                <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-               <h3 className="font-medium text-lg">Aucune tournée configurée</h3>
+                <h3 className="font-medium text-lg">Aucun tracteur disponible</h3>
                <p className="text-muted-foreground text-sm mt-1">
-                 Ajoutez des tournées pour les programmer au planning.
+                  Ajoutez des véhicules de type "Tracteur" dans l'onglet Véhicules pour planifier des missions.
                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => window.location.href = '/vehicles'}
+                >
+                  Aller aux Véhicules
+                </Button>
              </div>
            ) : (
              <ScrollArea className="h-full">
