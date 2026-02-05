@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { clearAllCaches } from "./utils/clearAllCaches";
 
 // In Tauri, a previously registered PWA service worker can keep serving an older cached UI
 // even after you rebuild the executable. We explicitly unregister + clear caches in desktop builds.
@@ -22,6 +23,15 @@ if (isTauri) {
   } catch {
     // ignore
   }
+}
+
+// One-time cache cleanup (version bump forces re-clear)
+const CACHE_VERSION = 'v2';
+const lastCacheVersion = localStorage.getItem('optiflow_cache_version');
+if (lastCacheVersion !== CACHE_VERSION) {
+  clearAllCaches();
+  localStorage.setItem('optiflow_cache_version', CACHE_VERSION);
+  console.log('[Cache] Cleared all caches for version', CACHE_VERSION);
 }
 
 createRoot(document.getElementById("root")!).render(
