@@ -23,7 +23,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useChargePresets, type ChargePreset } from '@/hooks/useChargePresets';
-import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
 import type { FixedCharge } from '@/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -35,7 +35,7 @@ interface ChargePresetsDialogProps {
 }
 
 export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogProps) {
-  const { charges, setCharges } = useApp();
+  const { charges, createCharge, deleteCharge } = useCloudCharges();
   const { presets, loading, createPreset, updatePreset, deletePreset, duplicatePreset } = useChargePresets();
   
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
@@ -84,7 +84,7 @@ export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogP
     }
   };
 
-  const handleApplyPreset = (preset: ChargePreset) => {
+  const handleApplyPreset = async (preset: ChargePreset) => {
     // Merge with existing charges, replacing by name or adding new ones
     const existingByName = new Map(charges.map(c => [c.name, c]));
     const newCharges: FixedCharge[] = [];
@@ -113,17 +113,29 @@ export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogP
     // Keep remaining existing charges
     existingByName.forEach(charge => newCharges.push(charge));
     
-    setCharges(newCharges);
+    // Create new charges in cloud (merge operation)
+    for (const charge of newCharges) {
+      // Only add if not already in current charges
+      if (!charges.find(c => c.id === charge.id)) {
+        await createCharge(charge);
+      }
+    }
     onOpenChange(false);
   };
 
-  const handleReplaceWithPreset = (preset: ChargePreset) => {
+  const handleReplaceWithPreset = async (preset: ChargePreset) => {
     // Replace all charges with preset charges
     const newCharges = preset.charges.map(c => ({
       ...c,
       id: `preset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     }));
-    setCharges(newCharges);
+    // Delete existing charges and add new ones
+    for (const charge of charges) {
+      await deleteCharge(charge.id);
+    }
+    for (const charge of newCharges) {
+      await createCharge(charge);
+    }
     onOpenChange(false);
   };
 

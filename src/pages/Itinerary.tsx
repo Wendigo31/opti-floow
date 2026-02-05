@@ -53,6 +53,8 @@ import { Input } from '@/components/ui/input';
 import { AddressInput } from '@/components/route/AddressInput';
 import { MapPreview } from '@/components/map/MapPreview';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { FRENCH_TOLL_RATES, SEMI_TRAILER_SPECS } from '@/hooks/useTomTom';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -205,7 +207,13 @@ function SortableStop({ stop, index, onUpdate, onRemove, onSwap, isLast, onOpenA
 }
 
 export default function Itinerary() {
-  const { vehicle, trip, setTrip, setVehicle, drivers, selectedDriverIds, charges, settings } = useApp();
+  const { vehicle, trip, setTrip, setVehicle, selectedDriverIds, settings } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
+  
   const { toast } = useToast();
   const [trips, setTrips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);

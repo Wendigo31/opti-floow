@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useToast } from '@/hooks/use-toast';
 import type { LocalClient, LocalClientReport, LocalTrip, LocalQuote } from '@/types/local';
 import { generateId } from '@/types/local';
@@ -33,7 +35,13 @@ interface ClientDetailDialogProps {
 }
 
 export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailDialogProps) {
-  const { drivers, vehicle, selectedDriverIds, charges, settings } = useApp();
+  const { vehicle, selectedDriverIds, settings } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
+  
   const { toast } = useToast();
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);

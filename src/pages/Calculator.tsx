@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { useExploitationMetrics } from '@/hooks/useExploitationMetrics';
@@ -32,13 +34,16 @@ export default function Calculator() {
     setTrip,
     vehicle,
     setVehicle,
-    drivers,
     selectedDriverIds,
     setSelectedDriverIds,
-    charges,
     settings,
     setSettings,
   } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
   
   // Role-based permissions
   const { canViewCostBreakdown, canViewFinancialData, canViewPricing, role } = useRolePermissions();

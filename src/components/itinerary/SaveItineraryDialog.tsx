@@ -23,6 +23,8 @@ import {
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { calculateVehicleCosts, calculateTrailerCosts } from '@/hooks/useVehicleCost';
 import type { Vehicle } from '@/types/vehicle';
@@ -75,7 +77,13 @@ export function SaveItineraryDialog({
 }: SaveItineraryDialogProps) {
   const navigate = useNavigate();
   const { saveTour } = useSavedTours();
-  const { vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
+  const { vehicle, selectedDriverIds, settings } = useApp();
+  
+  // Use cloud data for drivers and charges (shared company data)
+  const { charges } = useCloudCharges();
+  const { cdiDrivers, interimDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...interimDrivers];
+  
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
