@@ -299,6 +299,8 @@ export async function parseDriversFromUrl(url: string): Promise<ParsedDriverRow[
    return parsedDrivers.map((parsed, index) => ({
      id: `imported_${Date.now()}_${index}`,
      name: parsed.name,
+     firstName: parsed.firstName,
+     lastName: parsed.lastName,
      baseSalary: parsed.contractType === 'interim' ? 0 : 2200,
      hourlyRate: 12.50,
      hoursPerDay: 10,
@@ -312,6 +314,7 @@ export async function parseDriversFromUrl(url: string): Promise<ParsedDriverRow[
      isInterim: parsed.contractType === 'interim',
      interimAgency: parsed.agencyName || '',
      phone: parsed.phone,
+     email: parsed.email || '',
      contractType: parsed.contractType,
    }));
  }

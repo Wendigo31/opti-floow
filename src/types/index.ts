@@ -2,6 +2,10 @@
 export interface Driver {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
   baseSalary: number;
   hourlyRate: number; // Taux horaire brut
   hoursPerDay: number; // Heures travaillées par jour

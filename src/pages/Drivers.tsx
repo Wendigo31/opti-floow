@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
- import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -609,7 +609,12 @@ export default function Drivers() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-foreground">{driver.name}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {driver.firstName && driver.lastName 
+                        ? `${driver.firstName} ${driver.lastName}`
+                        : driver.name
+                      }
+                    </h3>
                     {driver.scheduleType === 'night' && (
                       <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">Nuit</span>
                     )}
@@ -635,6 +640,12 @@ export default function Drivers() {
                       : `${formatCurrency(driver.baseSalary)} brut/mois`
                     }
                 </p>
+                {driver.phone && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3" />
+                    {driver.phone}
+                  </p>
+                )}
                 {(driver as ExtendedDriver).assignedCity && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -848,7 +859,15 @@ export default function Drivers() {
               )}
             </div>
             <div>
-              <p className="font-medium">{driver.name}</p>
+              <p className="font-medium">
+                {driver.firstName && driver.lastName 
+                  ? `${driver.firstName} ${driver.lastName}`
+                  : driver.name
+                }
+              </p>
+              {driver.phone && (
+                <span className="text-xs text-muted-foreground">{driver.phone}</span>
+              )}
               {driver.scheduleType && driver.scheduleType !== 'day' && (
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
