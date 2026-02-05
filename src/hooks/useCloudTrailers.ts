@@ -30,6 +30,10 @@ export function useCloudTrailers() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const fetchInProgressRef = useRef(false);
 
+  // Keep latest state in ref for stable realtime handlers
+  const trailersRef = useRef<Trailer[]>(trailers);
+  useEffect(() => { trailersRef.current = trailers; }, [trailers]);
+
   const fetchTrailers = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
     
@@ -89,6 +93,7 @@ export function useCloudTrailers() {
               setTrailers(prev => {
                 const exists = prev.find(t => t.id === data.id);
                 const updated = exists ? prev.map(t => t.id === data.id ? data : t) : [data, ...prev];
+                trailersRef.current = updated;
                 setCachedTrailers(updated);
                 return updated;
               });
@@ -97,13 +102,18 @@ export function useCloudTrailers() {
             const localId = (payload.old as any).local_id;
             setTrailers(prev => {
               const updated = prev.filter(t => t.id !== localId);
+              trailersRef.current = updated;
               setCachedTrailers(updated);
               return updated;
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED' && authUserId) {
+          void fetchTrailers();
+        }
+      });
 
     return () => {
       if (channelRef.current) {
@@ -111,7 +121,7 @@ export function useCloudTrailers() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [licenseId, authUserId, fetchTrailers]);
 
   // Auto-fetch when licenseId becomes available
   useEffect(() => {
