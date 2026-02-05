@@ -1,41 +1,34 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLicense } from '@/hooks/useLicense';
+import { useLicenseContext, getLicenseId as getContextLicenseId } from '@/context/LicenseContext';
 import { toast } from 'sonner';
 import type { LocalQuote } from '@/types/local';
 import { generateId } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Get user's license_id for company-level sync
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
-
 export function useQuotes() {
-  useLicense(); // Hook must be called for licensing context
+  const { licenseId, authUserId } = useLicenseContext();
   const [quotes, setQuotes] = useState<LocalQuote[]>([]);
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const fetchInProgressRef = useRef(false);
+
+  // Keep latest state in ref for realtime handlers
+  const quotesRef = useRef<LocalQuote[]>(quotes);
+  useEffect(() => { quotesRef.current = quotes; }, [quotes]);
 
   const fetchQuotes = useCallback(async () => {
+    if (fetchInProgressRef.current) return;
+    
+    fetchInProgressRef.current = true;
     setLoading(true);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
+        fetchInProgressRef.current = false;
         return;
       }
 
@@ -68,11 +61,13 @@ export function useQuotes() {
       }));
 
       setQuotes(mappedQuotes);
+      quotesRef.current = mappedQuotes;
     } catch (error) {
       console.error('Error fetching quotes:', error);
       toast.error('Erreur lors du chargement des devis');
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, []);
 
@@ -94,13 +89,13 @@ export function useQuotes() {
         return null;
       }
 
-      const licenseId = await getUserLicenseId();
+      const currentLicenseId = await getContextLicenseId();
 
       const { data, error } = await supabase
         .from('quotes')
         .insert({
           user_id: user.id,
-          license_id: licenseId,
+          license_id: currentLicenseId,
           quote_number: quoteNumber,
           client_id: input.client_id,
           origin_address: input.origin_address,
@@ -142,6 +137,7 @@ export function useQuotes() {
       };
 
       setQuotes(prev => [newQuote, ...prev]);
+      quotesRef.current = [newQuote, ...quotesRef.current];
       toast.success('Devis créé');
       return newQuote;
     } catch (error) {
@@ -195,11 +191,6 @@ export function useQuotes() {
     return quotes.filter(q => q.client_id === clientId);
   }, [quotes]);
 
-  // Fetch license ID on mount
-  useEffect(() => {
-    getUserLicenseId().then(setLicenseId);
-  }, []);
-
   // Setup realtime subscription for company-level sync
   useEffect(() => {
     if (!licenseId) return;
@@ -240,7 +231,9 @@ export function useQuotes() {
             };
             setQuotes(prev => {
               if (prev.find(quote => quote.id === newQuote.id)) return prev;
-              return [newQuote, ...prev];
+              const updated = [newQuote, ...prev];
+              quotesRef.current = updated;
+              return updated;
             });
           } else if (payload.eventType === 'UPDATE') {
             const q = payload.new as any;
@@ -263,15 +256,27 @@ export function useQuotes() {
               created_at: q.created_at,
               updated_at: q.updated_at,
             };
-            setQuotes(prev => prev.map(quote => quote.id === updatedQuote.id ? updatedQuote : quote));
+            setQuotes(prev => {
+              const updated = prev.map(quote => quote.id === updatedQuote.id ? updatedQuote : quote);
+              quotesRef.current = updated;
+              return updated;
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as any).id;
-            setQuotes(prev => prev.filter(quote => quote.id !== deletedId));
+            setQuotes(prev => {
+              const updated = prev.filter(quote => quote.id !== deletedId);
+              quotesRef.current = updated;
+              return updated;
+            });
           }
         }
       )
       .subscribe((status) => {
         console.log('[Realtime] quotes subscription:', status);
+        // Reconcile on subscribe
+        if (status === 'SUBSCRIBED') {
+          void fetchQuotes();
+        }
       });
 
     return () => {
@@ -280,12 +285,14 @@ export function useQuotes() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [licenseId, fetchQuotes]);
 
   // Initial fetch
   useEffect(() => {
-    fetchQuotes();
-  }, [fetchQuotes]);
+    if (authUserId) {
+      fetchQuotes();
+    }
+  }, [authUserId, fetchQuotes]);
 
   return {
     quotes,

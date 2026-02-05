@@ -46,6 +46,10 @@ export function useSavedTours() {
   const inFlightRef = useRef<Promise<void> | null>(null);
   const lastToastAtRef = useRef<number>(0);
 
+  // Keep latest state in ref for realtime handlers
+  const toursRef = useRef<SavedTour[]>(tours);
+  useEffect(() => { toursRef.current = tours; }, [tours]);
+
   // Track auth state (prevents "anonymous" calls that trigger RLS errors)
   useEffect(() => {
     let isMounted = true;
@@ -186,14 +190,24 @@ export function useSavedTours() {
             setTours(prev => {
               // Avoid duplicates
               if (prev.find(t => t.id === newTour.id)) return prev;
-              return [newTour, ...prev];
+              const updated = [newTour, ...prev];
+              toursRef.current = updated;
+              return updated;
             });
           } else if (payload.eventType === 'UPDATE') {
             const updatedTour = mapDbToSavedTour(payload.new);
-            setTours(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t));
+            setTours(prev => {
+              const updated = prev.map(t => t.id === updatedTour.id ? updatedTour : t);
+              toursRef.current = updated;
+              return updated;
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as any).id;
-            setTours(prev => prev.filter(t => t.id !== deletedId));
+            setTours(prev => {
+              const updated = prev.filter(t => t.id !== deletedId);
+              toursRef.current = updated;
+              return updated;
+            });
           }
         }
       )

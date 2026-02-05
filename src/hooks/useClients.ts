@@ -16,42 +16,37 @@ export interface ClientWithCreator extends LocalClient {
   is_former_member?: boolean;
 }
 
-// Get user's license_id for company-level sync
-async function getUserLicenseId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('company_users')
-    .select('license_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
-  
-  return data?.license_id || null;
-}
+ import { useLicenseContext, getLicenseId as getContextLicenseId } from '@/context/LicenseContext';
 
 export function useClients() {
-  useLicense(); // Hook must be called but licenseData is not used directly
+  const { licenseId: contextLicenseId, authUserId } = useLicenseContext();
   const [clients, setClients] = useState<ClientWithCreator[]>([]);
   const [addresses, setAddresses] = useState<LocalClientAddress[]>([]);
   const [loading, setLoading] = useState(false);
-  const [licenseId, setLicenseId] = useState<string | null>(null);
   const [membersMap, setMembersMap] = useState<Map<string, { email: string; displayName?: string; isActive: boolean }>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const fetchInProgressRef = useRef(false);
+ 
+  // Keep latest state in ref for realtime handlers
+  const clientsRef = useRef<ClientWithCreator[]>(clients);
+  useEffect(() => { clientsRef.current = clients; }, [clients]);
 
   const fetchClients = useCallback(async () => {
+    if (fetchInProgressRef.current) return;
+    
+    fetchInProgressRef.current = true;
     setLoading(true);
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
+        fetchInProgressRef.current = false;
         return;
       }
       
       // Fetch license ID and company members for creator lookup
-      const userLicenseId = await getUserLicenseId();
+      const userLicenseId = await getContextLicenseId();
       
       // Fetch members in the same call to avoid state dependency issues
       let currentMembersMap = new Map<string, { email: string; displayName?: string; isActive: boolean }>();
@@ -108,6 +103,7 @@ export function useClients() {
       });
 
       setClients(mappedClients);
+      clientsRef.current = mappedClients;
 
       // Fetch addresses
       const clientIds = mappedClients.map(c => c.id);
@@ -138,6 +134,7 @@ export function useClients() {
       toast.error('Erreur lors du chargement des clients');
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, []); // Remove membersMap dependency to prevent infinite loop
 
@@ -149,7 +146,7 @@ export function useClients() {
         return null;
       }
 
-      const licenseId = await getUserLicenseId();
+      const licenseId = await getContextLicenseId();
 
       const { data, error } = await supabase
         .from('clients')
@@ -194,6 +191,7 @@ export function useClients() {
       };
 
       setClients(prev => [newClient, ...prev]);
+      clientsRef.current = [newClient, ...clientsRef.current];
       toast.success('Client ajouté');
       return newClient;
     } catch (error) {
@@ -251,24 +249,19 @@ export function useClients() {
     return addresses.filter(a => a.client_id === clientId);
   }, [addresses]);
 
-  // Fetch license ID on mount
-  useEffect(() => {
-    getUserLicenseId().then(setLicenseId);
-  }, []);
-
   // Setup realtime subscription for company-level sync
   useEffect(() => {
-    if (!licenseId) return;
+    if (!contextLicenseId) return;
 
     channelRef.current = supabase
-      .channel(`clients_${licenseId}`)
+      .channel(`clients_${contextLicenseId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'clients',
-          filter: `license_id=eq.${licenseId}`,
+          filter: `license_id=eq.${contextLicenseId}`,
         },
         (payload) => {
           console.log('[Realtime] clients change:', payload.eventType);
@@ -290,7 +283,9 @@ export function useClients() {
             };
             setClients(prev => {
               if (prev.find(c => c.id === newClient.id)) return prev;
-              return [newClient, ...prev];
+              const updated = [newClient, ...prev];
+              clientsRef.current = updated;
+              return updated;
             });
           } else if (payload.eventType === 'UPDATE') {
             const updatedClient: LocalClient = {
@@ -307,15 +302,27 @@ export function useClients() {
               created_at: (payload.new as any).created_at,
               updated_at: (payload.new as any).updated_at,
             };
-            setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+            setClients(prev => {
+              const updated = prev.map(c => c.id === updatedClient.id ? updatedClient : c);
+              clientsRef.current = updated;
+              return updated;
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as any).id;
-            setClients(prev => prev.filter(c => c.id !== deletedId));
+            setClients(prev => {
+              const updated = prev.filter(c => c.id !== deletedId);
+              clientsRef.current = updated;
+              return updated;
+            });
           }
         }
       )
       .subscribe((status) => {
         console.log('[Realtime] clients subscription:', status);
+        // Reconcile on subscribe
+        if (status === 'SUBSCRIBED') {
+          void fetchClients();
+        }
       });
 
     return () => {
@@ -324,12 +331,14 @@ export function useClients() {
         channelRef.current = null;
       }
     };
-  }, [licenseId]);
+  }, [contextLicenseId, fetchClients]);
 
   // Initial fetch
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+    if (authUserId) {
+      fetchClients();
+    }
+  }, [authUserId, fetchClients]);
 
   return {
     clients,
