@@ -192,10 +192,6 @@ export default function TripHistory() {
                 Exporter synthèse
               </Button>
             </FeatureGate>
-            <Button variant="outline" onClick={() => fetchTours()} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualiser
-            </Button>
             {canCompare ? (
               <Button 
                 variant={compareMode ? "default" : "outline"}

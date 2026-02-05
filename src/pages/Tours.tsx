@@ -10,7 +10,6 @@ import {
   MapPin,
   Euro,
   TrendingUp,
-  RefreshCw,
   Sparkles,
   EyeOff
 } from 'lucide-react';
@@ -287,10 +286,6 @@ export default function Tours() {
             <p className="text-muted-foreground">Gérez et exportez vos tournées</p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => fetchTours()} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
       </div>
 
       {/* Stats */}
