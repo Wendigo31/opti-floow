@@ -293,18 +293,44 @@ export function useCloudDrivers() {
         return false;
       }
 
-      // Do not rely on DELETE response payload: depending on RLS, PostgREST may
-      // return an empty array even when the delete actually succeeded.
-      const { error } = await supabase
+      // Try direct delete first. When RLS blocks the operation, PostgREST may
+      // return success with count=0 and no error.
+      const { error: deleteError, count } = await supabase
         .from('user_drivers')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('license_id', currentLicenseId)
-        .eq('local_id', id)
-        .select('id');
+        .eq('local_id', id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      // Verify deletion (covers RLS silent failures / filter mismatch)
+      // If nothing was deleted, we may be hitting a silent RLS denial.
+      // For Direction users, fallback to a server-verified deletion helper.
+      if (count === 0) {
+        const { data: isOwner, error: ownerError } = await supabase
+          .rpc('is_company_owner', { p_license_id: currentLicenseId, p_user_id: user.id });
+
+        if (ownerError) {
+          console.warn('Unable to check owner role:', ownerError);
+        }
+
+        if (isOwner) {
+          const { data: deletedByFn, error: fnError } = await supabase
+            .rpc('delete_company_driver', { p_license_id: currentLicenseId, p_local_id: id });
+
+          if (fnError) {
+            console.error('Direction delete_company_driver failed:', fnError);
+            toast.error('Suppression refusée');
+            return false;
+          }
+
+          if (!deletedByFn) {
+            toast.error('Conducteur introuvable');
+            return false;
+          }
+        }
+      }
+
+      // Final verification (covers RLS silent failures / filter mismatch)
       const { data: stillThere, error: verifyError } = await supabase
         .from('user_drivers')
         .select('id')
