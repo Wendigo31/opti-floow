@@ -453,8 +453,8 @@ export interface ExcelTourInput {
 
           const monday = startOfWeek(weekStartDate, { weekStartsOn: 1 });
 
-          // Generate entries for the current week + 4 previous weeks (1 month back)
-          const WEEKS_BACK = 4;
+          // Generate entries for the current week + 1 previous week
+          const WEEKS_BACK = 1;
           const allRows: any[] = [];
 
           for (let w = -WEEKS_BACK; w <= 0; w++) {
