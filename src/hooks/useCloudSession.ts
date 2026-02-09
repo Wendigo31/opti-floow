@@ -261,15 +261,19 @@ export function useCloudSession({
         setSessionId(null);
         setLastSavedAt(null);
       } else if (event === 'SIGNED_IN') {
+        // Always reset and reload for new user
+        userIdRef.current = null;
+        licenseIdRef.current = null;
+        hasLoadedRef.current = false;
+        setSessionId(null);
+        setLastSavedAt(null);
+        
         // Debounce to avoid multiple rapid calls during re-validation cycles
         if (debounceTimeout) {
           clearTimeout(debounceTimeout);
         }
         debounceTimeout = setTimeout(() => {
-          // Only reload if we haven't loaded yet
-          if (!hasLoadedRef.current) {
-            loadSession();
-          }
+          loadSession();
         }, 500);
       }
     });

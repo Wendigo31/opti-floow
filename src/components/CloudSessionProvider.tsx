@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useCloudSession } from '@/hooks/useCloudSession';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Cloud, CloudOff, Loader2 } from 'lucide-react';
 
@@ -21,6 +22,17 @@ export function CloudSessionProvider({ children }: { children: React.ReactNode }
   } = useApp();
 
   const hasRestoredRef = useRef(false);
+
+  // Reset hasRestoredRef when user changes (login/logout)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        console.log('[CloudSessionProvider] Auth changed, resetting restore flag');
+        hasRestoredRef.current = false;
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const { 
     isLoading, 
