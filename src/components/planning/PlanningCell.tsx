@@ -1,10 +1,11 @@
- import { Plus } from 'lucide-react';
- import { Badge } from '@/components/ui/badge';
- import { Button } from '@/components/ui/button';
- import { Checkbox } from '@/components/ui/checkbox';
- import type { PlanningEntry } from '@/types/planning';
- import { planningStatusColors } from '@/types/planning';
- import { cn } from '@/lib/utils';
+import { Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { PlanningEntry } from '@/types/planning';
+import { planningStatusColors } from '@/types/planning';
+import { cn } from '@/lib/utils';
  
  interface PlanningCellProps {
    date: Date;
@@ -140,16 +141,30 @@
                
                 {/* Mission preview */}
                 {!isSelectionMode && entry.mission_order && (
-                  <div className="mt-1 text-[10px] opacity-70 whitespace-pre-line break-words" title={entry.mission_order}>
-                    📋 {entry.mission_order}
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="mt-1 text-[10px] opacity-70 line-clamp-2 break-words cursor-help">
+                        📋 {entry.mission_order}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-sm whitespace-pre-line text-xs">
+                      {entry.mission_order}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
 
                 {/* Notes preview */}
                 {!isSelectionMode && !entry.mission_order && entry.notes && (
-                  <div className="mt-1 text-[10px] opacity-70 whitespace-pre-line break-words" title={entry.notes}>
-                    📝 {entry.notes}
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="mt-1 text-[10px] opacity-70 line-clamp-2 break-words cursor-help">
+                        📝 {entry.notes}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-sm whitespace-pre-line text-xs">
+                      {entry.notes}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                
                {/* Addresses preview */}
