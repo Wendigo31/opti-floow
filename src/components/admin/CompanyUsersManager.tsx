@@ -613,7 +613,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <div className="flex items-center gap-3">
                     <Avatar className={`h-8 w-8 ${!user.is_active ? 'grayscale' : ''}`}>
                       <AvatarFallback className="text-xs">
-                        {user.display_name?.[0] || user.email[0].toUpperCase()}
+                        {user.display_name?.[0] || user.email?.[0]?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
