@@ -180,15 +180,19 @@ export { CloudDataContext };
      deleteQuote,
    } = useQuotes();
  
-   const isLoading =
-     vehiclesLoading ||
-     trailersLoading ||
-     driversLoading ||
-     chargesLoading ||
-     clientsLoading ||
-     toursLoading ||
-     tripsLoading ||
-     quotesLoading;
+    // isLoading is only true during the INITIAL load phase when licenseId is available.
+    // Once any hook finishes, we consider the app usable.
+    // If licenseId is not yet available, we're not "loading cloud data" — we're waiting for auth.
+    const isLoading = licenseId
+      ? vehiclesLoading &&
+        trailersLoading &&
+        driversLoading &&
+        chargesLoading &&
+        clientsLoading &&
+        toursLoading &&
+        tripsLoading &&
+        quotesLoading
+      : false;
  
    // Subscribe to sync events for activity tracking
    useEffect(() => {
