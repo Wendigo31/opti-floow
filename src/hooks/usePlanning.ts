@@ -451,46 +451,55 @@ export interface ExcelTourInput {
           }
 
           const monday = startOfWeek(weekStartDate, { weekStartsOn: 1 });
-          const weekStartStr = format(monday, 'yyyy-MM-dd');
 
-          const rows = tours.flatMap((t) => {
-            const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
-            // Import Mon..Sat only (Sunday is manual/rare)
-            const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 5);
-            return validDays.map((dayIdx) => {
-              const date = addDays(monday, dayIdx);
-              // Use day-specific driver if available, otherwise fall back to global driver_id
-              const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
-              const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
-              return {
-                user_id: uid,
-                license_id: lid,
-                planning_date: format(date, 'yyyy-MM-dd'),
-                start_time: t.start_time || null,
-                end_time: t.end_time || null,
-                client_id: t.client_id || null,
-                driver_id: driverForDay,
-                // Excel import starts as "Non assigné"
-                vehicle_id: t.vehicle_id || null,
-                mission_order: t.mission_order || null,
-                origin_address: t.origin_address || null,
-                destination_address: t.destination_address || null,
-                notes: notesForDay,
-                status: 'planned' as const,
-                tour_name: t.tour_name,
-                recurring_days: validDays,
-                is_all_year: false,
-                start_date: weekStartStr,
-                end_date: null,
-                relay_driver_id: t.relay_driver_id || null,
-                relay_location: t.relay_location || null,
-                relay_time: t.relay_time || null,
-                parent_tour_id: null,
-                sector_manager: t.sector_manager || null,
-              };
+          // Generate entries for the current week + 4 previous weeks (1 month back)
+          const WEEKS_BACK = 4;
+          const allRows: any[] = [];
+
+          for (let w = -WEEKS_BACK; w <= 0; w++) {
+            const weekMonday = addDays(monday, w * 7);
+            const weekStartStr = format(weekMonday, 'yyyy-MM-dd');
+
+            const weekRows = tours.flatMap((t) => {
+              const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
+              // Import Mon..Sat only (Sunday is manual/rare)
+              const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 5);
+              return validDays.map((dayIdx) => {
+                const date = addDays(weekMonday, dayIdx);
+                // Use day-specific driver if available, otherwise fall back to global driver_id
+                const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
+                const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
+                return {
+                  user_id: uid,
+                  license_id: lid,
+                  planning_date: format(date, 'yyyy-MM-dd'),
+                  start_time: t.start_time || null,
+                  end_time: t.end_time || null,
+                  client_id: t.client_id || null,
+                  driver_id: driverForDay,
+                  vehicle_id: t.vehicle_id || null,
+                  mission_order: t.mission_order || null,
+                  origin_address: t.origin_address || null,
+                  destination_address: t.destination_address || null,
+                  notes: notesForDay,
+                  status: 'planned' as const,
+                  tour_name: t.tour_name,
+                  recurring_days: validDays,
+                  is_all_year: false,
+                  start_date: weekStartStr,
+                  end_date: null,
+                  relay_driver_id: t.relay_driver_id || null,
+                  relay_location: t.relay_location || null,
+                  relay_time: t.relay_time || null,
+                  parent_tour_id: null,
+                  sector_manager: t.sector_manager || null,
+                };
+              });
             });
-          });
+            allRows.push(...weekRows);
+          }
 
+          const rows = allRows;
           if (rows.length === 0) {
             toast.error('Aucune mission à importer (jours non cochés ?)');
             return false;

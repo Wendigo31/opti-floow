@@ -247,10 +247,11 @@ import { format } from 'date-fns';
  
            {/* Info banner */}
            {preview.length > 0 && (
-             <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-               <p>Les missions seront importées dans <strong className="text-foreground">"Non assigné"</strong>.</p>
-               <p className="mt-1">Cliquez ensuite sur chaque mission pour définir le véhicule.</p>
-             </div>
+              <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                <p>Les missions seront importées dans <strong className="text-foreground">"Non assigné"</strong>.</p>
+                <p className="mt-1">📅 L'import couvre <strong className="text-foreground">la semaine en cours + les 4 semaines précédentes</strong> (1 mois).</p>
+                <p className="mt-1">Cliquez ensuite sur chaque mission pour définir le véhicule.</p>
+              </div>
            )}
  
            {/* Preview */}
