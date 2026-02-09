@@ -80,7 +80,7 @@
      { wch: 20 }, // Client
      { wch: 30 }, // Ligne
      { wch: 20 }, // Titulaire
-    { wch: 35 }, // ODM
+    { wch: 50 }, // ODM
     { wch: 12 }, // Horaire début
     { wch: 12 }, // Horaire fin
    { wch: 22 }, // Responsable de secteur

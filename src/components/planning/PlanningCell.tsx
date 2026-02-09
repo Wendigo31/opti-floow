@@ -36,7 +36,7 @@
    return (
      <div 
        className={cn(
-         "min-h-[100px] p-2 border-r last:border-r-0 relative group cursor-pointer hover:bg-muted/20 transition-colors",
+         "min-h-[120px] p-2 border-r last:border-r-0 relative group cursor-pointer hover:bg-muted/20 transition-colors",
          isToday && "bg-primary/5"
        )}
        onClick={(e) => {
@@ -138,16 +138,16 @@
                  </div>
                )}
                
-               {/* Mission preview */}
-               {!isSelectionMode && entry.mission_order && (
-                 <div className="mt-1 text-[10px] opacity-70 line-clamp-2" title={entry.mission_order}>
-                   📋 {entry.mission_order}
-                 </div>
-               )}
+                {/* Mission preview */}
+                {!isSelectionMode && entry.mission_order && (
+                  <div className="mt-1 text-[10px] opacity-70 line-clamp-4 whitespace-pre-line break-words" title={entry.mission_order}>
+                    📋 {entry.mission_order}
+                  </div>
+                )}
 
                 {/* Notes preview (used for day-cell placeholders from Excel) */}
                 {!isSelectionMode && !entry.mission_order && entry.notes && (
-                  <div className="mt-1 text-[10px] opacity-70 line-clamp-2" title={entry.notes}>
+                  <div className="mt-1 text-[10px] opacity-70 line-clamp-4 whitespace-pre-line break-words" title={entry.notes}>
                     📝 {entry.notes}
                   </div>
                 )}
