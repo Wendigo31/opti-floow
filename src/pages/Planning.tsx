@@ -615,14 +615,17 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
          clients={clients}
           weekStartDate={currentWeekStart}
           onAutoCreateClient={autoCreateClient}
-         onImport={async (entries) => {
-             // Excel import: create entries ONLY on the displayed week days that are checked in Excel.
-             const ok = await importExcelPlanningWeek(entries, currentWeekStart);
-             const startDate = format(currentWeekStart, 'yyyy-MM-dd');
-             const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-             fetchEntries(startDate, endDate);
-             return ok;
-         }}
+          onImport={async (entries) => {
+              const ok = await importExcelPlanningWeek(entries, currentWeekStart);
+              if (ok) {
+                // Small delay to ensure DB commits are visible, then refresh
+                await new Promise(r => setTimeout(r, 500));
+                const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+                const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+                await fetchEntries(startDate, endDate);
+              }
+              return ok;
+          }}
        />
      </div>
    );
