@@ -78,12 +78,13 @@ export interface ExcelTourInput {
      setLoading(true);
  
      try {
-       let query = supabase
-         .from('planning_entries')
-         .select('*')
-         .eq('license_id', licenseId)
-         .order('planning_date', { ascending: true })
-         .order('start_time', { ascending: true });
+      let query = supabase
+          .from('planning_entries')
+          .select('*')
+          .eq('license_id', licenseId)
+          .order('planning_date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(10000);
  
        if (startDate) {
          query = query.gte('planning_date', startDate);
