@@ -12,6 +12,8 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { DataSyncProvider } from "./components/DataSyncProvider";
 import { CloudSessionProvider } from "./components/CloudSessionProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { PlanningImportProvider } from "./context/PlanningImportContext";
+import { BackgroundImportIndicator } from "./components/planning/BackgroundImportIndicator";
 import { useLicense } from "./hooks/useLicense";
 import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
@@ -174,9 +176,12 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
+        <PlanningImportProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+          <BackgroundImportIndicator />
+        </PlanningImportProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>

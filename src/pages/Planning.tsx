@@ -616,17 +616,17 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
          clients={clients}
           weekStartDate={currentWeekStart}
           onAutoCreateClient={autoCreateClient}
-          onImport={async (entries) => {
-              const ok = await importExcelPlanningWeek(entries, currentWeekStart);
-              if (ok) {
-                // Small delay to ensure DB commits are visible, then refresh
-                await new Promise(r => setTimeout(r, 500));
-                const startDate = format(currentWeekStart, 'yyyy-MM-dd');
-                const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-                await fetchEntries(startDate, endDate);
-              }
-              return ok;
-          }}
+           onImport={async (entries, onProgress) => {
+               const ok = await importExcelPlanningWeek(entries, currentWeekStart, onProgress);
+               if (ok) {
+                 // Small delay to ensure DB commits are visible, then refresh
+                 await new Promise(r => setTimeout(r, 500));
+                 const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+                 const endDate = format(addDays(currentWeekStart, 5), 'yyyy-MM-dd');
+                 await fetchEntries(startDate, endDate);
+               }
+               return ok;
+           }}
        />
      </div>
    );

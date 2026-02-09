@@ -1,19 +1,20 @@
- import { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, Download, Check, AlertCircle, Loader2, FileText } from 'lucide-react';
- import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
- import { Button } from '@/components/ui/button';
- import { Badge } from '@/components/ui/badge';
- import { ScrollArea } from '@/components/ui/scroll-area';
- import { parseExcelFile } from '@/utils/excelImport';
- import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { parseExcelFile } from '@/utils/excelImport';
+import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
 import type { ExcelTourInput } from '@/hooks/usePlanning';
 import { downloadPlanningTemplate } from '@/utils/excelTemplates';
- import { toast } from 'sonner';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
- import { dayLabels } from '@/types/planning';
- import type { Vehicle } from '@/types/vehicle';
- import type { Driver } from '@/types';
- import type { ClientWithCreator } from '@/hooks/useClients';
+import { dayLabels } from '@/types/planning';
+import type { Vehicle } from '@/types/vehicle';
+import type { Driver } from '@/types';
+import type { ClientWithCreator } from '@/hooks/useClients';
+import { usePlanningImport } from '@/context/PlanningImportContext';
  
  interface ImportPlanningDialogProps {
    open: boolean;
@@ -26,7 +27,7 @@ import { format } from 'date-fns';
    * We intentionally do NOT use the import day (today) to avoid empty weeks.
    */
   weekStartDate: Date;
-  onImport: (entries: ExcelTourInput[]) => Promise<boolean>;
+  onImport: (entries: ExcelTourInput[], onProgress?: (done: number, total: number) => void) => Promise<boolean>;
   /** Silent create client function (for auto-creating missing clients) */
   onAutoCreateClient?: (name: string) => Promise<string | null>;
  }
@@ -46,7 +47,8 @@ import { format } from 'date-fns';
    const [importing, setImporting] = useState(false);
    const [preview, setPreview] = useState<ParsedPlanningEntry[]>([]);
    const [error, setError] = useState<string | null>(null);
-   const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { startBackgroundImport } = usePlanningImport();
  
    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
      const selectedFile = e.target.files?.[0];
@@ -168,20 +170,25 @@ import { format } from 'date-fns';
         return;
       }
 
-      // Batch import: one call, one refetch (handled by parent)
-      const success = await onImport(validInputs);
-
-      if (!success) {
-        // The detailed error toast is already shown by importExcelPlanningWeek
-        return;
-      }
-
-      toast.success(`${validInputs.length} tournée(s) importée(s) avec succès`);
+      // Close dialog immediately and run import in background
+      const inputs = validInputs;
       handleClose();
+
+      startBackgroundImport({
+        total: inputs.length * 6 * 2, // rough estimate (days × weeks)
+        label: `Import de ${inputs.length} tournée(s)...`,
+        importFn: async (onProgress) => {
+          return onImport(inputs, onProgress);
+        },
+        onComplete: (success) => {
+          if (!success) {
+            toast.error("L'import a rencontré des erreurs");
+          }
+        },
+      });
      } catch (err) {
        console.error('Error importing:', err);
        toast.error('Erreur lors de l\'import');
-     } finally {
        setImporting(false);
      }
    };
