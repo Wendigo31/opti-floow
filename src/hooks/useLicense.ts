@@ -739,12 +739,36 @@ export function useLicense(): UseLicenseReturn {
                 setIsLicensed(true);
                 broadcastLicenseUpdate(updatedData);
               } else {
-                // License deactivated or not found
-                localStorage.removeItem(LICENSE_STORAGE_KEY);
-                localStorage.removeItem(LICENSE_CACHE_KEY);
-                setIsLicensed(false);
-                setLicenseData(null);
-                broadcastLicenseUpdate(null);
+                // Server says license is invalid — but if we have a valid cache, don't
+                // disconnect immediately. This protects against transient server errors,
+                // edge function timeouts, or race conditions during heavy operations.
+                const errorMsg = checkResponse?.error || '';
+                console.warn('[useLicense] Check returned valid=false', { error: errorMsg });
+
+                if (cachedLicense) {
+                  const expiresAt = new Date(cachedLicense.expiresAt);
+                  if (expiresAt > new Date()) {
+                    console.warn('[useLicense] Keeping cached license despite server check failure');
+                    setLicenseData(cachedLicense.data);
+                    setIsLicensed(true);
+                    broadcastLicenseUpdate(cachedLicense.data);
+                  } else {
+                    // Cache expired AND server says invalid → really disconnect
+                    console.log('[useLicense] Cache expired and server says invalid — disconnecting');
+                    localStorage.removeItem(LICENSE_STORAGE_KEY);
+                    localStorage.removeItem(LICENSE_CACHE_KEY);
+                    setIsLicensed(false);
+                    setLicenseData(null);
+                    broadcastLicenseUpdate(null);
+                  }
+                } else {
+                  // No cache at all → trust the server
+                  localStorage.removeItem(LICENSE_STORAGE_KEY);
+                  localStorage.removeItem(LICENSE_CACHE_KEY);
+                  setIsLicensed(false);
+                  setLicenseData(null);
+                  broadcastLicenseUpdate(null);
+                }
               }
             } else {
               // isRevalidating path - we already set state above, nothing more to do
