@@ -354,6 +354,19 @@ export function CreateCompanyDialog({
             {!isEditMode && (
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
+                  <Label htmlFor="companyIdentifier">Identifiant société <span className="text-muted-foreground text-xs">(optionnel)</span></Label>
+                  <Input
+                    id="companyIdentifier"
+                    placeholder="TRANSPORT-MARTIN, ACME-CORP..."
+                    value={companyIdentifier}
+                    onChange={(e) => setCompanyIdentifier(e.target.value.toUpperCase())}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Peut être défini plus tard. Cet identifiant sera utilisé par les utilisateurs pour se connecter.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Forfait</Label>
                   <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
                     <SelectTrigger>
