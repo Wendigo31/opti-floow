@@ -139,10 +139,6 @@ export function CreateCompanyDialog({
       toast.error('Email du propriétaire requis');
       return;
     }
-    if (!companyIdentifier.trim()) {
-      toast.error('Identifiant société requis');
-      return;
-    }
 
     setIsCreating(true);
     try {
@@ -155,7 +151,7 @@ export function CreateCompanyDialog({
           firstName: ownerFirstName.trim() || null,
           lastName: ownerLastName.trim() || null,
           companyName: company.companyName,
-          companyIdentifier: companyIdentifier.trim(),
+          companyIdentifier: companyIdentifier.trim() || null,
           siren: company.siren,
           address: company.address,
           city: company.city,
@@ -365,7 +361,7 @@ export function CreateCompanyDialog({
                 <h4 className="font-medium">Identifiant société</h4>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="companyIdentifier">Identifiant société *</Label>
+                  <Label htmlFor="companyIdentifier">Identifiant société <span className="text-muted-foreground text-xs">(optionnel)</span></Label>
                   <Input
                     id="companyIdentifier"
                     placeholder="TRANSPORT-MARTIN, ACME-CORP..."
@@ -373,7 +369,7 @@ export function CreateCompanyDialog({
                     onChange={(e) => setCompanyIdentifier(e.target.value.toUpperCase())}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Cet identifiant sera utilisé par les utilisateurs pour se connecter
+                    Peut être défini plus tard. Cet identifiant sera utilisé par les utilisateurs pour se connecter.
                   </p>
                 </div>
                 
@@ -466,6 +462,7 @@ export function CreateCompanyDialog({
                 <Button 
                   onClick={handleCreate} 
                   disabled={isCreating || !company || !ownerEmail.trim()}
+
                 >
                   {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   <Building2 className="h-4 w-4 mr-2" />

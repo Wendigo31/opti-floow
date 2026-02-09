@@ -266,6 +266,38 @@ export function FeatureEditor({
 
           {/* FEATURES TAB */}
           <TabsContent value="features" className="mt-0 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allFeatureKeys = FEATURE_CATEGORIES.flatMap(c => c.features.map(f => f.key));
+                  setFeatures(prev => {
+                    const updated = { ...prev };
+                    allFeatureKeys.forEach(key => { (updated as any)[key] = true; });
+                    return updated;
+                  });
+                  setHasChanges(true);
+                }}
+              >
+                Tout activer
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allFeatureKeys = FEATURE_CATEGORIES.flatMap(c => c.features.map(f => f.key));
+                  setFeatures(prev => {
+                    const updated = { ...prev };
+                    allFeatureKeys.forEach(key => { (updated as any)[key] = false; });
+                    return updated;
+                  });
+                  setHasChanges(true);
+                }}
+              >
+                Tout désactiver
+              </Button>
+            </div>
             {FEATURE_CATEGORIES.map(({ categoryName, features: categoryFeatures }) => {
               const enabledCount = categoryFeatures.filter(f => (features as any)[f.key]).length;
               const modifiedCount = categoryFeatures.filter(f => 
