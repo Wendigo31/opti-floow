@@ -94,15 +94,16 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
   };
  
    // Generate week days
-   const weekDays = useMemo(() => {
-     return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
-   }, [currentWeekStart]);
+    // Mon-Sat only (6 days, no Sunday)
+    const weekDays = useMemo(() => {
+      return Array.from({ length: 6 }, (_, i) => addDays(currentWeekStart, i));
+    }, [currentWeekStart]);
  
    // Fetch data on mount and week change
    useEffect(() => {
-     const startDate = format(currentWeekStart, 'yyyy-MM-dd');
-     const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-     fetchEntries(startDate, endDate);
+      const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+      const endDate = format(addDays(currentWeekStart, 5), 'yyyy-MM-dd'); // Mon-Sat only
+      fetchEntries(startDate, endDate);
    }, [currentWeekStart, fetchEntries]);
  
    useEffect(() => {
@@ -345,7 +346,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
             <ScrollArea className="h-full">
               <div className="min-w-[1200px]">
                 {/* Header row with days */}
-                <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                <div className="grid grid-cols-[200px_100px_100px_100px_repeat(6,1fr)] border-b bg-muted/50 sticky top-0 z-10">
                   <div className="p-3 font-medium border-r">
                     Traction
                   </div>
@@ -371,7 +372,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                 </div>
 
                 {/* Row for unassigned entries */}
-                  <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-accent/10">
+                  <div className="grid grid-cols-[200px_100px_100px_100px_repeat(6,1fr)] border-b bg-accent/10">
                    <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
                      <div className="font-medium text-accent-foreground">
                       Non assigné
@@ -428,7 +429,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
              <ScrollArea className="h-full">
                <div className="min-w-[1200px]">
                  {/* Header row with days */}
-                 <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                 <div className="grid grid-cols-[200px_100px_100px_100px_repeat(6,1fr)] border-b bg-muted/50 sticky top-0 z-10">
                    <div className="p-3 font-medium border-r">
                      Traction
                    </div>
@@ -459,7 +460,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                    return (
                    <div 
                      key={vehicle.id} 
-                     className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b last:border-b-0"
+                     className="grid grid-cols-[200px_100px_100px_100px_repeat(6,1fr)] border-b last:border-b-0"
                    >
                      {/* Vehicle info */}
                      <div className="p-3 border-r bg-muted/30 flex flex-col justify-center">
@@ -532,7 +533,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 
                 {/* Row for unassigned entries at the bottom */}
                 {unassignedEntries.length > 0 && (
-                   <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-accent/10">
+                   <div className="grid grid-cols-[200px_100px_100px_100px_repeat(6,1fr)] border-b bg-accent/10">
                      <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
                        <div className="font-medium text-accent-foreground">
                         Non assigné
