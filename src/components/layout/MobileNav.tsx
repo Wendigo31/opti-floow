@@ -15,7 +15,8 @@ import {
   Settings,
   Menu,
   X,
-  UsersRound
+  UsersRound,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
@@ -31,6 +32,7 @@ const NAV_LABELS = {
   calculator: 'Calculateur',
   itinerary: 'Itinéraire',
   tours: 'Tournées',
+  planning: 'Planning',
   dashboard: 'Analyse',
   forecast: 'Prévisionnel',
   vehicles: 'Véhicules',
@@ -56,6 +58,7 @@ const navItems: NavItemConfig[] = [
   { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
   { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro', userFeatureKey: 'page_itinerary' },
   { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
+  { to: '/planning', icon: CalendarDays, labelKey: 'planning', requiredPlan: 'pro' },
   { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro', userFeatureKey: 'page_dashboard' },
   { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro', directionOnly: true },
   { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
