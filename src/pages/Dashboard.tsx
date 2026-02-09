@@ -36,10 +36,11 @@ interface StoredRoute {
 
 export default function Dashboard() {
   const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
-  useLicense(); // Hook called for licensing context
+  const { licenseData } = useLicense();
   const { clients } = useClients();
   const { tours } = useSavedTours();
-  const { isDirection, isLoading: isTeamLoading } = useTeam();
+  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const { settings: marginSettings } = useMarginAlerts();
   
   const [chartType, setChartType] = useState<ChartType>('donut');

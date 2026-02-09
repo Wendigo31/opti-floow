@@ -4,11 +4,14 @@ import { ExploitationMetricsConfig } from '@/components/team/ExploitationMetrics
 import { RoleManagement } from '@/components/team/RoleManagement';
 import { UserPermissionsManager } from '@/components/team/UserPermissionsManager';
 import { useTeam } from '@/hooks/useTeam';
+import { useLicense } from '@/hooks/useLicense';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Settings, UserCog, Shield } from 'lucide-react';
 
 export default function Team() {
-  const { isDirection } = useTeam();
+  const { isDirection: isDirectionFromTeam } = useTeam();
+  const { licenseData } = useLicense();
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const [activeTab, setActiveTab] = useState('team');
 
   return (

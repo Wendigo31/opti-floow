@@ -12,6 +12,7 @@ import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useTeam } from '@/hooks/useTeam';
+import { useLicense } from '@/hooks/useLicense';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -45,7 +46,9 @@ export default function Forecast() {
   const { cdiDrivers, interimDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...interimDrivers];
   
-  const { isDirection, isLoading: isTeamLoading } = useTeam();
+  const { licenseData } = useLicense();
+  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);

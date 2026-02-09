@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { useLicense } from '@/hooks/useLicense';
 import { useNavigate } from 'react-router-dom';
 import type { FixedCharge } from '@/types';
 import { cn } from '@/lib/utils';
@@ -54,7 +55,9 @@ export default function Charges() {
   } = useCloudCharges();
   
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
-  const { isDirection, isLoading: isTeamLoading } = useTeam();
+  const { licenseData } = useLicense();
+  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
