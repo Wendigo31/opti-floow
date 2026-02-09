@@ -537,10 +537,14 @@ export interface ExcelTourInput {
           }
 
           return true;
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error importing planning from Excel:', error);
-          const errMsg = error instanceof Error ? error.message : "Erreur lors de l'import Excel";
-          toast.error(errMsg);
+          // Log detailed DB error info for debugging
+          const dbDetails = error?.details || error?.hint || error?.code || '';
+          const dbMessage = error?.message || '';
+          console.error('[import] DB details:', { message: dbMessage, details: dbDetails, code: error?.code });
+          const errMsg = dbMessage || "Erreur lors de l'import Excel";
+          toast.error(`Import échoué: ${errMsg}${dbDetails ? ` (${dbDetails})` : ''}`);
           return false;
         } finally {
           suspendRealtimeRef.current = false;

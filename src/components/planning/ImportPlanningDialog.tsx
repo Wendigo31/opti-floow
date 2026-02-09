@@ -155,7 +155,7 @@ import { format } from 'date-fns';
       const success = await onImport(validInputs);
 
       if (!success) {
-        toast.error('Import incomplet : certaines tournées n\'ont pas pu être créées');
+        // The detailed error toast is already shown by importExcelPlanningWeek
         return;
       }
 
