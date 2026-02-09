@@ -431,7 +431,11 @@ export interface ExcelTourInput {
    }, [authUserId, licenseId]);
 
     const importExcelPlanningWeek = useCallback(
-      async (tours: ExcelTourInput[], weekStartDate: Date): Promise<boolean> => {
+      async (
+        tours: ExcelTourInput[],
+        weekStartDate: Date,
+        onProgress?: (done: number, total: number) => void,
+      ): Promise<boolean> => {
         try {
           suspendRealtimeRef.current = true;
 
@@ -463,11 +467,9 @@ export interface ExcelTourInput {
 
             const weekRows = tours.flatMap((t) => {
               const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
-              // Import Mon..Sat only (Sunday is manual/rare)
               const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 5);
               return validDays.map((dayIdx) => {
                 const date = addDays(weekMonday, dayIdx);
-                // Use day-specific driver if available, otherwise fall back to global driver_id
                 const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
                 const notesForDay = t.day_notes?.[dayIdx] ?? t.notes ?? null;
                 return {
@@ -506,41 +508,34 @@ export interface ExcelTourInput {
             return false;
           }
 
-          // Insert in chunks to avoid payload limits on large files
-          const CHUNK_SIZE = 500;
-          const totalChunks = Math.ceil(rows.length / CHUNK_SIZE);
-          
-          // Show progress toast for large imports
-          const toastId = rows.length > 200 ? toast.loading(`Import en cours... 0/${totalChunks} lots (${rows.length} missions)`) : null;
+          // Insert in small chunks to keep the browser responsive
+          const CHUNK_SIZE = 50;
+          let inserted = 0;
+
+          onProgress?.(0, rows.length);
 
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
-            const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
 
-            // Update progress toast
-            if (toastId) {
-              toast.loading(`Import en cours... ${chunkNum}/${totalChunks} lots`, { id: toastId });
-            }
-
-            // Execute the insert — use longer timeout for large imports
             const res = await withTimeout(
               () => supabase.from('planning_entries').insert(chunk) as any,
               120_000,
-              `Import Excel (lot ${chunkNum}/${totalChunks})`
+              `Import Excel (${i + chunk.length}/${rows.length})`
             );
             const { error } = res as { error: unknown | null };
             if (error) throw error;
+
+            inserted += chunk.length;
+            onProgress?.(inserted, rows.length);
+
+            // Yield to the event loop between chunks to keep UI responsive
+            await new Promise((r) => setTimeout(r, 50));
           }
 
-          // Dismiss progress toast
-          if (toastId) {
-            toast.dismiss(toastId);
-          }
-
+          toast.success(`${rows.length} missions importées avec succès`);
           return true;
         } catch (error: any) {
           console.error('Error importing planning from Excel:', error);
-          // Log detailed DB error info for debugging
           const dbDetails = error?.details || error?.hint || error?.code || '';
           const dbMessage = error?.message || '';
           console.error('[import] DB details:', { message: dbMessage, details: dbDetails, code: error?.code });
