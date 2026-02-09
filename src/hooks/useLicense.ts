@@ -528,10 +528,11 @@ export function useLicense(): UseLicenseReturn {
             const authEmail = authData?.user?.email?.toLowerCase() ?? null;
             const storedEmail = data.email?.toLowerCase() ?? null;
 
-            // If there is no auth user or it doesn't match, we must re-validate to obtain the right session.
-            // BUT skip if we're already in a re-validation cycle to prevent infinite loops
-            if ((!authEmail || !storedEmail || authEmail !== storedEmail) && !isRevalidating) {
-              console.log('[useLicense] Auth user missing/mismatch, re-validating to set correct session', {
+            // Only re-validate when BOTH emails exist but DIFFER (admin "connexion en tant que" scenario).
+            // If authEmail is null/undefined it's likely a transient state (token refresh, slow network)
+            // — do NOT sign out in that case to avoid disconnecting the user mid-session.
+            if (authEmail && storedEmail && authEmail !== storedEmail && !isRevalidating) {
+              console.log('[useLicense] Auth user mismatch, re-validating to set correct session', {
                 authEmail,
                 storedEmail,
               });
