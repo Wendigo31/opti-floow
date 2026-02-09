@@ -121,7 +121,8 @@ export interface ExcelTourInput {
          relay_driver_id: row.relay_driver_id,
          relay_location: row.relay_location,
          relay_time: row.relay_time,
-         parent_tour_id: row.parent_tour_id,
+          parent_tour_id: row.parent_tour_id,
+          sector_manager: row.sector_manager,
        }));
  
        setEntries(mappedEntries);
@@ -251,7 +252,8 @@ export interface ExcelTourInput {
            relay_driver_id: input.relay_driver_id || null,
            relay_location: input.relay_location || null,
            relay_time: input.relay_time || null,
-           parent_tour_id: input.parent_tour_id || null,
+            parent_tour_id: input.parent_tour_id || null,
+            sector_manager: input.sector_manager || null,
          })
          .select()
          .single();
@@ -283,7 +285,8 @@ export interface ExcelTourInput {
          relay_driver_id: data.relay_driver_id,
          relay_location: data.relay_location,
          relay_time: data.relay_time,
-         parent_tour_id: data.parent_tour_id,
+          parent_tour_id: data.parent_tour_id,
+          sector_manager: data.sector_manager,
        };
  
        setEntries(prev => [...prev, newEntry].sort((a, b) => 

@@ -24,11 +24,13 @@
    start_date: string | null;
    end_date: string | null;
    // Relay driver
-   relay_driver_id: string | null;
-   relay_location: string | null;
-   relay_time: string | null;
-   // Parent tour reference
-   parent_tour_id: string | null;
+  relay_driver_id: string | null;
+  relay_location: string | null;
+  relay_time: string | null;
+  // Parent tour reference
+  parent_tour_id: string | null;
+  // Sector manager
+  sector_manager: string | null;
  }
  
  export interface PlanningEntryInput {
@@ -51,9 +53,10 @@
    end_date?: string | null;
    // Relay driver
    relay_driver_id?: string | null;
-   relay_location?: string | null;
-   relay_time?: string | null;
-   parent_tour_id?: string | null;
+  relay_location?: string | null;
+  relay_time?: string | null;
+  parent_tour_id?: string | null;
+  sector_manager?: string | null;
  }
  
  export interface TourInput {
