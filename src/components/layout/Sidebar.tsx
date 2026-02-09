@@ -150,6 +150,8 @@ export function Sidebar() {
   // Check if plan meets requirement
   const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
     if (!requiredPlan) return true;
+    // If planType is not yet loaded, don't hide items — show them by default
+    if (!planType) return true;
     if (requiredPlan === 'pro') {
       return planType === 'pro' || planType === 'enterprise';
     }
