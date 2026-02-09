@@ -188,13 +188,9 @@ export interface ExcelTourInput {
            }
          }
        )
-       .subscribe((status) => {
-         console.log('[Realtime] planning subscription:', status);
-         // Reconcile on subscribe to catch any missed events
-        if (status === 'SUBSCRIBED') {
-          void fetchEntriesRef.current?.();
-         }
-       });
+        .subscribe((status) => {
+          console.log('[Realtime] planning subscription:', status);
+        });
  
      return () => {
        if (channelRef.current) {
