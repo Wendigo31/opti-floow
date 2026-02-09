@@ -45,9 +45,7 @@ import {
   Calendar,
   DollarSign,
   Package,
-  Sparkles,
   Plus,
-  Pencil,
   ClipboardList,
   Settings,
   UserCog,
@@ -116,15 +114,6 @@ interface ChargeData {
   synced_at: string;
 }
 
-interface LicenseAddon {
-  id: string;
-  license_id: string;
-  addon_id: string;
-  activated_at: string;
-  billing_period: string;
-  monthly_price: number;
-  is_active: boolean;
-}
 
 interface AuditLogEntry {
   id: string;
@@ -177,13 +166,6 @@ export function UserDetailDialog({
   const [statsLoading, setStatsLoading] = useState(false);
   const [stats, setStats] = useState<UserStats | null>(null);
   
-  // Add-ons data
-  const [addons, setAddons] = useState<LicenseAddon[]>([]);
-  const [addonsLoading, setAddonsLoading] = useState(false);
-  const [addonsEditMode, setAddonsEditMode] = useState(false);
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const [addonsSaving, setAddonsSaving] = useState(false);
-  
   // Details data
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [drivers, setDrivers] = useState<DriverData[]>([]);
@@ -214,85 +196,12 @@ export function UserDetailDialog({
       // Fetch data
       fetchLoginHistory();
       fetchUserStats();
-      fetchAddons();
-      
       // Reset details
       setVehicles([]);
       setDrivers([]);
       setCharges([]);
     }
   }, [license, open]);
-
-  const fetchAddons = async () => {
-    if (!license) return;
-    
-    setAddonsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-license', {
-        body: { 
-          action: 'admin-get-addons',
-          licenseId: license.id,
-          adminToken
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.success) {
-        setAddons(data.addons || []);
-        // Initialize selected addons from current active addons
-        setSelectedAddons((data.addons || []).filter((a: LicenseAddon) => a.is_active).map((a: LicenseAddon) => a.addon_id));
-      }
-    } catch (error) {
-      console.error('Error fetching addons:', error);
-    } finally {
-      setAddonsLoading(false);
-    }
-  };
-
-  const saveAddons = async () => {
-    if (!license) return;
-    
-    setAddonsSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-license', {
-        body: { 
-          action: 'admin-update-addons',
-          licenseId: license.id,
-          addOns: selectedAddons,
-          adminToken
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.success) {
-        toast.success('Add-ons mis à jour avec succès');
-        setAddonsEditMode(false);
-        fetchAddons();
-        onUpdate?.();
-      }
-    } catch (error) {
-      console.error('Error saving addons:', error);
-      toast.error('Erreur lors de la mise à jour des add-ons');
-    } finally {
-      setAddonsSaving(false);
-    }
-  };
-
-  const toggleAddonSelection = (addonId: string) => {
-    setSelectedAddons(prev => 
-      prev.includes(addonId) 
-        ? prev.filter(id => id !== addonId)
-        : [...prev, addonId]
-    );
-  };
-
-  const cancelEditAddons = () => {
-    setAddonsEditMode(false);
-    // Reset to current active addons
-    setSelectedAddons(addons.filter(a => a.is_active).map(a => a.addon_id));
-  };
 
   const fetchAuditLogs = async () => {
     if (!license) return;
@@ -463,7 +372,7 @@ export function UserDetailDialog({
         </DialogHeader>
 
         <Tabs defaultValue="company" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="company" className="flex items-center gap-1 text-xs">
               <Building2 className="w-3 h-3" />
               Société
@@ -471,10 +380,6 @@ export function UserDetailDialog({
             <TabsTrigger value="stats" className="flex items-center gap-1 text-xs">
               <BarChart3 className="w-3 h-3" />
               Stats
-            </TabsTrigger>
-            <TabsTrigger value="addons" className="flex items-center gap-1 text-xs">
-              <Package className="w-3 h-3" />
-              Add-ons
             </TabsTrigger>
             <TabsTrigger value="vehicles" className="flex items-center gap-1 text-xs" onClick={() => vehicles.length === 0 && fetchDetails('vehicles')}>
               <Car className="w-3 h-3" />
@@ -689,142 +594,6 @@ export function UserDetailDialog({
                 <p className="text-sm">L'utilisateur n'a pas encore créé de compte</p>
               </div>
             )}
-          </TabsContent>
-
-          {/* Add-ons Tab */}
-          <TabsContent value="addons" className="mt-4">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted-foreground">
-                Add-ons actifs ({addons.filter(a => a.is_active).length})
-              </p>
-              <div className="flex items-center gap-2">
-                {addonsEditMode ? (
-                  <>
-                    <Button variant="outline" size="sm" onClick={cancelEditAddons} disabled={addonsSaving}>
-                      Annuler
-                    </Button>
-                    <Button size="sm" onClick={saveAddons} disabled={addonsSaving}>
-                      {addonsSaving ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Enregistrement...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Enregistrer
-                        </>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="outline" size="sm" onClick={fetchAddons} disabled={addonsLoading}>
-                      <RefreshCw className={`w-4 h-4 mr-2 ${addonsLoading ? 'animate-spin' : ''}`} />
-                      Actualiser
-                    </Button>
-                    <Button size="sm" onClick={() => setAddonsEditMode(true)}>
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Modifier
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <ScrollArea className="h-[350px]">
-              {addonsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : addonsEditMode ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>La gestion des add-ons est désactivée.</p>
-                  <p className="text-sm">La tarification est gérée sur mesure.</p>
-                </div>
-              ) : addons.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucun add-on actif</p>
-                  <p className="text-sm">Cliquez sur "Modifier" pour ajouter des add-ons</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {addons.map((addon) => {
-                    const addonInfo = null; // ADD_ONS removed - custom pricing
-                    return (
-                      <Card key={addon.id} className={addon.is_active ? 'border-primary/30 bg-primary/5' : 'opacity-60'}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <Sparkles className="w-4 h-4 text-primary" />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    {addonInfo?.name || addon.addon_id}
-                                  </span>
-                                  {addon.is_active ? (
-                                    <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">
-                                      <CheckCircle className="w-3 h-3 mr-1" />
-                                      Actif
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="secondary" className="text-xs">
-                                      <XCircle className="w-3 h-3 mr-1" />
-                                      Inactif
-                                    </Badge>
-                                  )}
-                                </div>
-                                {addonInfo?.description && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {addonInfo.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    Activé le {format(new Date(addon.activated_at), 'dd/MM/yyyy', { locale: fr })}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <DollarSign className="w-3 h-3" />
-                                    {formatCurrency(addon.monthly_price)}/mois
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">
-                                    {addon.billing_period === 'yearly' ? 'Annuel' : 'Mensuel'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {addonInfo?.category === 'feature' ? 'Fonctionnalité' : 
-                               addonInfo?.category === 'limit' ? 'Limite' : 
-                               addonInfo?.category === 'support' ? 'Support' : 'Autre'}
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-
-                  {/* Total mensuel */}
-                  {addons.filter(a => a.is_active).length > 0 && (
-                    <Card className="border-dashed">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Total add-ons actifs</span>
-                          <span className="font-semibold text-lg">
-                            {formatCurrency(addons.filter(a => a.is_active).reduce((sum, a) => sum + a.monthly_price, 0))}/mois
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </ScrollArea>
           </TabsContent>
 
           {/* Vehicles Tab */}
