@@ -8,7 +8,7 @@ import { AppProvider } from "./context/AppContext";
 import { LicenseProvider } from "./context/LicenseContext";
 import { CloudDataProvider } from "./context/CloudDataContext";
 import { MainLayout } from "./components/layout/MainLayout";
-import { UpdateNotification } from "./components/layout/UpdateNotification";
+
 import { DataSyncProvider } from "./components/DataSyncProvider";
 import { CloudSessionProvider } from "./components/CloudSessionProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -177,7 +177,6 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AppContent />
-        <UpdateNotification />
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>

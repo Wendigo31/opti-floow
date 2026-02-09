@@ -40,7 +40,7 @@ import { GitMerge } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FeatureEditor } from '@/components/admin/FeatureEditor';
 // PricingManager removed - custom pricing handled externally
-import { PWAUpdatesManager } from '@/components/admin/PWAUpdatesManager';
+
 import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { SchemaSyncManager } from '@/components/admin/SchemaSyncManager';
 import { CompanyUsersManager } from '@/components/admin/CompanyUsersManager';
@@ -165,7 +165,7 @@ const ADMIN_NAV = [
   { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer toutes les licences' },
   { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Utilisateurs & données' },
   { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les accès' },
-  { id: 'updates', label: 'Mises à jour', icon: RefreshCw, description: 'Versions PWA' },
+  
 ] as const;
 
 type AdminTab = typeof ADMIN_NAV[number]['id'];
@@ -1116,16 +1116,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Updates Tab */}
-          {adminActiveTab === 'updates' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold">Mises à jour PWA</h2>
-                <p className="text-sm text-muted-foreground">Gérez les versions et mises à jour de l'application</p>
-              </div>
-              <PWAUpdatesManager />
-            </div>
-          )}
 
         </div>
       </main>
