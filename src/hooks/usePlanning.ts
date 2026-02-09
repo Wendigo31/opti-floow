@@ -506,11 +506,11 @@ export interface ExcelTourInput {
           }
 
           // Insert in chunks to avoid payload limits on large files
-          const CHUNK_SIZE = 200;
+          const CHUNK_SIZE = 500;
           const totalChunks = Math.ceil(rows.length / CHUNK_SIZE);
           
           // Show progress toast for large imports
-          const toastId = rows.length > 200 ? toast.loading(`Import en cours... (0/${totalChunks} lots)`) : null;
+          const toastId = rows.length > 200 ? toast.loading(`Import en cours... 0/${totalChunks} lots (${rows.length} missions)`) : null;
 
           for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
@@ -518,13 +518,13 @@ export interface ExcelTourInput {
 
             // Update progress toast
             if (toastId) {
-              toast.loading(`Import en cours... (${chunkNum}/${totalChunks} lots)`, { id: toastId });
+              toast.loading(`Import en cours... ${chunkNum}/${totalChunks} lots`, { id: toastId });
             }
 
-            // Execute the insert
+            // Execute the insert — use longer timeout for large imports
             const res = await withTimeout(
               () => supabase.from('planning_entries').insert(chunk) as any,
-              60_000,
+              120_000,
               `Import Excel (lot ${chunkNum}/${totalChunks})`
             );
             const { error } = res as { error: unknown | null };
