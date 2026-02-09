@@ -135,18 +135,13 @@ export function CreateCompanyDialog({
       toast.error('Veuillez d\'abord rechercher une entreprise via SIREN');
       return;
     }
-    if (!ownerEmail.trim()) {
-      toast.error('Email du propriétaire requis');
-      return;
-    }
-
     setIsCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke('validate-license', {
         body: {
           action: 'create-license',
           adminToken: getAdminToken(),
-          email: ownerEmail.toLowerCase().trim(),
+          email: ownerEmail.trim() ? ownerEmail.toLowerCase().trim() : `admin+${company.siren}@opti-group.fr`,
           planType,
           firstName: ownerFirstName.trim() || null,
           lastName: ownerLastName.trim() || null,
@@ -358,77 +353,6 @@ export function CreateCompanyDialog({
             {/* Owner Information - Only show in create mode */}
             {!isEditMode && (
               <div className="space-y-4 pt-2">
-                <h4 className="font-medium">Identifiant société</h4>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="companyIdentifier">Identifiant société <span className="text-muted-foreground text-xs">(optionnel)</span></Label>
-                  <Input
-                    id="companyIdentifier"
-                    placeholder="TRANSPORT-MARTIN, ACME-CORP..."
-                    value={companyIdentifier}
-                    onChange={(e) => setCompanyIdentifier(e.target.value.toUpperCase())}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Peut être défini plus tard. Cet identifiant sera utilisé par les utilisateurs pour se connecter.
-                  </p>
-                </div>
-                
-                <h4 className="font-medium pt-2">Propriétaire de la société</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Prénom</Label>
-                    <Input
-                      id="firstName"
-                      placeholder="Jean"
-                      value={ownerFirstName}
-                      onChange={(e) => setOwnerFirstName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Nom</Label>
-                    <Input
-                      id="lastName"
-                      placeholder="Dupont"
-                      value={ownerLastName}
-                      onChange={(e) => setOwnerLastName(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email du propriétaire *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="contact@entreprise.fr"
-                    value={ownerEmail}
-                    onChange={(e) => setOwnerEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Téléphone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="06 12 34 56 78"
-                      value={ownerPhone}
-                      onChange={(e) => setOwnerPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="position">Poste / Fonction</Label>
-                    <Input
-                      id="position"
-                      placeholder="Gérant, Directeur..."
-                      value={ownerPosition}
-                      onChange={(e) => setOwnerPosition(e.target.value)}
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label>Forfait</Label>
                   <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
@@ -461,7 +385,7 @@ export function CreateCompanyDialog({
               ) : (
                 <Button 
                   onClick={handleCreate} 
-                  disabled={isCreating || !company || !ownerEmail.trim()}
+                  disabled={isCreating || !company}
 
                 >
                   {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
