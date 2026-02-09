@@ -140,14 +140,14 @@
                
                 {/* Mission preview */}
                 {!isSelectionMode && entry.mission_order && (
-                  <div className="mt-1 text-[10px] opacity-70 line-clamp-4 whitespace-pre-line break-words" title={entry.mission_order}>
+                  <div className="mt-1 text-[10px] opacity-70 whitespace-pre-line break-words" title={entry.mission_order}>
                     📋 {entry.mission_order}
                   </div>
                 )}
 
-                {/* Notes preview (used for day-cell placeholders from Excel) */}
+                {/* Notes preview */}
                 {!isSelectionMode && !entry.mission_order && entry.notes && (
-                  <div className="mt-1 text-[10px] opacity-70 line-clamp-4 whitespace-pre-line break-words" title={entry.notes}>
+                  <div className="mt-1 text-[10px] opacity-70 whitespace-pre-line break-words" title={entry.notes}>
                     📝 {entry.notes}
                   </div>
                 )}
