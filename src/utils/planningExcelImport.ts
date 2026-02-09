@@ -283,13 +283,11 @@ function extractDayCellText(cellValue: string | undefined): string {
        if (!raw) continue;
        const v = extractDayCellText(raw.toString());
         if (!v) continue;
-        // "X" is treated as "use the default titulaire driver" — store the titulaire name
+        // "X" means the line runs that day but no specific info — skip it (leave cell empty)
         if (v.toLowerCase() === 'x') {
-          const fallbackName = extractDriverFromCell(titulaire);
-          if (fallbackName) day_cells[dayIdx] = fallbackName;
-        } else {
-          day_cells[dayIdx] = v;
+          continue;
         }
+        day_cells[dayIdx] = v;
      }
      
      // Only add if we have meaningful data
