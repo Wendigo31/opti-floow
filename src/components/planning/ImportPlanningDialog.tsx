@@ -87,12 +87,12 @@ import { format } from 'date-fns';
      setImporting(true);
      
      try {
-       // Build initial maps for matching
-       const clientMap = new Map<string, string>();
-       clients.forEach(c => {
-         if (c.name) clientMap.set(c.name.toLowerCase().trim(), c.id);
-         if (c.company) clientMap.set(c.company.toLowerCase().trim(), c.id);
-       });
+      // Build initial maps for matching
+      const clientMap = new Map<string, string>();
+      clients.forEach(c => {
+        if (c.name) clientMap.set(c.name.toLowerCase().trim(), c.id);
+        if (c.company) clientMap.set(c.company.toLowerCase().trim(), c.id);
+      });
       // Build driver map with firstName/lastName for improved matching
       const driverMap = new Map<string, { id: string; firstName?: string; lastName?: string }>();
       drivers.forEach(d => {
@@ -102,25 +102,42 @@ import { format } from 'date-fns';
           lastName: d.lastName,
         });
       });
-       
-       // Auto-create missing clients (silently)
-       const missingClients = new Set<string>();
-       for (const entry of preview) {
-         if (!entry.client) continue;
-         const clientLower = entry.client.toLowerCase().trim();
-         if (!clientMap.has(clientLower)) {
-           missingClients.add(entry.client);
-         }
-       }
+        
+      // Auto-create missing clients (silently)
+      // Use the same fuzzy matching as convertToTourInputs to avoid false negatives
+      const findClientMatch = (clientName: string): string | null => {
+        const clientLower = clientName.toLowerCase().trim();
+        // Exact match first
+        if (clientMap.has(clientLower)) return clientMap.get(clientLower)!;
+        // Fuzzy match (same logic as convertToTourInputs)
+        for (const [name, id] of clientMap.entries()) {
+          if (name.includes(clientLower) || clientLower.includes(name)) {
+            return id;
+          }
+        }
+        return null;
+      };
 
-       if (missingClients.size > 0 && onAutoCreateClient) {
-         for (const clientName of missingClients) {
-           const newId = await onAutoCreateClient(clientName);
-           if (newId) {
-             clientMap.set(clientName.toLowerCase().trim(), newId);
-           }
-         }
-       }
+      const missingClients = new Set<string>();
+      for (const entry of preview) {
+        if (!entry.client) continue;
+        if (!findClientMatch(entry.client)) {
+          missingClients.add(entry.client);
+        }
+      }
+
+      if (missingClients.size > 0 && onAutoCreateClient) {
+        console.log(`[planning-import] Auto-creating ${missingClients.size} missing client(s):`, [...missingClients]);
+        for (const clientName of missingClients) {
+          const newId = await onAutoCreateClient(clientName);
+          if (newId) {
+            clientMap.set(clientName.toLowerCase().trim(), newId);
+            console.log(`[planning-import] Created client "${clientName}" -> ${newId}`);
+          } else {
+            console.warn(`[planning-import] Failed to create client "${clientName}"`);
+          }
+        }
+      }
 
        // Convert to TourInput format
         const tourInputs = convertToTourInputs(
