@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, RefreshCw, Check, AlertTriangle, Truck, Users, Coins, Container, X, Briefcase } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, Briefcase, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
@@ -17,17 +17,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
 import { useLicense, PlanType } from '@/hooks/useLicense';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { isTauri } from '@/hooks/useTauri';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
-import { useDataSyncActions } from '@/components/DataSyncProvider';
+
 import { useTeam } from '@/hooks/useTeam';
 import { MobileNav } from './MobileNav';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -60,14 +55,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
   const isMobile = useIsMobile();
   const cloudSyncState = useCloudDataSafe();
 
-  const { 
-    forceSync, 
-    isSyncing, 
-    lastSyncAt, 
-    syncErrors, 
-    clearErrors, 
-    stats,
-  } = useDataSyncActions();
 
   // Normalize role for display - use licenseData.userRole directly
   const getNormalizedRole = (): string | null => {
@@ -173,117 +160,12 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* SINGLE SYNC BUTTON with Popover */}
             {/* Cloud Sync Indicator - Shows real-time activity */}
             <CloudSyncIndicator
               isConnected={cloudSyncState.isConnected}
               isLoading={cloudSyncState.isLoading}
               recentActivity={cloudSyncState.recentActivity}
             />
-            
-            {/* Local Sync Button with Popover */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={syncErrors.length > 0 ? "destructive" : "outline"}
-                  size="sm"
-                  className="gap-2"
-                  title="État de synchronisation"
-                >
-                  {isSyncing ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : syncErrors.length > 0 ? (
-                    <AlertTriangle className="w-4 h-4" />
-                  ) : lastSyncAt ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {isSyncing ? 'Synchro...' : syncErrors.length > 0 ? 'Erreurs' : 'Sync'}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
-                <div className="space-y-4">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">État de synchronisation</h4>
-                    {isSyncing ? (
-                      <Badge variant="secondary" className="text-xs gap-1">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        En cours
-                      </Badge>
-                    ) : syncErrors.length > 0 ? (
-                      <Badge variant="destructive" className="text-xs gap-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        Erreurs
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
-                        <Check className="w-3 h-3" />
-                        OK
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Last sync */}
-                  {lastSyncAt && (
-                    <div className="text-xs text-muted-foreground flex items-center gap-2">
-                      <Clock className="w-3 h-3" />
-                      <span>
-                        Dernière synchro : {formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: fr })}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                      <Truck className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{stats.vehicleCount} véhicule{stats.vehicleCount > 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                      <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{stats.driverCount} conducteur{stats.driverCount > 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                      <Coins className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{stats.chargeCount} charge{stats.chargeCount > 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                      <Container className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>{stats.trailerCount} remorque{stats.trailerCount > 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-
-                  {/* Errors */}
-                  {syncErrors.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-destructive">Erreurs récentes</span>
-                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearErrors}>
-                          <X className="w-3 h-3 mr-1" />
-                          Effacer
-                        </Button>
-                      </div>
-                      <div className="space-y-1 max-h-24 overflow-y-auto">
-                        {syncErrors.map((err, i) => (
-                          <div key={i} className="text-xs bg-destructive/10 text-destructive rounded px-2 py-1 flex items-start gap-2">
-                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium">{err.table}:</span>{' '}
-                              <span className="break-words">{err.message}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </PopoverContent>
-            </Popover>
 
             {/* Role Badge */}
             {roleInfo && (
