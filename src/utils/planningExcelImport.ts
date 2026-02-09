@@ -282,8 +282,14 @@ function extractDayCellText(cellValue: string | undefined): string {
        const raw = row[colIdx];
        if (!raw) continue;
        const v = extractDayCellText(raw.toString());
-       if (!v || v.toLowerCase() === 'x') continue;
-       day_cells[dayIdx] = v;
+        if (!v) continue;
+        // "X" is treated as "use the default titulaire driver" — store the titulaire name
+        if (v.toLowerCase() === 'x') {
+          const fallbackName = extractDriverFromCell(titulaire);
+          if (fallbackName) day_cells[dayIdx] = fallbackName;
+        } else {
+          day_cells[dayIdx] = v;
+        }
      }
      
      // Only add if we have meaningful data

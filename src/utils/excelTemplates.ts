@@ -65,13 +65,13 @@
     'Dimanche'
    ];
  
-   const sampleData = [
-    ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'Paul RESPONSABLE', 'X', 'X', '', 'X', 'X', '', ''],
-    ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'Marie CHEF', 'X', '', 'X', '', 'X', '', ''],
-    ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', 'Paul RESPONSABLE', '', 'X', 'X', 'X', '', '', ''],
-    ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'Jean MANAGER', 'X', 'X', 'X', 'X', 'X', '', ''],
-    ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', 'Marie CHEF', '', '', 'X', 'X', 'X', 'X', ''],
-   ];
+    const sampleData = [
+     ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'Paul RESPONSABLE', 'Jean DUPONT', 'Jean DUPONT', '', 'Jean DUPONT', 'Jean DUPONT', '', ''],
+     ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'Marie CHEF', 'Pierre MARTIN', '', 'Pierre MARTIN', '', 'Pierre MARTIN', '', ''],
+     ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', 'Paul RESPONSABLE', '', 'Marie DURAND', 'Marie DURAND', 'Marie DURAND', '', '', ''],
+     ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'Jean MANAGER', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', '', ''],
+     ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', 'Marie CHEF', '', '', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', ''],
+    ];
  
    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
    
@@ -110,7 +110,7 @@
     ['- Horaire début: Heure de départ (format: 06h00 ou 06:00)'],
     ['- Horaire fin: Heure d\'arrivée (format: 14h00 ou 14:00)'],
    ['- Responsable de secteur: Nom du responsable pour filtrer les tractions'],
-     ['- Jours de la semaine: Mettre "X" pour indiquer les jours de récurrence'],
+     ['- Jours de la semaine: Indiquer le nom et prénom du conducteur pour chaque jour travaillé (laisser vide si repos)'],
      [''],
      ['Conseils:'],
     ['- Les conducteurs doivent être créés avant l\'import'],
