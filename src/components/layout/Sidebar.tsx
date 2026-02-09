@@ -131,7 +131,9 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
-  const { isDirection } = useTeam();
+  const { isDirection: isDirectionFromTeam } = useTeam();
+  // Fallback: use userRole from cached license data when auth session isn't ready
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   // Get restricted features (user-specific overrides that are disabled)

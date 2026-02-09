@@ -717,6 +717,8 @@ export function useLicense(): UseLicenseReturn {
                   showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
                   showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
                   showLicenseInfo: checkResponse.licenseData?.showLicenseInfo ?? true,
+                  companyUserId: checkResponse.companyUserId || data.companyUserId || null,
+                  userRole: checkResponse.userRole || data.userRole || null,
                 };
                 
                 // Update storage and cache
@@ -845,6 +847,8 @@ export function useLicense(): UseLicenseReturn {
         showCompanyInfo: response.licenseData.showCompanyInfo ?? true,
         showAddressInfo: response.licenseData.showAddressInfo ?? true,
         showLicenseInfo: response.licenseData.showLicenseInfo ?? true,
+        companyUserId: response.companyUserId || null,
+        userRole: response.userRole || null,
       };
       
       localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(licenseDataToStore));
@@ -935,7 +939,8 @@ export function useLicense(): UseLicenseReturn {
           showCompanyInfo: checkResponse.licenseData?.showCompanyInfo ?? true,
           showAddressInfo: checkResponse.licenseData?.showAddressInfo ?? true,
           showLicenseInfo: checkResponse.licenseData?.showLicenseInfo ?? true,
-          companyUserId: checkResponse.companyUserId || null,
+          companyUserId: checkResponse.companyUserId || data.companyUserId || null,
+          userRole: checkResponse.userRole || data.userRole || null,
         };
         
         localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedData));

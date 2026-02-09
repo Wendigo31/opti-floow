@@ -71,8 +71,9 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { planType, hasFeature } = useLicense();
-  const { isDirection } = useTeam();
+  const { planType, hasFeature, licenseData } = useLicense();
+  const { isDirection: isDirectionFromTeam } = useTeam();
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
