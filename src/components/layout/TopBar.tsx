@@ -281,17 +281,6 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                     </div>
                   )}
 
-                  {/* Force sync button */}
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => void forceSync()}
-                    disabled={isSyncing}
-                  >
-                    <RefreshCw className={isSyncing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                    Forcer la synchronisation complète
-                  </Button>
                 </div>
               </PopoverContent>
             </Popover>
