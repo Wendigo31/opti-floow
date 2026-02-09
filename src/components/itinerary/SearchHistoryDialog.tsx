@@ -105,9 +105,12 @@ export function SearchHistoryDialog({
       </div>
       
       <div className="flex items-center justify-between pt-1 border-t">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="w-3 h-3" />
           {formatTime(entry.timestamp)}
+          {entry.displayName && (
+            <span className="text-foreground font-medium">• {entry.displayName}</span>
+          )}
         </div>
         
         <div className="flex items-center gap-1">

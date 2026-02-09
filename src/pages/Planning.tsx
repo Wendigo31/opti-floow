@@ -1,4 +1,5 @@
  import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
  import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
  import { toast } from 'sonner';
  
  export default function Planning() {
+  const navigate = useNavigate();
   const { licenseId } = useLicenseContext();
    const [currentWeekStart, setCurrentWeekStart] = useState(() => 
      startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -229,6 +231,20 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
     }
     return driver?.name || null;
    };
+
+   // Get summary info for a vehicle's entries in the current week
+   const getVehicleSummary = useCallback((vehicleId: string) => {
+     const vehicleEntries = entries.filter(e => e.vehicle_id === vehicleId);
+     // Get unique driver names
+     const driverIds = [...new Set(vehicleEntries.map(e => e.driver_id).filter(Boolean))];
+     const driverNames = driverIds.map(id => getDriverName(id)).filter(Boolean);
+     // Get unique relay driver names
+     const relayIds = [...new Set(vehicleEntries.map(e => e.relay_driver_id).filter(Boolean))];
+     const relayNames = relayIds.map(id => getRelayDriverName(id)).filter(Boolean);
+     // Get unique sector managers
+     const sectors = [...new Set(vehicleEntries.map(e => e.sector_manager).filter(Boolean))];
+     return { driverNames, relayNames, sectors };
+   }, [entries, allDrivers]);
  
    return (
      <div className="space-y-4 h-full flex flex-col">
@@ -327,12 +343,15 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
              </div>
            ) : tractions.length === 0 ? (
             <ScrollArea className="h-full">
-              <div className="min-w-[900px]">
+              <div className="min-w-[1200px]">
                 {/* Header row with days */}
-                <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
                   <div className="p-3 font-medium border-r">
                     Traction
                   </div>
+                  <div className="p-3 font-medium border-r text-xs text-center">Conducteur</div>
+                  <div className="p-3 font-medium border-r text-xs text-center">Relais</div>
+                  <div className="p-3 font-medium border-r text-xs text-center">Resp. secteur</div>
                   {weekDays.map((day, i) => {
                     const isToday = isSameDay(day, new Date());
                     return (
@@ -352,7 +371,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                 </div>
 
                 {/* Row for unassigned entries */}
-                 <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-accent/10">
+                  <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-accent/10">
                    <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
                      <div className="font-medium text-accent-foreground">
                       Non assigné
@@ -361,6 +380,9 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                       Sans véhicule
                     </div>
                   </div>
+                  <div className="p-2 border-r bg-accent/10" />
+                  <div className="p-2 border-r bg-accent/10" />
+                  <div className="p-2 border-r bg-accent/10" />
 
                   {weekDays.map((day, i) => {
                     const cellEntries = getUnassignedEntriesForDate(day);
@@ -394,7 +416,7 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                     variant="outline" 
                     size="sm"
                     className="mt-2"
-                    onClick={() => window.location.href = '/vehicles'}
+                    onClick={() => navigate('/vehicles')}
                   >
                     Aller aux Véhicules
                   </Button>
@@ -404,12 +426,15 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
             </ScrollArea>
           ) : (
              <ScrollArea className="h-full">
-               <div className="min-w-[900px]">
+               <div className="min-w-[1200px]">
                  {/* Header row with days */}
-                 <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+                 <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
                    <div className="p-3 font-medium border-r">
                      Traction
                    </div>
+                   <div className="p-3 font-medium border-r text-xs text-center">Conducteur</div>
+                   <div className="p-3 font-medium border-r text-xs text-center">Relais</div>
+                   <div className="p-3 font-medium border-r text-xs text-center">Resp. secteur</div>
                    {weekDays.map((day, i) => {
                      const isToday = isSameDay(day, new Date());
                      return (
@@ -429,10 +454,12 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                  </div>
  
                  {/* Rows for each traction */}
-                 {tractions.map((vehicle) => (
+                 {tractions.map((vehicle) => {
+                   const summary = getVehicleSummary(vehicle.id);
+                   return (
                    <div 
                      key={vehicle.id} 
-                     className="grid grid-cols-[200px_repeat(7,1fr)] border-b last:border-b-0"
+                     className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b last:border-b-0"
                    >
                      {/* Vehicle info */}
                      <div className="p-3 border-r bg-muted/30 flex flex-col justify-center">
@@ -443,7 +470,40 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                          {vehicle.licensePlate}
                        </div>
                      </div>
- 
+
+                     {/* Conducteur attitré */}
+                     <div className="p-2 border-r bg-muted/10 flex items-center justify-center">
+                       <div className="text-xs text-center truncate" title={summary.driverNames.join(', ')}>
+                         {summary.driverNames.length > 0 ? (
+                           <span className="text-foreground">👤 {summary.driverNames.join(', ')}</span>
+                         ) : (
+                           <span className="text-muted-foreground">-</span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Relais */}
+                     <div className="p-2 border-r bg-muted/10 flex items-center justify-center">
+                       <div className="text-xs text-center truncate" title={summary.relayNames.join(', ')}>
+                         {summary.relayNames.length > 0 ? (
+                           <span className="text-foreground">🔄 {summary.relayNames.join(', ')}</span>
+                         ) : (
+                           <span className="text-muted-foreground">-</span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Responsable secteur */}
+                     <div className="p-2 border-r bg-muted/10 flex items-center justify-center">
+                       <div className="text-xs text-center truncate" title={summary.sectors.join(', ')}>
+                         {summary.sectors.length > 0 ? (
+                           <span className="text-foreground">{summary.sectors.join(', ')}</span>
+                         ) : (
+                           <span className="text-muted-foreground">-</span>
+                         )}
+                       </div>
+                     </div>
+
                      {/* Cells for each day */}
                      {weekDays.map((day, i) => {
                        const cellEntries = getEntriesForCell(vehicle.id, day);
@@ -467,11 +527,12 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                        );
                      })}
                    </div>
-                 ))}
+                   );
+                 })}
 
                 {/* Row for unassigned entries at the bottom */}
                 {unassignedEntries.length > 0 && (
-                   <div className="grid grid-cols-[200px_repeat(7,1fr)] border-b bg-accent/10">
+                   <div className="grid grid-cols-[200px_100px_100px_100px_repeat(7,1fr)] border-b bg-accent/10">
                      <div className="p-3 border-r bg-accent/20 flex flex-col justify-center">
                        <div className="font-medium text-accent-foreground">
                         Non assigné
@@ -480,6 +541,9 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
                         {unassignedEntries.length} mission(s)
                       </div>
                     </div>
+                    <div className="p-2 border-r bg-accent/10" />
+                    <div className="p-2 border-r bg-accent/10" />
+                    <div className="p-2 border-r bg-accent/10" />
 
                     {weekDays.map((day, i) => {
                       const cellEntries = getUnassignedEntriesForDate(day);

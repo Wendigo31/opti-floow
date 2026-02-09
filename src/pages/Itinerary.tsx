@@ -305,17 +305,18 @@ export default function Itinerary() {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    if (originAddress && destinationAddress && originPosition && destinationPosition) {
+    if (originAddress && destinationAddress) {
       const saveSearch = async () => {
         const searchId = await addSearch({
           originAddress,
-          originPosition,
+          originPosition: originPosition || null,
           destinationAddress,
-          destinationPosition,
+          destinationPosition: destinationPosition || null,
           stops,
           vehicleId: selectedVehicleId,
           clientId: selectedClientId,
           calculated: false,
+          displayName: null,
         });
         if (searchId) {
           currentSearchIdRef.current = searchId;

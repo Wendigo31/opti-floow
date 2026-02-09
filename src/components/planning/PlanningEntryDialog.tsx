@@ -65,10 +65,11 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
      notes: null,
      status: 'planned',
      tour_name: null,
-     relay_driver_id: null,
-     relay_location: null,
-     relay_time: null,
-   });
+      relay_driver_id: null,
+      relay_location: null,
+      relay_time: null,
+      sector_manager: null,
+    });
    
    const [showRelay, setShowRelay] = useState(false);
   const [applyToAllTour, setApplyToAllTour] = useState(false);
@@ -94,11 +95,12 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
          notes: entry.notes,
          status: entry.status,
          tour_name: entry.tour_name,
-         relay_driver_id: entry.relay_driver_id,
-         relay_location: entry.relay_location,
-         relay_time: entry.relay_time,
-       });
-       setShowRelay(!!entry.relay_driver_id);
+          relay_driver_id: entry.relay_driver_id,
+          relay_location: entry.relay_location,
+          relay_time: entry.relay_time,
+          sector_manager: entry.sector_manager,
+        });
+        setShowRelay(!!entry.relay_driver_id);
      } else {
        setFormData({
          planning_date: defaultValues.planning_date || '',
@@ -113,9 +115,10 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
          notes: defaultValues.notes || null,
          status: defaultValues.status || 'planned',
          tour_name: defaultValues.tour_name || null,
-         relay_driver_id: defaultValues.relay_driver_id || null,
-         relay_location: defaultValues.relay_location || null,
-         relay_time: defaultValues.relay_time || null,
+          relay_driver_id: defaultValues.relay_driver_id || null,
+          relay_location: defaultValues.relay_location || null,
+          relay_time: defaultValues.relay_time || null,
+          sector_manager: defaultValues.sector_manager || null,
        });
        setShowRelay(false);
      }
@@ -402,29 +405,40 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
              )}
            </div>
  
-           {/* Mission Order */}
-           <div className="space-y-2">
-             <Label htmlFor="mission_order">Ordre de mission</Label>
-             <Textarea
-               id="mission_order"
-               value={formData.mission_order || ''}
-               onChange={(e) => setFormData(prev => ({ ...prev, mission_order: e.target.value || null }))}
-               placeholder="Détails de la mission : instructions, références, contacts..."
-               rows={4}
-             />
-           </div>
- 
-           {/* Notes */}
-           <div className="space-y-2">
-             <Label htmlFor="notes">Notes</Label>
-             <Textarea
-               id="notes"
-               value={formData.notes || ''}
-               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value || null }))}
-               placeholder="Notes internes..."
-               rows={2}
-             />
-           </div>
+            {/* Mission Order */}
+            <div className="space-y-2">
+              <Label htmlFor="mission_order">Ordre de mission</Label>
+              <Textarea
+                id="mission_order"
+                value={formData.mission_order || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, mission_order: e.target.value || null }))}
+                placeholder="Détails de la mission : instructions, références, contacts..."
+                rows={4}
+              />
+            </div>
+
+            {/* Sector Manager */}
+            <div className="space-y-2">
+              <Label htmlFor="sector_manager">Responsable de secteur</Label>
+              <Input
+                id="sector_manager"
+                value={formData.sector_manager || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, sector_manager: e.target.value || null }))}
+                placeholder="Ex: Jean Dupont"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value || null }))}
+                placeholder="Notes internes..."
+                rows={2}
+              />
+            </div>
  
            <DialogFooter className="gap-2 sm:gap-0">
               <div className="mr-auto flex flex-wrap gap-2">

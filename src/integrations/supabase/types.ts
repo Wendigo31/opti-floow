@@ -1431,6 +1431,7 @@ export type Database = {
           destination_address: string
           destination_lat: number | null
           destination_lon: number | null
+          display_name: string | null
           id: string
           license_id: string | null
           origin_address: string
@@ -1448,6 +1449,7 @@ export type Database = {
           destination_address: string
           destination_lat?: number | null
           destination_lon?: number | null
+          display_name?: string | null
           id?: string
           license_id?: string | null
           origin_address: string
@@ -1465,6 +1467,7 @@ export type Database = {
           destination_address?: string
           destination_lat?: number | null
           destination_lon?: number | null
+          display_name?: string | null
           id?: string
           license_id?: string | null
           origin_address?: string

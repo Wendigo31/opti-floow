@@ -24,6 +24,7 @@ export interface SearchHistoryEntry {
   vehicleId: string | null;
   clientId: string | null;
   calculated: boolean;
+  displayName: string | null;
 }
 
 interface DbSearchHistory {
@@ -40,6 +41,7 @@ interface DbSearchHistory {
   vehicle_id: string | null;
   client_id: string | null;
   calculated: boolean;
+  display_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +60,7 @@ function dbToEntry(db: DbSearchHistory): SearchHistoryEntry {
     vehicleId: db.vehicle_id,
     clientId: db.client_id,
     calculated: db.calculated,
+    displayName: db.display_name,
   };
 }
 
@@ -154,6 +157,19 @@ export function useSearchHistory() {
         return existing[0].id;
       }
 
+      // Fetch display name for the user
+      let displayName: string | null = null;
+      try {
+        const { data: cuData } = await supabase
+          .from('company_users')
+          .select('display_name, email')
+          .eq('user_id', authUserId)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+        displayName = cuData?.display_name || cuData?.email || null;
+      } catch { /* ignore */ }
+
       // Insert new entry using raw insert to avoid type issues with new table
       const insertData = {
         user_id: authUserId,
@@ -168,6 +184,7 @@ export function useSearchHistory() {
         vehicle_id: entry.vehicleId,
         client_id: entry.clientId,
         calculated: entry.calculated,
+        display_name: displayName,
       };
 
       const { data, error } = await supabase
