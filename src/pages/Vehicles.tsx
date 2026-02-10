@@ -26,7 +26,10 @@ import {
   Download,
   Filter,
   Lock,
-  Sparkles
+  Sparkles,
+  LayoutGrid,
+  List,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +74,9 @@ import { toast } from 'sonner';
 import { parseExcelFile } from '@/utils/excelImport';
 import * as XLSX from 'xlsx';
 import { FeatureGate } from '@/components/license/FeatureGate';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
 
 // Lazy load VehicleReports
 const VehicleReportsContent = lazy(() => import('./VehicleReports'));
@@ -124,6 +130,11 @@ export default function Vehicles() {
   const [vehicleOwnershipFilter, setVehicleOwnershipFilter] = useState<OwnershipFilter>('all');
   const [trailerOwnershipFilter, setTrailerOwnershipFilter] = useState<OwnershipFilter>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [vehicleViewMode, setVehicleViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDuplicating, setBulkDuplicating] = useState(false);
 
   // Check if user has fleet management (depreciation, maintenance, tires, consumption)
   const hasFleetManagement = hasFeature('fleet_management') || planType === 'pro' || planType === 'enterprise';
@@ -360,6 +371,55 @@ export default function Vehicles() {
     if (success) {
       removeVehicleCharges(id);
     }
+  };
+
+  // Toggle vehicle selection
+  const toggleVehicleSelection = (id: string) => {
+    setSelectedVehicleIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllVehicles = () => {
+    if (selectedVehicleIds.size === filteredVehicles.length) {
+      setSelectedVehicleIds(new Set());
+    } else {
+      setSelectedVehicleIds(new Set(filteredVehicles.map(v => v.id)));
+    }
+  };
+
+  const handleBulkDeleteVehicles = async () => {
+    if (selectedVehicleIds.size === 0) return;
+    setBulkDeleting(true);
+    for (const id of selectedVehicleIds) {
+      await deleteVehicle(id);
+      removeVehicleCharges(id);
+    }
+    setSelectedVehicleIds(new Set());
+    setBulkDeleting(false);
+    toast.success(`${selectedVehicleIds.size} véhicule(s) supprimé(s)`);
+  };
+
+  const handleDuplicateVehicles = async () => {
+    if (selectedVehicleIds.size === 0) return;
+    setBulkDuplicating(true);
+    const toDuplicate = vehicles.filter(v => selectedVehicleIds.has(v.id));
+    for (const v of toDuplicate) {
+      const now = new Date().toISOString();
+      const copy: Vehicle = {
+        ...v,
+        id: generateVehicleId(),
+        name: `${v.name} (copie)`,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await createVehicle(copy);
+    }
+    setSelectedVehicleIds(new Set());
+    setBulkDuplicating(false);
+    toast.success(`${toDuplicate.length} véhicule(s) dupliqué(s)`);
   };
 
   const addMaintenance = () => {
@@ -2067,6 +2127,24 @@ export default function Vehicles() {
               </SelectContent>
             </Select>
             <div className="flex gap-2">
+              <div className="flex border border-border rounded-md">
+                <Button
+                  variant={vehicleViewMode === 'grid' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9 rounded-r-none"
+                  onClick={() => setVehicleViewMode('grid')}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={vehicleViewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9 rounded-l-none"
+                  onClick={() => setVehicleViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
               <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
                 <Button variant="outline" onClick={downloadFleetTemplate} title="Télécharger le modèle Excel">
                   <Download className="w-4 h-4" />
@@ -2085,14 +2163,97 @@ export default function Vehicles() {
             </div>
           </div>
 
+          {/* Bulk Actions */}
+          <BulkActionsBar
+            count={selectedVehicleIds.size}
+            onDelete={handleBulkDeleteVehicles}
+            onDuplicate={handleDuplicateVehicles}
+            onClear={() => setSelectedVehicleIds(new Set())}
+            deleting={bulkDeleting}
+            duplicating={bulkDuplicating}
+          />
+
           {/* Add Form */}
           {isAdding && renderForm()}
 
           {/* Vehicles List */}
           {filteredVehicles.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6">
-              {filteredVehicles.map((vehicle, index) => renderVehicleCard(vehicle, index))}
-            </div>
+            vehicleViewMode === 'list' ? (
+              <div className="glass-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={selectedVehicleIds.size === filteredVehicles.length && filteredVehicles.length > 0}
+                          onCheckedChange={toggleAllVehicles}
+                        />
+                      </TableHead>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Immatriculation</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Marque / Modèle</TableHead>
+                      <TableHead className="text-right">Kilométrage</TableHead>
+                      <TableHead className="text-right">Conso.</TableHead>
+                      <TableHead className="text-right">Coût/km</TableHead>
+                      <TableHead className="w-28">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredVehicles.map((vehicle) => {
+                      const costBreakdown = getVehicleCostBreakdown(vehicle);
+                      const costColor = getCostPerKmColor(costBreakdown.totalCostPerKm);
+                      return (
+                        <TableRow key={vehicle.id} data-state={selectedVehicleIds.has(vehicle.id) ? 'selected' : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedVehicleIds.has(vehicle.id)}
+                              onCheckedChange={() => toggleVehicleSelection(vehicle.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{vehicle.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-mono text-xs">{vehicle.licensePlate}</Badge>
+                          </TableCell>
+                          <TableCell className="capitalize">{vehicle.type}</TableCell>
+                          <TableCell className="text-muted-foreground">{vehicle.brand} {vehicle.model}</TableCell>
+                          <TableCell className="text-right">{formatNumber(vehicle.currentKm)} km</TableCell>
+                          <TableCell className="text-right">{vehicle.fuelConsumption} L</TableCell>
+                          <TableCell className={cn(
+                            "text-right font-semibold",
+                            costColor === 'success' && "text-success",
+                            costColor === 'warning' && "text-warning",
+                            costColor === 'destructive' && "text-destructive"
+                          )}>
+                            {formatCostPerKm(costBreakdown.totalCostPerKm)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(vehicle)}>
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={async () => {
+                                const now = new Date().toISOString();
+                                await createVehicle({ ...vehicle, id: generateVehicleId(), name: `${vehicle.name} (copie)`, createdAt: now, updatedAt: now });
+                              }}>
+                                <Copy className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(vehicle.id)}>
+                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredVehicles.map((vehicle, index) => renderVehicleCard(vehicle, index))}
+              </div>
+            )
           ) : vehicles.length > 0 ? (
             <div className="glass-card p-8 text-center">
               <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
