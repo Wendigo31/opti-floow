@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload, Search, X } from 'lucide-react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { usePlanning } from '@/hooks/usePlanning';
@@ -60,6 +61,7 @@ export default function Planning() {
   const [filterSector, setFilterSector] = useState<string | null>(null);
   const [filterClient, setFilterClient] = useState<string | null>(null);
   const [filterDay, setFilterDay] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek } = usePlanning();
   const { vehicles, fetchVehicles } = useCloudVehicles();
@@ -154,6 +156,7 @@ export default function Planning() {
 
   // Filter groups
   const filteredGroups = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
     return tractionGroups.filter(g => {
       if (filterSector && g.sectorManager !== filterSector) return false;
       if (filterClient && g.clientId !== filterClient) return false;
@@ -165,9 +168,25 @@ export default function Planning() {
           if (!hasEntry) return false;
         }
       }
+      if (q) {
+        const clientName = getClientName(g.clientId) || '';
+        const driverInfo = getDriverDisplay(g.driverId);
+        const driverName = driverInfo?.name || '';
+        // Search in: tour name, ODM, sector manager, client name, driver name, day notes
+        const dayNotes = g.entries.map(e => e.notes || '').join(' ');
+        const haystack = [
+          g.tourName,
+          g.missionOrder || '',
+          g.sectorManager || '',
+          clientName,
+          driverName,
+          dayNotes,
+        ].join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [tractionGroups, filterSector, filterClient, filterDay, currentWeekStart]);
+  }, [tractionGroups, filterSector, filterClient, filterDay, currentWeekStart, searchQuery, getClientName, getDriverDisplay]);
 
   const getGroupEntryForDay = (group: TractionGroup, date: Date): PlanningEntry | undefined => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -229,6 +248,27 @@ export default function Planning() {
         onDayChange={setFilterDay}
       />
 
+      {/* Search bar + count */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher une ligne, un conducteur, un ODM…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
+        <Badge variant="secondary" className="text-xs whitespace-nowrap">
+          {filteredGroups.length} ligne{filteredGroups.length > 1 ? 's' : ''}
+        </Badge>
+      </div>
+
       {/* Grid */}
       <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
@@ -284,7 +324,10 @@ export default function Planning() {
                   return (
                     <div
                       key={gi}
-                      className="grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-muted/10 transition-colors"
+                      className={cn(
+                        "grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-accent/40 transition-colors",
+                        gi % 2 === 1 && "bg-muted/30"
+                      )}
                       onClick={() => handleRowClick(group)}
                     >
                       {/* Resp. secteur */}
