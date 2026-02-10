@@ -20,6 +20,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 import { cn } from '@/lib/utils';
+import { usePlanningImport } from '@/context/PlanningImportContext';
 
 const DAY_COLUMNS = [
   { label: 'Lundi', idx: 0 },
@@ -47,6 +48,7 @@ interface TractionGroup {
 
 export default function Planning() {
   const { licenseId } = useLicenseContext();
+  const { progress: importProgress } = usePlanningImport();
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -95,6 +97,17 @@ export default function Planning() {
     const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
     fetchEntries(startDate, endDate);
   }, [currentWeekStart, fetchEntries]);
+
+  // Re-fetch when background import completes
+  useEffect(() => {
+    if (importProgress.completedAt > 0) {
+      const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+      const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+      // Small delay to ensure DB writes are committed
+      const timer = setTimeout(() => fetchEntries(startDate, endDate), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [importProgress.completedAt, currentWeekStart, fetchEntries]);
 
   useEffect(() => {
     fetchVehicles();
