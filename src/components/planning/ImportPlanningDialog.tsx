@@ -15,6 +15,7 @@ import type { Vehicle } from '@/types/vehicle';
 import type { Driver } from '@/types';
 import type { ClientWithCreator } from '@/hooks/useClients';
 import { usePlanningImport } from '@/context/PlanningImportContext';
+import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
  
  interface ImportPlanningDialogProps {
    open: boolean;
@@ -49,6 +50,7 @@ import { usePlanningImport } from '@/context/PlanningImportContext';
    const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { startBackgroundImport } = usePlanningImport();
+    const { addUncreatedDrivers } = useUncreatedDrivers();
  
    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
      const selectedFile = e.target.files?.[0];
@@ -140,6 +142,40 @@ import { usePlanningImport } from '@/context/PlanningImportContext';
           }
         }
       }
+
+       // Detect uncreated drivers (names in Excel that don't match any existing driver)
+       const findDriverMatch = (driverName: string): boolean => {
+         const driverLower = driverName.toLowerCase().trim();
+         if (!driverLower) return true; // empty = no driver specified
+         for (const [name, driverData] of driverMap.entries()) {
+           const nameLower = name.toLowerCase();
+           const firstName = (driverData.firstName || '').toLowerCase().trim();
+           const lastName = (driverData.lastName || '').toLowerCase().trim();
+           if (nameLower.includes(driverLower) || driverLower.includes(nameLower)) return true;
+           if (lastName && lastName === driverLower) return true;
+           if (firstName && firstName === driverLower && firstName.length >= 3) return true;
+         }
+         return false;
+       };
+
+       const unmatchedDriverNames = new Set<string>();
+       for (const entry of preview) {
+         // Check titulaire
+         if (entry.driver_name && !findDriverMatch(entry.driver_name)) {
+           unmatchedDriverNames.add(entry.driver_name);
+         }
+         // Check day cells (often contain driver names)
+         for (const cellText of Object.values(entry.day_cells || {})) {
+           if (cellText && !findDriverMatch(cellText)) {
+             unmatchedDriverNames.add(cellText);
+           }
+         }
+       }
+
+       if (unmatchedDriverNames.size > 0) {
+         addUncreatedDrivers([...unmatchedDriverNames], 'Import planning');
+         console.log(`[planning-import] ${unmatchedDriverNames.size} conducteur(s) non reconnu(s):`, [...unmatchedDriverNames]);
+       }
 
        // Convert to TourInput format
         const tourInputs = convertToTourInputs(
