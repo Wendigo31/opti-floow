@@ -65,7 +65,7 @@ export default function Planning() {
   const [filterDay, setFilterDay] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek } = usePlanning();
+  const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, deleteTourInWeek } = usePlanning();
   const { vehicles, fetchVehicles } = useCloudVehicles();
   const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
   const { clients } = useClients();
@@ -449,6 +449,15 @@ export default function Planning() {
           vehicles={vehicles.filter(v => v.isActive && v.type === 'tracteur')}
           onUpdateEntry={updateEntry}
           onDeleteEntry={deleteEntry}
+          onDeleteTraction={async () => {
+            const ok = await deleteTourInWeek(selectedGroup.tourName, currentWeekStart);
+            if (ok) {
+              const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+              const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+              await fetchEntries(startDate, endDate);
+            }
+            return ok;
+          }}
         />
       )}
 

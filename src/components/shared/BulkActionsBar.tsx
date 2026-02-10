@@ -1,4 +1,4 @@
-import { Trash2, Copy, X } from 'lucide-react';
+import { Trash2, Copy, X, Merge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -6,12 +6,13 @@ interface BulkActionsBarProps {
   count: number;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  onMerge?: () => void;
   onClear: () => void;
   deleting?: boolean;
   duplicating?: boolean;
 }
 
-export function BulkActionsBar({ count, onDelete, onDuplicate, onClear, deleting, duplicating }: BulkActionsBarProps) {
+export function BulkActionsBar({ count, onDelete, onDuplicate, onMerge, onClear, deleting, duplicating }: BulkActionsBarProps) {
   if (count === 0) return null;
 
   return (
@@ -20,6 +21,12 @@ export function BulkActionsBar({ count, onDelete, onDuplicate, onClear, deleting
         {count} sélectionné{count > 1 ? 's' : ''}
       </Badge>
       <div className="flex items-center gap-2">
+        {onMerge && count >= 2 && (
+          <Button variant="outline" size="sm" onClick={onMerge} className="gap-1.5">
+            <Merge className="w-3.5 h-3.5" />
+            Fusionner
+          </Button>
+        )}
         {onDuplicate && (
           <Button variant="outline" size="sm" onClick={onDuplicate} disabled={duplicating} className="gap-1.5">
             <Copy className="w-3.5 h-3.5" />

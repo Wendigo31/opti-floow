@@ -137,8 +137,11 @@ export interface ExcelTourInput {
          relay_driver_id: row.relay_driver_id,
          relay_location: row.relay_location,
          relay_time: row.relay_time,
-          parent_tour_id: row.parent_tour_id,
-          sector_manager: row.sector_manager,
+           parent_tour_id: row.parent_tour_id,
+           sector_manager: row.sector_manager,
+           stops: Array.isArray(row.stops) ? row.stops as any : [],
+           line_reference: (row as any).line_reference || null,
+           return_line_reference: (row as any).return_line_reference || null,
        }));
  
        setEntries(mappedEntries);
@@ -297,9 +300,12 @@ export interface ExcelTourInput {
          end_date: data.end_date,
          relay_driver_id: data.relay_driver_id,
          relay_location: data.relay_location,
-         relay_time: data.relay_time,
-          parent_tour_id: data.parent_tour_id,
-          sector_manager: data.sector_manager,
+          relay_time: data.relay_time,
+           parent_tour_id: data.parent_tour_id,
+           sector_manager: data.sector_manager,
+           stops: Array.isArray(data.stops) ? data.stops as any : [],
+           line_reference: (data as any).line_reference || null,
+           return_line_reference: (data as any).return_line_reference || null,
        };
  
        setEntries(prev => [...prev, newEntry].sort((a, b) => 
@@ -318,13 +324,18 @@ export interface ExcelTourInput {
  
    const updateEntry = useCallback(async (id: string, updates: Partial<PlanningEntryInput>): Promise<boolean> => {
      try {
-       const { error } = await supabase
-         .from('planning_entries')
-         .update({
-           ...updates,
-           updated_at: new Date().toISOString(),
-         })
-         .eq('id', id);
+        const updatePayload: Record<string, any> = {
+          ...updates,
+          updated_at: new Date().toISOString(),
+        };
+        // Convert stops array to JSON for DB
+        if (updates.stops !== undefined) {
+          updatePayload.stops = JSON.stringify(updates.stops);
+        }
+        const { error } = await supabase
+          .from('planning_entries')
+          .update(updatePayload)
+          .eq('id', id);
  
        if (error) throw error;
  

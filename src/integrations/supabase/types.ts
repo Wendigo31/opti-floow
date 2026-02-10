@@ -1082,6 +1082,7 @@ export type Database = {
           id: string
           is_all_year: boolean | null
           license_id: string | null
+          line_reference: string | null
           mission_order: string | null
           notes: string | null
           origin_address: string | null
@@ -1091,10 +1092,12 @@ export type Database = {
           relay_driver_id: string | null
           relay_location: string | null
           relay_time: string | null
+          return_line_reference: string | null
           sector_manager: string | null
           start_date: string | null
           start_time: string | null
           status: string
+          stops: Json | null
           tour_name: string | null
           updated_at: string
           user_id: string
@@ -1110,6 +1113,7 @@ export type Database = {
           id?: string
           is_all_year?: boolean | null
           license_id?: string | null
+          line_reference?: string | null
           mission_order?: string | null
           notes?: string | null
           origin_address?: string | null
@@ -1119,10 +1123,12 @@ export type Database = {
           relay_driver_id?: string | null
           relay_location?: string | null
           relay_time?: string | null
+          return_line_reference?: string | null
           sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
           status?: string
+          stops?: Json | null
           tour_name?: string | null
           updated_at?: string
           user_id: string
@@ -1138,6 +1144,7 @@ export type Database = {
           id?: string
           is_all_year?: boolean | null
           license_id?: string | null
+          line_reference?: string | null
           mission_order?: string | null
           notes?: string | null
           origin_address?: string | null
@@ -1147,10 +1154,12 @@ export type Database = {
           relay_driver_id?: string | null
           relay_location?: string | null
           relay_time?: string | null
+          return_line_reference?: string | null
           sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
           status?: string
+          stops?: Json | null
           tour_name?: string | null
           updated_at?: string
           user_id?: string
