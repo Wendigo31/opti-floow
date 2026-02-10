@@ -11,7 +11,8 @@ import {
   Euro,
   TrendingUp,
   Sparkles,
-  EyeOff
+  EyeOff,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useLicense } from '@/hooks/useLicense';
@@ -53,6 +55,7 @@ import { useCompanyData } from '@/hooks/useCompanyData';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
+import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -67,7 +70,7 @@ interface Client {
 }
 
 export default function Tours() {
-  const { tours, loading, fetchTours, deleteTour, toggleFavorite } = useSavedTours();
+  const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour } = useSavedTours();
   const { planType } = useLicense();
   const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
   const { canViewPricing, canViewFinancialData, canExportFinancialReports } = useRolePermissions();
@@ -79,8 +82,67 @@ export default function Tours() {
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [selectedTour, setSelectedTour] = useState<SavedTour | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   
   const isEnterprise = planType === 'enterprise';
+
+  const toggleCheck = (id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (checkedIds.size === 0) return;
+    if (!confirm(`Supprimer ${checkedIds.size} tournée(s) ?`)) return;
+    for (const id of checkedIds) {
+      await deleteTour(id);
+    }
+    toast.success(`${checkedIds.size} tournée(s) supprimée(s)`);
+    setCheckedIds(new Set());
+  };
+
+  const handleDuplicate = async () => {
+    if (checkedIds.size === 0) return;
+    const toDuplicate = tours.filter(t => checkedIds.has(t.id));
+    for (const tour of toDuplicate) {
+      await saveTour({
+        name: `${tour.name} (copie)`,
+        origin_address: tour.origin_address,
+        destination_address: tour.destination_address,
+        distance_km: tour.distance_km,
+        duration_minutes: tour.duration_minutes || 0,
+        toll_cost: tour.toll_cost,
+        fuel_cost: tour.fuel_cost,
+        adblue_cost: tour.adblue_cost,
+        driver_cost: tour.driver_cost,
+        structure_cost: tour.structure_cost,
+        vehicle_cost: tour.vehicle_cost,
+        total_cost: tour.total_cost,
+        revenue: tour.revenue || 0,
+        profit: tour.profit || 0,
+        profit_margin: tour.profit_margin || 0,
+        client_id: tour.client_id,
+        vehicle_id: tour.vehicle_id,
+        driver_ids: tour.driver_ids || [],
+        stops: tour.stops || [],
+        notes: tour.notes,
+        tags: tour.tags || [],
+        pricing_mode: tour.pricing_mode || 'km',
+        price_per_km: tour.price_per_km || 0,
+        fixed_price: tour.fixed_price || 0,
+        target_margin: tour.target_margin || 15,
+        vehicle_data: tour.vehicle_data,
+        drivers_data: tour.drivers_data || [],
+        trailer_id: tour.trailer_id,
+        trailer_data: tour.trailer_data,
+      });
+    }
+    toast.success(`${toDuplicate.length} tournée(s) dupliquée(s)`);
+    setCheckedIds(new Set());
+  };
 
   useEffect(() => {
     fetchTours();
@@ -387,11 +449,28 @@ export default function Tours() {
         </CardContent>
       </Card>
 
+      {/* Bulk actions */}
+      <BulkActionsBar
+        count={checkedIds.size}
+        onDelete={handleBulkDelete}
+        onDuplicate={handleDuplicate}
+        onClear={() => setCheckedIds(new Set())}
+      />
+
       {/* Tours Table */}
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={filteredTours.length > 0 && filteredTours.every(t => checkedIds.has(t.id))}
+                  onCheckedChange={(checked) => {
+                    if (checked) setCheckedIds(new Set(filteredTours.map(t => t.id)));
+                    else setCheckedIds(new Set());
+                  }}
+                />
+              </TableHead>
               <TableHead className="w-10"></TableHead>
               <TableHead>Tournée</TableHead>
               {isCompanyMember && <TableHead>Créé par</TableHead>}
@@ -419,7 +498,10 @@ export default function Tours() {
               </TableRow>
             ) : (
               filteredTours.map(tour => (
-                <TableRow key={tour.id}>
+                <TableRow key={tour.id} className={checkedIds.has(tour.id) ? 'bg-primary/10' : ''}>
+                  <TableCell>
+                    <Checkbox checked={checkedIds.has(tour.id)} onCheckedChange={() => toggleCheck(tour.id)} />
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
