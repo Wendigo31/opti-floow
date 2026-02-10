@@ -6,8 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target, FileSpreadsheet } from 'lucide-react';
+import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target, FileSpreadsheet, LayoutGrid, List, Copy } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useClients, type ClientWithCreator } from '@/hooks/useClients';
 import type { LocalClientReport } from '@/types/local';
@@ -18,6 +20,8 @@ import { ToxicClientsAnalysis } from '@/components/clients/ToxicClientsAnalysis'
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { ImportClientsDialog } from '@/components/clients/ImportClientsDialog';
+import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
+import { toast as sonnerToast } from 'sonner';
 
 export default function Clients() {
   const { toast } = useToast();
@@ -35,6 +39,8 @@ export default function Clients() {
   const [activeTab, setActiveTab] = useState('clients');
   const [sharedTractionsOpen, setSharedTractionsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   
   const [formData, setFormData] = useState({
     name: '', company: '', email: '', phone: '',
@@ -68,6 +74,44 @@ export default function Clients() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce client ?')) return;
     await deleteClient(id);
+  };
+
+  const handleBulkDelete = async () => {
+    if (checkedIds.size === 0) return;
+    if (!confirm(`Supprimer ${checkedIds.size} client(s) ?`)) return;
+    for (const id of checkedIds) {
+      await deleteClient(id);
+    }
+    sonnerToast.success(`${checkedIds.size} client(s) supprimé(s)`);
+    setCheckedIds(new Set());
+  };
+
+  const handleDuplicate = async () => {
+    if (checkedIds.size === 0) return;
+    const toDuplicate = clients.filter(c => checkedIds.has(c.id));
+    for (const client of toDuplicate) {
+      await createClient({
+        name: `${client.name} (copie)`,
+        company: client.company || null,
+        email: client.email || null,
+        phone: client.phone || null,
+        address: client.address || null,
+        city: client.city || null,
+        postal_code: client.postal_code || null,
+        siret: client.siret || null,
+        notes: client.notes || null,
+      });
+    }
+    sonnerToast.success(`${toDuplicate.length} client(s) dupliqué(s)`);
+    setCheckedIds(new Set());
+  };
+
+  const toggleCheck = (id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
   const resetForm = () => {
@@ -278,8 +322,23 @@ export default function Clients() {
                 <Route className="w-4 h-4 mr-1" />
                 Tournées
               </Button>
+              <div className="h-8 w-px bg-border mx-1" />
+              <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => setViewMode('grid')}>
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => setViewMode('list')}>
+                <List className="w-4 h-4" />
+              </Button>
             </div>
           </div>
+
+          {/* Bulk actions */}
+          <BulkActionsBar
+            count={checkedIds.size}
+            onDelete={handleBulkDelete}
+            onDuplicate={handleDuplicate}
+            onClear={() => setCheckedIds(new Set())}
+          />
 
           {/* Tour search results */}
           {searchMode === 'tours' && searchTerm && (
@@ -341,28 +400,82 @@ export default function Clients() {
                   {loading ? 'Chargement...' : searchTerm ? 'Aucun client trouvé' : 'Aucun client. Créez votre premier client !'}
                 </CardContent>
               </Card>
+            ) : viewMode === 'list' ? (
+              /* LIST VIEW */
+              <Card className="glass-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={filteredClients.length > 0 && filteredClients.every(c => checkedIds.has(c.id))}
+                          onCheckedChange={(checked) => {
+                            if (checked) setCheckedIds(new Set(filteredClients.map(c => c.id)));
+                            else setCheckedIds(new Set());
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Société</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Téléphone</TableHead>
+                      <TableHead>Ville</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map(client => (
+                      <TableRow key={client.id} className={checkedIds.has(client.id) ? 'bg-primary/10' : ''}>
+                        <TableCell>
+                          <Checkbox checked={checkedIds.has(client.id)} onCheckedChange={() => toggleCheck(client.id)} />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {client.name}
+                            {client.license_id && (
+                              <SharedDataBadge isShared createdBy={client.creator_display_name} createdByEmail={client.creator_email} isOwn={client.is_own} isFormerMember={client.is_former_member} compact />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{client.company || '-'}</TableCell>
+                        <TableCell>{client.email || '-'}</TableCell>
+                        <TableCell>{client.phone || '-'}</TableCell>
+                        <TableCell>{client.city || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setDetailClient(client); setDetailOpen(true); }}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(client)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(client.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
             ) : (
+              /* GRID VIEW */
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredClients.map(client => {
                 const clientAddresses = getClientAddressesLocal(client.id);
                 const isShared = !!client.license_id;
                 
                 return (
-                  <Card key={client.id} className="glass-card hover:border-primary/30 transition-colors">
+                  <Card key={client.id} className={`glass-card hover:border-primary/30 transition-colors ${checkedIds.has(client.id) ? 'ring-2 ring-primary/40' : ''}`}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <Checkbox checked={checkedIds.has(client.id)} onCheckedChange={() => toggleCheck(client.id)} />
                             <CardTitle className="text-lg truncate">{client.name}</CardTitle>
                             {isShared && (
-                              <SharedDataBadge
-                                isShared={isShared}
-                                createdBy={client.creator_display_name}
-                                createdByEmail={client.creator_email}
-                                isOwn={client.is_own}
-                                isFormerMember={client.is_former_member}
-                                compact
-                              />
+                              <SharedDataBadge isShared={isShared} createdBy={client.creator_display_name} createdByEmail={client.creator_email} isOwn={client.is_own} isFormerMember={client.is_former_member} compact />
                             )}
                           </div>
                           {client.company && (

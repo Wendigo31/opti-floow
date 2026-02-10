@@ -148,6 +148,24 @@ export default function Drivers() {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (checkedDriverIds.size === 0) return;
+    const driverIds = Array.from(checkedDriverIds);
+    for (const driverId of driverIds) {
+      const driverType: 'cdi' | 'cdd' | 'interim' = cloudInterimDrivers.some(d => d.id === driverId)
+        ? 'interim'
+        : cloudCddDrivers.some(d => d.id === driverId)
+          ? 'cdd'
+          : 'cdi';
+      const driver = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers].find(d => d.id === driverId);
+      if (driver) {
+        await createCloudDriver({ ...driver, name: `${driver.name} (copie)`, id: Date.now().toString() } as Driver, driverType);
+      }
+    }
+    toast.success(`${driverIds.length} conducteur(s) dupliqué(s)`);
+    clearSelection();
+  };
+
   // Handle assignment
   const handleAssignment = async (assignment: {
     type: 'client' | 'city' | 'tour';
