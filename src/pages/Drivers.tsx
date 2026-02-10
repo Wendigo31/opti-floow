@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ import { DriverAssignmentDialog } from '@/components/drivers/DriverAssignmentDia
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLicenseContext } from '@/context/LicenseContext';
-
+import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
@@ -59,11 +59,12 @@ export default function Drivers() {
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
   const { licenseId } = useLicenseContext();
+  const { uncreatedDrivers, removeUncreatedDriver, clearAll: clearUncreated } = useUncreatedDrivers();
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
-  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim'>('cdi');
+  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'uncreated'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -1252,7 +1253,7 @@ export default function Drivers() {
       )}
 
       {/* Tabs CDI / Intérim */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'uncreated')}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
@@ -1267,6 +1268,12 @@ export default function Drivers() {
               <Users2 className="w-4 h-4" />
               Intérimaires ({filteredInterimDrivers.length})
             </TabsTrigger>
+            {uncreatedDrivers.length > 0 && (
+              <TabsTrigger value="uncreated" className="gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />
+                Non créés ({uncreatedDrivers.length})
+              </TabsTrigger>
+            )}
           </TabsList>
           <Button 
             onClick={handleAdd} 
@@ -1359,6 +1366,80 @@ export default function Drivers() {
               </Button>
             </div>
           )}
+        </TabsContent>
+        <TabsContent value="uncreated" className="mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Ces conducteurs ont été détectés lors de l'import du planning mais n'existent pas encore dans votre base.
+              </p>
+              <Button variant="outline" size="sm" onClick={clearUncreated}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Tout effacer
+              </Button>
+            </div>
+            <div className="glass-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom du conducteur</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Détecté le</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {uncreatedDrivers.map((d, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{d.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{d.source}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(d.detectedAt).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => {
+                              setActiveTab('cdi');
+                              setIsAdding(true);
+                              setFormData({ name: d.name, baseSalary: 2200, hourlyRate: 12.50, hoursPerDay: 10, patronalCharges: 45, mealAllowance: 15.20, overnightAllowance: 45, workingDaysPerMonth: 21, sundayBonus: 0, nightBonus: 0, seniorityBonus: 0 });
+                              removeUncreatedDriver(d.name);
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Créer CDI
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setActiveTab('interim');
+                              setIsAdding(true);
+                              setFormData({ name: d.name, isInterim: true, baseSalary: 0, hourlyRate: 15, hoursPerDay: 10, patronalCharges: 0, mealAllowance: 15.20, overnightAllowance: 45, workingDaysPerMonth: 21, sundayBonus: 0, nightBonus: 0, seniorityBonus: 0, interimAgency: '', interimHourlyRate: 15, interimCoefficient: 1.85 });
+                              removeUncreatedDriver(d.name);
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Créer Intérim
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => removeUncreatedDriver(d.name)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
        
