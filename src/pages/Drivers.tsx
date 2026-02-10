@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle, Merge, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
+import { MergeDialog } from '@/components/shared/MergeDialog';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
@@ -73,7 +74,7 @@ export default function Drivers() {
   const [checkedDriverIds, setCheckedDriverIds] = useState<Set<string>>(new Set());
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
-  
+  const [mergeOpen, setMergeOpen] = useState(false);
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudCddDrivers.length + cloudInterimDrivers.length;
   const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
@@ -164,6 +165,30 @@ export default function Drivers() {
     }
     toast.success(`${driverIds.length} conducteur(s) dupliqué(s)`);
     clearSelection();
+  };
+
+  const handleMergeDrivers = async (keepId: string, mergeIds: string[]): Promise<boolean> => {
+    try {
+      for (const oldId of mergeIds) {
+        // Update planning_entries driver references
+        await supabase.from('planning_entries').update({ driver_id: keepId }).eq('driver_id', oldId);
+        await supabase.from('planning_entries').update({ relay_driver_id: keepId }).eq('relay_driver_id', oldId);
+        // Delete the duplicate driver
+        const driverType: 'cdi' | 'cdd' | 'interim' = cloudInterimDrivers.some(d => d.id === oldId)
+          ? 'interim'
+          : cloudCddDrivers.some(d => d.id === oldId)
+            ? 'cdd'
+            : 'cdi';
+        await deleteCloudDriver(oldId, driverType);
+      }
+      toast.success(`${mergeIds.length} conducteur(s) fusionné(s)`);
+      clearSelection();
+      return true;
+    } catch (e) {
+      console.error('Merge drivers error:', e);
+      toast.error('Erreur lors de la fusion');
+      return false;
+    }
   };
 
   // Handle assignment
@@ -1249,9 +1274,19 @@ export default function Drivers() {
               <CheckSquare className="w-4 h-4 mr-2" />
               Tout sélectionner
             </Button>
+            {checkedDriverIds.size >= 2 && (
+              <Button variant="outline" size="sm" onClick={() => setMergeOpen(true)} className="gap-2">
+                <Merge className="w-4 h-4" />
+                Fusionner
+              </Button>
+            )}
             <Button onClick={() => setIsAssignDialogOpen(true)} className="gap-2">
               <UserPlus className="w-4 h-4" />
               Assigner
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDuplicate} className="gap-2">
+              <Copy className="w-4 h-4" />
+              Dupliquer
             </Button>
             <Button 
               variant="destructive" 
@@ -1473,6 +1508,24 @@ export default function Drivers() {
          selectedDriverIds={Array.from(checkedDriverIds)}
          onAssign={handleAssignment}
        />
+      <MergeDialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        items={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers]
+          .filter(d => checkedDriverIds.has(d.id))
+          .map(d => ({
+            id: d.id,
+            name: d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name,
+            extra: cloudInterimDrivers.some(i => i.id === d.id) ? 'Intérim' : cloudCddDrivers.some(c => c.id === d.id) ? 'CDD' : 'CDI',
+          }))}
+        entityLabel="conducteurs"
+        onMerge={handleMergeDrivers}
+        allItems={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers].map(d => ({
+          id: d.id,
+          name: d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name,
+          extra: cloudInterimDrivers.some(i => i.id === d.id) ? 'Intérim' : cloudCddDrivers.some(c => c.id === d.id) ? 'CDD' : 'CDI',
+        }))}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target, FileSpreadsheet, LayoutGrid, List, Copy } from 'lucide-react';
+import { Plus, Building2, Phone, Mail, MapPin, Trash2, Edit2, Search, Eye, BarChart3, Users, Route, Link2, Target, FileSpreadsheet, LayoutGrid, List, Copy, Merge } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useClients, type ClientWithCreator } from '@/hooks/useClients';
 import type { LocalClientReport } from '@/types/local';
@@ -21,7 +21,9 @@ import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { ImportClientsDialog } from '@/components/clients/ImportClientsDialog';
 import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
+import { MergeDialog } from '@/components/shared/MergeDialog';
 import { toast as sonnerToast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Clients() {
   const { toast } = useToast();
@@ -41,6 +43,7 @@ export default function Clients() {
   const [importOpen, setImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [mergeOpen, setMergeOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '', company: '', email: '', phone: '',
@@ -112,6 +115,33 @@ export default function Clients() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const handleMergeClients = async (keepId: string, mergeIds: string[]): Promise<boolean> => {
+    try {
+      // Reassign all references from mergeIds to keepId
+      for (const oldId of mergeIds) {
+        // Update planning_entries
+        await supabase.from('planning_entries').update({ client_id: keepId }).eq('client_id', oldId);
+        // Update saved_tours
+        await supabase.from('saved_tours').update({ client_id: keepId }).eq('client_id', oldId);
+        // Update trips
+        await supabase.from('trips').update({ client_id: keepId }).eq('client_id', oldId);
+        // Update quotes
+        await supabase.from('quotes').update({ client_id: keepId }).eq('client_id', oldId);
+        // Move addresses
+        await supabase.from('client_addresses').update({ client_id: keepId }).eq('client_id', oldId);
+        // Delete the duplicate
+        await deleteClient(oldId);
+      }
+      sonnerToast.success(`${mergeIds.length} client(s) fusionné(s)`);
+      setCheckedIds(new Set());
+      return true;
+    } catch (e) {
+      console.error('Merge error:', e);
+      sonnerToast.error('Erreur lors de la fusion');
+      return false;
+    }
   };
 
   const resetForm = () => {
@@ -337,6 +367,7 @@ export default function Clients() {
             count={checkedIds.size}
             onDelete={handleBulkDelete}
             onDuplicate={handleDuplicate}
+            onMerge={() => setMergeOpen(true)}
             onClear={() => setCheckedIds(new Set())}
           />
 
@@ -557,6 +588,14 @@ export default function Clients() {
         open={importOpen} 
         onOpenChange={setImportOpen} 
         onImport={handleImportClients}
+      />
+      <MergeDialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        items={clients.filter(c => checkedIds.has(c.id)).map(c => ({ id: c.id, name: c.name, extra: c.company || c.city || '' }))}
+        entityLabel="clients"
+        onMerge={handleMergeClients}
+        allItems={clients.map(c => ({ id: c.id, name: c.name, extra: c.company || c.city || '' }))}
       />
     </div>
   );

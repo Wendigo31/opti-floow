@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus } from 'lucide-react';
+import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
@@ -34,6 +34,12 @@ interface PlanningRowDetailPanelProps {
   vehicles: Vehicle[];
   onUpdateEntry: (id: string, updates: Partial<PlanningEntryInput>) => Promise<boolean>;
   onDeleteEntry: (id: string) => Promise<boolean>;
+  onDeleteTraction?: () => Promise<boolean>;
+}
+
+interface StopAddress {
+  address: string;
+  label?: string;
 }
 
 export function PlanningRowDetailPanel({
@@ -45,10 +51,13 @@ export function PlanningRowDetailPanel({
   vehicles,
   onUpdateEntry,
   onDeleteEntry,
+  onDeleteTraction,
 }: PlanningRowDetailPanelProps) {
   const first = entries.length > 0 ? entries[0] : null;
 
   const [tourName, setTourName] = useState('');
+  const [lineReference, setLineReference] = useState('');
+  const [returnLineReference, setReturnLineReference] = useState('');
   const [missionOrder, setMissionOrder] = useState('');
   const [clientId, setClientId] = useState('');
   const [driverId, setDriverId] = useState('');
@@ -57,6 +66,7 @@ export function PlanningRowDetailPanel({
   const [startTime, setStartTime] = useState('');
   const [originAddress, setOriginAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
+  const [stops, setStops] = useState<StopAddress[]>([]);
   const [showRelay, setShowRelay] = useState(false);
   const [relayDriverId, setRelayDriverId] = useState('');
   const [relayTime, setRelayTime] = useState('');
@@ -65,6 +75,8 @@ export function PlanningRowDetailPanel({
   useEffect(() => {
     if (open && first) {
       setTourName(first.tour_name || '');
+      setLineReference(first.line_reference || '');
+      setReturnLineReference(first.return_line_reference || '');
       setMissionOrder(first.mission_order || '');
       setClientId(first.client_id || '');
       setDriverId(first.driver_id || '');
@@ -73,6 +85,7 @@ export function PlanningRowDetailPanel({
       setStartTime(first.start_time || '');
       setOriginAddress(first.origin_address || '');
       setDestinationAddress(first.destination_address || '');
+      setStops(Array.isArray(first.stops) ? first.stops : []);
       setShowRelay(!!first.relay_driver_id);
       setRelayDriverId(first.relay_driver_id || '');
       setRelayTime(first.relay_time || '');
@@ -95,6 +108,8 @@ export function PlanningRowDetailPanel({
   const handleSaveAll = async () => {
     const updates: Partial<PlanningEntryInput> = {
       tour_name: tourName || null,
+      line_reference: lineReference || null,
+      return_line_reference: returnLineReference || null,
       mission_order: missionOrder || null,
       client_id: clientId || null,
       driver_id: driverId || null,
@@ -103,6 +118,7 @@ export function PlanningRowDetailPanel({
       start_time: startTime || null,
       origin_address: originAddress || null,
       destination_address: destinationAddress || null,
+      stops: stops.filter(s => s.address.trim()),
       relay_driver_id: showRelay ? (relayDriverId || null) : null,
       relay_time: showRelay ? (relayTime || null) : null,
       relay_location: showRelay ? (relayLocation || null) : null,
@@ -119,23 +135,69 @@ export function PlanningRowDetailPanel({
     }
   };
 
+  const handleDeleteDay = async (entryId: string) => {
+    if (!confirm('Supprimer cette journée du planning ?')) return;
+    await onDeleteEntry(entryId);
+    if (entries.length <= 1) onOpenChange(false);
+  };
+
+  const handleDeleteTraction = async () => {
+    if (!confirm(`Supprimer toute la traction "${tourName || 'Sans nom'}" sur cette semaine ?`)) return;
+    if (onDeleteTraction) {
+      const ok = await onDeleteTraction();
+      if (ok) onOpenChange(false);
+    } else {
+      // Fallback: delete all entries one by one
+      for (const entry of entries) {
+        await onDeleteEntry(entry.id);
+      }
+      onOpenChange(false);
+    }
+  };
+
+  const addStop = () => {
+    setStops(prev => [...prev, { address: '', label: '' }]);
+  };
+
+  const updateStop = (index: number, field: 'address' | 'label', value: string) => {
+    setStops(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
+  };
+
+  const removeStop = (index: number) => {
+    setStops(prev => prev.filter((_, i) => i !== index));
+  };
+
   const generateDriverText = () => {
     const lines: string[] = [];
     lines.push(`📋 ORDRE DE MISSION`);
+    if (lineReference) lines.push(`Réf. ligne : ${lineReference}`);
+    if (returnLineReference) lines.push(`Réf. retour : ${returnLineReference}`);
     lines.push(`Ligne : ${tourName || 'Non définie'}`);
     if (clientName) lines.push(`Client : ${clientName}`);
     if (driverName) lines.push(`Conducteur : ${driverName}`);
     if (startTime) lines.push(`Prise de service : ${startTime}`);
+    
+    lines.push('');
+    lines.push('📍 ITINÉRAIRE');
     if (originAddress) lines.push(`Départ : ${originAddress}`);
+    stops.filter(s => s.address.trim()).forEach((s, i) => {
+      const label = s.label ? ` (${s.label})` : '';
+      lines.push(`Étape ${i + 1}${label} : ${s.address}`);
+    });
     if (destinationAddress) lines.push(`Arrivée : ${destinationAddress}`);
+    
     if (relayDriverId && showRelay) {
       const rd = drivers.find(d => d.id === relayDriverId);
       const rdName = rd?.firstName && rd?.lastName ? `${rd.firstName} ${rd.lastName}` : rd?.name || '';
-      lines.push(`Relais : ${rdName} à ${relayTime || '?'} (${relayLocation || '?'})`);
+      lines.push('');
+      lines.push(`🔄 RELAIS`);
+      lines.push(`Conducteur relais : ${rdName}`);
+      if (relayTime) lines.push(`Heure : ${relayTime}`);
+      if (relayLocation) lines.push(`Lieu : ${relayLocation}`);
     }
     if (missionOrder) {
       lines.push('');
-      lines.push(`Instructions :`);
+      lines.push(`📝 INSTRUCTIONS`);
       lines.push(missionOrder);
     }
     const text = lines.join('\n');
@@ -154,11 +216,25 @@ export function PlanningRowDetailPanel({
         </SheetHeader>
 
         <div className="space-y-4 mt-6">
+          {/* Ligne / Tour name */}
           <div className="space-y-1.5">
             <Label className="text-xs">Ligne (nom de tournée)</Label>
             <Input value={tourName} onChange={e => setTourName(e.target.value)} placeholder="Nom de la ligne" />
           </div>
 
+          {/* Line references */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Référence ligne</Label>
+              <Input value={lineReference} onChange={e => setLineReference(e.target.value)} placeholder="Réf. aller" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Référence retour</Label>
+              <Input value={returnLineReference} onChange={e => setReturnLineReference(e.target.value)} placeholder="Réf. retour" />
+            </div>
+          </div>
+
+          {/* Client */}
           <div className="space-y-1.5">
             <Label className="text-xs">Client</Label>
             <Select value={clientId || '_none'} onValueChange={v => setClientId(v === '_none' ? '' : v)}>
@@ -170,11 +246,13 @@ export function PlanningRowDetailPanel({
             </Select>
           </div>
 
+          {/* Sector manager */}
           <div className="space-y-1.5">
             <Label className="text-xs">Responsable secteur</Label>
             <Input value={sectorManager} onChange={e => setSectorManager(e.target.value)} placeholder="Nom du responsable" />
           </div>
 
+          {/* Driver */}
           <div className="space-y-1.5">
             <Label className="text-xs">Conducteur titulaire</Label>
             <Select value={driverId || '_none'} onValueChange={v => setDriverId(v === '_none' ? '' : v)}>
@@ -190,6 +268,7 @@ export function PlanningRowDetailPanel({
             </Select>
           </div>
 
+          {/* Vehicle */}
           <div className="space-y-1.5">
             <Label className="text-xs">Véhicule</Label>
             <Select value={vehicleId || '_none'} onValueChange={v => setVehicleId(v === '_none' ? '' : v)}>
@@ -201,20 +280,56 @@ export function PlanningRowDetailPanel({
             </Select>
           </div>
 
+          {/* Time */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1"><Clock className="h-3 w-3" /> Heure prise de service</Label>
             <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
           </div>
 
+          {/* Addresses - Origin */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Adresse de départ</Label>
             <Input value={originAddress} onChange={e => setOriginAddress(e.target.value)} placeholder="Adresse de départ" />
           </div>
+
+          {/* Intermediate stops */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Étapes intermédiaires</Label>
+              <Button type="button" variant="ghost" size="sm" onClick={addStop} className="gap-1 text-xs h-7">
+                <Plus className="h-3 w-3" /> Ajouter
+              </Button>
+            </div>
+            {stops.map((stop, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <div className="flex-1 space-y-1">
+                  <Input
+                    value={stop.address}
+                    onChange={e => updateStop(i, 'address', e.target.value)}
+                    placeholder={`Adresse étape ${i + 1}`}
+                    className="text-xs h-8"
+                  />
+                  <Input
+                    value={stop.label || ''}
+                    onChange={e => updateStop(i, 'label', e.target.value)}
+                    placeholder="Label (optionnel)"
+                    className="text-xs h-7 text-muted-foreground"
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeStop(i)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Destination */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1"><MapPin className="h-3 w-3" /> Adresse d'arrivée</Label>
             <Input value={destinationAddress} onChange={e => setDestinationAddress(e.target.value)} placeholder="Adresse d'arrivée" />
           </div>
 
+          {/* Relay */}
           <div>
             <Button type="button" variant="outline" size="sm" onClick={() => setShowRelay(!showRelay)} className="gap-1 text-xs">
               <UserPlus className="h-3 w-3" />
@@ -248,9 +363,39 @@ export function PlanningRowDetailPanel({
             )}
           </div>
 
+          {/* Mission order */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> Ordre de mission</Label>
             <Textarea value={missionOrder} onChange={e => setMissionOrder(e.target.value)} placeholder="Instructions, références..." rows={4} />
+          </div>
+
+          {/* Delete section */}
+          <div className="pt-4 border-t space-y-2">
+            <Label className="text-xs text-destructive font-medium">Zone de suppression</Label>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 text-xs" onClick={handleDeleteTraction}>
+                <Trash2 className="h-3 w-3" /> Supprimer toute la traction ({entries.length} jours)
+              </Button>
+            </div>
+            {entries.length > 1 && (
+              <div className="space-y-1 mt-2">
+                <p className="text-[10px] text-muted-foreground">Ou supprimer des jours individuels :</p>
+                <div className="flex flex-wrap gap-1">
+                  {entries.map(entry => (
+                    <Button
+                      key={entry.id}
+                      variant="ghost"
+                      size="sm"
+                      className="text-[10px] h-6 px-2 hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteDay(entry.id)}
+                    >
+                      <X className="h-2.5 w-2.5 mr-0.5" />
+                      {new Date(entry.planning_date + 'T00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

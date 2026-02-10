@@ -31,6 +31,11 @@
   parent_tour_id: string | null;
   // Sector manager
   sector_manager: string | null;
+  // Multi-address stops
+  stops: { address: string; label?: string }[];
+  // Line references
+  line_reference: string | null;
+  return_line_reference: string | null;
  }
  
  export interface PlanningEntryInput {
@@ -57,7 +62,10 @@
   relay_time?: string | null;
   parent_tour_id?: string | null;
   sector_manager?: string | null;
- }
+  stops?: { address: string; label?: string }[];
+  line_reference?: string | null;
+  return_line_reference?: string | null;
+}
  
  export interface TourInput {
    tour_name: string;
