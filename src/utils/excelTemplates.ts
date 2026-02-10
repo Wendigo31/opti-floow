@@ -47,84 +47,88 @@
  /**
   * Generate a sample Excel template for planning import
   */
- export function generatePlanningTemplate(): Blob {
-   const headers = [
-     'Client',
-     'Ligne (Origine - Destination)',
-    'Titulaire / Conducteur', 
-    'ODM (Ordre de Mission)',
-    'Horaire début',
-    'Horaire fin',
-   'Responsable de secteur',
+export function generatePlanningTemplate(): Blob {
+  const headers = [
+    'Responsable de secteur',
+    'Client',
+    'Ligne (Origine - Destination)',
+    'Titulaire / Conducteur',
     'Lundi',
     'Mardi',
     'Mercredi',
     'Jeudi',
     'Vendredi',
     'Samedi',
-    'Dimanche'
-   ];
- 
-    const sampleData = [
-     ['Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Livraison urgente', '06h00', '14h00', 'Paul RESPONSABLE', 'Jean DUPONT', 'Jean DUPONT', '', 'Jean DUPONT', 'Jean DUPONT', '', ''],
-     ['Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Palette fragile', '08h00', '18h00', 'Marie CHEF', 'Pierre MARTIN', '', 'Pierre MARTIN', '', 'Pierre MARTIN', '', ''],
-     ['Auchan', 'Lille - Nantes', 'Marie DURAND', 'RDV Quai 5', '05h30', '15h00', 'Paul RESPONSABLE', '', 'Marie DURAND', 'Marie DURAND', 'Marie DURAND', '', '', ''],
-     ['Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00', 'Jean MANAGER', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', '', ''],
-     ['Intermarché', 'Lyon - Paris', 'Sophie PETIT', 'Retour à vide possible', '04h00', '12h00', 'Marie CHEF', '', '', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', ''],
-    ];
- 
-   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-   
-   // Set column widths
-   ws['!cols'] = [
-     { wch: 20 }, // Client
-     { wch: 30 }, // Ligne
-     { wch: 20 }, // Titulaire
+    'Dimanche soir',
+    'ODM (Ordre de Mission)',
+    'Horaire début',
+    'Horaire fin',
+  ];
+
+  const sampleData = [
+    ['Paul RESPONSABLE', 'Carrefour', 'Paris - Lyon', 'Jean DUPONT', 'Jean DUPONT', 'Jean DUPONT', '', 'Jean DUPONT', 'Jean DUPONT', '', '', 'Livraison urgente', '06h00', '14h00'],
+    ['Marie CHEF', 'Leclerc', 'Marseille - Bordeaux', 'Pierre MARTIN', 'Pierre MARTIN', '', 'Pierre MARTIN', '', 'Pierre MARTIN', '', '', 'Palette fragile', '08h00', '18h00'],
+    ['Paul RESPONSABLE', 'Auchan', 'Lille - Nantes', 'Marie DURAND', '', 'Marie DURAND', 'Marie DURAND', 'Marie DURAND', '', '', '', 'RDV Quai 5', '05h30', '15h00'],
+    ['Jean MANAGER', 'Metro', 'Toulouse - Strasbourg', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', 'Lucas BERNARD', '', 'Lucas BERNARD', 'Frigo -18°C', '22h00', '08h00'],
+    ['Marie CHEF', 'Intermarché', 'Lyon - Paris', 'Sophie PETIT', '', '', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', 'Sophie PETIT', '', 'Retour à vide possible', '04h00', '12h00'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+
+  ws['!cols'] = [
+    { wch: 22 }, // Responsable de secteur
+    { wch: 20 }, // Client
+    { wch: 30 }, // Ligne
+    { wch: 20 }, // Titulaire
+    { wch: 15 }, // Lundi
+    { wch: 15 }, // Mardi
+    { wch: 15 }, // Mercredi
+    { wch: 15 }, // Jeudi
+    { wch: 15 }, // Vendredi
+    { wch: 15 }, // Samedi
+    { wch: 15 }, // Dimanche soir
     { wch: 50 }, // ODM
     { wch: 12 }, // Horaire début
     { wch: 12 }, // Horaire fin
-   { wch: 22 }, // Responsable de secteur
-     { wch: 8 },  // Lundi
-     { wch: 8 },  // Mardi
-     { wch: 10 }, // Mercredi
-     { wch: 8 },  // Jeudi
-     { wch: 10 }, // Vendredi
-     { wch: 8 },  // Samedi
-     { wch: 10 }, // Dimanche
-   ];
- 
-   const wb = XLSX.utils.book_new();
-   XLSX.utils.book_append_sheet(wb, ws, 'Planning');
- 
-   // Add instructions sheet
-   const instructionsData = [
-     ['INSTRUCTIONS D\'UTILISATION'],
-     [''],
-     ['Colonnes obligatoires:'],
-     ['- Client: Nom du client'],
-     ['- Ligne: Format "Ville Origine - Ville Destination"'],
-     ['- Titulaire: Nom du conducteur (doit correspondre à un conducteur existant)'],
-     [''],
-     ['Colonnes optionnelles:'],
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Planning');
+
+  const instructionsData = [
+    ['INSTRUCTIONS D\'UTILISATION'],
+    [''],
+    ['Colonnes obligatoires:'],
+    ['- Client: Nom du client'],
+    ['- Ligne: Format "Ville Origine - Ville Destination"'],
+    [''],
+    ['Colonnes recommandées:'],
+    ['- Responsable de secteur: Pour filtrer les tractions par responsable'],
+    ['- Titulaire: Nom du conducteur titulaire de la ligne'],
+    [''],
+    ['Colonnes optionnelles:'],
     ['- ODM: Ordre de mission ou notes'],
     ['- Horaire début: Heure de départ (format: 06h00 ou 06:00)'],
     ['- Horaire fin: Heure d\'arrivée (format: 14h00 ou 14:00)'],
-   ['- Responsable de secteur: Nom du responsable pour filtrer les tractions'],
-     ['- Jours de la semaine: Indiquer le nom et prénom du conducteur pour chaque jour travaillé (laisser vide si repos)'],
-     [''],
-     ['Conseils:'],
+    [''],
+    ['Jours de la semaine (Lundi à Dimanche soir):'],
+    ['- Indiquer le nom du conducteur affecté ce jour-là'],
+    ['- Laisser vide si la ligne ne tourne pas ce jour'],
+    ['- "Dimanche soir" correspond au départ du dimanche soir'],
+    [''],
+    ['Conseils:'],
     ['- Les conducteurs doivent être créés avant l\'import'],
     ['- Les clients seront automatiquement créés s\'ils n\'existent pas'],
     ['- Si aucun véhicule n\'est sélectionné, les missions apparaîtront dans "Non assigné"'],
-   ];
- 
-   const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
-   wsInstructions['!cols'] = [{ wch: 60 }];
-   XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
- 
-   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-   return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
- }
+  ];
+
+  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+  wsInstructions['!cols'] = [{ wch: 70 }];
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
+
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
  
  /**
   * Download a blob as a file

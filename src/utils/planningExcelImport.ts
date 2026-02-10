@@ -49,6 +49,7 @@ function getDayIdxFromHeader(header: string): number | null {
   if (h.includes('vendredi')) return 4;
   if (h.includes('samedi')) return 5;
   if (h.includes('dimanche')) return 6;
+  if (h.includes('dim') && h.includes('soir')) return 6;
 
   // Abbreviations FR
   if (/\blun\b/.test(h)) return 0;
@@ -273,21 +274,20 @@ function extractDayCellText(cellValue: string | undefined): string {
      
      // Determine which days are active and who drives each day
      // Always import Mon..Sat. Sunday is intentionally excluded.
-     const recurring_days: number[] = [0, 1, 2, 3, 4, 5];
+     const recurring_days: number[] = [0, 1, 2, 3, 4, 5, 6];
     const day_cells: Record<number, string> = {};
      
-     // Parse raw day cell text from Excel day columns (notes/placeholders)
-     for (const { colIdx, dayIdx } of dayColumns) {
-       if (dayIdx === 6) continue; // never import Sunday
-       const raw = row[colIdx];
-       if (!raw) continue;
-       const v = extractDayCellText(raw.toString());
-        if (!v) continue;
-        // "X" means the line runs that day but no specific info — skip it (leave cell empty)
-        if (v.toLowerCase() === 'x') {
-          continue;
-        }
-        day_cells[dayIdx] = v;
+      // Parse raw day cell text from Excel day columns (notes/placeholders)
+      for (const { colIdx, dayIdx } of dayColumns) {
+        const raw = row[colIdx];
+        if (!raw) continue;
+        const v = extractDayCellText(raw.toString());
+         if (!v) continue;
+         // "X" means the line runs that day but no specific info — skip it (leave cell empty)
+         if (v.toLowerCase() === 'x') {
+           continue;
+         }
+         day_cells[dayIdx] = v;
      }
      
      // Only add if we have meaningful data
@@ -388,7 +388,7 @@ function extractDayCellText(cellValue: string | undefined): string {
      const day_notes: Record<number, string> = {};
      for (const [dayIdxRaw, text] of Object.entries(entry.day_cells || {})) {
        const dayIdx = Number(dayIdxRaw);
-       if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 5) continue;
+       if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 6) continue;
        const v = (text || '').toString().trim();
        if (!v) continue;
        day_notes[dayIdx] = v;
@@ -399,7 +399,7 @@ function extractDayCellText(cellValue: string | undefined): string {
       vehicle_id: defaultVehicleId || undefined,
        client_id,
        driver_id,
-        recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4, 5],
+        recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4, 5, 6],
        is_all_year: false,
        start_date: startDate,
        start_time: entry.start_time,
