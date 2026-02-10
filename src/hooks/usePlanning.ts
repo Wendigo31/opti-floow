@@ -68,14 +68,27 @@ export interface ExcelTourInput {
    useEffect(() => { entriesRef.current = entries; }, [entries]);
 
    const fetchEntries = useCallback(async (startDate?: string, endDate?: string): Promise<void> => {
-     if (fetchInProgressRef.current) return;
-     
-     if (!authUserId || !licenseId) {
+     // If a fetch is already running, skip but don't block forever
+     if (fetchInProgressRef.current) {
+       console.log('[Planning] fetchEntries skipped (already in progress)');
        return;
      }
+      
+      if (!authUserId || !licenseId) {
+        console.log('[Planning] fetchEntries skipped (no auth/license)', { authUserId: !!authUserId, licenseId: !!licenseId });
+        return;
+      }
  
-     fetchInProgressRef.current = true;
-     setLoading(true);
+      fetchInProgressRef.current = true;
+      setLoading(true);
+
+      // Safety: auto-release guard after 30s to prevent permanent lock
+      const guardTimeout = setTimeout(() => {
+        if (fetchInProgressRef.current) {
+          console.warn('[Planning] fetchInProgressRef auto-released after 30s');
+          fetchInProgressRef.current = false;
+        }
+      }, 30000);
  
      try {
       let query = supabase
@@ -93,9 +106,11 @@ export interface ExcelTourInput {
          query = query.lte('planning_date', endDate);
        }
  
-       const { data, error } = await query;
- 
-       if (error) throw error;
+        const { data, error } = await query;
+  
+        if (error) throw error;
+
+        console.log(`[Planning] fetchEntries got ${data?.length || 0} entries`, { startDate, endDate });
  
        const mappedEntries: PlanningEntry[] = (data || []).map(row => ({
          id: row.id,
@@ -128,13 +143,14 @@ export interface ExcelTourInput {
  
        setEntries(mappedEntries);
        entriesRef.current = mappedEntries;
-     } catch (error) {
-       console.error('Error fetching planning entries:', error);
-       toast.error('Erreur lors du chargement du planning');
-     } finally {
-       setLoading(false);
-       fetchInProgressRef.current = false;
-     }
+      } catch (error) {
+        console.error('Error fetching planning entries:', error);
+        toast.error('Erreur lors du chargement du planning');
+      } finally {
+        setLoading(false);
+        fetchInProgressRef.current = false;
+        clearTimeout(guardTimeout);
+      }
    }, [authUserId, licenseId]);
  
   // Store fetchEntries in ref to avoid subscription churn

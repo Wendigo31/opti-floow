@@ -5,6 +5,8 @@ interface ImportProgress {
   total: number;
   done: number;
   label: string;
+  /** Incremented each time an import finishes (success or fail) */
+  completedAt: number;
 }
 
 interface PlanningImportContextType {
@@ -31,6 +33,7 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
     total: 0,
     done: 0,
     label: '',
+    completedAt: 0,
   });
   const runningRef = useRef(false);
 
@@ -39,7 +42,7 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
       if (runningRef.current) return;
       runningRef.current = true;
 
-      setProgress({ active: true, total, done: 0, label });
+      setProgress({ active: true, total, done: 0, label, completedAt: 0 });
 
       // Run in background — not awaited
       importFn((done, tot) => {
@@ -53,9 +56,9 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
         })
         .finally(() => {
           // Keep the "done" state visible for a moment
-          setProgress((p) => ({ ...p, done: p.total }));
+          setProgress((p) => ({ ...p, done: p.total, completedAt: Date.now() }));
           setTimeout(() => {
-            setProgress({ active: false, total: 0, done: 0, label: '' });
+            setProgress({ active: false, total: 0, done: 0, label: '', completedAt: 0 });
             runningRef.current = false;
           }, 2000);
         });
