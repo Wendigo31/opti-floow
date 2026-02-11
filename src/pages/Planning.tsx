@@ -553,6 +553,8 @@ export default function Planning() {
                           ? 'bg-amber-100 dark:bg-amber-900/40'
                           : cellDriverType === 'cdd'
                           ? 'bg-purple-100 dark:bg-purple-900/40'
+                          : cellDriverType === 'autre'
+                          ? 'bg-gray-100 dark:bg-gray-900/40'
                           : '';
 
                         return (
@@ -573,9 +575,10 @@ export default function Planning() {
                                     cellDriverType === 'joker' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
                                     cellDriverType === 'interim' && 'bg-amber-500/10 text-amber-700 border-amber-500/30',
                                     cellDriverType === 'cdd' && 'bg-purple-500/10 text-purple-700 border-purple-500/30',
+                                    cellDriverType === 'autre' && 'bg-gray-500/10 text-gray-700 border-gray-500/30',
                                     cellDriverType === 'cdi' && 'bg-blue-500/10 text-blue-700 border-blue-500/30'
                                   )}>
-                                    {cellDriverType === 'joker' ? 'Joker' : cellDriverType === 'interim' ? 'Intérim' : cellDriverType === 'cdd' ? 'CDD' : cellDriverType === 'cdi' ? 'CDI' : cellDriverType}
+                                    {cellDriverType === 'joker' ? 'Joker' : cellDriverType === 'interim' ? 'Intérim' : cellDriverType === 'cdd' ? 'CDD' : cellDriverType === 'autre' ? 'Autre' : cellDriverType === 'cdi' ? 'CDI' : cellDriverType}
                                   </Badge>
                                 )}
                               </div>
