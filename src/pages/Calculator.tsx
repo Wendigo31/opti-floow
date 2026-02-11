@@ -1045,47 +1045,109 @@ export default function Calculator() {
             </div>
           </div>
 
-          {/* Driver Selection */}
+          {/* Driver Selection - Compact */}
           <div className="glass-card p-5 opacity-0 animate-slide-up" style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                 <Users className="w-5 h-5 text-purple-400" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-lg font-semibold text-foreground">Conducteurs</h2>
                 <p className="text-xs text-muted-foreground">{selectedDriverIds.length} sélectionné(s)</p>
               </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {drivers.map(driver => {
-                const isSelected = selectedDriverIds.includes(driver.id);
-                return (
-                  <button 
-                    key={driver.id} 
-                    onClick={() => toggleDriver(driver.id)} 
-                    className={cn(
-                      "p-3 rounded-lg border transition-all text-left relative",
-                      isSelected 
-                        ? "border-primary bg-primary/10" 
-                        : "border-border/50 bg-muted/30 hover:bg-muted/50"
-                    )}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
-                      </div>
-                    )}
-                    <p className="font-medium text-sm text-foreground">{driver.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatCurrency(driver.baseSalary)}/mois</p>
-                  </button>
-                );
-              })}
-              {drivers.length === 0 && (
-                <p className="text-muted-foreground col-span-full text-center py-3 text-sm">
-                  Aucun conducteur configuré.
-                </p>
+              {selectedDriverIds.length > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedDriverIds([])}>
+                  Tout retirer
+                </Button>
               )}
             </div>
+            
+            {drivers.length === 0 ? (
+              <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">Aucun conducteur configuré.</p>
+                <Link to="/drivers" className="text-xs text-primary hover:underline mt-1 inline-block">Ajouter un conducteur</Link>
+              </div>
+            ) : (
+              <>
+                {/* Dropdown to add drivers */}
+                <Select
+                  value=""
+                  onValueChange={(id) => {
+                    if (!selectedDriverIds.includes(id)) {
+                      setSelectedDriverIds([...selectedDriverIds, id]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full h-9 text-sm">
+                    <SelectValue placeholder="+ Ajouter un conducteur..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drivers
+                      .filter(d => !selectedDriverIds.includes(d.id))
+                      .map(d => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name} — {d.contractType?.toUpperCase() || 'CDI'}
+                        </SelectItem>
+                      ))}
+                    {drivers.filter(d => !selectedDriverIds.includes(d.id)).length === 0 && (
+                      <SelectItem value="__none__" disabled>Tous les conducteurs sont sélectionnés</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                {/* Selected drivers compact list with employer cost */}
+                {selectedDrivers.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {selectedDrivers.map(driver => {
+                      const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
+                      const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
+                      const dailyBonuses = ((driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0)) / driver.workingDaysPerMonth;
+                      const dailyAllowances = (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
+                      const totalDaily = dailyRate + dailyBonuses + dailyAllowances;
+                      
+                      return (
+                        <div key={driver.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 group">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground truncate">{driver.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium shrink-0">
+                                {driver.contractType?.toUpperCase() || 'CDI'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                              <span>{formatCurrency(monthlyEmployerCost)}/mois chargé</span>
+                              <span className="text-primary font-medium">{formatCurrency(totalDaily)}/jour</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleDriver(driver.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            title="Retirer"
+                          >
+                            <span className="text-xs">✕</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {/* Total driver cost summary */}
+                    {selectedDrivers.length > 1 && (
+                      <div className="flex justify-between items-center pt-1.5 border-t border-border/30 text-xs">
+                        <span className="text-muted-foreground">Total conducteurs/jour</span>
+                        <span className="font-semibold text-primary">
+                          {formatCurrency(selectedDrivers.reduce((sum, d) => {
+                            const mc = d.baseSalary * (1 + d.patronalCharges / 100);
+                            const dr = mc / d.workingDaysPerMonth;
+                            const db = ((d.nightBonus || 0) + (d.sundayBonus || 0) + (d.seniorityBonus || 0)) / d.workingDaysPerMonth;
+                            const da = (d.mealAllowance || 0) + (d.overnightAllowance || 0);
+                            return sum + dr + db + da;
+                          }, 0))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
