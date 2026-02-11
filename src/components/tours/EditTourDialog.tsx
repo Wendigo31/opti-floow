@@ -14,7 +14,10 @@ import {
   Euro,
   Calculator,
   RefreshCw,
-  Plus
+  Plus,
+  Utensils,
+  Moon,
+  Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +39,7 @@ import type { SavedTour, SaveTourInput } from '@/types/savedTour';
 import type { Driver } from '@/types/index';
 import type { Vehicle } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
+import { calculateTourCosts } from '@/utils/tourCostCalculation';
 
 interface Client {
   id: string;
@@ -107,72 +111,21 @@ export function EditTourDialog({
 
   // ── Live cost recalculation ──
   const calculatedCosts = useMemo(() => {
-    const distance = tour.distance_km;
-    const tvaRate = settings.tvaRate || 20;
-
-    const fuelPriceHT = appVehicleParams.fuelPriceIsHT
-      ? appVehicleParams.fuelPriceHT
-      : appVehicleParams.fuelPriceHT / (1 + tvaRate / 100);
-    const adBluePriceHT = appVehicleParams.adBluePriceIsHT
-      ? appVehicleParams.adBluePriceHT
-      : appVehicleParams.adBluePriceHT / (1 + tvaRate / 100);
-
-    // Multi-vehicle: average consumption across selected vehicles, or fallback to app defaults
     const selectedVehicles = vehicles.filter(v => selectedVehicleIds.includes(v.id));
-    let fuelConsumption = appVehicleParams.fuelConsumption;
-    let adBlueConsumption = appVehicleParams.adBlueConsumption;
-    if (selectedVehicles.length > 0) {
-      // For multi-relay: each vehicle covers a segment. Use average consumption as approximation.
-      fuelConsumption = selectedVehicles.reduce((sum, v) => sum + v.fuelConsumption, 0) / selectedVehicles.length;
-      adBlueConsumption = selectedVehicles.reduce((sum, v) => sum + v.adBlueConsumption, 0) / selectedVehicles.length;
-    }
+    const selectedDriversList = drivers.filter(d => selectedDriverIds.includes(d.id));
+    const selectedTrailer = trailers.find(t => t.id === trailerId) || null;
 
-    const fuelCost = (distance / 100) * fuelConsumption * fuelPriceHT;
-    const adBlueCost = (distance / 100) * adBlueConsumption * adBluePriceHT;
-
-    // Tolls: keep original (no route recalculation)
-    const tollCost = tour.toll_cost;
-
-    // Driver cost: sum of each selected driver's daily employer cost
-    let driverCost = 0;
-    for (const dId of selectedDriverIds) {
-      const driver = drivers.find(d => d.id === dId);
-      if (driver) {
-        const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
-        const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
-        driverCost += dailyRate;
-      }
-    }
-
-    // Structure cost: daily charges
-    const structureCost = charges.reduce((total, charge) => {
-      const amountHT = charge.isHT ? charge.amount : charge.amount / (1 + tvaRate / 100);
-      let dailyAmount = 0;
-      switch (charge.periodicity) {
-        case 'yearly':
-          dailyAmount = amountHT / settings.workingDaysPerYear;
-          break;
-        case 'monthly':
-          dailyAmount = amountHT / settings.workingDaysPerMonth;
-          break;
-        case 'daily':
-          dailyAmount = amountHT;
-          break;
-      }
-      return total + dailyAmount;
-    }, 0);
-
-    // Vehicle cost: sum of all selected vehicles (leasing + insurance daily)
-    let vehicleCost = 0;
-    for (const v of selectedVehicles) {
-      vehicleCost += (v.monthlyLeasing / settings.workingDaysPerMonth) +
-        (v.insuranceCost / settings.workingDaysPerYear);
-    }
-
-    const totalCost = fuelCost + adBlueCost + tollCost + driverCost + structureCost + vehicleCost;
-
-    return { fuelCost, adBlueCost, tollCost, driverCost, structureCost, vehicleCost, totalCost };
-  }, [tour.distance_km, tour.toll_cost, selectedVehicleIds, selectedDriverIds, vehicles, drivers, charges, settings, appVehicleParams]);
+    return calculateTourCosts({
+      distance: tour.distance_km,
+      tollCost: tour.toll_cost,
+      selectedDrivers: selectedDriversList,
+      selectedVehicles,
+      selectedTrailer,
+      charges,
+      settings,
+      appVehicleParams: appVehicleParams,
+    });
+  }, [tour.distance_km, tour.toll_cost, selectedVehicleIds, selectedDriverIds, trailerId, vehicles, drivers, trailers, charges, settings, appVehicleParams]);
 
   // Derived financials
   const profit = revenue - calculatedCosts.totalCost;
@@ -523,14 +476,38 @@ export function EditTourDialog({
                     <span className="font-medium">{formatCurrency(calculatedCosts.driverCost)}</span>
                   </div>
                   <div className="flex justify-between p-2 bg-background rounded">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Moon className="w-3 h-3" />
+                      Primes
+                    </span>
+                    <span className="font-medium">{formatCurrency(calculatedCosts.driverBonuses)}</span>
+                  </div>
+                  <div className="flex justify-between p-2 bg-background rounded">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Utensils className="w-3 h-3" />
+                      Indemnités
+                    </span>
+                    <span className="font-medium">{formatCurrency(calculatedCosts.driverAllowances)}</span>
+                  </div>
+                  <div className="flex justify-between p-2 bg-background rounded">
                     <span className="text-muted-foreground">Structure</span>
                     <span className="font-medium">{formatCurrency(calculatedCosts.structureCost)}</span>
                   </div>
                   <div className="flex justify-between p-2 bg-background rounded">
-                    <span className="text-muted-foreground">Véhicule(s)</span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Wrench className="w-3 h-3" />
+                      Véhicule(s)
+                    </span>
                     <span className="font-medium">{formatCurrency(calculatedCosts.vehicleCost)}</span>
                   </div>
                   <div className="flex justify-between p-2 bg-background rounded">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Container className="w-3 h-3" />
+                      Remorque
+                    </span>
+                    <span className="font-medium">{formatCurrency(calculatedCosts.trailerCost)}</span>
+                  </div>
+                  <div className="flex justify-between p-2 bg-background rounded col-span-2">
                     <span className="text-muted-foreground">Péages</span>
                     <span className="font-medium">{formatCurrency(calculatedCosts.tollCost)}</span>
                   </div>

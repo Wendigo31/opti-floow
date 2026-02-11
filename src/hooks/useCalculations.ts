@@ -27,10 +27,19 @@ export function useCalculations(
 
     // Driver costs - sum of all selected drivers
     let driverCost = 0;
+    let driverBonuses = 0;
+    let driverAllowances = 0;
     for (const driver of selectedDrivers) {
       const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
       const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
       driverCost += dailyRate;
+
+      // Bonuses (night, sunday, seniority) prorated daily
+      const monthlyBonuses = (driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0);
+      driverBonuses += monthlyBonuses / driver.workingDaysPerMonth;
+
+      // Allowances per day (meal + overnight)
+      driverAllowances += (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
     }
 
     // Structure costs (fixed charges spread over one trip) - convert to HT
@@ -53,7 +62,7 @@ export function useCalculations(
     const structureCost = dailyCharges;
 
     // Total calculations (all in HT)
-    const totalCost = fuelCost + adBlueCost + tollsHT + driverCost + structureCost;
+    const totalCost = fuelCost + adBlueCost + tollsHT + driverCost + driverBonuses + driverAllowances + structureCost;
     const costPerKm = trip.distance > 0 ? totalCost / trip.distance : 0;
 
     // Suggested price based on target margin
@@ -87,7 +96,11 @@ export function useCalculations(
       adBlue: adBlueCost,
       tolls: tollsHT,
       driverCost,
+      driverBonuses,
+      driverAllowances,
       structureCost,
+      vehicleCost: 0, // Vehicle costs are calculated separately in tour context
+      trailerCost: 0, // Trailer costs are calculated separately in tour context
       totalCost,
       costPerKm,
       suggestedPrice,

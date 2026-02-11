@@ -15,7 +15,11 @@ const COLORS = [
   'hsl(142, 76%, 36%)',   // adBlue - green
   'hsl(38, 92%, 50%)',    // tolls - warning/orange
   'hsl(280, 67%, 55%)',   // driver - purple
+  'hsl(320, 70%, 50%)',   // bonuses - pink
+  'hsl(25, 80%, 50%)',    // allowances - amber
   'hsl(0, 72%, 51%)',     // structure - destructive
+  'hsl(210, 60%, 45%)',   // vehicle - steel blue
+  'hsl(170, 60%, 40%)',   // trailer - teal
 ];
 
 export function CostChart({ costs, chartType, onChartTypeChange }: CostChartProps) {
@@ -24,7 +28,11 @@ export function CostChart({ costs, chartType, onChartTypeChange }: CostChartProp
     { name: 'AdBlue', value: costs.adBlue, color: COLORS[1] },
     { name: 'Péages', value: costs.tolls, color: COLORS[2] },
     { name: 'Conducteur', value: costs.driverCost, color: COLORS[3] },
-    { name: 'Structure', value: costs.structureCost, color: COLORS[4] },
+    { name: 'Primes', value: costs.driverBonuses || 0, color: COLORS[4] },
+    { name: 'Indemnités', value: costs.driverAllowances || 0, color: COLORS[5] },
+    { name: 'Structure', value: costs.structureCost, color: COLORS[6] },
+    { name: 'Véhicule', value: costs.vehicleCost || 0, color: COLORS[7] },
+    { name: 'Remorque', value: costs.trailerCost || 0, color: COLORS[8] },
   ].filter(item => item.value > 0);
 
   const formatValue = (value: number) => `${value.toFixed(2)} €`;
