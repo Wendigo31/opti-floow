@@ -56,7 +56,11 @@ export interface CostBreakdown {
   adBlue: number;
   tolls: number;
   driverCost: number;
+  driverBonuses: number;
+  driverAllowances: number;
   structureCost: number;
+  vehicleCost: number;
+  trailerCost: number;
   totalCost: number;
   costPerKm: number;
   suggestedPrice: number;

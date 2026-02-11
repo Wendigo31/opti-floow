@@ -111,6 +111,9 @@ export default function Dashboard() {
     
     return {
       ...aggregated,
+      driverBonuses: 0,
+      driverAllowances: 0,
+      trailerCost: 0,
       profitMargin,
       costPerKm,
       suggestedPrice,
@@ -527,8 +530,12 @@ export default function Dashboard() {
                 { label: 'AdBlue', value: displayCosts.adBlue, color: 'text-success' },
                 { label: 'Péages', value: displayCosts.tolls, color: 'text-warning' },
                 { label: 'Conducteur', value: displayCosts.driverCost, color: 'text-purple-400' },
+                { label: 'Primes', value: displayCosts.driverBonuses || 0, color: 'text-pink-400' },
+                { label: 'Indemnités', value: displayCosts.driverAllowances || 0, color: 'text-amber-500' },
                 { label: 'Structure', value: displayCosts.structureCost, color: 'text-destructive' },
-              ].map((item) => (
+                { label: 'Véhicule', value: displayCosts.vehicleCost || 0, color: 'text-blue-500' },
+                { label: 'Remorque', value: displayCosts.trailerCost || 0, color: 'text-teal-500' },
+              ].filter(item => item.value > 0).map((item) => (
                 <div key={item.label} className="text-center p-4 rounded-lg bg-muted/30">
                   <p className="text-sm text-muted-foreground mb-1">{item.label}</p>
                   <p className={`text-xl font-bold ${item.color}`}>{formatCurrency(item.value)}</p>
