@@ -78,8 +78,8 @@ export default function Tours() {
   const { clients } = useCloudClients();
   const { vehicles } = useCloudVehicles();
   const { trailers } = useCloudTrailers();
-  const { cdiDrivers, cddDrivers, interimDrivers } = useCloudDrivers();
-  const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers];
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers } = useCloudDrivers();
+  const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers];
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');

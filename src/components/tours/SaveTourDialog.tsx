@@ -312,7 +312,16 @@ export function SaveTourDialog({
                 <p className="text-sm text-muted-foreground">Aucun conducteur configuré</p>
               ) : (
                 <div className="border rounded-lg p-2 space-y-1 max-h-32 overflow-y-auto">
-                  {drivers.map((driver) => (
+                  {drivers.map((driver) => {
+                    const typeLabel = driver.contractType === 'interim' ? 'Intérim'
+                      : driver.contractType === 'cdd' ? 'CDD'
+                      : driver.contractType === 'autre' ? 'Autre'
+                      : 'CDI';
+                    const typeColor = driver.contractType === 'interim' ? 'bg-amber-500/10 text-amber-700 border-amber-500/30'
+                      : driver.contractType === 'cdd' ? 'bg-blue-500/10 text-blue-700 border-blue-500/30'
+                      : driver.contractType === 'autre' ? 'bg-muted text-muted-foreground border-border'
+                      : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30';
+                    return (
                     <div 
                       key={driver.id} 
                       className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
@@ -328,11 +337,15 @@ export function SaveTourDialog({
                       />
                       <User className="w-4 h-4 text-muted-foreground" />
                       <span className="flex-1 text-sm">{driver.name}</span>
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${typeColor}`}>
+                        {typeLabel}
+                      </Badge>
                       {selectedDriverIds.includes(driver.id) && (
                         <Check className="w-4 h-4 text-primary" />
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               
