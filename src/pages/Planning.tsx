@@ -89,7 +89,7 @@ export default function Planning() {
     } catch { return null; }
   }, [licenseId]);
 
-  const handleQuickCreateDriver = useCallback(async (name: string) => {
+  const handleQuickCreateDriver = useCallback(async (name: string, driverType: string = 'cdi') => {
     // Parse "LASTNAME FIRSTNAME" into parts
     const parts = name.trim().split(/\s+/);
     const lastName = parts[0] || name;
@@ -110,7 +110,7 @@ export default function Planning() {
       nightBonus: 0,
       seniorityBonus: 0,
     };
-    const ok = await createDriver(driver, 'cdi');
+    const ok = await createDriver(driver, (driverType as 'cdi' | 'cdd' | 'interim'));
     if (ok) {
       fetchDrivers();
     }
