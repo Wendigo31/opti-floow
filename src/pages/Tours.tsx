@@ -7,6 +7,7 @@ import {
   StarOff,
   Trash2,
   Eye,
+  Pencil,
   MapPin,
   Euro,
   TrendingUp,
@@ -50,9 +51,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useClients as useCloudClients } from '@/hooks/useClients';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useCloudDrivers } from '@/hooks/drivers';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
+import { EditTourDialog } from '@/components/tours/EditTourDialog';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
@@ -65,17 +70,22 @@ import jsPDF from 'jspdf';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
 export default function Tours() {
-  const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour } = useSavedTours();
+  const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour, updateTour } = useSavedTours();
   const { planType } = useLicense();
   const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
   const { canViewPricing, canViewFinancialData, canExportFinancialReports } = useRolePermissions();
   const { clients } = useCloudClients();
+  const { vehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
+  const { cdiDrivers, cddDrivers, interimDrivers } = useCloudDrivers();
+  const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers];
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterFavorite, setFilterFavorite] = useState<'all' | 'favorites'>('all');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [selectedTour, setSelectedTour] = useState<SavedTour | null>(null);
+  const [editingTour, setEditingTour] = useState<SavedTour | null>(null);
   const [exporting, setExporting] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   
@@ -586,6 +596,15 @@ export default function Tours() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        onClick={() => setEditingTour(tour)}
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => setSelectedTour(tour)}
                       >
                         <Eye className="w-4 h-4" />
@@ -773,6 +792,20 @@ export default function Tours() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Tour Dialog */}
+      {editingTour && (
+        <EditTourDialog
+          open={!!editingTour}
+          onOpenChange={(open) => !open && setEditingTour(null)}
+          tour={editingTour}
+          onUpdate={updateTour}
+          clients={clients}
+          drivers={allDrivers}
+          vehicles={vehicles}
+          trailers={trailers}
+        />
+      )}
     </div>
   );
 }
