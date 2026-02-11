@@ -445,6 +445,7 @@ export default function Planning() {
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           entries={selectedGroup.entries}
+          allEntries={entries}
           clients={clients}
           drivers={allDrivers}
           vehicles={vehicles.filter(v => v.isActive && v.type === 'tracteur')}
