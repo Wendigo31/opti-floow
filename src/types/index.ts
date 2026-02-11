@@ -6,6 +6,7 @@ export interface Driver {
   lastName?: string;
   phone?: string;
   email?: string;
+  hireDate?: string; // ISO date format (YYYY-MM-DD)
   baseSalary: number;
   hourlyRate: number; // Taux horaire brut
   hoursPerDay: number; // Heures travaillées par jour
