@@ -7,7 +7,7 @@ export function generateDriversTemplate(): Blob {
     const headers = [
       'Nom Prénom',
       'Téléphone',
-      'Fonction',
+      'Type (VL/PL/SPL/TP)',
       'Type de contrat',
       'Horaire',
       'Service/Département',
@@ -15,11 +15,11 @@ export function generateDriversTemplate(): Blob {
     ];
   
     const sampleData = [
-      ['DUPONT Jean', '06 12 34 56 78', 'Chauffeur SPL', 'CDI', 'Jour', 'Transport', 'jean.dupont@email.com'],
-      ['MARTIN Pierre', '06 98 76 54 32', 'Conducteur Poids Lourd', 'CDI', 'Nuit', 'Livraison', 'pierre.martin@email.com'],
-      ['DURAND Marie', '07 11 22 33 44', 'Chauffeur SPL', 'CDD', 'Jour', 'Transport', 'marie.durand@email.com'],
-      ['BERNARD Lucas', '06 55 66 77 88', 'Chauffeur Routier', 'CDI', 'Nuit', 'Transport', 'lucas.bernard@email.com'],
-      ['PETIT Sophie', '06 44 33 22 11', 'Conducteur Super Poids Lourd', 'CDD', 'Jour', 'Logistique', ''],
+      ['DUPONT Jean', '06 12 34 56 78', 'SPL', 'CDI', 'Jour', 'Transport', 'jean.dupont@email.com'],
+      ['MARTIN Pierre', '06 98 76 54 32', 'PL', 'CDI', 'Nuit', 'Livraison', 'pierre.martin@email.com'],
+      ['DURAND Marie', '07 11 22 33 44', 'SPL', 'CDD', 'Jour', 'Transport', 'marie.durand@email.com'],
+      ['BERNARD Lucas', '06 55 66 77 88', 'TP', 'CDI', 'Nuit', 'Transport', 'lucas.bernard@email.com'],
+      ['PETIT Sophie', '06 44 33 22 11', 'VL', 'CDD', 'Jour', 'Logistique', ''],
     ];
   
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
@@ -28,7 +28,7 @@ export function generateDriversTemplate(): Blob {
     ws['!cols'] = [
       { wch: 25 }, // Nom Prénom
       { wch: 18 }, // Téléphone
-      { wch: 25 }, // Fonction
+      { wch: 20 }, // Type
       { wch: 15 }, // Type de contrat
       { wch: 12 }, // Horaire
       { wch: 20 }, // Service
