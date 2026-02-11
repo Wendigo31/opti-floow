@@ -7,6 +7,7 @@ export interface Driver {
   phone?: string;
   email?: string;
   hireDate?: string; // ISO date format (YYYY-MM-DD)
+  contractType?: 'cdi' | 'cdd' | 'interim' | 'autre'; // Type de contrat
   baseSalary: number;
   hourlyRate: number; // Taux horaire brut
   hoursPerDay: number; // Heures travaillées par jour
@@ -18,6 +19,9 @@ export interface Driver {
   nightBonus: number; // Prime nuit
   seniorityBonus: number; // Prime ancienneté
   unloadingBonus: number; // Prime décaissage
+  interimAgency?: string;
+  interimHourlyRate?: number;
+  interimCoefficient?: number;
 }
 
 export interface FixedCharge {

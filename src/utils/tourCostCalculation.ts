@@ -64,18 +64,36 @@ export function calculateTourCosts(params: {
   let driverAllowances = 0;
 
   for (const driver of selectedDrivers) {
-    // Base daily employer cost
-    const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
-    const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
-    driverCost += dailyRate;
+    const isInterim = driver.contractType === 'interim';
+    const isAutre = driver.contractType === 'autre';
 
-    // Daily bonuses (night, sunday, seniority) — prorated per working day
-    const monthlyBonuses = (driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0);
-    const dailyBonuses = monthlyBonuses / driver.workingDaysPerMonth;
-    driverBonuses += dailyBonuses;
+    if (isAutre) {
+      // "Autre" type drivers have no cost (they're not real drivers)
+      continue;
+    }
 
-    // Allowances per day (meal + overnight)
-    driverAllowances += (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
+    if (isInterim) {
+      // Interim: hourly rate × coefficient × hours per day
+      const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
+      const coefficient = (driver as any).interimCoefficient || 1.85;
+      const hoursPerDay = driver.hoursPerDay || 7;
+      driverCost += interimRate * coefficient * hoursPerDay;
+      // Interim drivers typically don't have bonuses/allowances from the company
+      driverAllowances += (driver.mealAllowance || 0);
+    } else {
+      // CDI/CDD: Base daily employer cost
+      const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
+      const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
+      driverCost += dailyRate;
+
+      // Daily bonuses (night, sunday, seniority) — prorated per working day
+      const monthlyBonuses = (driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0);
+      const dailyBonuses = monthlyBonuses / driver.workingDaysPerMonth;
+      driverBonuses += dailyBonuses;
+
+      // Allowances per day (meal + overnight)
+      driverAllowances += (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
+    }
   }
 
   // ── Structure costs (fixed charges) ──

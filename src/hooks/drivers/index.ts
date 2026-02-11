@@ -68,6 +68,8 @@ export function useCloudDrivers() {
       (data || []).forEach(row => {
         const driverData = row.driver_data as unknown as Driver;
         if (driverData) {
+          // Tag driver with contract type
+          driverData.contractType = (row.driver_type as Driver['contractType']) || 'cdi';
           if (row.driver_type === 'interim') {
             interim.push(driverData);
           } else if (row.driver_type === 'cdd') {
