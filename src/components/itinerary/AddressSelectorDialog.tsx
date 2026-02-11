@@ -13,6 +13,7 @@ import { useCloudFavoriteAddresses, type CloudFavoriteAddress } from '@/hooks/us
 import { useAddressAutocomplete } from '@/hooks/useAddressAutocomplete';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 interface AddressSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,7 +71,6 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // For custom address
-  const [showCustomForm, setShowCustomForm] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customAddress, setCustomAddress] = useState('');
   const [customCity, setCustomCity] = useState('');
@@ -160,44 +160,55 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
       return;
     }
 
-    // Get coordinates for the address
+    // If the user already selected a suggestion (address has coordinates from getPlaceDetails),
+    // we need to geocode the final address
     const searchQuery = customPostalCode && customCity 
       ? `${customAddress}, ${customPostalCode} ${customCity}`
       : customAddress;
     
-    await searchAddress(searchQuery);
-    
-    // Wait a moment for suggestions
-    setTimeout(async () => {
-      if (suggestions.length > 0) {
-        const details = await getPlaceDetails(suggestions[0].placeId);
-        if (details) {
-          addFavorite({
-            name: customName,
-            address: details.formattedAddress,
-            lat: details.lat,
-            lon: details.lng,
-            city: details.addressComponents.city,
-            postal_code: details.addressComponents.postalCode,
-          });
-          setShowCustomForm(false);
-          setShowCustomForm(false);
-          setCustomName('');
-          setCustomAddress('');
-          setCustomCity('');
-          setCustomPostalCode('');
-          clearSuggestions();
-          setActiveTab('favorites');
-        }
-      } else {
+    try {
+      // Direct API call to get place suggestions
+      const { data: searchData, error: searchError } = await supabase.functions.invoke('google-places-search', {
+        body: { query: searchQuery }
+      });
+
+      if (searchError || !searchData?.predictions?.length) {
         toast({ title: "Impossible de géolocaliser l'adresse", variant: "destructive" });
+        return;
       }
-    }, 500);
+
+      const firstPlaceId = searchData.predictions[0].place_id;
+      const details = await getPlaceDetails(firstPlaceId);
+      
+      if (!details) {
+        toast({ title: "Impossible de géolocaliser l'adresse", variant: "destructive" });
+        return;
+      }
+
+      await addFavorite({
+        name: customName,
+        address: details.formattedAddress,
+        lat: details.lat,
+        lon: details.lng,
+        city: details.addressComponents.city,
+        postal_code: details.addressComponents.postalCode,
+      });
+      
+      setCustomName('');
+      setCustomAddress('');
+      setCustomCity('');
+      setCustomPostalCode('');
+      clearSuggestions();
+      setActiveTab('favorites');
+    } catch (error) {
+      console.error('Error saving custom address:', error);
+      toast({ title: "Erreur lors de l'enregistrement", variant: "destructive" });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-primary" />
@@ -479,7 +490,7 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
                     onChange={(e) => handleAddressSearch(e.target.value)}
                   />
                   {suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
+                    <div className="absolute top-full left-0 right-0 z-[100] mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
                       {suggestions.map((suggestion) => (
                         <button
                           key={suggestion.id}
