@@ -1,61 +1,24 @@
 
 
-# Planning : approche "recherche d'abord"
+## Correction de la fenetre "Conducteurs non reconnus" dans le Planning
 
-## Probleme
-Le planning charge jusqu'a 10 000 lignes par semaine au chargement de la page, ce qui cause des problemes de persistance, de performance et de chargement infini.
+### Probleme identifie
+La fonctionnalite existe deja : quand un conducteur du planning n'est pas dans le repertoire, il apparait dans le bandeau "Conducteurs non reconnus" avec un bouton "Gerer". Cependant, la fenetre est trop petite (`max-w-lg`, scroll `400px`) et l'UX de creation est confuse (deux clics necessaires dans un espace reduit).
 
-## Solution
-Ne plus charger automatiquement les donnees au chargement de la page. Afficher un ecran d'accueil invitant l'utilisateur a rechercher ou filtrer, puis ne charger que les resultats correspondants depuis la base de donnees (requete filtree cote serveur).
+### Corrections prevues
 
-## Changements prevus
+**1. Agrandir la fenetre (UncreatedDriversBanner.tsx)**
+- Passer le `DialogContent` en `w-[90vw] max-w-3xl h-[80vh]` pour que la liste soit confortable meme avec beaucoup de conducteurs
+- Etendre le `ScrollArea` a `flex-1` pour occuper tout l'espace disponible
 
-### 1. `src/pages/Planning.tsx`
-- Supprimer le `useEffect` qui appelle `fetchEntries` automatiquement au changement de semaine
-- Ajouter un etat `hasSearched` (false par defaut)
-- Quand `hasSearched` est false, afficher un ecran d'accueil avec les champs de recherche et un message "Recherchez par client, ligne, conducteur, responsable secteur ou telephone pour afficher le planning"
-- Quand l'utilisateur clique sur "Rechercher" ou appuie sur Entree, passer `hasSearched` a true et lancer `fetchEntries` avec les filtres actifs
-- Les filtres (secteur, client, recherche texte) declenchent une requete serveur filtree au lieu d'un filtrage client
+**2. Ameliorer le flow de creation**
+- Afficher directement le selecteur de type (CDI/CDD/Interim) a cote du bouton "Creer" sans etape intermediaire
+- Chaque ligne affiche : Nom | [CDI v] [Creer] [Fusionner] [Supprimer]
+- Simplifier en un seul clic : choisir le type dans le dropdown puis cliquer "Creer"
 
-### 2. `src/hooks/usePlanning.ts`
-- Modifier `fetchEntries` pour accepter des parametres de filtre optionnels : `tourName`, `clientId`, `sectorManager`, `driverName`
-- Ajouter les clauses `.ilike()` ou `.eq()` correspondantes a la requete Supabase cote serveur
-- Supprimer le `useEffect` d'auto-fetch au chargement (`licenseId + authUserId`)
-- Reduire la limite de 10 000 a 1 000 (les resultats filtres seront toujours petits)
+**3. Ajouter un bouton "Creer tous"**
+- Un bouton dans le footer pour creer tous les conducteurs restants d'un coup avec le type selectionne (CDI par defaut)
+- Gain de temps quand il y a beaucoup de conducteurs a creer
 
-### 3. Filtrage cote serveur (nouvelle requete)
-- `tour_name` : `.ilike('tour_name', '%query%')`
-- `client_id` : `.eq('client_id', clientId)`
-- `sector_manager` : `.ilike('sector_manager', '%query%')`
-- `driver_id` : `.eq('driver_id', driverId)` ou recherche par nom dans `notes` via `.ilike('notes', '%query%')`
-- Recherche universelle : combine plusieurs `.or()` pour chercher dans tour_name, notes, sector_manager, mission_order
-
-### 4. UX de l'ecran d'accueil
-- Barre de recherche principale (deja existante) mise en avant
-- Filtres dropdowns (secteur, client, jour) toujours accessibles
-- Bouton "Rechercher" explicite
-- Message informatif : "Saisissez un critere de recherche pour afficher les lignes de planning"
-- Les boutons "Ajouter une tournee" et "Importer Excel" restent toujours visibles
-- Apres import, lancer automatiquement une recherche pour afficher les donnees importees
-
-### 5. Comportement post-import
-- Apres un import Excel, `hasSearched` passe a true et une recherche globale (sans filtre) est lancee sur la semaine courante, limitee a 500 resultats
-- L'utilisateur peut ensuite affiner avec les filtres
-
----
-
-## Details techniques
-
-```text
-Avant :
-Page chargee --> fetchEntries(semaine) --> 10 000 lignes --> filtrage JS
-
-Apres :
-Page chargee --> ecran vide avec barre de recherche
-Utilisateur tape "DUPONT" --> fetchEntries(semaine, {search: "DUPONT"}) --> ~20 lignes
-```
-
-Fichiers modifies :
-- `src/hooks/usePlanning.ts` (parametres de filtre serveur, suppression auto-fetch)
-- `src/pages/Planning.tsx` (etat hasSearched, ecran d'accueil, recherche declenchee)
-
+### Fichier modifie
+- `src/components/planning/UncreatedDriversBanner.tsx`
