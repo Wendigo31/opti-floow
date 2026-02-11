@@ -135,7 +135,8 @@ export function useCloudDrivers() {
   }, [authUserId, licenseId, createCRUD]);
 
   const createDriversBatch = useCallback(async (
-    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[]
+    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[],
+    onProgress?: (done: number, total: number) => void
   ): Promise<number> => {
     const uid = authUserIdRef.current || authUserId;
     const lid = licenseIdRef.current || licenseId;
@@ -144,10 +145,10 @@ export function useCloudDrivers() {
       const fallbackLid = await getLicenseId();
       const { data: { user } } = await supabase.auth.getUser();
       if (!fallbackLid || !user) return 0;
-      return createBatchCRUD(drivers, user.id, fallbackLid);
+      return createBatchCRUD(drivers, user.id, fallbackLid, onProgress);
     }
 
-    return createBatchCRUD(drivers, uid, lid);
+    return createBatchCRUD(drivers, uid, lid, onProgress);
   }, [authUserId, licenseId, createBatchCRUD]);
 
   const updateDriver = useCallback(async (

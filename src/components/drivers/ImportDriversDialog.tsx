@@ -7,12 +7,11 @@ import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Down
  import { parseExcelFile } from '@/utils/excelImport';
  import { parseDriversExcel, convertToDrivers, type ParsedDriverRow, type ExtendedParsedDriver } from '@/utils/driversExcelImport';
 import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils/excelTemplates';
- import { toast } from 'sonner';
  
  interface ImportDriversDialogProps {
    open: boolean;
    onOpenChange: (open: boolean) => void;
-   onImport: (drivers: ExtendedParsedDriver[]) => Promise<number>;
+   onImport: (drivers: ExtendedParsedDriver[]) => void;
  }
  
  export function ImportDriversDialog({
@@ -22,7 +21,6 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
  }: ImportDriversDialogProps) {
    const [file, setFile] = useState<File | null>(null);
    const [loading, setLoading] = useState(false);
-   const [importing, setImporting] = useState(false);
    const [preview, setPreview] = useState<ParsedDriverRow[]>([]);
    const [error, setError] = useState<string | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,10 +28,8 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
   const resetState = () => {
     setFile(null);
     setLoading(false);
-    setImporting(false);
     setPreview([]);
     setError(null);
-    // Allow re-selecting the same file
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -42,11 +38,11 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
      const selectedFile = e.target.files?.[0];
      if (!selectedFile) return;
- 
+
      setFile(selectedFile);
      setError(null);
      setLoading(true);
- 
+
      try {
        const workbook = await parseExcelFile(selectedFile);
        const data = parseDriversExcel(workbook);
@@ -66,26 +62,14 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
      }
    };
  
-   const handleImport = async () => {
+   const handleImport = () => {
      if (preview.length === 0) return;
- 
-     setImporting(true);
-    console.log('[ImportDrivers] Starting import of', preview.length, 'drivers');
 
-     try {
-       const drivers = convertToDrivers(preview);
-      console.log('[ImportDrivers] Converted drivers:', drivers.length);
-       const count = await onImport(drivers);
-      console.log('[ImportDrivers] Import completed, count:', count);
-
-       toast.success(`${count} conducteur(s) importé(s) avec succès`);
-        handleClose();
-     } catch (err) {
-      console.error('[ImportDrivers] Error importing:', err);
-      toast.error('Erreur lors de l\'import');
-     } finally {
-       setImporting(false);
-     }
+     const drivers = convertToDrivers(preview);
+     
+     // Fire import and close dialog immediately — progress shown externally
+     onImport(drivers);
+     handleClose();
    };
  
     const handleClose = () => {
@@ -117,7 +101,7 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
              Importez votre liste du personnel. Le système détectera automatiquement les chauffeurs et leurs contrats.
            </DialogDescription>
          </DialogHeader>
- 
+
          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           {/* Download template button */}
           <div className="flex justify-end gap-2">
@@ -165,7 +149,7 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                Liste du personnel au format Excel (.xlsx, .xls)
              </p>
            </div>
- 
+
            {/* Error */}
            {error && (
              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
@@ -173,7 +157,7 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                <span>{error}</span>
              </div>
            )}
- 
+
            {/* Preview */}
            {preview.length > 0 && (
              <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
@@ -264,20 +248,16 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
              </div>
            )}
          </div>
- 
+
          <DialogFooter>
            <Button variant="outline" onClick={handleClose}>
              Annuler
            </Button>
            <Button 
              onClick={handleImport} 
-             disabled={preview.length === 0 || importing}
+             disabled={preview.length === 0}
            >
-             {importing ? (
-               <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-             ) : (
-               <Upload className="w-4 h-4 mr-1" />
-             )}
+             <Upload className="w-4 h-4 mr-1" />
              Importer {preview.length > 0 && `(${preview.length})`}
            </Button>
          </DialogFooter>
