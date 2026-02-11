@@ -16,6 +16,7 @@ export interface Driver {
   sundayBonus: number; // Prime dimanche
   nightBonus: number; // Prime nuit
   seniorityBonus: number; // Prime ancienneté
+  unloadingBonus: number; // Prime décaissage
 }
 
 export interface FixedCharge {

@@ -5,7 +5,7 @@ export interface VehicleDefaultSpec {
   brand: string;
   models: {
     name: string;
-    type: 'tracteur' | 'porteur';
+    type: 'tracteur' | 'porteur' | 'porteur_caisse';
     fuelConsumption: number; // L/100km
     adBlueConsumption: number; // L/100km
     weight: number; // PTAC kg

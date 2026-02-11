@@ -127,6 +127,7 @@ export default function Planning() {
       sundayBonus: 0,
       nightBonus: 0,
       seniorityBonus: 0,
+      unloadingBonus: 0,
     };
     const ok = await createDriver(driver, (driverType as 'cdi' | 'cdd' | 'interim'));
     if (ok) {
