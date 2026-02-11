@@ -332,7 +332,7 @@ export default function Planning() {
 
       {/* Unassigned drivers alert */}
       {hasSearched && !loading && (() => {
-        const unassignedDays: { day: string; count: number }[] = [];
+        const unassignedDays: { day: string; count: number; dayIdx: number }[] = [];
         DAY_COLUMNS.forEach((col) => {
           const day = weekDays[col.idx];
           if (!day) return;
@@ -340,16 +340,41 @@ export default function Planning() {
           const dayEntries = entries.filter(e => e.planning_date === dateStr);
           const withoutDriver = dayEntries.filter(e => !e.driver_id && !e.notes);
           if (withoutDriver.length > 0) {
-            unassignedDays.push({ day: col.label, count: withoutDriver.length });
+            unassignedDays.push({ day: col.label, count: withoutDriver.length, dayIdx: col.idx });
           }
         });
         if (unassignedDays.length === 0) return null;
         const total = unassignedDays.reduce((s, d) => s + d.count, 0);
+
+        const handleDayClick = (dayIdx: number) => {
+          const day = weekDays[dayIdx];
+          if (!day) return;
+          const dateStr = format(day, 'yyyy-MM-dd');
+          // Find the first traction group that has an unassigned entry on this day
+          const group = filteredGroups.find(g =>
+            g.entries.some(e => e.planning_date === dateStr && !e.driver_id && !e.notes)
+          );
+          if (group) {
+            handleRowClick(group);
+          }
+        };
+
         return (
           <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm">
             <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
             <span className="flex-1">
-              <strong>{total}</strong> traction{total > 1 ? 's' : ''} sans conducteur assigné : {unassignedDays.map(d => `${d.day} (${d.count})`).join(', ')}
+              <strong>{total}</strong> traction{total > 1 ? 's' : ''} sans conducteur assigné :{' '}
+              {unassignedDays.map((d, i) => (
+                <span key={d.dayIdx}>
+                  {i > 0 && ', '}
+                  <button
+                    className="underline font-medium hover:text-destructive transition-colors"
+                    onClick={() => handleDayClick(d.dayIdx)}
+                  >
+                    {d.day} ({d.count})
+                  </button>
+                </span>
+              ))}
             </span>
           </div>
         );
