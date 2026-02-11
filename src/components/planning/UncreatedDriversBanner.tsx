@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { AlertTriangle, UserPlus, X, Link2, Trash2 } from 'lucide-react';
+import { AlertTriangle, UserPlus, X, Link2, Trash2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import type { Driver } from '@/types';
 import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
@@ -11,7 +12,7 @@ import { toast } from 'sonner';
 
 interface UncreatedDriversBannerProps {
   drivers: Driver[];
-  onCreateDriver?: (name: string) => Promise<void>;
+  onCreateDriver?: (name: string, driverType?: string) => Promise<void>;
 }
 
 export function UncreatedDriversBanner({ drivers, onCreateDriver }: UncreatedDriversBannerProps) {
@@ -20,6 +21,7 @@ export function UncreatedDriversBanner({ drivers, onCreateDriver }: UncreatedDri
   const [linking, setLinking] = useState<string | null>(null); // name being linked
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [creating, setCreating] = useState<string | null>(null);
+  const [creatingType, setCreatingType] = useState<string>('cdi'); // CDI, CDD, Intérim
 
   if (uncreatedDrivers.length === 0) return null;
 
@@ -41,9 +43,10 @@ export function UncreatedDriversBanner({ drivers, onCreateDriver }: UncreatedDri
     if (!onCreateDriver) return;
     setCreating(name);
     try {
-      await onCreateDriver(name);
+      await onCreateDriver(name, creatingType);
       removeUncreatedDriver(name);
-      toast.success(`Conducteur "${name}" créé`);
+      toast.success(`Conducteur "${name}" créé (${creatingType.toUpperCase()})`);
+      setCreatingType('cdi'); // Reset for next creation
     } catch {
       toast.error(`Erreur lors de la création de "${name}"`);
     } finally {
@@ -85,44 +88,79 @@ export function UncreatedDriversBanner({ drivers, onCreateDriver }: UncreatedDri
                     <p className="text-xs text-muted-foreground">{d.source}</p>
                   </div>
 
-                  {linking === d.name ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-48">
-                        <DriverSearchSelect
-                          drivers={drivers}
-                          value={selectedDriverId}
-                          onChange={setSelectedDriverId}
-                          placeholder="Lier à..."
-                        />
-                      </div>
-                      <Button size="sm" disabled={!selectedDriverId} onClick={confirmLink}>OK</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setLinking(null)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      {onCreateDriver && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="gap-1"
-                          disabled={creating === d.name}
-                          onClick={() => handleCreate(d.name)}
-                        >
-                          <UserPlus className="h-3 w-3" />
-                          Créer
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => handleLink(d.name)}>
-                        <Link2 className="h-3 w-3" />
-                        Lier
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeUncreatedDriver(d.name)}>
-                        <Trash2 className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  )}
+                   {linking === d.name ? (
+                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                       <div className="w-48">
+                         <DriverSearchSelect
+                           drivers={drivers}
+                           value={selectedDriverId}
+                           onChange={setSelectedDriverId}
+                           placeholder="Fusionner avec..."
+                         />
+                       </div>
+                       <Button size="sm" disabled={!selectedDriverId} onClick={confirmLink}>Fusionner</Button>
+                       <Button variant="ghost" size="sm" onClick={() => setLinking(null)}>
+                         <X className="h-3.5 w-3.5" />
+                       </Button>
+                     </div>
+                   ) : creating === d.name ? (
+                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                       <Select value={creatingType} onValueChange={setCreatingType}>
+                         <SelectTrigger className="w-24">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="cdi">CDI</SelectItem>
+                           <SelectItem value="cdd">CDD</SelectItem>
+                           <SelectItem value="interim">Intérim</SelectItem>
+                         </SelectContent>
+                       </Select>
+                       <Button
+                         size="sm"
+                         disabled={creating !== d.name}
+                         onClick={() => handleCreate(d.name)}
+                       >
+                         Créer
+                       </Button>
+                       <Button variant="ghost" size="sm" onClick={() => setCreating(null)}>
+                         <X className="h-3.5 w-3.5" />
+                       </Button>
+                     </div>
+                   ) : (
+                     <div className="flex items-center gap-1.5">
+                       {onCreateDriver && (
+                         <Button
+                           variant="default"
+                           size="sm"
+                           className="gap-1"
+                           disabled={creating !== null}
+                           onClick={() => setCreating(d.name)}
+                         >
+                           <UserPlus className="h-3 w-3" />
+                           Créer
+                         </Button>
+                       )}
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="gap-1" 
+                         disabled={creating !== null}
+                         onClick={() => handleLink(d.name)}
+                       >
+                         <Link2 className="h-3 w-3" />
+                         Fusionner
+                       </Button>
+                       <Button 
+                         variant="ghost" 
+                         size="icon" 
+                         className="h-7 w-7" 
+                         disabled={creating !== null}
+                         onClick={() => removeUncreatedDriver(d.name)}
+                       >
+                         <Trash2 className="h-3 w-3 text-muted-foreground" />
+                       </Button>
+                     </div>
+                   )}
                 </div>
               ))}
             </div>
