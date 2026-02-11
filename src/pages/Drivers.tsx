@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle, Merge, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { TooltipProvider } from '@/components/ui/tooltip';
  import { ImportDriversDialog } from '@/components/drivers/ImportDriversDialog';
+ import { DriverImportProgress, type DriverImportProgressState } from '@/components/drivers/DriverImportProgress';
  import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
  import { useApp } from '@/context/AppContext';
@@ -350,7 +351,15 @@ export default function Drivers() {
     return baseCost;
   };
 
-  const handleImportDrivers = async (importedDrivers: ExtendedParsedDriver[]): Promise<number> => {
+  const [importProgress, setImportProgress] = useState<DriverImportProgressState>({
+    active: false, done: 0, total: 0, label: '', finished: false,
+  });
+
+  const dismissImportProgress = useCallback(() => {
+    setImportProgress(p => ({ ...p, active: false }));
+  }, []);
+
+  const handleImportDrivers = useCallback((importedDrivers: ExtendedParsedDriver[]) => {
     console.log('[Drivers] handleImportDrivers called with', importedDrivers.length, 'drivers');
 
     // Convert all drivers first
@@ -378,24 +387,56 @@ export default function Drivers() {
       return { driver: newDriver as Driver, type: driverType };
     });
 
-    // Use batch insert for efficiency
-    const count = await createDriversBatch(driversToCreate);
+    // Show progress bar immediately
+    setImportProgress({
+      active: true,
+      done: 0,
+      total: driversToCreate.length,
+      label: `Import de ${driversToCreate.length} conducteur(s)...`,
+      finished: false,
+    });
 
-    // Refresh to reconcile
-    try {
-      await fetchDrivers();
-    } catch (e) {
-      console.warn('[Drivers] fetchDrivers error after import:', e);
-    }
+    // Run import in background (not awaited)
+    (async () => {
+      try {
+        const count = await createDriversBatch(driversToCreate, (done, total) => {
+          setImportProgress(p => ({ ...p, done, total }));
+        });
 
-    console.log('[Drivers] Import completed, total:', count);
+        // Refresh to reconcile
+        try { await fetchDrivers(); } catch (e) {
+          console.warn('[Drivers] fetchDrivers error after import:', e);
+        }
 
-    if (count < driversToCreate.length) {
-      const failures = driversToCreate.length - count;
-      toast.warning(`${failures} conducteur(s) non importé(s) (erreur ou doublon)`);
-    }
-    return count;
-  };
+        setImportProgress(p => ({
+          ...p,
+          done: driversToCreate.length,
+          finished: true,
+          label: `${count} conducteur(s) importé(s) ✓`,
+        }));
+
+        toast.success(`${count} conducteur(s) importé(s) avec succès`);
+
+        if (count < driversToCreate.length) {
+          const failures = driversToCreate.length - count;
+          toast.warning(`${failures} conducteur(s) non importé(s) (erreur ou doublon)`);
+        }
+
+        // Auto-dismiss after 4s
+        setTimeout(() => {
+          setImportProgress(p => ({ ...p, active: false }));
+        }, 4000);
+      } catch (err) {
+        console.error('[Drivers] Background import error:', err);
+        setImportProgress(p => ({
+          ...p,
+          finished: true,
+          label: 'Erreur lors de l\'import',
+          error: err instanceof Error ? err.message : 'Erreur inconnue',
+        }));
+      }
+    })();
+  }, [createDriversBatch, fetchDrivers]);
  
   // Cast cloud drivers to ExtendedDriver for UI
   const cdiDrivers = cloudCdiDrivers as ExtendedDriver[];
@@ -1489,6 +1530,8 @@ export default function Drivers() {
           extra: cloudInterimDrivers.some(i => i.id === d.id) ? 'Intérim' : cloudCddDrivers.some(c => c.id === d.id) ? 'CDD' : 'CDI',
         }))}
       />
+
+      <DriverImportProgress progress={importProgress} onDismiss={dismissImportProgress} />
     </div>
   );
 }

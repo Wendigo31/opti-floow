@@ -49,7 +49,8 @@ export function useDriverCRUD() {
   const createBatch = useCallback(async (
     drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[],
     uid: string,
-    lid: string
+    lid: string,
+    onProgress?: (done: number, total: number) => void
   ): Promise<number> => {
     const CHUNK_SIZE = 50;
     let totalInserted = 0;
@@ -76,6 +77,13 @@ export function useDriverCRUD() {
         console.error(`[useDriverCRUD] Batch insert error (chunk ${Math.floor(i / CHUNK_SIZE) + 1}):`, error);
       } else {
         totalInserted += data?.length || 0;
+      }
+
+      onProgress?.(Math.min(i + CHUNK_SIZE, drivers.length), drivers.length);
+
+      // Small delay to keep UI responsive
+      if (i + CHUNK_SIZE < drivers.length) {
+        await new Promise(r => setTimeout(r, 50));
       }
     }
 
