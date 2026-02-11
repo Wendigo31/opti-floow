@@ -188,13 +188,12 @@ function containsDriverKeyword(text: string): boolean {
          nameIdx = headers.findIndex(h => h === 'nom');
        }
        
-      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
-      const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
-      const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type de contrat'));
-      const shiftIdx = headers.findIndex(h => h === 'horaire' || h === 'type horaire' || h.includes('jour/nuit') || h.includes('shift'));
-      const agencyIdx = headers.findIndex(h => h.includes('agence') || h.includes('interim') || h.includes('intérim'));
-      const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
-      const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
+       const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
+       const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
+       const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type de contrat'));
+       const shiftIdx = headers.findIndex(h => h === 'horaire' || h === 'type horaire' || h.includes('jour/nuit') || h.includes('shift'));
+       const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
+       const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
      
       if (import.meta.env.DEV) {
         console.log('Driver columns:', { nameIdx, firstNameIdx, lastNameIdx, phoneIdx, positionIdx });
@@ -274,17 +273,12 @@ function containsDriverKeyword(text: string): boolean {
           }
         }
         
-        // Get agency name for interim
-        let agencyName = '';
-        if (agencyIdx >= 0) {
-          agencyName = String(row[agencyIdx] || '').trim();
-        }
-        
-        // Get department
-        let department = '';
-        if (deptIdx >= 0) {
-          department = String(row[deptIdx] || '').trim();
-        }
+         
+         // Get department
+         let department = '';
+         if (deptIdx >= 0) {
+           department = String(row[deptIdx] || '').trim();
+         }
         
         // Get email
         let email = '';
@@ -292,18 +286,17 @@ function containsDriverKeyword(text: string): boolean {
           email = String(row[emailIdx] || '').trim();
         }
         
-        drivers.push({
-          name: fullName,
-          firstName,
-          lastName,
-          phone,
-          contractType,
-          shiftType,
-          agencyName,
-          position,
-          department,
-          email,
-        });
+         drivers.push({
+           name: fullName,
+           firstName,
+           lastName,
+           phone,
+           contractType,
+           shiftType,
+           position,
+           department,
+           email,
+         });
      }
    }
    

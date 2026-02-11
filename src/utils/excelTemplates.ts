@@ -10,17 +10,16 @@ export function generateDriversTemplate(): Blob {
       'Fonction',
       'Type de contrat',
       'Horaire',
-      'Agence intérim',
       'Service/Département',
       'Email'
     ];
   
     const sampleData = [
-      ['DUPONT Jean', '06 12 34 56 78', 'Chauffeur SPL', 'CDI', 'Jour', '', 'Transport', 'jean.dupont@email.com'],
-      ['MARTIN Pierre', '06 98 76 54 32', 'Conducteur Poids Lourd', 'CDI', 'Nuit', '', 'Livraison', 'pierre.martin@email.com'],
-      ['DURAND Marie', '07 11 22 33 44', 'Chauffeur SPL', 'CDD', 'Jour', '', 'Transport', 'marie.durand@email.com'],
-      ['BERNARD Lucas', '06 55 66 77 88', 'Chauffeur Routier', 'Intérim', 'Nuit', 'Manpower', 'Transport', 'lucas.bernard@email.com'],
-      ['PETIT Sophie', '06 44 33 22 11', 'Conducteur Super Poids Lourd', 'Intérim', 'Jour', 'Adecco', 'Logistique', ''],
+      ['DUPONT Jean', '06 12 34 56 78', 'Chauffeur SPL', 'CDI', 'Jour', 'Transport', 'jean.dupont@email.com'],
+      ['MARTIN Pierre', '06 98 76 54 32', 'Conducteur Poids Lourd', 'CDI', 'Nuit', 'Livraison', 'pierre.martin@email.com'],
+      ['DURAND Marie', '07 11 22 33 44', 'Chauffeur SPL', 'CDD', 'Jour', 'Transport', 'marie.durand@email.com'],
+      ['BERNARD Lucas', '06 55 66 77 88', 'Chauffeur Routier', 'CDI', 'Nuit', 'Transport', 'lucas.bernard@email.com'],
+      ['PETIT Sophie', '06 44 33 22 11', 'Conducteur Super Poids Lourd', 'CDD', 'Jour', 'Logistique', ''],
     ];
   
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
@@ -32,7 +31,6 @@ export function generateDriversTemplate(): Blob {
       { wch: 25 }, // Fonction
       { wch: 15 }, // Type de contrat
       { wch: 12 }, // Horaire
-      { wch: 15 }, // Agence intérim
       { wch: 20 }, // Service
       { wch: 30 }, // Email
     ];
