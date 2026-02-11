@@ -91,7 +91,7 @@ export function MergeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Merge className="h-5 w-5" /> Fusionner des {entityLabel}
@@ -135,7 +135,7 @@ export function MergeDialog({
                 className="pl-9"
               />
             </div>
-            <ScrollArea className="max-h-[300px]">
+            <ScrollArea className="max-h-[50vh]">
               {filteredDuplicates.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   Aucun doublon détecté
