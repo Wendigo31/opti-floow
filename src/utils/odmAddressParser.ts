@@ -79,15 +79,51 @@ export function parseOdmAddresses(odm: string | null | undefined): ParsedOdmAddr
   const result: ParsedOdmAddresses = { origin: null, destination: null, stops: [] };
   if (!odm || odm.trim().length < 3) return result;
 
-  const places: string[] = [];
+  // We collect places in order of appearance in the text.
+  // To preserve order, we store { name, position } then sort by position.
+  const foundPlaces: { name: string; position: number }[] = [];
+  const odmNorm = norm(odm);
 
-  // Strategy 1: Find UPPER-CASE sequences of 2+ characters (likely city names)
-  // E.g. "LYON", "SAINT-ETIENNE", "LE HAVRE"
-  const upperPattern = /\b([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ\s'-]{1,30})\b/g;
+  // Strategy 1 (PRIMARY): Check for known city names in the text (case-insensitive)
+  // This is the most reliable strategy as it works regardless of case.
+  for (const city of KNOWN_CITIES) {
+    const cityNorm = norm(city);
+    const escapedCity = cityNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedCity}\\b`, 'g');
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(odmNorm)) !== null) {
+      const properCase = city.split(/[\s-]/).map(w =>
+        w.charAt(0).toUpperCase() + w.slice(1)
+      ).join(city.includes('-') ? '-' : ' ');
+      if (!foundPlaces.some(p => norm(p.name) === cityNorm)) {
+        foundPlaces.push({ name: properCase, position: match.index });
+      }
+      break; // only first occurrence matters for ordering
+    }
+  }
+
+  // Strategy 2: Look for city names after action keywords (case-insensitive)
   let match: RegExpExecArray | null;
+  const actionPattern = new RegExp(
+    `(?:${ACTION_KEYWORDS.join('|')})\\s*:?\\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\\s'-]{1,30})`,
+    'gi'
+  );
+  while ((match = actionPattern.exec(odm)) !== null) {
+    let candidate = match[1].trim();
+    // Remove trailing common words that aren't part of the city
+    candidate = candidate.replace(/\s+(à|a|de|du|des|le|la|les|puis|et|ou)\s*$/i, '').trim();
+    if (candidate.length >= 2 && !foundPlaces.some(p => norm(p.name) === norm(candidate))) {
+      // Only add if it looks like a place (not a time or number)
+      if (!/^\d/.test(candidate) && !/^[0-9h:]+$/.test(candidate)) {
+        foundPlaces.push({ name: candidate, position: match.index });
+      }
+    }
+  }
+
+  // Strategy 3 (BONUS): Find UPPER-CASE sequences (classic ODM style)
+  const upperPattern = /\b([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ\s'-]{1,30})\b/g;
   while ((match = upperPattern.exec(odm)) !== null) {
     const candidate = match[1].trim();
-    // Filter out common non-city uppercase words
     const skipWords = [
       'RDV', 'ODM', 'OK', 'KM', 'HS', 'AM', 'PM', 'PL', 'VL', 'SPL', 'TP',
       'CDI', 'CDD', 'NB', 'TEL', 'FAX', 'CHAUFFEUR', 'CONDUCTEUR', 'MISSION',
@@ -103,48 +139,23 @@ export function parseOdmAddresses(odm: string | null | undefined): ParsedOdmAddr
     ];
     if (candidate.length < 2) continue;
     if (skipWords.includes(candidate.replace(/['-\s]/g, ''))) continue;
-    // Must have at least 2 letter characters
     if ((candidate.match(/[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ]/g) || []).length < 2) continue;
-    places.push(candidate);
-  }
-
-  // Strategy 2: Look for city names after action keywords
-  const actionPattern = new RegExp(
-    `(?:${ACTION_KEYWORDS.join('|')})\\s*:?\\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜŸÇa-zàâäéèêëïîôùûüÿç][A-Za-zÀ-ÿ\\s'-]{1,30})`,
-    'gi'
-  );
-  while ((match = actionPattern.exec(odm)) !== null) {
-    const candidate = match[1].trim();
-    if (candidate.length >= 2 && !places.some(p => norm(p) === norm(candidate))) {
-      places.push(candidate);
+    if (!foundPlaces.some(p => norm(p.name) === norm(candidate))) {
+      foundPlaces.push({ name: candidate, position: match.index });
     }
   }
 
-  // Strategy 3: Check for known city names in the text
-  const odmLower = norm(odm);
-  for (const city of KNOWN_CITIES) {
-    const cityNorm = norm(city);
-    // Word boundary check
-    const regex = new RegExp(`\\b${cityNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    if (regex.test(odmLower)) {
-      const properCase = city.split(/[\s-]/).map(w =>
-        w.charAt(0).toUpperCase() + w.slice(1)
-      ).join(city.includes('-') ? '-' : ' ');
-      if (!places.some(p => norm(p) === cityNorm)) {
-        places.push(properCase);
-      }
-    }
-  }
+  // Sort by position in text to preserve order of appearance
+  foundPlaces.sort((a, b) => a.position - b.position);
 
-  // Deduplicate and order
+  // Deduplicate (already sorted by position)
   const seen = new Set<string>();
   const uniquePlaces: string[] = [];
-  for (const p of places) {
-    const key = norm(p);
+  for (const p of foundPlaces) {
+    const key = norm(p.name);
     if (!seen.has(key) && key.length >= 2) {
       seen.add(key);
-      // Title-case for consistency
-      const formatted = p.charAt(0).toUpperCase() + p.slice(1);
+      const formatted = p.name.charAt(0).toUpperCase() + p.name.slice(1);
       uniquePlaces.push(formatted);
     }
   }
