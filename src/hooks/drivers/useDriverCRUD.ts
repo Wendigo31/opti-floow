@@ -11,7 +11,7 @@ export interface DriverCRUDOptions {
 export function useDriverCRUD() {
   const createDriver = useCallback(async (
     driver: Driver,
-    driverType: 'cdi' | 'cdd' | 'interim',
+    driverType: 'cdi' | 'cdd' | 'interim' | 'autre',
     uid: string,
     lid: string,
     options?: DriverCRUDOptions
@@ -47,7 +47,7 @@ export function useDriverCRUD() {
   }, []);
 
   const createBatch = useCallback(async (
-    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[],
+    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' | 'autre' }[],
     uid: string,
     lid: string,
     onProgress?: (done: number, total: number) => void
@@ -92,7 +92,7 @@ export function useDriverCRUD() {
 
   const updateDriver = useCallback(async (
     driver: Driver,
-    driverType: 'cdi' | 'cdd' | 'interim'
+    driverType: 'cdi' | 'cdd' | 'interim' | 'autre'
   ): Promise<boolean> => {
     try {
       const currentLicenseId = await getLicenseId();

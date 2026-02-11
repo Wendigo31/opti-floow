@@ -29,7 +29,7 @@ export interface Trailer {
   brand: string;
   model: string;
   year: number;
-  type: 'tautliner' | 'frigo' | 'benne' | 'citerne' | 'porte-conteneur' | 'plateau' | 'savoyarde' | 'other';
+  type: 'tautliner' | 'frigo' | 'benne' | 'citerne' | 'porte-conteneur' | 'plateau' | 'savoyarde' | 'caisse' | 'other';
   
   // Dimensions
   length: number; // mètres
@@ -109,6 +109,7 @@ export const trailerTypes = [
   { value: 'porte-conteneur', label: 'Porte-conteneur' },
   { value: 'plateau', label: 'Plateau' },
   { value: 'savoyarde', label: 'Savoyarde' },
+  { value: 'caisse', label: 'Caisse' },
   { value: 'other', label: 'Autre' },
 ] as const;
 

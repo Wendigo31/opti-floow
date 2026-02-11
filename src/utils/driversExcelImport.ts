@@ -338,6 +338,7 @@ export async function parseDriversFromUrl(url: string): Promise<ParsedDriverRow[
       sundayBonus: 0,
       nightBonus: parsed.shiftType === 'nuit' ? 25 : 0,
       seniorityBonus: 0,
+      unloadingBonus: 0,
       isInterim: parsed.contractType === 'interim',
       interimAgency: parsed.agencyName || '',
       phone: parsed.phone,

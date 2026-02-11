@@ -48,7 +48,8 @@ export default function Drivers() {
   const { 
     cdiDrivers: cloudCdiDrivers, 
     cddDrivers: cloudCddDrivers,
-    interimDrivers: cloudInterimDrivers, 
+    interimDrivers: cloudInterimDrivers,
+    autreDrivers: cloudAutreDrivers,
     fetchDrivers,
     createDriver: createCloudDriver,
     createDriversBatch,
@@ -68,7 +69,7 @@ export default function Drivers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
-  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'uncreated'>('cdi');
+  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'uncreated'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -79,7 +80,7 @@ export default function Drivers() {
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   // Combined driver count for limits
-  const totalDriverCount = cloudCdiDrivers.length + cloudCddDrivers.length + cloudInterimDrivers.length;
+  const totalDriverCount = cloudCdiDrivers.length + cloudCddDrivers.length + cloudInterimDrivers.length + cloudAutreDrivers.length;
   const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
 
   // Toggle driver selection
@@ -101,7 +102,9 @@ export default function Drivers() {
       ? sortedCdiDrivers.map(d => d.id)
       : activeTab === 'cdd'
         ? sortedCddDrivers.map(d => d.id)
-        : sortedInterimDrivers.map(d => d.id);
+        : activeTab === 'autre'
+          ? sortedAutreDrivers.map(d => d.id)
+          : sortedInterimDrivers.map(d => d.id);
     setCheckedDriverIds(new Set(allIds));
   };
 
@@ -127,12 +130,14 @@ export default function Drivers() {
       let successCount = 0;
       
       for (const driverId of driverIds) {
-        // Check if it's an interim or CDI driver
-        const driverType: 'cdi' | 'cdd' | 'interim' = cloudInterimDrivers.some(d => d.id === driverId)
+        // Check driver type
+        const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = cloudInterimDrivers.some(d => d.id === driverId)
           ? 'interim'
           : cloudCddDrivers.some(d => d.id === driverId)
             ? 'cdd'
-            : 'cdi';
+            : cloudAutreDrivers.some(d => d.id === driverId)
+              ? 'autre'
+              : 'cdi';
         const success = await deleteCloudDriver(driverId, driverType);
         if (success) successCount++;
       }
@@ -156,12 +161,14 @@ export default function Drivers() {
     if (checkedDriverIds.size === 0) return;
     const driverIds = Array.from(checkedDriverIds);
     for (const driverId of driverIds) {
-      const driverType: 'cdi' | 'cdd' | 'interim' = cloudInterimDrivers.some(d => d.id === driverId)
+      const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = cloudInterimDrivers.some(d => d.id === driverId)
         ? 'interim'
         : cloudCddDrivers.some(d => d.id === driverId)
           ? 'cdd'
-          : 'cdi';
-      const driver = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers].find(d => d.id === driverId);
+          : cloudAutreDrivers.some(d => d.id === driverId)
+            ? 'autre'
+            : 'cdi';
+      const driver = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers].find(d => d.id === driverId);
       if (driver) {
         await createCloudDriver({ ...driver, name: `${driver.name} (copie)`, id: crypto.randomUUID() } as Driver, driverType);
       }
@@ -177,11 +184,13 @@ export default function Drivers() {
         await supabase.from('planning_entries').update({ driver_id: keepId }).eq('driver_id', oldId);
         await supabase.from('planning_entries').update({ relay_driver_id: keepId }).eq('relay_driver_id', oldId);
         // Delete the duplicate driver
-        const driverType: 'cdi' | 'cdd' | 'interim' = cloudInterimDrivers.some(d => d.id === oldId)
+        const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = cloudInterimDrivers.some(d => d.id === oldId)
           ? 'interim'
           : cloudCddDrivers.some(d => d.id === oldId)
             ? 'cdd'
-            : 'cdi';
+            : cloudAutreDrivers.some(d => d.id === oldId)
+              ? 'autre'
+              : 'cdi';
         await deleteCloudDriver(oldId, driverType);
       }
       toast.success(`${mergeIds.length} conducteur(s) fusionné(s)`);
@@ -241,18 +250,20 @@ export default function Drivers() {
   const handleAdd = () => {
     setIsAdding(true);
     const isInterim = activeTab === 'interim';
+    const isAutre = activeTab === 'autre';
     setFormData({
       name: '',
-      baseSalary: isInterim ? 0 : 2200,
-      hourlyRate: isInterim ? 15 : 12.50,
-      hoursPerDay: 10,
-      patronalCharges: isInterim ? 0 : 45,
-      mealAllowance: 15.20,
-      overnightAllowance: 45,
-      workingDaysPerMonth: 21,
+      baseSalary: isInterim || isAutre ? 0 : 2200,
+      hourlyRate: isInterim ? 15 : isAutre ? 0 : 12.50,
+      hoursPerDay: isAutre ? 0 : 10,
+      patronalCharges: isInterim || isAutre ? 0 : 45,
+      mealAllowance: isAutre ? 0 : 15.20,
+      overnightAllowance: isAutre ? 0 : 45,
+      workingDaysPerMonth: isAutre ? 0 : 21,
       sundayBonus: 0,
       nightBonus: 0,
       seniorityBonus: 0,
+      unloadingBonus: 0,
       isInterim,
       interimAgency: '',
       interimHourlyRate: 15,
@@ -271,6 +282,7 @@ export default function Drivers() {
 
   const handleSave = async () => {
     const isInterim = formData.isInterim || activeTab === 'interim';
+    const isAutre = activeTab === 'autre';
     
     if (isAdding) {
       const newDriver: ExtendedDriver = {
@@ -286,6 +298,7 @@ export default function Drivers() {
         sundayBonus: formData.sundayBonus || 0,
         nightBonus: formData.nightBonus || 0,
         seniorityBonus: formData.seniorityBonus || 0,
+        unloadingBonus: formData.unloadingBonus || 0,
         isInterim,
         interimAgency: formData.interimAgency || '',
         interimHourlyRate: formData.interimHourlyRate || 15,
@@ -297,7 +310,7 @@ export default function Drivers() {
       };
       
       // Save to cloud
-      const driverType: 'cdi' | 'cdd' | 'interim' = isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : 'cdi');
+      const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = isAutre ? 'autre' : isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : 'cdi');
       await createCloudDriver(newDriver as Driver, driverType);
       setIsAdding(false);
     } else if (editingId) {
@@ -306,10 +319,12 @@ export default function Drivers() {
         ? cloudInterimDrivers.find(d => d.id === editingId)
         : activeTab === 'cdd'
           ? cloudCddDrivers.find(d => d.id === editingId)
-          : cloudCdiDrivers.find(d => d.id === editingId);
+          : activeTab === 'autre'
+            ? cloudAutreDrivers.find(d => d.id === editingId)
+            : cloudCdiDrivers.find(d => d.id === editingId);
       
       const updatedDriver = { ...existingDriver, ...formData, id: editingId } as ExtendedDriver;
-      const driverType: 'cdi' | 'cdd' | 'interim' = isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : 'cdi');
+      const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : activeTab === 'autre' ? 'autre' : 'cdi');
       await updateCloudDriver(updatedDriver as Driver, driverType);
       setEditingId(null);
     }
@@ -322,7 +337,7 @@ export default function Drivers() {
     setFormData({});
   };
 
-  const handleDelete = async (id: string, driverType: 'cdi' | 'cdd' | 'interim') => {
+  const handleDelete = async (id: string, driverType: 'cdi' | 'cdd' | 'interim' | 'autre') => {
     await deleteCloudDriver(id, driverType);
   };
 
@@ -378,6 +393,7 @@ export default function Drivers() {
         sundayBonus: driver.sundayBonus,
         nightBonus: driver.nightBonus,
         seniorityBonus: driver.seniorityBonus,
+        unloadingBonus: (driver as any).unloadingBonus || 0,
         isInterim: driverType === 'interim',
         interimAgency: driver.interimAgency || '',
         interimHourlyRate: 15,
@@ -442,6 +458,7 @@ export default function Drivers() {
   const cdiDrivers = cloudCdiDrivers as ExtendedDriver[];
   const cddDrivers = cloudCddDrivers as ExtendedDriver[];
   const interimDrivers = cloudInterimDrivers as ExtendedDriver[];
+  const autreDrivers = cloudAutreDrivers as ExtendedDriver[];
 
   const renderForm = () => {
     const isInterim = formData.isInterim || activeTab === 'interim';
@@ -643,7 +660,7 @@ export default function Drivers() {
         {!isInterim && (
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Primes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="sundayBonus">Prime dimanche (€)</Label>
                 <Input
@@ -672,6 +689,16 @@ export default function Drivers() {
                   step="0.01"
                   value={formData.seniorityBonus || ''}
                   onChange={(e) => setFormData({ ...formData, seniorityBonus: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unloadingBonus">Prime décaissage (€)</Label>
+                <Input
+                  id="unloadingBonus"
+                  type="number"
+                  step="0.01"
+                  value={formData.unloadingBonus || ''}
+                  onChange={(e) => setFormData({ ...formData, unloadingBonus: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
@@ -1034,7 +1061,21 @@ export default function Drivers() {
     }
   }, [filteredCddDrivers, sortBy]);
 
-  const renderDriverRow = (driver: ExtendedDriver, driverType: 'cdi' | 'cdd' | 'interim') => {
+  const filteredAutreDrivers = useMemo(() => {
+    let result = autreDrivers;
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      result = result.filter(d => d.name.toLowerCase().includes(search));
+    }
+    return result;
+  }, [autreDrivers, searchTerm]);
+
+  const sortedAutreDrivers = useMemo(() => {
+    const drivers = [...filteredAutreDrivers];
+    return drivers.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  }, [filteredAutreDrivers]);
+
+  const renderDriverRow = (driver: ExtendedDriver, driverType: 'cdi' | 'cdd' | 'interim' | 'autre') => {
     const isInterim = driverType === 'interim';
     const driverInfo = getDriverInfo(driver.id);
     const isShared = !!driverInfo?.licenseId;
@@ -1299,7 +1340,7 @@ export default function Drivers() {
       )}
 
       {/* Tabs CDI / Intérim */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'uncreated')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'uncreated')}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
@@ -1314,6 +1355,10 @@ export default function Drivers() {
               <Users2 className="w-4 h-4" />
               Intérimaires ({filteredInterimDrivers.length})
             </TabsTrigger>
+            <TabsTrigger value="autre" className="gap-2">
+              <User className="w-4 h-4" />
+              Autres ({filteredAutreDrivers.length})
+            </TabsTrigger>
             {uncreatedDrivers.length > 0 && (
               <TabsTrigger value="uncreated" className="gap-2">
                 <AlertTriangle className="w-4 h-4 text-warning" />
@@ -1326,7 +1371,7 @@ export default function Drivers() {
             disabled={isAdding || !canAddDriver}
           >
             <Plus className="w-4 h-4 mr-2" />
-            {activeTab === 'interim' ? 'Ajouter un intérimaire' : 'Ajouter un conducteur'}
+            {activeTab === 'interim' ? 'Ajouter un intérimaire' : activeTab === 'autre' ? 'Ajouter un profil' : 'Ajouter un conducteur'}
           </Button>
         </div>
 
@@ -1424,6 +1469,31 @@ export default function Drivers() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="autre" className="mt-6">
+          {isAdding && activeTab === 'autre' && renderForm()}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {sortedAutreDrivers.map((driver, index) => renderDriverCard(driver, index, 'autre'))}
+            </div>
+          ) : (
+            sortedAutreDrivers.length > 0 && renderDriversTable(sortedAutreDrivers, 'autre')
+          )}
+          {autreDrivers.length === 0 && !isAdding && (
+            <div className="glass-card p-12 text-center">
+              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Aucun profil "Autre"</h3>
+              <p className="text-muted-foreground mb-4">
+                Ajoutez des profils non-conducteurs à utiliser dans le planning (ex: responsable, accompagnateur).
+              </p>
+              <Button onClick={handleAdd}>
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter un profil
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="uncreated" className="mt-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">

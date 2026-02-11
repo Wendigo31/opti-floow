@@ -29,7 +29,7 @@ export interface Vehicle {
   brand: string;
   model: string;
   year: number;
-  type: 'porteur' | 'tracteur' | 'fourgon' | 'other';
+  type: 'porteur' | 'tracteur' | 'porteur_caisse' | 'fourgon' | 'other';
   
   // Dimensions
   length: number; // mètres
@@ -120,6 +120,7 @@ export const maintenanceTypes = [
 export const vehicleTypes = [
   { value: 'tracteur', label: 'Tracteur' },
   { value: 'porteur', label: 'Porteur' },
+  { value: 'porteur_caisse', label: 'Porteur Caisse' },
   { value: 'fourgon', label: 'Fourgon' },
   { value: 'other', label: 'Autre' },
 ] as const;
