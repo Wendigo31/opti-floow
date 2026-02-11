@@ -18,9 +18,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle } from 'lucide-react';
+import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
 import type { Driver } from '@/types';
@@ -76,6 +77,7 @@ export function PlanningRowDetailPanel({
   const [relayDriverId, setRelayDriverId] = useState('');
   const [relayTime, setRelayTime] = useState('');
   const [relayLocation, setRelayLocation] = useState('');
+  const [isRewriting, setIsRewriting] = useState(false);
 
   useEffect(() => {
     if (open && first) {
@@ -190,6 +192,38 @@ export function PlanningRowDetailPanel({
 
   const removeStop = (index: number) => {
     setStops(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRewriteODM = async () => {
+    if (!missionOrder.trim()) return;
+    setIsRewriting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rewrite-mission-order', {
+        body: {
+          missionOrder,
+          tourName,
+          driverName,
+          clientName,
+          originAddress,
+          destinationAddress,
+          startTime,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data?.rewritten) {
+        setMissionOrder(data.rewritten);
+        toast.success('Ordre de mission reformulé par l\'IA');
+      }
+    } catch (e) {
+      console.error('Rewrite ODM error:', e);
+      toast.error('Impossible de reformuler l\'ordre de mission');
+    } finally {
+      setIsRewriting(false);
+    }
   };
 
   const generateDriverText = () => {
@@ -413,7 +447,25 @@ export function PlanningRowDetailPanel({
 
           {/* Mission order */}
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> Ordre de mission</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> Ordre de mission</Label>
+              {missionOrder.trim() && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs h-7"
+                  disabled={isRewriting}
+                  onClick={handleRewriteODM}
+                >
+                  {isRewriting ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" /> Réécriture…</>
+                  ) : (
+                    <><Sparkles className="h-3 w-3" /> Régénérer</>
+                  )}
+                </Button>
+              )}
+            </div>
             <Textarea value={missionOrder} onChange={e => setMissionOrder(e.target.value)} placeholder="Instructions, références..." rows={4} />
           </div>
 
