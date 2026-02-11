@@ -30,15 +30,24 @@ export function DriverForm({ driver, driverType, isLoading, onSave, onCancel }: 
   return (
     <div className="space-y-4 p-4 bg-card border rounded-lg">
       <div className="space-y-2">
-        <Label>Nom Prénom</Label>
-        <Input
-          placeholder="Nom du conducteur"
-          value={formData.name || ''}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        />
-      </div>
+         <Label>Nom Prénom</Label>
+         <Input
+           placeholder="Nom du conducteur"
+           value={formData.name || ''}
+           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+         />
+       </div>
 
-      {driverType !== 'interim' && (
+       <div className="space-y-2">
+         <Label>Date d'entrée dans l'entreprise</Label>
+         <Input
+           type="date"
+           value={formData.hireDate || ''}
+           onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+         />
+       </div>
+
+       {driverType !== 'interim' && (
         <>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
