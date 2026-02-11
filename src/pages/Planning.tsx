@@ -22,6 +22,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 import { cn } from '@/lib/utils';
 import { usePlanningImport } from '@/context/PlanningImportContext';
+import { UncreatedDriversBanner } from '@/components/planning/UncreatedDriversBanner';
 
 const DAY_COLUMNS = [
   { label: 'Lundi', idx: 0 },
@@ -68,7 +69,7 @@ export default function Planning() {
 
   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, deleteTourInWeek } = usePlanning();
   const { vehicles, fetchVehicles } = useCloudVehicles();
-  const { cdiDrivers, cddDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
+  const { cdiDrivers, cddDrivers, interimDrivers, fetchDrivers, createDriver } = useCloudDrivers();
   const { clients } = useClients();
 
   const allDrivers = useMemo(() => [...cdiDrivers, ...cddDrivers, ...interimDrivers], [cdiDrivers, cddDrivers, interimDrivers]);
@@ -88,6 +89,33 @@ export default function Planning() {
     } catch { return null; }
   }, [licenseId]);
 
+  const handleQuickCreateDriver = useCallback(async (name: string) => {
+    // Parse "LASTNAME FIRSTNAME" into parts
+    const parts = name.trim().split(/\s+/);
+    const lastName = parts[0] || name;
+    const firstName = parts.slice(1).join(' ') || '';
+    const driver: import('@/types').Driver = {
+      id: `driver_${Date.now()}`,
+      name: name.trim(),
+      firstName,
+      lastName,
+      baseSalary: 0,
+      hourlyRate: 12.5,
+      hoursPerDay: 8,
+      patronalCharges: 45,
+      mealAllowance: 15.96,
+      overnightAllowance: 0,
+      workingDaysPerMonth: 21.67,
+      sundayBonus: 0,
+      nightBonus: 0,
+      seniorityBonus: 0,
+    };
+    const ok = await createDriver(driver, 'cdi');
+    if (ok) {
+      fetchDrivers();
+    }
+  }, [createDriver, fetchDrivers]);
+
   // Mon-Sun (7 days)
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
@@ -104,8 +132,8 @@ export default function Planning() {
     if (importProgress.completedAt > 0) {
       const startDate = format(currentWeekStart, 'yyyy-MM-dd');
       const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-      // Small delay to ensure DB writes are committed
-      const timer = setTimeout(() => fetchEntries(startDate, endDate), 800);
+      // Force refetch to bypass any in-progress guard
+      const timer = setTimeout(() => fetchEntries(startDate, endDate, true), 500);
       return () => clearTimeout(timer);
     }
   }, [importProgress.completedAt, currentWeekStart, fetchEntries]);
@@ -261,6 +289,9 @@ export default function Planning() {
         onClientChange={setFilterClient}
         onDayChange={setFilterDay}
       />
+
+      {/* Uncreated drivers banner */}
+      <UncreatedDriversBanner drivers={allDrivers} onCreateDriver={handleQuickCreateDriver} />
 
       {/* Search bar + count */}
       <div className="flex items-center gap-3 flex-shrink-0">
