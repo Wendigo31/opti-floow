@@ -48,7 +48,8 @@ export default function Drivers() {
     cddDrivers: cloudCddDrivers,
     interimDrivers: cloudInterimDrivers, 
     fetchDrivers,
-    createDriver: createCloudDriver, 
+    createDriver: createCloudDriver,
+    createDriversBatch,
     updateDriver: updateCloudDriver,
     deleteDriver: deleteCloudDriver,
     loading: driversLoading 
@@ -351,24 +352,6 @@ export default function Drivers() {
   const handleImportDrivers = async (importedDrivers: ExtendedParsedDriver[]): Promise<number> => {
     console.log('[Drivers] handleImportDrivers called with', importedDrivers.length, 'drivers');
 
-    const withTimeout = async <T,>(
-      p: Promise<T>,
-      ms: number,
-      label: string
-    ): Promise<T> => {
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      try {
-        return await Promise.race([
-          p,
-          new Promise<T>((_, reject) => {
-            timeoutId = setTimeout(() => reject(new Error(`Timeout ${ms}ms: ${label}`)), ms);
-          }),
-        ]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    };
-    
     // Convert all drivers first
     const driversToCreate = importedDrivers.map(driver => {
       const driverType: 'cdi' | 'cdd' | 'interim' = driver.isInterim ? 'interim' : (driver.contractType === 'cdd' ? 'cdd' : 'cdi');
@@ -394,53 +377,21 @@ export default function Drivers() {
       return { driver: newDriver as Driver, type: driverType };
     });
 
-    // Process in parallel batches, but NEVER let one request hang the whole import.
-    const BATCH_SIZE = 5;
-    const PER_DRIVER_TIMEOUT_MS = 20_000;
+    // Use batch insert for efficiency
+    const count = await createDriversBatch(driversToCreate);
 
-    let count = 0;
-    let failures = 0;
-
-    for (let i = 0; i < driversToCreate.length; i += BATCH_SIZE) {
-      const batch = driversToCreate.slice(i, i + BATCH_SIZE);
-      console.log(
-        `[Drivers] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(driversToCreate.length / BATCH_SIZE)}`
-      );
-
-      const settled = await Promise.allSettled(
-        batch.map(({ driver, type }) =>
-          withTimeout(
-            createCloudDriver(driver, type, { silent: true }),
-            PER_DRIVER_TIMEOUT_MS,
-            driver.name
-          )
-        )
-      );
-
-      const batchOk = settled.filter(r => r.status === 'fulfilled' && r.value === true).length;
-      const batchFailures = settled.length - batchOk;
-      count += batchOk;
-      failures += batchFailures;
-
-      if (batchFailures > 0) {
-        console.warn('[Drivers] Import batch failures:', settled);
-      }
-    }
-
-    // Refresh once at the end to reconcile (and to show imported drivers even in silent mode).
+    // Refresh to reconcile
     try {
-      // NOTE: fetchDrivers can hang indefinitely on bad network conditions.
-      // We guard it so the import dialog can always finish and close.
-      await withTimeout(fetchDrivers(), 20_000, 'fetchDrivers');
+      await fetchDrivers();
     } catch (e) {
-      console.warn('[Drivers] fetchDrivers timeout/error after import:', e);
-      toast.warning('Import terminé, mais le rafraîchissement a pris trop de temps. Rechargez la page si nécessaire.');
+      console.warn('[Drivers] fetchDrivers error after import:', e);
     }
 
-    console.log('[Drivers] Import completed, total:', { count, failures });
+    console.log('[Drivers] Import completed, total:', count);
 
-    if (failures > 0) {
-      toast.warning(`${failures} conducteur(s) non importé(s) (erreur ou timeout)`);
+    if (count < driversToCreate.length) {
+      const failures = driversToCreate.length - count;
+      toast.warning(`${failures} conducteur(s) non importé(s) (erreur ou doublon)`);
     }
     return count;
   };

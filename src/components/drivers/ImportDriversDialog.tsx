@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Building2, Download, Moon, Sun } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Download, Moon, Sun } from 'lucide-react';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
@@ -197,36 +197,42 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                  </Badge>
                </div>
                <ScrollArea className="flex-1 border rounded-lg">
-                 <table className="w-full text-sm">
+                  <table className="w-full text-sm">
                     <thead className="bg-muted/50 sticky top-0">
                       <tr>
                         <th className="text-left p-2">Nom</th>
                         <th className="text-left p-2">Téléphone</th>
+                        <th className="text-left p-2">Type</th>
                         <th className="text-left p-2">Contrat</th>
                         <th className="text-left p-2">Horaire</th>
-                        <th className="text-left p-2">Agence / Service</th>
-                        <th className="text-left p-2">Fonction</th>
                       </tr>
                     </thead>
-                   <tbody>
-                     {preview.map((driver, index) => (
-                       <tr key={index} className="border-t border-border/50 hover:bg-muted/30">
-                         <td className="p-2">
-                           <div className="flex items-center gap-2">
-                             <User className="w-4 h-4 text-muted-foreground" />
-                             <span className="font-medium">{driver.name}</span>
-                           </div>
-                         </td>
-                         <td className="p-2">
-                           {driver.phone ? (
-                             <div className="flex items-center gap-1 text-muted-foreground">
-                               <Phone className="w-3 h-3" />
-                               {driver.phone}
-                             </div>
-                           ) : (
-                             <span className="text-muted-foreground">-</span>
-                           )}
-                         </td>
+                    <tbody>
+                      {preview.map((driver, index) => (
+                        <tr key={index} className="border-t border-border/50 hover:bg-muted/30">
+                          <td className="p-2">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium">{driver.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            {driver.phone ? (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Phone className="w-3 h-3" />
+                                {driver.phone}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                          <td className="p-2">
+                            {driver.driverCategory ? (
+                              <Badge variant="secondary">{driver.driverCategory}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
                           <td className="p-2">
                             <Badge 
                               variant={driver.contractType === 'interim' ? 'outline' : 'secondary'}
@@ -250,25 +256,10 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                               )}
                             </div>
                           </td>
-                         <td className="p-2 max-w-[150px]">
-                           {driver.agencyName || driver.department ? (
-                             <div className="flex items-center gap-1 text-muted-foreground truncate">
-                               <Building2 className="w-3 h-3 flex-shrink-0" />
-                               <span className="truncate">{driver.agencyName || driver.department}</span>
-                             </div>
-                           ) : (
-                             <span className="text-muted-foreground">-</span>
-                           )}
-                         </td>
-                         <td className="p-2 max-w-[150px]">
-                           <span className="text-muted-foreground truncate block">
-                             {driver.position || '-'}
-                           </span>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                </ScrollArea>
              </div>
            )}

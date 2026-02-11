@@ -323,13 +323,75 @@ export function useCloudDrivers() {
       toast.success('Conducteur ajouté');
       return true;
     } catch (error) {
-      console.error('Error creating driver:', error);
+      console.error('[useCloudDrivers] Error creating driver:', error, { name: driver.name, driverType, uid, lid });
       if (!options?.silent) {
         toast.error('Erreur lors de la création');
       }
       return false;
     }
   }, [authUserId, licenseId]);
+
+  const createDriversBatch = useCallback(async (
+    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[]
+  ): Promise<number> => {
+    try {
+      const uid = authUserIdRef.current || authUserId;
+      const lid = licenseIdRef.current || licenseId;
+
+      if (!uid || !lid) {
+        // Fallback
+        const fallbackLicenseId = await getLicenseId();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!fallbackLicenseId || !user) {
+          console.error('[useCloudDrivers] createDriversBatch: no auth context');
+          return 0;
+        }
+        return createDriversBatchInternal(drivers, user.id, fallbackLicenseId);
+      }
+
+      return createDriversBatchInternal(drivers, uid, lid);
+    } catch (error) {
+      console.error('[useCloudDrivers] createDriversBatch error:', error);
+      return 0;
+    }
+  }, [authUserId, licenseId]);
+
+  const createDriversBatchInternal = useCallback(async (
+    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' }[],
+    uid: string,
+    lid: string
+  ): Promise<number> => {
+    // Insert in chunks of 50 to avoid payload limits
+    const CHUNK_SIZE = 50;
+    let totalInserted = 0;
+
+    for (let i = 0; i < drivers.length; i += CHUNK_SIZE) {
+      const chunk = drivers.slice(i, i + CHUNK_SIZE);
+      const rows = chunk.map(({ driver, type }) => ({
+        user_id: uid,
+        license_id: lid,
+        local_id: driver.id,
+        name: driver.name,
+        driver_type: type,
+        base_salary: driver.baseSalary,
+        hourly_rate: driver.hourlyRate,
+        driver_data: JSON.parse(JSON.stringify(driver)),
+      }));
+
+      const { error, data } = await supabase
+        .from('user_drivers')
+        .insert(rows)
+        .select('id');
+
+      if (error) {
+        console.error(`[useCloudDrivers] Batch insert error (chunk ${Math.floor(i / CHUNK_SIZE) + 1}):`, error);
+      } else {
+        totalInserted += data?.length || 0;
+      }
+    }
+
+    return totalInserted;
+  }, []);
 
   const updateDriver = useCallback(async (driver: Driver, driverType: 'cdi' | 'cdd' | 'interim' = 'cdi'): Promise<boolean> => {
     try {
@@ -463,6 +525,7 @@ export function useCloudDrivers() {
     loading,
     fetchDrivers,
     createDriver,
+    createDriversBatch,
     updateDriver,
     deleteDriver,
     setCdiDrivers,

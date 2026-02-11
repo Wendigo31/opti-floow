@@ -10,8 +10,6 @@ export interface ParsedDriverRow {
     shiftType: 'jour' | 'nuit';
     driverCategory?: 'VL' | 'PL' | 'SPL' | 'TP';
     agencyName?: string;
-    position?: string;
-    department?: string;
     email?: string;
   }
  
@@ -107,31 +105,25 @@ export interface ParsedDriverRow {
  /**
   * Check if a row represents a driver/chauffeur
   */
- function isDriverRow(row: any[], headers: string[]): boolean {
-   // Look for keywords in the row that indicate it's a driver
-   const rowText = row.join(' ').toLowerCase();
-   
-   const driverKeywords = [
-     'chauffeur', 'conducteur', 'routier', 'driver', 'spl', 'pl',
-    'super poids lourd', 'poids lourd', 'livreur', 'super poids lourds',
-    'poids lourds', 'chauffeurs', 'conducteurs'
-   ];
-   
-   return driverKeywords.some(kw => rowText.includes(kw));
- }
- 
-/**
- * Check if text contains driver keywords
- */
-function containsDriverKeyword(text: string): boolean {
-  const lower = text.toLowerCase();
-  const keywords = [
-    'chauffeur', 'conducteur', 'routier', 'driver', 'spl', 'pl',
-    'super poids lourd', 'poids lourd', 'livreur', 'super poids lourds',
-    'poids lourds'
-  ];
-  return keywords.some(kw => lower.includes(kw));
-}
+  function isDriverRow(row: any[], headers: string[]): boolean {
+    // Look for keywords in the row that indicate it's a driver
+    const rowText = row.join(' ').toLowerCase();
+    
+    const driverKeywords = [
+      'chauffeur', 'conducteur', 'routier', 'driver', 'spl', 'pl',
+     'super poids lourd', 'poids lourd', 'livreur', 'super poids lourds',
+     'poids lourds', 'chauffeurs', 'conducteurs', 'vl', 'tp'
+    ];
+    
+    return driverKeywords.some(kw => {
+      // For short keywords like 'vl', 'pl', 'tp', 'spl', match as whole word
+      if (kw.length <= 3) {
+        const regex = new RegExp(`\\b${kw}\\b`, 'i');
+        return regex.test(rowText);
+      }
+      return rowText.includes(kw);
+    });
+  }
 
  /**
   * Parse the uploaded Excel file for driver data
@@ -190,15 +182,13 @@ function containsDriverKeyword(text: string): boolean {
        }
        
        const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
-       const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
        const driverTypeIdx = headers.findIndex(h => h.includes('type') && (h.includes('vl') || h.includes('pl') || h.includes('spl') || h.includes('tp') || h.includes('chauffeur')));
        const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type de contrat'));
        const shiftIdx = headers.findIndex(h => h === 'horaire' || h === 'type horaire' || h.includes('jour/nuit') || h.includes('shift'));
-       const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
        const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
      
       if (import.meta.env.DEV) {
-        console.log('Driver columns:', { nameIdx, firstNameIdx, lastNameIdx, phoneIdx, positionIdx });
+        console.log('Driver columns:', { nameIdx, firstNameIdx, lastNameIdx, phoneIdx, driverTypeIdx });
       }
      
      // Process data rows
@@ -210,15 +200,12 @@ function containsDriverKeyword(text: string): boolean {
        const rowContent = row.filter(c => c && String(c).trim()).length;
        if (rowContent < 2) continue;
        
-       // Check if this row is a driver (look for driver-related keywords in position/function)
-       let position = positionIdx >= 0 ? String(row[positionIdx] || '').trim() : '';
-       const rowText = row.join(' ').toLowerCase();
+        const rowText = row.join(' ').toLowerCase();
+        
+       // Only include if it's a driver/chauffeur - be more lenient
+       const hasDriverKeyword = isDriverRow(row, headers);
        
-      // Only include if it's a driver/chauffeur - be more lenient
-      const hasDriverKeyword = isDriverRow(row, headers);
-      const positionHasKeyword = containsDriverKeyword(position);
-      
-      if (!hasDriverKeyword && !positionHasKeyword) continue;
+       if (!hasDriverKeyword) continue;
        
        // Extract name
        let fullName = '';
@@ -286,30 +273,22 @@ function containsDriverKeyword(text: string): boolean {
            else if (typeVal === 'TP' || typeVal.includes('TRAVAUX PUBLICS') || typeVal.includes('TRANSPORT PUBLIC')) driverCategory = 'TP';
          }
 
-         // Get department
-         let department = '';
-         if (deptIdx >= 0) {
-           department = String(row[deptIdx] || '').trim();
+         // Get email
+         let email = '';
+         if (emailIdx >= 0) {
+           email = String(row[emailIdx] || '').trim();
          }
-        
-        // Get email
-        let email = '';
-        if (emailIdx >= 0) {
-          email = String(row[emailIdx] || '').trim();
-        }
-        
-         drivers.push({
-           name: fullName,
-           firstName,
-           lastName,
-           phone,
-           contractType,
-           shiftType,
-           driverCategory,
-           position,
-           department,
-           email,
-         });
+         
+          drivers.push({
+            name: fullName,
+            firstName,
+            lastName,
+            phone,
+            contractType,
+            shiftType,
+            driverCategory,
+            email,
+          });
      }
    }
    
