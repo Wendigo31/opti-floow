@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload, Search, X, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload, Search, X, Filter, AlertCircle } from 'lucide-react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { usePlanning, type PlanningFilters as PlanningServerFilters } from '@/hooks/usePlanning';
@@ -329,6 +329,31 @@ export default function Planning() {
 
       {/* Uncreated drivers banner */}
       <UncreatedDriversBanner drivers={allDrivers} onCreateDriver={handleQuickCreateDriver} />
+
+      {/* Unassigned drivers alert */}
+      {hasSearched && !loading && (() => {
+        const unassignedDays: { day: string; count: number }[] = [];
+        DAY_COLUMNS.forEach((col) => {
+          const day = weekDays[col.idx];
+          if (!day) return;
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const dayEntries = entries.filter(e => e.planning_date === dateStr);
+          const withoutDriver = dayEntries.filter(e => !e.driver_id && !e.notes);
+          if (withoutDriver.length > 0) {
+            unassignedDays.push({ day: col.label, count: withoutDriver.length });
+          }
+        });
+        if (unassignedDays.length === 0) return null;
+        const total = unassignedDays.reduce((s, d) => s + d.count, 0);
+        return (
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm">
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+            <span className="flex-1">
+              <strong>{total}</strong> traction{total > 1 ? 's' : ''} sans conducteur assigné : {unassignedDays.map(d => `${d.day} (${d.count})`).join(', ')}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Search bar + count */}
       <div className="flex items-center gap-3 flex-shrink-0">
