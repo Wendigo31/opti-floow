@@ -161,7 +161,7 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
  
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
-       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+       <DialogContent className="w-[90vw] max-w-4xl h-[85vh] flex flex-col overflow-hidden">
          <DialogHeader>
            <DialogTitle className="flex items-center gap-2">
              <Plus className="h-5 w-5" />
@@ -169,7 +169,8 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
            </DialogTitle>
          </DialogHeader>
  
-         <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {/* Load from saved tours */}
             <Collapsible open={showSavedTours} onOpenChange={setShowSavedTours}>
               <CollapsibleTrigger asChild>
@@ -433,19 +434,20 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
              />
            </div>
  
-           <DialogFooter>
-             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-               Annuler
-             </Button>
-             <Button 
-               type="submit" 
-               disabled={!formData.tour_name || !formData.vehicle_id || formData.recurring_days.length === 0 || isSubmitting}
-             >
-               <Save className="h-4 w-4 mr-2" />
-               {isSubmitting ? 'Création...' : 'Créer la tournée'}
-             </Button>
-           </DialogFooter>
-         </form>
+            </div>
+            <DialogFooter className="pt-4 border-t flex-shrink-0">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Annuler
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={!formData.tour_name || !formData.vehicle_id || formData.recurring_days.length === 0 || isSubmitting}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSubmitting ? 'Création...' : 'Créer la tournée'}
+              </Button>
+            </DialogFooter>
+          </form>
        </DialogContent>
      </Dialog>
    );
