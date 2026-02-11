@@ -36,6 +36,8 @@
   // Line references
   line_reference: string | null;
   return_line_reference: string | null;
+  // Link to saved tour
+  saved_tour_id: string | null;
  }
  
  export interface PlanningEntryInput {
@@ -65,6 +67,7 @@
   stops?: { address: string; label?: string }[];
   line_reference?: string | null;
   return_line_reference?: string | null;
+  saved_tour_id?: string | null;
 }
  
  export interface TourInput {

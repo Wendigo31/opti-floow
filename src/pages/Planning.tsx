@@ -18,6 +18,7 @@ import { PlanningRowDetailPanel } from '@/components/planning/PlanningRowDetailP
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 import { cn } from '@/lib/utils';
 import { usePlanningImport } from '@/context/PlanningImportContext';
@@ -457,6 +458,15 @@ export default function Planning() {
               await fetchEntries(startDate, endDate);
             }
             return ok;
+          }}
+          onSyncToSavedTour={async (savedTourId, updates) => {
+            await supabase
+              .from('saved_tours')
+              .update({
+                ...updates,
+                stops: updates.stops ? (updates.stops as unknown as Json) : undefined,
+              })
+              .eq('id', savedTourId);
           }}
         />
       )}

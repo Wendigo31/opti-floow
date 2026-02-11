@@ -6,6 +6,7 @@ import { useLicenseContext } from '@/context/LicenseContext';
  import type { RealtimeChannel } from '@supabase/supabase-js';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 import { getLicenseId } from '@/context/LicenseContext';
+import type { Json } from '@/integrations/supabase/types';
 
 function withTimeout<T>(work: () => Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -140,9 +141,10 @@ export interface ExcelTourInput {
            parent_tour_id: row.parent_tour_id,
            sector_manager: row.sector_manager,
            stops: Array.isArray(row.stops) ? row.stops as any : [],
-           line_reference: (row as any).line_reference || null,
-           return_line_reference: (row as any).return_line_reference || null,
-       }));
+            line_reference: (row as any).line_reference || null,
+            return_line_reference: (row as any).return_line_reference || null,
+            saved_tour_id: (row as any).saved_tour_id || null,
+        }));
  
        setEntries(mappedEntries);
        entriesRef.current = mappedEntries;
@@ -303,10 +305,11 @@ export interface ExcelTourInput {
           relay_time: data.relay_time,
            parent_tour_id: data.parent_tour_id,
            sector_manager: data.sector_manager,
-           stops: Array.isArray(data.stops) ? data.stops as any : [],
-           line_reference: (data as any).line_reference || null,
-           return_line_reference: (data as any).return_line_reference || null,
-       };
+            stops: Array.isArray(data.stops) ? data.stops as any : [],
+            line_reference: (data as any).line_reference || null,
+            return_line_reference: (data as any).return_line_reference || null,
+            saved_tour_id: (data as any).saved_tour_id || null,
+        };
  
        setEntries(prev => [...prev, newEntry].sort((a, b) => 
          a.planning_date.localeCompare(b.planning_date) || 
@@ -451,7 +454,116 @@ export interface ExcelTourInput {
        toast.error('Erreur lors de la création de la tournée');
        return false;
      }
-   }, [authUserId, licenseId]);
+    }, [authUserId, licenseId]);
+
+    /**
+     * Auto-create saved tours from planning entries that don't have one yet.
+     * Groups entries by tour_name, creates a saved_tour for each unique traction,
+     * and links the entries via saved_tour_id.
+     */
+    const createSavedToursFromPlanning = useCallback(async (weekStartDate: Date): Promise<void> => {
+      let uid = authUserId;
+      let lid = licenseId;
+      if (!uid || !lid) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const fallbackLicenseId = await getLicenseId();
+        uid = user?.id || null;
+        lid = fallbackLicenseId;
+      }
+      if (!uid || !lid) return;
+
+      const monday = startOfWeek(weekStartDate, { weekStartsOn: 1 });
+      const startStr = format(monday, 'yyyy-MM-dd');
+      const endStr = format(addDays(monday, 6), 'yyyy-MM-dd');
+
+      // Fetch entries without a saved_tour_id for this week
+      const { data: unlinkedEntries, error: fetchErr } = await supabase
+        .from('planning_entries')
+        .select('*')
+        .eq('license_id', lid)
+        .gte('planning_date', startStr)
+        .lte('planning_date', endStr)
+        .is('saved_tour_id', null);
+
+      if (fetchErr || !unlinkedEntries || unlinkedEntries.length === 0) return;
+
+      // Group by tour_name
+      const tourMap = new Map<string, typeof unlinkedEntries>();
+      for (const entry of unlinkedEntries) {
+        const key = entry.tour_name || 'Sans nom';
+        const arr = tourMap.get(key) || [];
+        arr.push(entry);
+        tourMap.set(key, arr);
+      }
+
+      for (const [tourName, groupEntries] of tourMap) {
+        const first = groupEntries[0];
+
+        // Check if a saved_tour already exists with this name for this license
+        const { data: existing } = await supabase
+          .from('saved_tours')
+          .select('id')
+          .eq('license_id', lid)
+          .eq('name', tourName)
+          .eq('category', 'planning')
+          .limit(1);
+
+        let savedTourId: string;
+
+        if (existing && existing.length > 0) {
+          savedTourId = existing[0].id;
+        } else {
+          // Create new saved tour
+          const { data: newTour, error: createErr } = await supabase
+            .from('saved_tours')
+            .insert({
+              user_id: uid,
+              license_id: lid,
+              name: tourName,
+              origin_address: first.origin_address || '',
+              destination_address: first.destination_address || '',
+              stops: (first.stops || []) as unknown as Json,
+              client_id: first.client_id || null,
+              vehicle_id: first.vehicle_id || null,
+              driver_ids: first.driver_id ? [first.driver_id] : [],
+              category: 'planning',
+              distance_km: 0,
+              toll_cost: 0,
+              fuel_cost: 0,
+              adblue_cost: 0,
+              driver_cost: 0,
+              structure_cost: 0,
+              vehicle_cost: 0,
+              total_cost: 0,
+              revenue: 0,
+              profit: 0,
+              profit_margin: 0,
+              pricing_mode: 'km',
+              notes: first.mission_order || null,
+            })
+            .select('id')
+            .single();
+
+          if (createErr || !newTour) {
+            console.error('[Planning] Error creating saved tour for', tourName, createErr);
+            continue;
+          }
+          savedTourId = newTour.id;
+        }
+
+        // Link all entries in this group to the saved tour
+        const entryIds = groupEntries.map(e => e.id);
+        await supabase
+          .from('planning_entries')
+          .update({ saved_tour_id: savedTourId })
+          .in('id', entryIds);
+      }
+
+      console.log(`[Planning] Auto-created/linked ${tourMap.size} saved tour(s)`);
+    }, [authUserId, licenseId]);
+
+    const createSavedToursFromPlanningRef = useRef<(weekStartDate: Date) => Promise<void>>();
+    useEffect(() => { createSavedToursFromPlanningRef.current = createSavedToursFromPlanning; }, [createSavedToursFromPlanning]);
 
     const importExcelPlanningWeek = useCallback(
       async (
@@ -556,6 +668,14 @@ export interface ExcelTourInput {
           }
 
           toast.success(`${rows.length} missions importées avec succès`);
+
+          // Auto-create saved tours from the imported tractions
+          try {
+            await createSavedToursFromPlanningRef.current?.(weekStartDate);
+          } catch (e) {
+            console.error('[Planning] Error auto-creating saved tours:', e);
+          }
+
           return true;
         } catch (error: any) {
           console.error('Error importing planning from Excel:', error);
@@ -687,6 +807,7 @@ export interface ExcelTourInput {
       importExcelPlanningWeek,
       deleteTourInWeek,
      duplicateToNextWeeks,
+     createSavedToursFromPlanning,
     applyVehicleToTour: async (vehicleId: string, tourName: string): Promise<boolean> => {
       try {
         if (!licenseId) {
