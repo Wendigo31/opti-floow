@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle } from 'lucide-react';
+import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
@@ -284,17 +285,12 @@ export function PlanningRowDetailPanel({
           {/* Driver */}
           <div className="space-y-1.5">
             <Label className="text-xs">Conducteur titulaire</Label>
-            <Select value={driverId || '_none'} onValueChange={v => setDriverId(v === '_none' ? '' : v)}>
-              <SelectTrigger><SelectValue placeholder="Conducteur" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">Aucun</SelectItem>
-                {drivers.map(d => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DriverSearchSelect
+              drivers={drivers}
+              value={driverId}
+              onChange={v => setDriverId(v)}
+              placeholder="Rechercher un conducteur..."
+            />
           </div>
 
           {/* Vehicle */}
@@ -395,17 +391,13 @@ export function PlanningRowDetailPanel({
               <div className="grid grid-cols-1 gap-3 mt-3 p-3 rounded-lg bg-muted/30 border">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Conducteur relais</Label>
-                  <Select value={relayDriverId || '_none'} onValueChange={v => setRelayDriverId(v === '_none' ? '' : v)}>
-                    <SelectTrigger><SelectValue placeholder="Relais" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">Aucun</SelectItem>
-                      {drivers.filter(d => d.id !== driverId).map(d => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DriverSearchSelect
+                    drivers={drivers}
+                    value={relayDriverId}
+                    onChange={v => setRelayDriverId(v)}
+                    placeholder="Rechercher un relais..."
+                    excludeId={driverId}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Heure relais</Label>
