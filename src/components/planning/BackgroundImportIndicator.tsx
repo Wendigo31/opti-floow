@@ -1,9 +1,10 @@
 import { usePlanningImport } from '@/context/PlanningImportContext';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function BackgroundImportIndicator() {
-  const { progress } = usePlanningImport();
+  const { progress, dismissProgress } = usePlanningImport();
 
   if (!progress.active) return null;
 
@@ -12,13 +13,18 @@ export function BackgroundImportIndicator() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 bg-card border border-border rounded-lg shadow-lg p-4 space-y-2 animate-in slide-in-from-bottom-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        {isDone ? (
-          <Check className="w-4 h-4 text-success" />
-        ) : (
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        )}
-        <span>{isDone ? 'Import terminé !' : progress.label}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {isDone ? (
+            <Check className="w-4 h-4 text-success" />
+          ) : (
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          )}
+          <span>{isDone ? 'Import terminé !' : progress.label}</span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={dismissProgress}>
+          <X className="w-3 h-3" />
+        </Button>
       </div>
       <Progress value={pct} className="h-2" />
       <p className="text-xs text-muted-foreground">

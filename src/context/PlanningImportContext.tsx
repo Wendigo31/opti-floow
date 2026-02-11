@@ -17,6 +17,7 @@ interface PlanningImportContextType {
     label: string;
     onComplete?: (success: boolean) => void;
   }) => void;
+  dismissProgress: () => void;
 }
 
 const PlanningImportContext = createContext<PlanningImportContextType | null>(null);
@@ -44,6 +45,13 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
 
       setProgress({ active: true, total, done: 0, label, completedAt: 0 });
 
+      // Safety timeout — auto-cleanup after 5 minutes max
+      const safetyTimer = setTimeout(() => {
+        console.warn('[PlanningImport] Safety timeout reached, forcing cleanup');
+        setProgress({ active: false, total: 0, done: 0, label: '', completedAt: 0 });
+        runningRef.current = false;
+      }, 5 * 60 * 1000);
+
       // Run in background — not awaited
       importFn((done, tot) => {
         setProgress((p) => ({ ...p, done, total: tot }));
@@ -55,6 +63,7 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
           onComplete?.(false);
         })
         .finally(() => {
+          clearTimeout(safetyTimer);
           // Keep the "done" state visible for a moment
           setProgress((p) => ({ ...p, done: p.total, completedAt: Date.now() }));
           setTimeout(() => {
@@ -65,9 +74,13 @@ export function PlanningImportProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+  const dismissProgress = useCallback(() => {
+    setProgress({ active: false, total: 0, done: 0, label: '', completedAt: 0 });
+    runningRef.current = false;
+  }, []);
 
   return (
-    <PlanningImportContext.Provider value={{ progress, startBackgroundImport }}>
+    <PlanningImportContext.Provider value={{ progress, startBackgroundImport, dismissProgress }}>
       {children}
     </PlanningImportContext.Provider>
   );
