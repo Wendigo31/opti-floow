@@ -8,6 +8,7 @@ export interface ParsedDriverRow {
     phone: string;
     contractType: 'cdi' | 'cdd' | 'interim';
     shiftType: 'jour' | 'nuit';
+    driverCategory?: 'VL' | 'PL' | 'SPL' | 'TP';
     agencyName?: string;
     position?: string;
     department?: string;
@@ -190,6 +191,7 @@ function containsDriverKeyword(text: string): boolean {
        
        const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
        const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
+       const driverTypeIdx = headers.findIndex(h => h.includes('type') && (h.includes('vl') || h.includes('pl') || h.includes('spl') || h.includes('tp') || h.includes('chauffeur')));
        const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type de contrat'));
        const shiftIdx = headers.findIndex(h => h === 'horaire' || h === 'type horaire' || h.includes('jour/nuit') || h.includes('shift'));
        const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
@@ -274,6 +276,16 @@ function containsDriverKeyword(text: string): boolean {
         }
         
          
+         // Get driver category (VL/PL/SPL/TP)
+         let driverCategory: 'VL' | 'PL' | 'SPL' | 'TP' | undefined;
+         if (driverTypeIdx >= 0) {
+           const typeVal = String(row[driverTypeIdx] || '').toUpperCase().trim();
+           if (typeVal === 'SPL' || typeVal.includes('SUPER POIDS LOURD')) driverCategory = 'SPL';
+           else if (typeVal === 'PL' || typeVal.includes('POIDS LOURD')) driverCategory = 'PL';
+           else if (typeVal === 'VL' || typeVal.includes('VÉHICULE LÉGER') || typeVal.includes('VEHICULE LEGER')) driverCategory = 'VL';
+           else if (typeVal === 'TP' || typeVal.includes('TRAVAUX PUBLICS') || typeVal.includes('TRANSPORT PUBLIC')) driverCategory = 'TP';
+         }
+
          // Get department
          let department = '';
          if (deptIdx >= 0) {
@@ -293,6 +305,7 @@ function containsDriverKeyword(text: string): boolean {
            phone,
            contractType,
            shiftType,
+           driverCategory,
            position,
            department,
            email,
