@@ -44,10 +44,11 @@
    updateTrailer: (trailer: Trailer) => Promise<boolean>;
    deleteTrailer: (id: string) => Promise<boolean>;
  
-   // Drivers
-   cdiDrivers: Driver[];
-   interimDrivers: Driver[];
-   driversLoading: boolean;
+    // Drivers
+    cdiDrivers: Driver[];
+    cddDrivers: Driver[];
+    interimDrivers: Driver[];
+    driversLoading: boolean;
   createDriver: (driver: Driver, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
   updateDriver: (driver: Driver, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
   deleteDriver: (id: string, driverType?: 'cdi' | 'cdd' | 'interim') => Promise<boolean>;
@@ -125,15 +126,16 @@ export { CloudDataContext };
      deleteTrailer,
    } = useCloudTrailers();
  
-   const {
-     cdiDrivers,
-     interimDrivers,
-     loading: driversLoading,
-     fetchDrivers,
-     createDriver,
-     updateDriver,
-     deleteDriver,
-   } = useCloudDrivers();
+    const {
+      cdiDrivers,
+      cddDrivers,
+      interimDrivers,
+      loading: driversLoading,
+      fetchDrivers,
+      createDriver,
+      updateDriver,
+      deleteDriver,
+    } = useCloudDrivers();
  
    const {
      charges,
@@ -287,10 +289,11 @@ export { CloudDataContext };
          updateTrailer,
          deleteTrailer,
  
-         // Drivers
-         cdiDrivers,
-         interimDrivers,
-         driversLoading,
+          // Drivers
+          cdiDrivers,
+          cddDrivers,
+          interimDrivers,
+          driversLoading,
          createDriver,
          updateDriver,
          deleteDriver,

@@ -331,9 +331,9 @@ export interface ExcelTourInput {
           ...updates,
           updated_at: new Date().toISOString(),
         };
-        // Convert stops array to JSON for DB
+        // Pass stops array directly - Supabase driver handles JSONB serialization
         if (updates.stops !== undefined) {
-          updatePayload.stops = JSON.stringify(updates.stops);
+          updatePayload.stops = updates.stops;
         }
         const { error } = await supabase
           .from('planning_entries')
@@ -668,6 +668,14 @@ export interface ExcelTourInput {
           }
 
           toast.success(`${rows.length} missions importées avec succès`);
+
+          // Auto-refetch after import to ensure UI is up-to-date
+          setTimeout(() => {
+            fetchEntriesRef.current?.(
+              format(weekStartDate, 'yyyy-MM-dd'),
+              format(addDays(weekStartDate, 6), 'yyyy-MM-dd')
+            );
+          }, 1000);
 
           // Auto-create saved tours from the imported tractions
           try {

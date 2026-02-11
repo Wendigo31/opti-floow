@@ -161,7 +161,7 @@ export default function Drivers() {
           : 'cdi';
       const driver = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers].find(d => d.id === driverId);
       if (driver) {
-        await createCloudDriver({ ...driver, name: `${driver.name} (copie)`, id: Date.now().toString() } as Driver, driverType);
+        await createCloudDriver({ ...driver, name: `${driver.name} (copie)`, id: crypto.randomUUID() } as Driver, driverType);
       }
     }
     toast.success(`${driverIds.length} conducteur(s) dupliqué(s)`);
@@ -272,7 +272,7 @@ export default function Drivers() {
     
     if (isAdding) {
       const newDriver: ExtendedDriver = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: formData.name || 'Nouveau conducteur',
         baseSalary: formData.baseSalary || 0,
         hourlyRate: formData.hourlyRate || 0,

@@ -207,7 +207,8 @@ export function useCloudDrivers() {
               }
             }
           } else if (payload.eventType === 'DELETE') {
-            const localId = (payload.old as any).local_id;
+            const oldPayload = payload.old as any;
+            const localId = oldPayload.local_id || oldPayload.driver_data?.id || oldPayload.id;
             setCdiDrivers(prev => {
               const updated = prev.filter(d => d.id !== localId);
               cdiDriversRef.current = updated;
@@ -294,9 +295,10 @@ export function useCloudDrivers() {
     options?: { silent?: boolean }
   ): Promise<boolean> => {
     try {
+      // Use upsert to handle duplicates gracefully (deduplication by local_id + license_id)
       const { error } = await supabase
         .from('user_drivers')
-        .insert([{
+        .upsert([{
           user_id: uid,
           license_id: lid,
           local_id: driver.id,
@@ -305,7 +307,8 @@ export function useCloudDrivers() {
           base_salary: driver.baseSalary,
           hourly_rate: driver.hourlyRate,
           driver_data: JSON.parse(JSON.stringify(driver)),
-        }]);
+          synced_at: new Date().toISOString(),
+        }], { onConflict: 'local_id,license_id', ignoreDuplicates: false });
 
       if (error) throw error;
       
