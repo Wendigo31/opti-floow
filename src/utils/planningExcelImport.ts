@@ -311,18 +311,98 @@ function extractDayCellText(cellValue: string | undefined): string {
    return entries;
  }
  
- /**
-  * Convert parsed entries to TourInput format for the planning system
-  */
- export function convertToTourInputs(
-   parsedEntries: ParsedPlanningEntry[],
-   clientMap: Map<string, string>, // client name -> client id
-  driverMap: Map<string, { id: string; firstName?: string; lastName?: string }>, // driver name -> driver data with firstName/lastName
-  defaultVehicleId: string | null,
-   startDate: string
+/**
+ * Normalize a name for fuzzy matching: lowercase, strip annotations like (Vl), (Polyvalent), etc.
+ */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '') // Remove parenthetical annotations
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extract first/last name parts from a full name string.
+ * Handles formats like "Toufaha (Vl) Abdallah" -> ["toufaha", "abdallah"]
+ */
+function extractNameParts(name: string): string[] {
+  return normalizeName(name).split(' ').filter(p => p.length > 0);
+}
+
+/**
+ * Try to match a search name against a driver map entry.
+ * Returns true if the names match (fuzzy).
+ */
+function fuzzyDriverMatch(
+  searchName: string,
+  driverName: string,
+  driverFirstName?: string,
+  driverLastName?: string,
+): boolean {
+  return fuzzyDriverMatchPublic(searchName, driverName, driverFirstName, driverLastName);
+}
+
+/**
+ * Public version of fuzzyDriverMatch for use in other modules.
+ */
+export function fuzzyDriverMatchPublic(
+  searchName: string,
+  driverName: string,
+  driverFirstName?: string,
+  driverLastName?: string,
+): boolean {
+  const searchNorm = normalizeName(searchName);
+  const driverNorm = normalizeName(driverName);
+  const searchParts = searchNorm.split(' ').filter(p => p.length > 0);
+
+  // Exact normalized match
+  if (searchNorm === driverNorm) return true;
+
+  // Substring match (either direction)
+  if (driverNorm.includes(searchNorm) || searchNorm.includes(driverNorm)) return true;
+
+  // Use provided firstName/lastName if available
+  const fn = driverFirstName ? normalizeName(driverFirstName) : '';
+  const ln = driverLastName ? normalizeName(driverLastName) : '';
+
+  // If no separate first/last, extract from full name
+  const driverParts = extractNameParts(driverName);
+  const effectiveFirst = fn || (driverParts.length > 0 ? driverParts[0] : '');
+  const effectiveLast = ln || (driverParts.length > 1 ? driverParts[driverParts.length - 1] : '');
+
+  // Last name only match
+  if (effectiveLast && effectiveLast === searchNorm) return true;
+
+  // First name only match (if long enough)
+  if (effectiveFirst && effectiveFirst === searchNorm && effectiveFirst.length >= 3) return true;
+
+  // Cross-match parts (handles reversed order: "DUPONT JEAN" vs "Jean Dupont")
+  if (searchParts.length >= 2 && driverParts.length >= 2) {
+    const matchCount = searchParts.filter(sp =>
+      driverParts.some(dp => dp.includes(sp) || sp.includes(dp))
+    ).length;
+    if (matchCount >= 2) return true;
+  }
+
+  // Partial last name match
+  if (effectiveLast && searchNorm.length >= 3 && effectiveLast.includes(searchNorm)) return true;
+
+  return false;
+}
+
+/**
+ * Convert parsed entries to TourInput format for the planning system
+ */
+export function convertToTourInputs(
+  parsedEntries: ParsedPlanningEntry[],
+  clientMap: Map<string, string>, // client name -> client id
+ driverMap: Map<string, { id: string; firstName?: string; lastName?: string }>, // driver name -> driver data with firstName/lastName
+ defaultVehicleId: string | null,
+  startDate: string
 ): (Partial<TourInput> & {
-  sector_manager?: string | null;
-  day_notes?: Record<number, string>;
+ sector_manager?: string | null;
+ day_notes?: Record<number, string>;
 })[] {
    return parsedEntries.map(entry => {
      // Try to match client
@@ -337,52 +417,16 @@ function extractDayCellText(cellValue: string | undefined): string {
        }
      }
      
-    // Try to match driver (supports full name, last name only, or first+last name separately)
-     let driver_id: string | null = null;
-     if (entry.driver_name) {
-      const driverLower = entry.driver_name.toLowerCase().trim();
-      const driverParts = driverLower.split(/\s+/).filter(p => p.length > 0);
-      
-      for (const [name, driverData] of driverMap.entries()) {
-        const nameLower = name.toLowerCase();
-        const firstName = (driverData.firstName || '').toLowerCase().trim();
-        const lastName = (driverData.lastName || '').toLowerCase().trim();
-        
-        // Exact or partial match on full name
-        if (nameLower.includes(driverLower) || driverLower.includes(nameLower)) {
-          driver_id = driverData.id;
-          break;
-        }
-        
-        // Match on last name only (common: Excel has "DUPONT" but DB has "Jean Dupont")
-        if (lastName && lastName === driverLower) {
-          driver_id = driverData.id;
-          break;
-        }
-        
-        // Match on first name only (if unique enough)
-        if (firstName && firstName === driverLower && firstName.length >= 3) {
-          driver_id = driverData.id;
-          break;
-        }
-        
-        // Match on first name + last name separately
-        if (firstName && lastName && driverParts.length >= 2) {
-          const matchesFirst = driverParts.some(p => firstName.includes(p) || p.includes(firstName));
-          const matchesLast = driverParts.some(p => lastName.includes(p) || p.includes(lastName));
-          if (matchesFirst && matchesLast) {
-            driver_id = driverData.id;
-            break;
-          }
-        }
-        
-        // Partial match on last name (Excel has "DUP" for "DUPONT")
-        if (lastName && driverLower.length >= 3 && lastName.includes(driverLower)) {
-          driver_id = driverData.id;
+     // Try to match driver using improved fuzzy matching
+      let driver_id: string | null = null;
+      if (entry.driver_name) {
+       for (const [name, driverData] of driverMap.entries()) {
+         if (fuzzyDriverMatch(entry.driver_name, name, driverData.firstName, driverData.lastName)) {
+           driver_id = driverData.id;
            break;
          }
        }
-     }
+      }
      
       // Day cells -> notes per day AND per-day driver matching
       const day_notes: Record<number, string> = {};
@@ -394,24 +438,13 @@ function extractDayCellText(cellValue: string | undefined): string {
         if (!v) continue;
         day_notes[dayIdx] = v;
 
-        // Try to match day cell text to a known driver
-        const cellLower = v.toLowerCase().trim();
-        const cellParts = cellLower.split(/\s+/).filter(p => p.length > 0);
-        for (const [, driverData] of driverMap.entries()) {
-          const firstName = (driverData.firstName || '').toLowerCase().trim();
-          const lastName = (driverData.lastName || '').toLowerCase().trim();
-          const fullName = `${firstName} ${lastName}`.trim();
-
-          if (lastName && lastName === cellLower) { day_driver_ids[dayIdx] = driverData.id; break; }
-          if (firstName && firstName === cellLower && firstName.length >= 3) { day_driver_ids[dayIdx] = driverData.id; break; }
-          if (fullName && (fullName.includes(cellLower) || cellLower.includes(fullName))) { day_driver_ids[dayIdx] = driverData.id; break; }
-          if (firstName && lastName && cellParts.length >= 2) {
-            const mF = cellParts.some(p => firstName.includes(p) || p.includes(firstName));
-            const mL = cellParts.some(p => lastName.includes(p) || p.includes(lastName));
-            if (mF && mL) { day_driver_ids[dayIdx] = driverData.id; break; }
-          }
-          if (lastName && cellLower.length >= 3 && lastName.includes(cellLower)) { day_driver_ids[dayIdx] = driverData.id; break; }
-        }
+         // Try to match day cell text to a known driver using improved fuzzy matching
+         for (const [name, driverData] of driverMap.entries()) {
+           if (fuzzyDriverMatch(v, name, driverData.firstName, driverData.lastName)) {
+             day_driver_ids[dayIdx] = driverData.id;
+             break;
+           }
+         }
       }
 
       return {

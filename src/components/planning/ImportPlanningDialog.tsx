@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parseExcelFile } from '@/utils/excelImport';
-import { parsePlanningExcel, convertToTourInputs, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
+import { parsePlanningExcel, convertToTourInputs, fuzzyDriverMatchPublic, type ParsedPlanningEntry } from '@/utils/planningExcelImport';
 import type { ExcelTourInput } from '@/hooks/usePlanning';
 import { downloadPlanningTemplate } from '@/utils/excelTemplates';
 import { toast } from 'sonner';
@@ -148,12 +148,7 @@ import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
          const driverLower = driverName.toLowerCase().trim();
          if (!driverLower) return true; // empty = no driver specified
          for (const [name, driverData] of driverMap.entries()) {
-           const nameLower = name.toLowerCase();
-           const firstName = (driverData.firstName || '').toLowerCase().trim();
-           const lastName = (driverData.lastName || '').toLowerCase().trim();
-           if (nameLower.includes(driverLower) || driverLower.includes(nameLower)) return true;
-           if (lastName && lastName === driverLower) return true;
-           if (firstName && firstName === driverLower && firstName.length >= 3) return true;
+           if (fuzzyDriverMatchPublic(driverName, name, driverData.firstName, driverData.lastName)) return true;
          }
          return false;
        };
