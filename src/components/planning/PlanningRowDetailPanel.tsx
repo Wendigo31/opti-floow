@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle, Sparkles, Loader2, Phone, Mail } from 'lucide-react';
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -325,6 +325,38 @@ export function PlanningRowDetailPanel({
               onChange={v => setDriverId(v)}
               placeholder="Rechercher un conducteur..."
             />
+            {/* Driver contact info */}
+            {(() => {
+              const selectedDriver = drivers.find(d => d.id === driverId);
+              if (!selectedDriver || (!selectedDriver.phone && !selectedDriver.email)) return null;
+              return (
+                <div className="flex items-center gap-2 mt-1.5 p-2 rounded-md bg-muted/40 border">
+                  {selectedDriver.phone && (
+                    <a
+                      href={`tel:${selectedDriver.phone}`}
+                      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Phone className="h-3 w-3" />
+                      {selectedDriver.phone}
+                    </a>
+                  )}
+                  {selectedDriver.phone && selectedDriver.email && (
+                    <span className="text-muted-foreground text-xs">·</span>
+                  )}
+                  {selectedDriver.email && (
+                    <a
+                      href={`mailto:${selectedDriver.email}`}
+                      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedDriver.email}
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Vehicle */}
