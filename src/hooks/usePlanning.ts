@@ -602,7 +602,7 @@ export interface ExcelTourInput {
 
             const weekRows = tours.flatMap((t) => {
               const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
-              const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 5);
+              const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
               return validDays.map((dayIdx) => {
                 const date = addDays(weekMonday, dayIdx);
                 const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
