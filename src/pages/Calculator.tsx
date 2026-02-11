@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useApp } from '@/context/AppContext';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useClients } from '@/hooks/useClients';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
@@ -14,7 +17,7 @@ import { useExploitationMetrics } from '@/hooks/useExploitationMetrics';
 import { useMarginAlerts } from '@/hooks/useMarginAlerts';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useFuelPrice, FuelType, convertTTCtoHT, convertHTtoTTC } from '@/hooks/useFuelPrice';
 import type { Vehicle } from '@/types/vehicle';
@@ -55,9 +58,9 @@ export default function Calculator() {
   // Margin alerts
   const { settings: marginSettings, checkMargin } = useMarginAlerts();
   
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { vehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
+  const { clients } = useClients();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedTrailerId, setSelectedTrailerId] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
