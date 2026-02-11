@@ -384,31 +384,52 @@ function extractDayCellText(cellValue: string | undefined): string {
        }
      }
      
-     // Day cells -> default notes per day (driver assignment is done manually in the grid)
-     const day_notes: Record<number, string> = {};
-     for (const [dayIdxRaw, text] of Object.entries(entry.day_cells || {})) {
-       const dayIdx = Number(dayIdxRaw);
-       if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 6) continue;
-       const v = (text || '').toString().trim();
-       if (!v) continue;
-       day_notes[dayIdx] = v;
-     }
+      // Day cells -> notes per day AND per-day driver matching
+      const day_notes: Record<number, string> = {};
+      const day_driver_ids: Record<number, string> = {};
+      for (const [dayIdxRaw, text] of Object.entries(entry.day_cells || {})) {
+        const dayIdx = Number(dayIdxRaw);
+        if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 6) continue;
+        const v = (text || '').toString().trim();
+        if (!v) continue;
+        day_notes[dayIdx] = v;
 
-     return {
-       tour_name: entry.ligne || entry.client || 'Tournée importée',
-      vehicle_id: defaultVehicleId || undefined,
-       client_id,
-       driver_id,
+        // Try to match day cell text to a known driver
+        const cellLower = v.toLowerCase().trim();
+        const cellParts = cellLower.split(/\s+/).filter(p => p.length > 0);
+        for (const [, driverData] of driverMap.entries()) {
+          const firstName = (driverData.firstName || '').toLowerCase().trim();
+          const lastName = (driverData.lastName || '').toLowerCase().trim();
+          const fullName = `${firstName} ${lastName}`.trim();
+
+          if (lastName && lastName === cellLower) { day_driver_ids[dayIdx] = driverData.id; break; }
+          if (firstName && firstName === cellLower && firstName.length >= 3) { day_driver_ids[dayIdx] = driverData.id; break; }
+          if (fullName && (fullName.includes(cellLower) || cellLower.includes(fullName))) { day_driver_ids[dayIdx] = driverData.id; break; }
+          if (firstName && lastName && cellParts.length >= 2) {
+            const mF = cellParts.some(p => firstName.includes(p) || p.includes(firstName));
+            const mL = cellParts.some(p => lastName.includes(p) || p.includes(lastName));
+            if (mF && mL) { day_driver_ids[dayIdx] = driverData.id; break; }
+          }
+          if (lastName && cellLower.length >= 3 && lastName.includes(cellLower)) { day_driver_ids[dayIdx] = driverData.id; break; }
+        }
+      }
+
+      return {
+        tour_name: entry.ligne || entry.client || 'Tournée importée',
+        vehicle_id: defaultVehicleId || undefined,
+        client_id,
+        driver_id,
         recurring_days: entry.recurring_days.length > 0 ? entry.recurring_days : [0, 1, 2, 3, 4, 5, 6],
-       is_all_year: false,
-       start_date: startDate,
-       start_time: entry.start_time,
-       end_time: entry.end_time,
-       origin_address: entry.origin_address || null,
-       destination_address: entry.destination_address || null,
-       mission_order: entry.mission_order || null,
-      sector_manager: entry.sector_manager,
+        is_all_year: false,
+        start_date: startDate,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        origin_address: entry.origin_address || null,
+        destination_address: entry.destination_address || null,
+        mission_order: entry.mission_order || null,
+        sector_manager: entry.sector_manager,
         day_notes: Object.keys(day_notes).length > 0 ? day_notes : undefined,
-     };
+        day_driver_ids: Object.keys(day_driver_ids).length > 0 ? day_driver_ids : undefined,
+      };
    });
  }

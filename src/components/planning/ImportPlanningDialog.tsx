@@ -197,7 +197,8 @@ import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
             is_all_year: false,
             start_date: format(weekStartDate, 'yyyy-MM-dd'),
            sector_manager: t.sector_manager || null,
-            day_notes: t.day_notes,
+             day_notes: t.day_notes,
+             day_driver_ids: (t as any).day_driver_ids,
          }));
 
       if (validInputs.length === 0) {
