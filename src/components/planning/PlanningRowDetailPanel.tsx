@@ -95,7 +95,7 @@ export function PlanningRowDetailPanel({
       setRelayTime(first.relay_time || '');
       setRelayLocation(first.relay_location || '');
     }
-  }, [open, first]);
+  }, [open, first?.id]);
 
   const clientName = useMemo(() => {
     const c = clients.find(c => c.id === clientId);

@@ -68,10 +68,10 @@ export default function Planning() {
 
   const { entries, loading, fetchEntries, createEntry, updateEntry, deleteEntry, createTour, importExcelPlanningWeek, deleteTourInWeek } = usePlanning();
   const { vehicles, fetchVehicles } = useCloudVehicles();
-  const { cdiDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
+  const { cdiDrivers, cddDrivers, interimDrivers, fetchDrivers } = useCloudDrivers();
   const { clients } = useClients();
 
-  const allDrivers = useMemo(() => [...cdiDrivers, ...interimDrivers], [cdiDrivers, interimDrivers]);
+  const allDrivers = useMemo(() => [...cdiDrivers, ...cddDrivers, ...interimDrivers], [cdiDrivers, cddDrivers, interimDrivers]);
 
   const autoCreateClient = useCallback(async (name: string): Promise<string | null> => {
     try {
@@ -479,7 +479,15 @@ export default function Planning() {
         clients={clients}
         drivers={allDrivers}
         vehicles={vehicles.filter(v => v.isActive && v.type === 'tracteur')}
-        onSave={createTour}
+        onSave={async (input, weeksAhead) => {
+          const ok = await createTour(input, weeksAhead);
+          if (ok) {
+            const startDate = format(currentWeekStart, 'yyyy-MM-dd');
+            const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+            await fetchEntries(startDate, endDate);
+          }
+          return ok;
+        }}
       />
 
       {/* Import Dialog */}

@@ -309,22 +309,29 @@ export function useClients() {
               return updated;
             });
           } else if (payload.eventType === 'UPDATE') {
-            const updatedClient: LocalClient = {
-              id: (payload.new as any).id,
-              name: (payload.new as any).name,
-              company: (payload.new as any).company,
-              email: (payload.new as any).email,
-              phone: (payload.new as any).phone,
-              address: (payload.new as any).address,
-              city: (payload.new as any).city,
-              postal_code: (payload.new as any).postal_code,
-              siret: (payload.new as any).siret,
-              notes: (payload.new as any).notes,
-              created_at: (payload.new as any).created_at,
-              updated_at: (payload.new as any).updated_at,
-            };
+            const raw = payload.new as any;
             setClients(prev => {
-              const updated = prev.map(c => c.id === updatedClient.id ? updatedClient : c);
+              const updated = prev.map(c => {
+                if (c.id !== raw.id) return c;
+                // Merge DB fields while preserving creator metadata from existing state
+                return {
+                  ...c,
+                  name: raw.name,
+                  company: raw.company,
+                  email: raw.email,
+                  phone: raw.phone,
+                  address: raw.address,
+                  city: raw.city,
+                  postal_code: raw.postal_code,
+                  siret: raw.siret,
+                  notes: raw.notes,
+                  created_at: raw.created_at,
+                  updated_at: raw.updated_at,
+                  user_id: raw.user_id ?? c.user_id,
+                  license_id: raw.license_id ?? c.license_id,
+                  // Preserve creator fields that aren't in the DB row
+                };
+              });
               clientsRef.current = updated;
               return updated;
             });

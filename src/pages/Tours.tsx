@@ -49,7 +49,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSavedTours } from '@/hooks/useSavedTours';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useClients as useCloudClients } from '@/hooks/useClients';
 import { useLicense } from '@/hooks/useLicense';
 import { useCompanyData } from '@/hooks/useCompanyData';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
@@ -63,18 +63,12 @@ import type { SavedTour } from '@/types/savedTour';
 import jsPDF from 'jspdf';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
-interface Client {
-  id: string;
-  name: string;
-  company?: string | null;
-}
-
 export default function Tours() {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour } = useSavedTours();
   const { planType } = useLicense();
   const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
   const { canViewPricing, canViewFinancialData, canExportFinancialReports } = useRolePermissions();
-  const [clients] = useLocalStorage<Client[]>('optiflow_clients', []);
+  const { clients } = useCloudClients();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
@@ -689,50 +683,59 @@ export default function Tours() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h4 className="font-medium">Détail des coûts</h4>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>Péages</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.toll_cost)}</span>
+                {canViewFinancialData ? (
+                  <>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Détail des coûts</h4>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>Péages</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.toll_cost)}</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>Carburant</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.fuel_cost)}</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>AdBlue</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.adblue_cost)}</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>Conducteur</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.driver_cost)}</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>Structure</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.structure_cost)}</span>
+                        </div>
+                        <div className="flex justify-between p-2 bg-muted/30 rounded">
+                          <span>Véhicule</span>
+                          <span className="font-medium">{formatCurrency(selectedTour.vehicle_cost)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>Carburant</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.fuel_cost)}</span>
-                    </div>
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>AdBlue</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.adblue_cost)}</span>
-                    </div>
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>Conducteur</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.driver_cost)}</span>
-                    </div>
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>Structure</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.structure_cost)}</span>
-                    </div>
-                    <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span>Véhicule</span>
-                      <span className="font-medium">{formatCurrency(selectedTour.vehicle_cost)}</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Coût total</p>
-                    <p className="text-xl font-bold">{formatCurrency(selectedTour.total_cost)}</p>
+                    <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Coût total</p>
+                        <p className="text-xl font-bold">{formatCurrency(selectedTour.total_cost)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Recette</p>
+                        <p className="text-xl font-bold text-primary">{formatCurrency(selectedTour.revenue || 0)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Bénéfice</p>
+                        <p className="text-xl font-bold text-green-500">{formatCurrency(selectedTour.profit || 0)}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-muted/30 rounded-lg text-center text-muted-foreground">
+                    <EyeOff className="w-5 h-5 mx-auto mb-2" />
+                    <p className="text-sm">Données financières réservées à la Direction</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Recette</p>
-                    <p className="text-xl font-bold text-primary">{formatCurrency(selectedTour.revenue || 0)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Bénéfice</p>
-                    <p className="text-xl font-bold text-green-500">{formatCurrency(selectedTour.profit || 0)}</p>
-                  </div>
-                </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setSelectedTour(null)}>
