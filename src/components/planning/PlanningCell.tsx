@@ -15,25 +15,41 @@ import { cn } from '@/lib/utils';
    onEntryClick: (entry: PlanningEntry) => void;
    getClientName: (clientId: string | null) => string | null;
    getDriverName: (driverId: string | null) => string | null;
-   getRelayDriverName: (driverId: string | null) => string | null;
-   isSelectionMode: boolean;
+  getRelayDriverName: (driverId: string | null) => string | null;
+    getDriverContractType?: (driverId: string | null) => string | undefined;
+    isSelectionMode: boolean;
    selectedEntryIds: Set<string>;
    onToggleSelection: (entryId: string) => void;
  }
  
- export function PlanningCell({
-   date,
-   entries,
-   isToday,
-   onCellClick,
-   onEntryClick,
-   getClientName,
-   getDriverName,
-   getRelayDriverName,
-   isSelectionMode,
-   selectedEntryIds,
-   onToggleSelection,
- }: PlanningCellProps) {
+export function PlanningCell({
+    date,
+    entries,
+    isToday,
+    onCellClick,
+    onEntryClick,
+    getClientName,
+    getDriverName,
+    getRelayDriverName,
+    getDriverContractType,
+    isSelectionMode,
+    selectedEntryIds,
+    onToggleSelection,
+  }: PlanningCellProps) {
+    const getContractTypeColor = (driverId: string | null): string | null => {
+      if (!driverId || !getDriverContractType) return null;
+      const contractType = getDriverContractType(driverId);
+      switch (contractType) {
+        case 'joker':
+          return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
+        case 'interim':
+          return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+        case 'cdd':
+          return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+        default:
+          return null;
+      }
+    };
    return (
      <div 
        className={cn(
@@ -74,19 +90,19 @@ import { cn } from '@/lib/utils';
            const relayDriverName = getRelayDriverName(entry.relay_driver_id);
            const isSelected = selectedEntryIds.has(entry.id);
            
-           return (
-             <div
-               key={entry.id}
-               className={cn(
-                 "p-2 rounded-md text-xs cursor-pointer transition-all",
-                 planningStatusColors[entry.status],
-                 isSelectionMode && isSelected && "ring-2 ring-primary",
-                 !isSelectionMode && "hover:ring-2 hover:ring-primary/50"
-               )}
-               onClick={(e) => {
-                 e.stopPropagation();
-                 onEntryClick(entry);
-               }}
+            return (
+              <div
+                key={entry.id}
+                className={cn(
+                  "p-2 rounded-md text-xs cursor-pointer transition-all",
+                  getContractTypeColor(entry.driver_id) || planningStatusColors[entry.status],
+                  isSelectionMode && isSelected && "ring-2 ring-primary",
+                  !isSelectionMode && "hover:ring-2 hover:ring-primary/50"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEntryClick(entry);
+                }}
              >
                {/* Selection checkbox */}
                {isSelectionMode && (
