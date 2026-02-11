@@ -246,18 +246,24 @@ export function useCloudVehicles() {
     }
   }, [licenseId]);
 
-  const deleteVehicle = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      if (!licenseId) {
-        toast.error('Session en cours de chargement...');
-        return false;
-      }
+   const deleteVehicle = useCallback(async (id: string): Promise<boolean> => {
+     try {
+       let lid = licenseId;
+       
+       if (!lid) {
+         lid = await getLicenseId();
+       }
+       
+       if (!lid) {
+         toast.error('Veuillez vous reconnecter');
+         return false;
+       }
 
-      const { error } = await supabase
-        .from('user_vehicles')
-        .delete()
-        .eq('license_id', licenseId)
-        .eq('local_id', id);
+       const { error } = await supabase
+         .from('user_vehicles')
+         .delete()
+         .eq('license_id', lid)
+         .eq('local_id', id);
 
       if (error) throw error;
 
