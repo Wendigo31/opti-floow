@@ -22,6 +22,7 @@ import { FeatureGate } from '@/components/license/FeatureGate';
 import { ImportClientsDialog } from '@/components/clients/ImportClientsDialog';
 import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
 import { MergeDialog } from '@/components/shared/MergeDialog';
+import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { toast as sonnerToast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -361,6 +362,13 @@ export default function Clients() {
               </Button>
             </div>
           </div>
+
+          {/* Duplicate detection */}
+          <DuplicateDetectionBanner
+            items={clients.map(c => ({ id: c.id, name: c.name, extra: c.company || c.city || '' }))}
+            entityLabel="clients"
+            onMerge={handleMergeClients}
+          />
 
           {/* Bulk actions */}
           <BulkActionsBar

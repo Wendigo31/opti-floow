@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
 import { MergeDialog } from '@/components/shared/MergeDialog';
+import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
@@ -1287,6 +1288,17 @@ export default function Drivers() {
             {activeTab === 'interim' ? 'Ajouter un intérimaire' : 'Ajouter un conducteur'}
           </Button>
         </div>
+
+        {/* Duplicate detection banner */}
+        <DuplicateDetectionBanner
+          items={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers].map(d => ({
+            id: d.id,
+            name: d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name,
+            extra: cloudInterimDrivers.some(i => i.id === d.id) ? 'Intérim' : cloudCddDrivers.some(c => c.id === d.id) ? 'CDD' : 'CDI',
+          }))}
+          entityLabel="conducteurs"
+          onMerge={handleMergeDrivers}
+        />
 
         <TabsContent value="cdi" className="mt-6">
           {/* Add Form */}
