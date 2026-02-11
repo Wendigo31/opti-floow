@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
@@ -359,16 +360,18 @@ export default function AIAnalysisPanel() {
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Véhicule</Label>
-                <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicles.filter(v => v.id).map(v => (
-                      <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedVehicleId}
+                  onValueChange={setSelectedVehicleId}
+                  options={vehicles.filter(v => v.id).map(v => ({
+                    value: v.id,
+                    label: v.name,
+                  }))}
+                  placeholder="Sélectionner..."
+                  emptyLabel="Aucun"
+                  searchPlaceholder="Rechercher un véhicule..."
+                  allowClear={false}
+                />
               </div>
               <div>
                 <Label className="text-xs">Conducteurs</Label>

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -219,17 +220,15 @@ export default function TripHistory() {
               className="pl-10"
             />
           </div>
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Filtrer par client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les clients</SelectItem>
-              {clients.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={clientFilter === 'all' ? '' : clientFilter}
+            onValueChange={(v) => setClientFilter(v || 'all')}
+            options={clients.map(c => ({ value: c.id, label: c.name }))}
+            placeholder="Filtrer par client"
+            emptyLabel="Tous les clients"
+            searchPlaceholder="Rechercher un client..."
+            triggerClassName="w-full sm:w-[200px]"
+          />
         </div>
 
         {/* Comparison Panel */}

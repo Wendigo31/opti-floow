@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Dialog,
   DialogContent,
@@ -274,20 +275,18 @@ export function EditTourDialog({
                   <Building2 className="w-4 h-4" />
                   Client associé
                 </Label>
-                <Select value={clientId || "none"} onValueChange={(val) => setClientId(val === "none" ? "" : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun client</SelectItem>
-                    {clients.filter(c => c.id).map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                        {client.company && ` (${client.company})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={clientId || ''}
+                  onValueChange={(val) => setClientId(val || '')}
+                  options={clients.filter(c => c.id).map((client) => ({
+                    value: client.id,
+                    label: client.name,
+                    sublabel: client.company || undefined,
+                  }))}
+                  placeholder="Sélectionnez un client"
+                  emptyLabel="Aucun client"
+                  searchPlaceholder="Rechercher un client..."
+                />
               </div>
 
               {/* Multi-Vehicle selection */}
@@ -348,19 +347,17 @@ export function EditTourDialog({
                   <Container className="w-4 h-4" />
                   Remorque
                 </Label>
-                <Select value={trailerId || "none"} onValueChange={(val) => setTrailerId(val === "none" ? "" : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une remorque" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucune remorque</SelectItem>
-                    {trailers.filter(t => t.id).map((trailer) => (
-                      <SelectItem key={trailer.id} value={trailer.id}>
-                        {trailer.name} ({trailer.licensePlate})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={trailerId || ''}
+                  onValueChange={(val) => setTrailerId(val || '')}
+                  options={trailers.filter(t => t.id).map((trailer) => ({
+                    value: trailer.id,
+                    label: `${trailer.name} (${trailer.licensePlate})`,
+                  }))}
+                  placeholder="Sélectionnez une remorque"
+                  emptyLabel="Aucune remorque"
+                  searchPlaceholder="Rechercher une remorque..."
+                />
               </div>
 
               {/* Driver selection */}

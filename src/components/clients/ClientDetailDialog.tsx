@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { 
   Building2, Mail, Phone, MapPin, Route, 
   Calculator, History, Receipt, Trash2, Calendar,
@@ -1044,18 +1045,19 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
 
             <div className="space-y-2">
               <Label>Sélectionner le client cible</Label>
-              <Select value={duplicateTargetClientId} onValueChange={setDuplicateTargetClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.filter(c => c.id !== client.id).map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.company ? `(${c.company})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={duplicateTargetClientId}
+                onValueChange={setDuplicateTargetClientId}
+                options={clients.filter(c => c.id !== client.id).map(c => ({
+                  value: c.id,
+                  label: c.name,
+                  sublabel: c.company || undefined,
+                }))}
+                placeholder="Choisir un client"
+                emptyLabel="Aucun"
+                searchPlaceholder="Rechercher un client..."
+                allowClear={false}
+              />
             </div>
 
             <div className="flex gap-2">
