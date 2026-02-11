@@ -78,14 +78,31 @@ export default function Planning() {
   const autoCreateClient = useCallback(async (name: string): Promise<string | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      const currentLicenseId = licenseId || await getLicenseId();
+      if (!user) {
+        // Try refreshing the session first
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.user) {
+          console.warn('[autoCreateClient] No user after refresh');
+          return null;
+        }
+      }
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
+      if (!currentUser) return null;
+      
+      const lid = licenseId || await getLicenseId();
+      if (!lid) {
+        console.warn('[autoCreateClient] No licenseId');
+        return null;
+      }
       const { data, error } = await supabase
         .from('clients')
-        .insert({ user_id: user.id, license_id: currentLicenseId, name })
+        .insert({ user_id: currentUser.id, license_id: lid, name })
         .select('id')
         .single();
-      if (error) return null;
+      if (error) {
+        console.warn('[autoCreateClient] Insert error:', error.message);
+        return null;
+      }
       return data?.id || null;
     } catch { return null; }
   }, [licenseId]);

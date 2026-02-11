@@ -603,6 +603,8 @@ export function usePlanning() {
           let lid = licenseId;
 
           if (!uid || !lid) {
+            // Try refreshing session first
+            await supabase.auth.refreshSession();
             const { data: { user } } = await supabase.auth.getUser();
             const fallbackLicenseId = await getLicenseId();
             uid = user?.id || null;
@@ -610,6 +612,7 @@ export function usePlanning() {
           }
 
           if (!uid || !lid) {
+            console.error('[Planning] Import failed: no auth after refresh', { uid: !!uid, lid: !!lid });
             toast.error('Session non initialisée. Veuillez vous reconnecter.');
             return false;
           }
