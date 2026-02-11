@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TRANSPORT_COMPANIES, COMPANY_CATEGORIES, type TransportCompanyAddress } from '@/data/transportCompanies';
 import { useCloudFavoriteAddresses, type CloudFavoriteAddress } from '@/hooks/useCloudFavoriteAddresses';
 import { useAddressAutocomplete } from '@/hooks/useAddressAutocomplete';
+import { useClients } from '@/hooks/useClients';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
 interface AddressSelectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,7 +69,9 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('companies');
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const { favorites, loading: favoritesLoading, addFavorite, removeFavorite } = useCloudFavoriteAddresses();
+  const { clients, addresses: allClientAddresses, loading: clientsLoading } = useClients();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // For custom address
@@ -117,6 +121,19 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
     );
   }, [favorites, search]);
 
+  const filteredClients = useMemo(() => {
+    return clients.filter(client => 
+      client.name.toLowerCase().includes(search.toLowerCase()) ||
+      (client.phone || '').includes(search) ||
+      (client.company || '').toLowerCase().includes(search.toLowerCase())
+    );
+  }, [clients, search]);
+
+  const clientAddresses = useMemo(() => {
+    if (!selectedClientId) return [];
+    return allClientAddresses.filter(addr => addr.client_id === selectedClientId);
+  }, [allClientAddresses, selectedClientId]);
+
   const handleSelectCompany = (company: TransportCompanyAddress) => {
     const fullAddress = `${company.address}, ${company.postalCode} ${company.city}`;
     onSelect(fullAddress, { lat: company.lat, lon: company.lon });
@@ -128,6 +145,21 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
     onSelect(favorite.address, { lat: favorite.lat, lon: favorite.lon });
     onOpenChange(false);
     setSearch('');
+  };
+
+  const handleSelectClientAddress = (address: any) => {
+    const fullAddress = address.address ? 
+      (address.postal_code && address.city 
+        ? `${address.address}, ${address.postal_code} ${address.city}`
+        : address.address)
+      : '';
+    
+    if (address.latitude && address.longitude) {
+      onSelect(fullAddress, { lat: address.latitude, lon: address.longitude });
+      onOpenChange(false);
+      setSearch('');
+      setSelectedClientId(null);
+    }
   };
 
   const handleDeleteFavorite = async (e: React.MouseEvent, id: string) => {
@@ -214,7 +246,7 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
             <MapPin className="w-5 h-5 text-primary" />
             Sélectionner une adresse
           </DialogTitle>
-          <DialogDescription>Recherchez parmi les transporteurs, vos favoris ou ajoutez une adresse personnalisée.</DialogDescription>
+          <DialogDescription>Recherchez parmi les transporteurs, dépôts clients, vos favoris ou ajoutez une adresse personnalisée.</DialogDescription>
         </DialogHeader>
 
         <div className="relative mb-4">
@@ -233,18 +265,26 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="companies" className="gap-2">
               <Building2 className="w-4 h-4" />
-              Transporteurs ({filteredCompanies.length})
+              <span className="hidden sm:inline text-xs">Transporteurs</span>
+              <span className="sm:hidden text-xs">({filteredCompanies.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="clients" className="gap-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Dépôts</span>
+              <span className="sm:hidden text-xs">({filteredClients.length})</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="gap-2">
               <Star className="w-4 h-4" />
-              Favoris ({filteredFavorites.length})
+              <span className="hidden sm:inline text-xs">Favoris</span>
+              <span className="sm:hidden text-xs">({filteredFavorites.length})</span>
             </TabsTrigger>
             <TabsTrigger value="custom" className="gap-2">
               <Plus className="w-4 h-4" />
-              Ajouter
+              <span className="hidden sm:inline text-xs">Ajouter</span>
+              <span className="sm:hidden">+</span>
             </TabsTrigger>
           </TabsList>
 
@@ -372,6 +412,111 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
                 )}
               </div>
             </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="clients" className="flex-1 mt-4">
+            {clientsLoading ? (
+              <div className="flex items-center justify-center h-[370px]">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {!selectedClientId ? (
+                  <ScrollArea className="h-[370px] pr-4">
+                    <div className="space-y-2">
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            onClick={() => setSelectedClientId(client.id)}
+                            className="w-full p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent/50 text-left transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-foreground">{client.name}</span>
+                                  {client.company && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {client.company}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {client.phone && (
+                                  <p className="text-sm text-muted-foreground">{client.phone}</p>
+                                )}
+                                {client.address && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {client.postal_code && <span className="font-medium">{client.postal_code}</span>} {client.address}, {client.city}
+                                  </p>
+                                )}
+                              </div>
+                              <Check className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Aucun client trouvé</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedClientId(null)}
+                      >
+                        ← Retour aux clients
+                      </Button>
+                      <span className="text-sm font-medium">
+                        {clients.find(c => c.id === selectedClientId)?.name}
+                      </span>
+                    </div>
+                    
+                    <ScrollArea className="h-[320px] pr-4 border border-border/50 rounded-lg p-3">
+                      {clientAddresses.length > 0 ? (
+                        <div className="space-y-2">
+                          {clientAddresses.map((addr) => (
+                            <button
+                              key={addr.id}
+                              onClick={() => handleSelectClientAddress(addr)}
+                              className="w-full p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent/50 text-left transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-foreground">{addr.label}</span>
+                                    {addr.is_default && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        Par défaut
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{addr.address}</p>
+                                  {(addr.postal_code || addr.city) && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      <span className="font-medium">{addr.postal_code}</span> {addr.city}
+                                    </p>
+                                  )}
+                                </div>
+                                <Check className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Aucune adresse enregistrée pour ce client</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="favorites" className="flex-1 mt-4">
