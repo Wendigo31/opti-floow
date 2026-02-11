@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Sparkles,
   EyeOff,
-  Copy
+  Copy,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,6 +89,8 @@ export default function Tours() {
   const [editingTour, setEditingTour] = useState<SavedTour | null>(null);
   const [exporting, setExporting] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [assignClientOpen, setAssignClientOpen] = useState(false);
+  const [assignClientId, setAssignClientId] = useState<string>('');
   
   const isEnterprise = planType === 'enterprise';
 
@@ -147,6 +150,21 @@ export default function Tours() {
     }
     toast.success(`${toDuplicate.length} tournée(s) dupliquée(s)`);
     setCheckedIds(new Set());
+  };
+
+  const handleBulkAssignClient = async () => {
+    if (checkedIds.size === 0 || !assignClientId) return;
+    let success = 0;
+    for (const id of checkedIds) {
+      const ok = await updateTour(id, { client_id: assignClientId });
+      if (ok) success++;
+    }
+    if (success > 0) {
+      toast.success(`${success} tournée(s) affectée(s) au client`);
+      setCheckedIds(new Set());
+    }
+    setAssignClientOpen(false);
+    setAssignClientId('');
   };
 
   const handleMergeTours = async (keepId: string, mergeIds: string[]): Promise<boolean> => {
@@ -482,7 +500,41 @@ export default function Tours() {
         onDelete={handleBulkDelete}
         onDuplicate={handleDuplicate}
         onClear={() => setCheckedIds(new Set())}
+        extraActions={
+          <Button variant="outline" size="sm" onClick={() => setAssignClientOpen(true)} className="gap-1.5">
+            <UserCheck className="w-3.5 h-3.5" />
+            Affecter à un client
+          </Button>
+        }
       />
+
+      {/* Assign to client dialog */}
+      <Dialog open={assignClientOpen} onOpenChange={(open) => { setAssignClientOpen(open); if (!open) setAssignClientId(''); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Affecter {checkedIds.size} tournée(s) à un client</DialogTitle>
+            <DialogDescription>
+              Les tournées sélectionnées seront regroupées sous un seul client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select value={assignClientId} onValueChange={setAssignClientId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un client..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignClientOpen(false)}>Annuler</Button>
+            <Button onClick={handleBulkAssignClient} disabled={!assignClientId}>Affecter</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Tours Table */}
       <Card>
