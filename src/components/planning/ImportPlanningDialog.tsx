@@ -229,6 +229,7 @@ import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
      setFile(null);
      setPreview([]);
      setError(null);
+     setImporting(false);
      onOpenChange(false);
    };
  
