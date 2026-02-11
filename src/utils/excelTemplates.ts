@@ -3,39 +3,39 @@
  /**
   * Generate a sample Excel template for driver import
   */
- export function generateDriversTemplate(): Blob {
-   const headers = [
-     'Nom',
-     'Prénom', 
-     'Téléphone',
-     'Fonction',
-     'Type de contrat',
-     'Agence intérim',
-     'Service/Département',
-     'Email'
-   ];
- 
-   const sampleData = [
-     ['DUPONT', 'Jean', '06 12 34 56 78', 'Chauffeur SPL', 'CDI', '', 'Transport', 'jean.dupont@email.com'],
-     ['MARTIN', 'Pierre', '06 98 76 54 32', 'Conducteur Poids Lourd', 'CDI', '', 'Livraison', 'pierre.martin@email.com'],
-     ['DURAND', 'Marie', '07 11 22 33 44', 'Chauffeur SPL', 'CDD', '', 'Transport', 'marie.durand@email.com'],
-     ['BERNARD', 'Lucas', '06 55 66 77 88', 'Chauffeur Routier', 'Intérim', 'Manpower', 'Transport', 'lucas.bernard@email.com'],
-     ['PETIT', 'Sophie', '06 44 33 22 11', 'Conducteur Super Poids Lourd', 'Intérim', 'Adecco', 'Logistique', ''],
-   ];
- 
-   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-   
-   // Set column widths
-   ws['!cols'] = [
-     { wch: 15 }, // Nom
-     { wch: 15 }, // Prénom
-     { wch: 18 }, // Téléphone
-     { wch: 25 }, // Fonction
-     { wch: 15 }, // Type de contrat
-     { wch: 15 }, // Agence intérim
-     { wch: 20 }, // Service
-     { wch: 30 }, // Email
-   ];
+export function generateDriversTemplate(): Blob {
+    const headers = [
+      'Nom Prénom',
+      'Téléphone',
+      'Fonction',
+      'Type de contrat',
+      'Horaire',
+      'Agence intérim',
+      'Service/Département',
+      'Email'
+    ];
+  
+    const sampleData = [
+      ['DUPONT Jean', '06 12 34 56 78', 'Chauffeur SPL', 'CDI', 'Jour', '', 'Transport', 'jean.dupont@email.com'],
+      ['MARTIN Pierre', '06 98 76 54 32', 'Conducteur Poids Lourd', 'CDI', 'Nuit', '', 'Livraison', 'pierre.martin@email.com'],
+      ['DURAND Marie', '07 11 22 33 44', 'Chauffeur SPL', 'CDD', 'Jour', '', 'Transport', 'marie.durand@email.com'],
+      ['BERNARD Lucas', '06 55 66 77 88', 'Chauffeur Routier', 'Intérim', 'Nuit', 'Manpower', 'Transport', 'lucas.bernard@email.com'],
+      ['PETIT Sophie', '06 44 33 22 11', 'Conducteur Super Poids Lourd', 'Intérim', 'Jour', 'Adecco', 'Logistique', ''],
+    ];
+  
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 25 }, // Nom Prénom
+      { wch: 18 }, // Téléphone
+      { wch: 25 }, // Fonction
+      { wch: 15 }, // Type de contrat
+      { wch: 12 }, // Horaire
+      { wch: 15 }, // Agence intérim
+      { wch: 20 }, // Service
+      { wch: 30 }, // Email
+    ];
  
    const wb = XLSX.utils.book_new();
    XLSX.utils.book_append_sheet(wb, ws, 'Conducteurs');
@@ -246,41 +246,39 @@ export function downloadClientsTemplate(): void {
  */
 export function generateInterimDriversTemplate(): Blob {
   const headers = [
-    'Nom',
-    'Prénom',
+    'Nom Prénom',
     'Téléphone',
     'Email',
     'Agence intérim',
+    'Horaire',
     'Taux horaire (€)',
     'Coefficient',
     'Heures/jour',
     'Jours travaillés/mois',
-    'Type horaire',
     'Notes'
   ];
 
   const sampleData = [
-    ['DUPONT', 'Jean', '06 12 34 56 78', 'jean.dupont@email.com', 'Manpower', '12.50', '1.85', '10', '21', 'Jour', 'Chauffeur SPL expérimenté'],
-    ['MARTIN', 'Pierre', '06 98 76 54 32', '', 'Adecco', '13.00', '1.90', '10', '21', 'Nuit', 'Disponible week-end'],
-    ['DURAND', 'Marie', '07 11 22 33 44', 'marie.d@email.com', 'Randstad', '12.00', '1.80', '8', '20', 'Jour', ''],
-    ['BERNARD', 'Lucas', '06 55 66 77 88', '', 'Synergie', '14.00', '2.00', '10', '22', 'Mixte', 'Longue distance'],
-    ['PETIT', 'Sophie', '06 44 33 22 11', '', 'Manpower', '11.50', '1.75', '10', '21', 'Jour', 'Permis EC'],
+    ['DUPONT Jean', '06 12 34 56 78', 'jean.dupont@email.com', 'Manpower', 'Jour', '12.50', '1.85', '10', '21', 'Chauffeur SPL expérimenté'],
+    ['MARTIN Pierre', '06 98 76 54 32', '', 'Adecco', 'Nuit', '13.00', '1.90', '10', '21', 'Disponible week-end'],
+    ['DURAND Marie', '07 11 22 33 44', 'marie.d@email.com', 'Randstad', 'Jour', '12.00', '1.80', '8', '20', ''],
+    ['BERNARD Lucas', '06 55 66 77 88', '', 'Synergie', 'Nuit', '14.00', '2.00', '10', '22', 'Longue distance'],
+    ['PETIT Sophie', '06 44 33 22 11', '', 'Manpower', 'Jour', '11.50', '1.75', '10', '21', 'Permis EC'],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
   
   // Set column widths
   ws['!cols'] = [
-    { wch: 15 }, // Nom
-    { wch: 15 }, // Prénom
+    { wch: 25 }, // Nom Prénom
     { wch: 18 }, // Téléphone
     { wch: 25 }, // Email
     { wch: 15 }, // Agence
+    { wch: 12 }, // Horaire
     { wch: 15 }, // Taux horaire
     { wch: 12 }, // Coefficient
     { wch: 12 }, // Heures/jour
     { wch: 18 }, // Jours travaillés
-    { wch: 12 }, // Type horaire
     { wch: 30 }, // Notes
   ];
 

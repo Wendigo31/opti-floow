@@ -1,17 +1,18 @@
  import * as XLSX from 'xlsx';
  import type { Driver } from '@/types';
  
- export interface ParsedDriverRow {
-   name: string;
-   firstName: string;
-   lastName: string;
-   phone: string;
-   contractType: 'cdi' | 'cdd' | 'interim';
-   agencyName?: string;
-   position?: string;
-   department?: string;
-   email?: string;
- }
+export interface ParsedDriverRow {
+    name: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    contractType: 'cdi' | 'cdd' | 'interim';
+    shiftType: 'jour' | 'nuit';
+    agencyName?: string;
+    position?: string;
+    department?: string;
+    email?: string;
+  }
  
  export interface ExtendedParsedDriver extends Driver {
    isInterim: boolean;
@@ -165,35 +166,35 @@ function containsDriverKeyword(text: string): boolean {
      
      if (headerRowIndex === -1) continue;
      
-     // Find relevant column indices
-      // First, check for separate first/last name columns
-      const firstNameIdx = headers.findIndex(h => 
-        h === 'prénom' || h === 'prenom' || h === 'firstname' || h === 'first name'
-      );
-      
-      // If we have a firstName column, look for a separate lastName column
-      // The "nom" column is the last name when there's also a "prénom" column
-      let lastNameIdx = -1;
-      let nameIdx = -1;
-      
-      if (firstNameIdx >= 0) {
-        // We have a prénom column, so "nom" should be the last name
-        lastNameIdx = headers.findIndex(h => 
-          h === 'nom' || h === 'nom de famille' || h === 'lastname' || h === 'last name'
-        );
-      } else {
-        // No prénom column, look for a combined name column
-        nameIdx = headers.findIndex(h => 
-          h === 'nom' || h.includes('nom complet') || h === 'nom prénom' || h === 'nom prenom'
-        );
-      }
-      
-     const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
-     const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
-     const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type'));
-     const agencyIdx = headers.findIndex(h => h.includes('agence') || h.includes('interim') || h.includes('intérim'));
-     const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
-     const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
+      // Find relevant column indices
+       // First, check for a combined "nom prénom" column
+       let nameIdx = headers.findIndex(h => 
+         h === 'nom prénom' || h === 'nom prenom' || h.includes('nom complet') || h === 'nom / prénom'
+       );
+       
+       // Then check for separate first/last name columns
+       const firstNameIdx = nameIdx < 0 ? headers.findIndex(h => 
+         h === 'prénom' || h === 'prenom' || h === 'firstname' || h === 'first name'
+       ) : -1;
+       
+       let lastNameIdx = -1;
+       
+       if (firstNameIdx >= 0) {
+         lastNameIdx = headers.findIndex(h => 
+           h === 'nom' || h === 'nom de famille' || h === 'lastname' || h === 'last name'
+         );
+       } else if (nameIdx < 0) {
+         // Fallback: single "nom" column as combined name
+         nameIdx = headers.findIndex(h => h === 'nom');
+       }
+       
+      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('tel') || h.includes('portable') || h.includes('mobile'));
+      const positionIdx = headers.findIndex(h => h.includes('fonction') || h.includes('poste') || h.includes('emploi') || h.includes('métier'));
+      const contractIdx = headers.findIndex(h => h.includes('contrat') || h.includes('type de contrat'));
+      const shiftIdx = headers.findIndex(h => h === 'horaire' || h === 'type horaire' || h.includes('jour/nuit') || h.includes('shift'));
+      const agencyIdx = headers.findIndex(h => h.includes('agence') || h.includes('interim') || h.includes('intérim'));
+      const deptIdx = headers.findIndex(h => h.includes('département') || h.includes('departement') || h.includes('service') || h.includes('secteur'));
+      const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
      
       if (import.meta.env.DEV) {
         console.log('Driver columns:', { nameIdx, firstNameIdx, lastNameIdx, phoneIdx, positionIdx });
@@ -256,43 +257,53 @@ function containsDriverKeyword(text: string): boolean {
          phone = extractPhone(String(row[nameIdx] || ''));
        }
        
-       // Determine contract type
-       let contractType: 'cdi' | 'cdd' | 'interim' = 'cdi';
-       if (contractIdx >= 0) {
-         contractType = parseContractType(String(row[contractIdx] || ''));
-       } else if (rowText.includes('interim') || rowText.includes('intérim')) {
-         contractType = 'interim';
-       }
-       
-       // Get agency name for interim
-       let agencyName = '';
-       if (agencyIdx >= 0) {
-         agencyName = String(row[agencyIdx] || '').trim();
-       }
-       
-       // Get department
-       let department = '';
-       if (deptIdx >= 0) {
-         department = String(row[deptIdx] || '').trim();
-       }
-       
-       // Get email
-       let email = '';
-       if (emailIdx >= 0) {
-         email = String(row[emailIdx] || '').trim();
-       }
-       
-       drivers.push({
-         name: fullName,
-         firstName,
-         lastName,
-         phone,
-         contractType,
-         agencyName,
-         position,
-         department,
-         email,
-       });
+        // Determine contract type
+        let contractType: 'cdi' | 'cdd' | 'interim' = 'cdi';
+        if (contractIdx >= 0) {
+          contractType = parseContractType(String(row[contractIdx] || ''));
+        } else if (rowText.includes('interim') || rowText.includes('intérim')) {
+          contractType = 'interim';
+        }
+        
+        // Determine shift type (jour/nuit)
+        let shiftType: 'jour' | 'nuit' = 'jour';
+        if (shiftIdx >= 0) {
+          const shiftVal = String(row[shiftIdx] || '').toLowerCase().trim();
+          if (shiftVal.includes('nuit') || shiftVal === 'night') {
+            shiftType = 'nuit';
+          }
+        }
+        
+        // Get agency name for interim
+        let agencyName = '';
+        if (agencyIdx >= 0) {
+          agencyName = String(row[agencyIdx] || '').trim();
+        }
+        
+        // Get department
+        let department = '';
+        if (deptIdx >= 0) {
+          department = String(row[deptIdx] || '').trim();
+        }
+        
+        // Get email
+        let email = '';
+        if (emailIdx >= 0) {
+          email = String(row[emailIdx] || '').trim();
+        }
+        
+        drivers.push({
+          name: fullName,
+          firstName,
+          lastName,
+          phone,
+          contractType,
+          shiftType,
+          agencyName,
+          position,
+          department,
+          email,
+        });
      }
    }
    
@@ -326,26 +337,26 @@ export async function parseDriversFromUrl(url: string): Promise<ParsedDriverRow[
  /**
   * Convert parsed rows to Driver objects ready for import
   */
- export function convertToDrivers(parsedDrivers: ParsedDriverRow[]): ExtendedParsedDriver[] {
-   return parsedDrivers.map((parsed, index) => ({
-     id: `imported_${Date.now()}_${index}`,
-     name: parsed.name,
-     firstName: parsed.firstName,
-     lastName: parsed.lastName,
-     baseSalary: parsed.contractType === 'interim' ? 0 : 2200,
-     hourlyRate: 12.50,
-     hoursPerDay: 10,
-     patronalCharges: parsed.contractType === 'interim' ? 0 : 45,
-     mealAllowance: 15.20,
-     overnightAllowance: 45,
-     workingDaysPerMonth: 21,
-     sundayBonus: 0,
-     nightBonus: 0,
-     seniorityBonus: 0,
-     isInterim: parsed.contractType === 'interim',
-     interimAgency: parsed.agencyName || '',
-     phone: parsed.phone,
-     email: parsed.email || '',
-     contractType: parsed.contractType,
-   }));
- }
+  export function convertToDrivers(parsedDrivers: ParsedDriverRow[]): ExtendedParsedDriver[] {
+    return parsedDrivers.map((parsed, index) => ({
+      id: `imported_${Date.now()}_${index}`,
+      name: parsed.name,
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      baseSalary: parsed.contractType === 'interim' ? 0 : (parsed.shiftType === 'nuit' ? 2500 : 2200),
+      hourlyRate: parsed.shiftType === 'nuit' ? 14.50 : 12.50,
+      hoursPerDay: 10,
+      patronalCharges: parsed.contractType === 'interim' ? 0 : 45,
+      mealAllowance: 15.20,
+      overnightAllowance: parsed.shiftType === 'nuit' ? 55 : 45,
+      workingDaysPerMonth: 21,
+      sundayBonus: 0,
+      nightBonus: parsed.shiftType === 'nuit' ? 25 : 0,
+      seniorityBonus: 0,
+      isInterim: parsed.contractType === 'interim',
+      interimAgency: parsed.agencyName || '',
+      phone: parsed.phone,
+      email: parsed.email || '',
+      contractType: parsed.contractType,
+    }));
+  }
