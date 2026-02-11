@@ -15,6 +15,7 @@ export function useCloudDrivers() {
   const [cddDrivers, setCddDrivers] = useState<Driver[]>(() => cache.cdd);
   const [interimDrivers, setInterimDrivers] = useState<Driver[]>(() => cache.interim);
   const [autreDrivers, setAutreDrivers] = useState<Driver[]>(() => cache.autre || []);
+  const [jokerDrivers, setJokerDrivers] = useState<Driver[]>(() => cache.joker || []);
   const [loading, setLoading] = useState(false);
 
   const fetchInProgressRef = useRef(false);
@@ -64,11 +65,11 @@ export function useCloudDrivers() {
       const cdd: Driver[] = [];
       const interim: Driver[] = [];
       const autre: Driver[] = [];
+      const joker: Driver[] = [];
 
       (data || []).forEach(row => {
         const driverData = row.driver_data as unknown as Driver;
         if (driverData) {
-          // Tag driver with contract type
           driverData.contractType = (row.driver_type as Driver['contractType']) || 'cdi';
           if (row.driver_type === 'interim') {
             interim.push(driverData);
@@ -76,6 +77,8 @@ export function useCloudDrivers() {
             cdd.push(driverData);
           } else if (row.driver_type === 'autre') {
             autre.push(driverData);
+          } else if (row.driver_type === 'joker') {
+            joker.push(driverData);
           } else {
             cdi.push(driverData);
           }
@@ -86,7 +89,8 @@ export function useCloudDrivers() {
       setCddDrivers(cdd);
       setInterimDrivers(interim);
       setAutreDrivers(autre);
-      persistCache(cdi, cdd, interim);
+      setJokerDrivers(joker);
+      persistCache(cdi, cdd, interim, autre, joker);
     } catch (error) {
       console.error('[useCloudDrivers] fetchDrivers error:', error);
       // Fallback to cache on error
@@ -119,7 +123,7 @@ export function useCloudDrivers() {
 
   const createDriver = useCallback(async (
     driver: Driver,
-    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = 'cdi',
+    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' = 'cdi',
     options?: { silent?: boolean }
   ): Promise<boolean> => {
     const uid = authUserIdRef.current || authUserId;
@@ -142,7 +146,7 @@ export function useCloudDrivers() {
   }, [authUserId, licenseId, createCRUD]);
 
   const createDriversBatch = useCallback(async (
-    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' | 'autre' }[],
+    drivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' }[],
     onProgress?: (done: number, total: number) => void
   ): Promise<number> => {
     const uid = authUserIdRef.current || authUserId;
@@ -160,14 +164,14 @@ export function useCloudDrivers() {
 
   const updateDriver = useCallback(async (
     driver: Driver,
-    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = 'cdi'
+    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' = 'cdi'
   ): Promise<boolean> => {
     return updateCRUD(driver, driverType);
   }, [updateCRUD]);
 
   const deleteDriver = useCallback(async (
     id: string,
-    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = 'cdi'
+    driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' = 'cdi'
   ): Promise<boolean> => {
     const uid = authUserIdRef.current || authUserId;
     const lid = licenseIdRef.current || licenseId;
@@ -189,6 +193,7 @@ export function useCloudDrivers() {
     cddDrivers,
     interimDrivers,
     autreDrivers,
+    jokerDrivers,
     loading,
     fetchDrivers,
     createDriver,
@@ -198,5 +203,6 @@ export function useCloudDrivers() {
     setCdiDrivers,
     setInterimDrivers,
     setAutreDrivers,
+    setJokerDrivers,
   };
 }

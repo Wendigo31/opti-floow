@@ -6,7 +6,7 @@ export interface ParsedDriverRow {
     firstName: string;
     lastName: string;
     phone: string;
-    contractType: 'cdi' | 'cdd' | 'interim';
+    contractType: 'cdi' | 'cdd' | 'interim' | 'joker';
     shiftType: 'jour' | 'nuit';
     driverCategory?: 'VL' | 'PL' | 'SPL' | 'TP';
     agencyName?: string;
@@ -17,7 +17,7 @@ export interface ParsedDriverRow {
    isInterim: boolean;
    interimAgency: string;
    phone: string;
-   contractType: 'cdi' | 'cdd' | 'interim';
+   contractType: 'cdi' | 'cdd' | 'interim' | 'joker';
  }
  
  /**
@@ -89,18 +89,21 @@ export interface ParsedDriverRow {
  /**
   * Determine contract type from text
   */
- function parseContractType(value: string): 'cdi' | 'cdd' | 'interim' {
-   if (!value) return 'cdi';
-   const lower = value.toLowerCase().trim();
-   
-   if (lower.includes('interim') || lower.includes('intérim') || lower.includes('interimaire') || lower.includes('intérimaire')) {
-     return 'interim';
-   }
-   if (lower.includes('cdd')) {
-     return 'cdd';
-   }
-   return 'cdi';
- }
+  function parseContractType(value: string): 'cdi' | 'cdd' | 'interim' | 'joker' {
+    if (!value) return 'cdi';
+    const lower = value.toLowerCase().trim();
+    
+    if (lower.includes('interim') || lower.includes('intérim') || lower.includes('interimaire') || lower.includes('intérimaire')) {
+      return 'interim';
+    }
+    if (lower.includes('cdd')) {
+      return 'cdd';
+    }
+    if (lower.includes('joker') || lower.includes('polyvalent')) {
+      return 'joker';
+    }
+    return 'cdi';
+  }
  
  /**
   * Check if a row represents a driver/chauffeur
@@ -246,12 +249,14 @@ export interface ParsedDriverRow {
        }
        
         // Determine contract type
-        let contractType: 'cdi' | 'cdd' | 'interim' = 'cdi';
-        if (contractIdx >= 0) {
-          contractType = parseContractType(String(row[contractIdx] || ''));
-        } else if (rowText.includes('interim') || rowText.includes('intérim')) {
-          contractType = 'interim';
-        }
+         let contractType: 'cdi' | 'cdd' | 'interim' | 'joker' = 'cdi';
+         if (contractIdx >= 0) {
+           contractType = parseContractType(String(row[contractIdx] || ''));
+         } else if (rowText.includes('interim') || rowText.includes('intérim')) {
+           contractType = 'interim';
+         } else if (rowText.includes('joker') || rowText.includes('polyvalent')) {
+           contractType = 'joker';
+         }
         
         // Determine shift type (jour/nuit)
         let shiftType: 'jour' | 'nuit' = 'jour';

@@ -66,6 +66,7 @@ export function calculateTourCosts(params: {
   for (const driver of selectedDrivers) {
     const isInterim = driver.contractType === 'interim';
     const isAutre = driver.contractType === 'autre';
+    const isJoker = driver.contractType === 'joker';
 
     if (isAutre) {
       // "Autre" type drivers have no cost (they're not real drivers)

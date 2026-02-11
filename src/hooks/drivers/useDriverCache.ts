@@ -5,12 +5,14 @@ const CACHE_KEY_CDI = 'optiflow_drivers_cache';
 const CACHE_KEY_INTERIM = 'optiflow_interim_drivers_cache';
 const CACHE_KEY_CDD = 'optiflow_cdd_drivers_cache';
 const CACHE_KEY_AUTRE = 'optiflow_autre_drivers_cache';
+const CACHE_KEY_JOKER = 'optiflow_joker_drivers_cache';
 
 export interface DriverCache {
   cdi: Driver[];
   cdd: Driver[];
   interim: Driver[];
   autre: Driver[];
+  joker: Driver[];
 }
 
 export function useDriverCache() {
@@ -20,15 +22,17 @@ export function useDriverCache() {
     cdd: getCachedDrivers(CACHE_KEY_CDD),
     interim: getCachedDrivers(CACHE_KEY_INTERIM),
     autre: getCachedDrivers(CACHE_KEY_AUTRE),
+    joker: getCachedDrivers(CACHE_KEY_JOKER),
   }));
 
-  const persist = useCallback((cdi: Driver[], cdd: Driver[], interim: Driver[], autre?: Driver[]) => {
+  const persist = useCallback((cdi: Driver[], cdd: Driver[], interim: Driver[], autre?: Driver[], joker?: Driver[]) => {
     try {
       localStorage.setItem(CACHE_KEY_CDI, JSON.stringify(cdi));
       localStorage.setItem(CACHE_KEY_CDD, JSON.stringify(cdd));
       localStorage.setItem(CACHE_KEY_INTERIM, JSON.stringify(interim));
       if (autre) localStorage.setItem(CACHE_KEY_AUTRE, JSON.stringify(autre));
-      setCache({ cdi, cdd, interim, autre: autre || [] });
+      if (joker) localStorage.setItem(CACHE_KEY_JOKER, JSON.stringify(joker));
+      setCache({ cdi, cdd, interim, autre: autre || [], joker: joker || [] });
     } catch (e) {
       console.error('Failed to cache drivers:', e);
     }
@@ -39,7 +43,8 @@ export function useDriverCache() {
     localStorage.removeItem(CACHE_KEY_CDD);
     localStorage.removeItem(CACHE_KEY_INTERIM);
     localStorage.removeItem(CACHE_KEY_AUTRE);
-    setCache({ cdi: [], cdd: [], interim: [], autre: [] });
+    localStorage.removeItem(CACHE_KEY_JOKER);
+    setCache({ cdi: [], cdd: [], interim: [], autre: [], joker: [] });
   }, []);
 
   return { cache, persist, clear };
