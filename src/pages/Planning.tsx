@@ -192,7 +192,7 @@ export default function Planning() {
     const name = driver.firstName && driver.lastName
       ? `${driver.firstName} ${driver.lastName}`
       : driver.name || '';
-    return { name, type: '' };
+    return { name, type: driver.contractType || 'cdi' };
   }, [allDrivers]);
 
   const getClientName = useCallback((clientId: string | null) => {
@@ -547,20 +547,35 @@ export default function Planning() {
                           }
                         }
 
+                        const contractBg = cellDriverType === 'joker'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/40'
+                          : cellDriverType === 'interim'
+                          ? 'bg-amber-100 dark:bg-amber-900/40'
+                          : cellDriverType === 'cdd'
+                          ? 'bg-purple-100 dark:bg-purple-900/40'
+                          : '';
+
                         return (
                           <div
                             key={col.idx}
                             className={cn(
                               "min-h-[56px] p-1.5 border-r last:border-r-0 flex items-center justify-center",
-                              isToday && "bg-primary/5"
+                              isToday && "bg-primary/5",
+                              contractBg
                             )}
                           >
                             {cellContent ? (
                               <div className="text-[11px] text-center leading-tight">
                                 <span className="font-medium">{cellContent}</span>
                                 {cellDriverType && (
-                                  <Badge variant="outline" className="block mt-0.5 text-[8px] px-1 py-0 mx-auto w-fit">
-                                    {cellDriverType}
+                                  <Badge variant="outline" className={cn(
+                                    "block mt-0.5 text-[8px] px-1 py-0 mx-auto w-fit",
+                                    cellDriverType === 'joker' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+                                    cellDriverType === 'interim' && 'bg-amber-500/10 text-amber-700 border-amber-500/30',
+                                    cellDriverType === 'cdd' && 'bg-purple-500/10 text-purple-700 border-purple-500/30',
+                                    cellDriverType === 'cdi' && 'bg-blue-500/10 text-blue-700 border-blue-500/30'
+                                  )}>
+                                    {cellDriverType === 'joker' ? 'Joker' : cellDriverType === 'interim' ? 'Intérim' : cellDriverType === 'cdd' ? 'CDD' : cellDriverType === 'cdi' ? 'CDI' : cellDriverType}
                                   </Badge>
                                 )}
                               </div>
