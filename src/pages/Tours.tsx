@@ -134,6 +134,8 @@ export default function Tours() {
         profit_margin: tour.profit_margin || 0,
         client_id: tour.client_id,
         vehicle_id: tour.vehicle_id,
+        vehicle_ids: tour.vehicle_ids || [],
+        vehicles_data: tour.vehicles_data || [],
         driver_ids: tour.driver_ids || [],
         stops: tour.stops || [],
         notes: tour.notes,

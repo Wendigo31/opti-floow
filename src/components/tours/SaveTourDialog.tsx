@@ -43,7 +43,7 @@ interface SaveTourDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (input: SaveTourInput) => Promise<void>;
-  tourData: Omit<SaveTourInput, 'name' | 'client_id' | 'notes' | 'tags' | 'driver_ids' | 'drivers_data' | 'vehicle_id' | 'vehicle_data' | 'trailer_id' | 'trailer_data'>;
+  tourData: Omit<SaveTourInput, 'name' | 'client_id' | 'notes' | 'tags' | 'driver_ids' | 'drivers_data' | 'vehicle_id' | 'vehicle_data' | 'trailer_id' | 'trailer_data' | 'vehicle_ids' | 'vehicles_data'>;
   clients: Client[];
   drivers: Driver[];
   vehicles: Vehicle[];
@@ -70,7 +70,7 @@ export function SaveTourDialog({
 }: SaveTourDialogProps) {
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState<string>('');
-  const [vehicleId, setVehicleId] = useState<string>(initialVehicleId);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(initialVehicleId ? [initialVehicleId] : []);
   const [trailerId, setTrailerId] = useState<string>(initialTrailerId);
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>(initialSelectedDriverIds);
   const [notes, setNotes] = useState('');
@@ -97,20 +97,32 @@ export function SaveTourDialog({
     );
   };
 
+  const toggleVehicle = (vehicleId: string) => {
+    setSelectedVehicleIds(prev =>
+      prev.includes(vehicleId)
+        ? prev.filter(id => id !== vehicleId)
+        : [...prev, vehicleId]
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim()) return;
 
     // Get driver data for the selected drivers
     const driversData = drivers.filter(d => selectedDriverIds.includes(d.id));
-    const vehicleData = vehicles.find(v => v.id === vehicleId) || null;
+    const vehiclesData = vehicles.filter(v => selectedVehicleIds.includes(v.id));
+    const primaryVehicleId = selectedVehicleIds[0] || null;
+    const primaryVehicleData = primaryVehicleId ? vehicles.find(v => v.id === primaryVehicleId) || null : null;
     const trailerData = trailers.find(t => t.id === trailerId) || null;
 
     await onSave({
       ...tourData,
       name: name.trim(),
       client_id: clientId || null,
-      vehicle_id: vehicleId || null,
-      vehicle_data: vehicleData,
+      vehicle_id: primaryVehicleId,
+      vehicle_data: primaryVehicleData,
+      vehicle_ids: selectedVehicleIds,
+      vehicles_data: vehiclesData,
       trailer_id: trailerId || null,
       trailer_data: trailerData,
       driver_ids: selectedDriverIds,
@@ -122,7 +134,7 @@ export function SaveTourDialog({
     // Reset form
     setName('');
     setClientId('');
-    setVehicleId('');
+    setSelectedVehicleIds([]);
     setTrailerId('');
     setSelectedDriverIds([]);
     setNotes('');
@@ -136,9 +148,9 @@ export function SaveTourDialog({
   }).format(value);
 
   const selectedClient = clients.find(c => c.id === clientId);
-  const selectedVehicle = vehicles.find(v => v.id === vehicleId);
   const selectedTrailer = trailers.find(t => t.id === trailerId);
   const selectedDriversList = drivers.filter(d => selectedDriverIds.includes(d.id));
+  const selectedVehiclesList = vehicles.filter(v => selectedVehicleIds.includes(v.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,34 +221,52 @@ export function SaveTourDialog({
               </Select>
             </div>
 
-            {/* Vehicle selection */}
+            {/* Multi-Vehicle selection */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Truck className="w-4 h-4" />
-                Véhicule assigné
+                Véhicule(s) — multi-relais
               </Label>
-              <Select value={vehicleId || "none"} onValueChange={(val) => setVehicleId(val === "none" ? "" : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un véhicule (optionnel)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun véhicule</SelectItem>
-                  {vehicles.filter(v => v.id).map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      <div className="flex items-center gap-2">
-                        <Truck className="w-4 h-4" />
+              {vehicles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucun véhicule configuré</p>
+              ) : (
+                <div className="border rounded-lg p-2 space-y-1 max-h-32 overflow-y-auto">
+                  {vehicles.map((vehicle) => (
+                    <div 
+                      key={vehicle.id} 
+                      className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                        selectedVehicleIds.includes(vehicle.id) 
+                          ? 'bg-primary/10 border border-primary/30' 
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => toggleVehicle(vehicle.id)}
+                    >
+                      <Checkbox 
+                        checked={selectedVehicleIds.includes(vehicle.id)}
+                        onCheckedChange={() => toggleVehicle(vehicle.id)}
+                      />
+                      <Truck className="w-4 h-4 text-muted-foreground" />
+                      <span className="flex-1 text-sm">
                         {vehicle.name}
-                        <span className="text-muted-foreground">({vehicle.licensePlate})</span>
-                      </div>
-                    </SelectItem>
+                        {vehicle.licensePlate && <span className="text-muted-foreground ml-1">({vehicle.licensePlate})</span>}
+                      </span>
+                      {selectedVehicleIds.includes(vehicle.id) && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-              {selectedVehicle && (
-                <Badge variant="secondary" className="text-xs">
-                  <Truck className="w-3 h-3 mr-1" />
-                  {selectedVehicle.name} - {selectedVehicle.brand} {selectedVehicle.model}
-                </Badge>
+                </div>
+              )}
+              {selectedVehiclesList.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {selectedVehiclesList.map((vehicle) => (
+                    <Badge key={vehicle.id} variant="secondary" className="text-xs cursor-pointer" onClick={() => toggleVehicle(vehicle.id)}>
+                      <Truck className="w-3 h-3 mr-1" />
+                      {vehicle.name}
+                      <X className="w-3 h-3 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
               )}
             </div>
 

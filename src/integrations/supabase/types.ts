@@ -1398,6 +1398,8 @@ export type Database = {
           vehicle_cost: number
           vehicle_data: Json | null
           vehicle_id: string | null
+          vehicle_ids: string[] | null
+          vehicles_data: Json | null
         }
         Insert: {
           adblue_cost?: number
@@ -1436,6 +1438,8 @@ export type Database = {
           vehicle_cost?: number
           vehicle_data?: Json | null
           vehicle_id?: string | null
+          vehicle_ids?: string[] | null
+          vehicles_data?: Json | null
         }
         Update: {
           adblue_cost?: number
@@ -1474,6 +1478,8 @@ export type Database = {
           vehicle_cost?: number
           vehicle_data?: Json | null
           vehicle_id?: string | null
+          vehicle_ids?: string[] | null
+          vehicles_data?: Json | null
         }
         Relationships: [
           {

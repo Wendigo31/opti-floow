@@ -13,6 +13,8 @@ function mapDbToSavedTour(row: any): SavedTour {
     stops: (row.stops as TourStop[]) || [],
     driver_ids: row.driver_ids || [],
     drivers_data: row.drivers_data || [],
+    vehicle_ids: row.vehicle_ids || [],
+    vehicles_data: row.vehicles_data || [],
     tags: row.tags || [],
   };
 }
@@ -209,6 +211,8 @@ export function useSavedTours() {
         profit_margin: input.profit_margin,
         vehicle_id: input.vehicle_id || null,
         vehicle_data: (input.vehicle_data || null) as Json,
+        vehicle_ids: input.vehicle_ids || [],
+        vehicles_data: (input.vehicles_data || []) as unknown as Json,
         trailer_id: input.trailer_id || null,
         trailer_data: (input.trailer_data || null) as Json,
         driver_ids: input.driver_ids || [],
@@ -245,6 +249,9 @@ export function useSavedTours() {
       }
       if (updates.vehicle_data) {
         dbUpdates.vehicle_data = updates.vehicle_data as Json;
+      }
+      if (updates.vehicles_data) {
+        dbUpdates.vehicles_data = updates.vehicles_data as unknown as Json;
       }
       if (updates.drivers_data) {
         dbUpdates.drivers_data = updates.drivers_data as unknown as Json;

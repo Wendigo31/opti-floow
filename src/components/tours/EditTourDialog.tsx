@@ -13,7 +13,8 @@ import {
   Container,
   Euro,
   Calculator,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,6 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/context/AppContext';
 import type { SavedTour, SaveTourInput } from '@/types/savedTour';
 import type { Driver } from '@/types/index';
@@ -68,7 +68,7 @@ export function EditTourDialog({
 
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState<string>('');
-  const [vehicleId, setVehicleId] = useState<string>('');
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [trailerId, setTrailerId] = useState<string>('');
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -88,7 +88,9 @@ export function EditTourDialog({
     if (tour && open) {
       setName(tour.name);
       setClientId(tour.client_id || '');
-      setVehicleId(tour.vehicle_id || '');
+      // Support legacy single vehicle_id + new vehicle_ids
+      const vIds = tour.vehicle_ids?.length ? tour.vehicle_ids : (tour.vehicle_id ? [tour.vehicle_id] : []);
+      setSelectedVehicleIds(vIds);
       setTrailerId(tour.trailer_id || '');
       setSelectedDriverIds(tour.driver_ids || []);
       setNotes(tour.notes || '');
@@ -108,17 +110,22 @@ export function EditTourDialog({
     const distance = tour.distance_km;
     const tvaRate = settings.tvaRate || 20;
 
-    // Fuel & AdBlue: use selected vehicle's consumption, app-level fuel prices
-    const selectedVehicle = vehicles.find(v => v.id === vehicleId);
-    const fuelConsumption = selectedVehicle?.fuelConsumption ?? appVehicleParams.fuelConsumption;
-    const adBlueConsumption = selectedVehicle?.adBlueConsumption ?? appVehicleParams.adBlueConsumption;
-
     const fuelPriceHT = appVehicleParams.fuelPriceIsHT
       ? appVehicleParams.fuelPriceHT
       : appVehicleParams.fuelPriceHT / (1 + tvaRate / 100);
     const adBluePriceHT = appVehicleParams.adBluePriceIsHT
       ? appVehicleParams.adBluePriceHT
       : appVehicleParams.adBluePriceHT / (1 + tvaRate / 100);
+
+    // Multi-vehicle: average consumption across selected vehicles, or fallback to app defaults
+    const selectedVehicles = vehicles.filter(v => selectedVehicleIds.includes(v.id));
+    let fuelConsumption = appVehicleParams.fuelConsumption;
+    let adBlueConsumption = appVehicleParams.adBlueConsumption;
+    if (selectedVehicles.length > 0) {
+      // For multi-relay: each vehicle covers a segment. Use average consumption as approximation.
+      fuelConsumption = selectedVehicles.reduce((sum, v) => sum + v.fuelConsumption, 0) / selectedVehicles.length;
+      adBlueConsumption = selectedVehicles.reduce((sum, v) => sum + v.adBlueConsumption, 0) / selectedVehicles.length;
+    }
 
     const fuelCost = (distance / 100) * fuelConsumption * fuelPriceHT;
     const adBlueCost = (distance / 100) * adBlueConsumption * adBluePriceHT;
@@ -137,7 +144,7 @@ export function EditTourDialog({
       }
     }
 
-    // Structure cost: daily charges (same logic as useCalculations)
+    // Structure cost: daily charges
     const structureCost = charges.reduce((total, charge) => {
       const amountHT = charge.isHT ? charge.amount : charge.amount / (1 + tvaRate / 100);
       let dailyAmount = 0;
@@ -155,17 +162,17 @@ export function EditTourDialog({
       return total + dailyAmount;
     }, 0);
 
-    // Vehicle cost: leasing + insurance/365 (daily) if vehicle selected
+    // Vehicle cost: sum of all selected vehicles (leasing + insurance daily)
     let vehicleCost = 0;
-    if (selectedVehicle) {
-      vehicleCost = (selectedVehicle.monthlyLeasing / settings.workingDaysPerMonth) +
-        (selectedVehicle.insuranceCost / settings.workingDaysPerYear);
+    for (const v of selectedVehicles) {
+      vehicleCost += (v.monthlyLeasing / settings.workingDaysPerMonth) +
+        (v.insuranceCost / settings.workingDaysPerYear);
     }
 
     const totalCost = fuelCost + adBlueCost + tollCost + driverCost + structureCost + vehicleCost;
 
     return { fuelCost, adBlueCost, tollCost, driverCost, structureCost, vehicleCost, totalCost };
-  }, [tour.distance_km, tour.toll_cost, vehicleId, selectedDriverIds, vehicles, drivers, charges, settings, appVehicleParams]);
+  }, [tour.distance_km, tour.toll_cost, selectedVehicleIds, selectedDriverIds, vehicles, drivers, charges, settings, appVehicleParams]);
 
   // Derived financials
   const profit = revenue - calculatedCosts.totalCost;
@@ -191,21 +198,35 @@ export function EditTourDialog({
     );
   };
 
+  const toggleVehicle = (vehicleId: string) => {
+    setSelectedVehicleIds(prev =>
+      prev.includes(vehicleId)
+        ? prev.filter(id => id !== vehicleId)
+        : [...prev, vehicleId]
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
 
     const driversData = drivers.filter(d => selectedDriverIds.includes(d.id));
-    const vehicleData = vehicles.find(v => v.id === vehicleId) || null;
+    const vehiclesData = vehicles.filter(v => selectedVehicleIds.includes(v.id));
     const trailerData = trailers.find(t => t.id === trailerId) || null;
+
+    // Keep backward compat: vehicle_id = first vehicle
+    const primaryVehicleId = selectedVehicleIds[0] || null;
+    const primaryVehicleData = primaryVehicleId ? vehicles.find(v => v.id === primaryVehicleId) || null : null;
 
     const success = await onUpdate(tour.id, {
       name: name.trim(),
       client_id: clientId || null,
       origin_address: originAddress,
       destination_address: destinationAddress,
-      vehicle_id: vehicleId || null,
-      vehicle_data: vehicleData,
+      vehicle_id: primaryVehicleId,
+      vehicle_data: primaryVehicleData,
+      vehicle_ids: selectedVehicleIds,
+      vehicles_data: vehiclesData,
       trailer_id: trailerId || null,
       trailer_data: trailerData,
       driver_ids: selectedDriverIds,
@@ -251,7 +272,7 @@ export function EditTourDialog({
             Modifier la tournée
           </DialogTitle>
           <DialogDescription>
-            Les coûts sont recalculés automatiquement selon le véhicule et les conducteurs sélectionnés
+            Les coûts sont recalculés automatiquement selon les véhicules et conducteurs sélectionnés
           </DialogDescription>
         </DialogHeader>
 
@@ -316,25 +337,56 @@ export function EditTourDialog({
                 </Select>
               </div>
 
-              {/* Vehicle selection */}
+              {/* Multi-Vehicle selection */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  Véhicule
+                  Véhicule(s) — multi-relais
                 </Label>
-                <Select value={vehicleId || "none"} onValueChange={(val) => setVehicleId(val === "none" ? "" : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un véhicule" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun véhicule</SelectItem>
-                    {vehicles.filter(v => v.id).map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.name} ({vehicle.licensePlate})
-                      </SelectItem>
+                {vehicles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun véhicule configuré</p>
+                ) : (
+                  <div className="border rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto">
+                    {vehicles.map((vehicle) => (
+                      <div
+                        key={vehicle.id}
+                        className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                          selectedVehicleIds.includes(vehicle.id)
+                            ? 'bg-primary/10 border border-primary/30'
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => toggleVehicle(vehicle.id)}
+                      >
+                        <Checkbox
+                          checked={selectedVehicleIds.includes(vehicle.id)}
+                          onCheckedChange={() => toggleVehicle(vehicle.id)}
+                        />
+                        <Truck className="w-4 h-4 text-muted-foreground" />
+                        <span className="flex-1 text-sm">
+                          {vehicle.name}
+                          {vehicle.licensePlate && <span className="text-muted-foreground ml-1">({vehicle.licensePlate})</span>}
+                        </span>
+                        {selectedVehicleIds.includes(vehicle.id) && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
+                {selectedVehicleIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedVehicleIds.map(vId => {
+                      const v = vehicles.find(x => x.id === vId);
+                      return v ? (
+                        <Badge key={vId} variant="secondary" className="text-xs cursor-pointer" onClick={() => toggleVehicle(vId)}>
+                          <Truck className="w-3 h-3 mr-1" />
+                          {v.name}
+                          <X className="w-3 h-3 ml-1" />
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Trailer selection */}
@@ -447,14 +499,14 @@ export function EditTourDialog({
                     Coûts calculés
                   </h3>
                   {costChanged && (
-                    <Badge variant="outline" className="text-xs flex items-center gap-1 text-amber-600 border-amber-300">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 border-amber-500/50 text-amber-600">
                       <RefreshCw className="w-3 h-3" />
                       Mis à jour
                     </Badge>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Distance : {tour.distance_km.toFixed(0)} km · Péages : {formatCurrency(calculatedCosts.tollCost)}
+                  Distance : {tour.distance_km.toFixed(0)} km · {selectedVehicleIds.length} véhicule(s) · {selectedDriverIds.length} conducteur(s)
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -475,7 +527,7 @@ export function EditTourDialog({
                     <span className="font-medium">{formatCurrency(calculatedCosts.structureCost)}</span>
                   </div>
                   <div className="flex justify-between p-2 bg-background rounded">
-                    <span className="text-muted-foreground">Véhicule</span>
+                    <span className="text-muted-foreground">Véhicule(s)</span>
                     <span className="font-medium">{formatCurrency(calculatedCosts.vehicleCost)}</span>
                   </div>
                   <div className="flex justify-between p-2 bg-background rounded">
