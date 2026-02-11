@@ -53,7 +53,14 @@ export interface ExcelTourInput {
   day_notes?: Record<number, string>;
 }
  
- export function usePlanning() {
+export interface PlanningFilters {
+  search?: string;
+  clientId?: string;
+  sectorManager?: string;
+  day?: string;
+}
+
+export function usePlanning() {
    const { licenseId, authUserId, isLoading: contextLoading } = useLicenseContext();
    const [entries, setEntries] = useState<PlanningEntry[]>([]);
    const [loading, setLoading] = useState(false);
@@ -68,7 +75,7 @@ export interface ExcelTourInput {
    const entriesRef = useRef<PlanningEntry[]>(entries);
    useEffect(() => { entriesRef.current = entries; }, [entries]);
 
-    const fetchEntries = useCallback(async (startDate?: string, endDate?: string, force?: boolean): Promise<void> => {
+    const fetchEntries = useCallback(async (startDate?: string, endDate?: string, force?: boolean, filters?: PlanningFilters): Promise<void> => {
      // If a fetch is already running, skip but don't block forever
      if (fetchInProgressRef.current && !force) {
        console.log('[Planning] fetchEntries skipped (already in progress)');
@@ -108,13 +115,25 @@ export interface ExcelTourInput {
           .eq('license_id', licenseId)
           .order('planning_date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(10000);
+          .limit(1000);
  
        if (startDate) {
          query = query.gte('planning_date', startDate);
        }
        if (endDate) {
          query = query.lte('planning_date', endDate);
+       }
+
+       // Server-side filtering
+       if (filters?.search) {
+         const q = filters.search.trim();
+         query = query.or(`tour_name.ilike.%${q}%,notes.ilike.%${q}%,sector_manager.ilike.%${q}%,mission_order.ilike.%${q}%`);
+       }
+       if (filters?.clientId) {
+         query = query.eq('client_id', filters.clientId);
+       }
+       if (filters?.sectorManager) {
+         query = query.ilike('sector_manager', `%${filters.sectorManager}%`);
        }
  
         const { data, error } = await query;
@@ -169,7 +188,7 @@ export interface ExcelTourInput {
    }, [authUserId, licenseId]);
  
   // Store fetchEntries in ref to avoid subscription churn
-   const fetchEntriesRef = useRef<(startDate?: string, endDate?: string, force?: boolean) => Promise<void>>();
+   const fetchEntriesRef = useRef<(startDate?: string, endDate?: string, force?: boolean, filters?: PlanningFilters) => Promise<void>>();
    useEffect(() => { fetchEntriesRef.current = fetchEntries; }, [fetchEntries]);
 
    // Realtime subscription
@@ -231,12 +250,7 @@ export interface ExcelTourInput {
      };
   }, [licenseId]); // Only depend on licenseId to prevent subscription churn
  
-   // Auto-fetch when licenseId becomes available
-   useEffect(() => {
-     if (licenseId && authUserId) {
-       fetchEntries();
-     }
-   }, [licenseId, authUserId, fetchEntries]);
+   // No auto-fetch — search-first approach
  
     const createEntry = useCallback(async (input: PlanningEntryInput): Promise<PlanningEntry | null> => {
      try {

@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Upload, Search, X, Filter } from 'lucide-react';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { usePlanning } from '@/hooks/usePlanning';
+import { usePlanning, type PlanningFilters as PlanningServerFilters } from '@/hooks/usePlanning';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useClients } from '@/hooks/useClients';
@@ -56,6 +56,7 @@ export default function Planning() {
   );
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Detail panel
   const [selectedGroup, setSelectedGroup] = useState<TractionGroup | null>(null);
@@ -121,18 +122,31 @@ export default function Planning() {
     return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   }, [currentWeekStart]);
 
-  useEffect(() => {
+  // Trigger search function
+  const doSearch = useCallback(() => {
     const startDate = format(currentWeekStart, 'yyyy-MM-dd');
     const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-    fetchEntries(startDate, endDate);
-  }, [currentWeekStart, fetchEntries]);
+    const filters: PlanningServerFilters = {};
+    if (searchQuery.trim()) filters.search = searchQuery.trim();
+    if (filterClient) filters.clientId = filterClient;
+    if (filterSector) filters.sectorManager = filterSector;
+    fetchEntries(startDate, endDate, false, filters);
+    setHasSearched(true);
+  }, [currentWeekStart, searchQuery, filterClient, filterSector, fetchEntries]);
+
+  // Re-fetch when week changes (only if already searched)
+  useEffect(() => {
+    if (hasSearched) {
+      doSearch();
+    }
+  }, [currentWeekStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch when background import completes
   useEffect(() => {
     if (importProgress.completedAt > 0) {
       const startDate = format(currentWeekStart, 'yyyy-MM-dd');
       const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-      // Force refetch to bypass any in-progress guard
+      setHasSearched(true);
       const timer = setTimeout(() => fetchEntries(startDate, endDate, true), 500);
       return () => clearTimeout(timer);
     }
@@ -301,6 +315,7 @@ export default function Planning() {
             placeholder="Rechercher une ligne, un conducteur, un ODM…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
             className="pl-9 h-9 text-sm"
           />
           {searchQuery && (
@@ -309,21 +324,42 @@ export default function Planning() {
             </button>
           )}
         </div>
-        <Badge variant="secondary" className="text-xs whitespace-nowrap">
-          {filteredGroups.length} ligne{filteredGroups.length > 1 ? 's' : ''}
-        </Badge>
+        <Button variant="default" size="sm" onClick={doSearch} className="gap-1.5">
+          <Search className="h-4 w-4" /> Rechercher
+        </Button>
+        {hasSearched && (
+          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+            {filteredGroups.length} ligne{filteredGroups.length > 1 ? 's' : ''}
+          </Badge>
+        )}
       </div>
 
       {/* Grid */}
       <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
-          {loading ? (
+          {!hasSearched ? (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
+              <Filter className="h-10 w-10 text-muted-foreground/50" />
+              <div className="text-center space-y-1">
+                <p className="font-medium text-foreground">Recherchez pour afficher le planning</p>
+                <p className="text-sm">Saisissez un critère (client, ligne, conducteur, responsable secteur) puis cliquez sur Rechercher</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsTourDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Ajouter
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-1" /> Importer
+                </Button>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
             </div>
           ) : filteredGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
-              <p>Aucune traction pour cette semaine.</p>
+              <p>Aucun résultat pour cette recherche.</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setIsTourDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" /> Ajouter
@@ -513,6 +549,7 @@ export default function Planning() {
         onSave={async (input, weeksAhead) => {
           const ok = await createTour(input, weeksAhead);
           if (ok) {
+            setHasSearched(true);
             const startDate = format(currentWeekStart, 'yyyy-MM-dd');
             const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
             await fetchEntries(startDate, endDate);
@@ -533,6 +570,7 @@ export default function Planning() {
         onImport={async (importEntries, onProgress) => {
           const ok = await importExcelPlanningWeek(importEntries, currentWeekStart, onProgress);
           if (ok) {
+            setHasSearched(true);
             await new Promise(r => setTimeout(r, 500));
             const startDate = format(currentWeekStart, 'yyyy-MM-dd');
             const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
