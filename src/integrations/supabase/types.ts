@@ -1093,6 +1093,7 @@ export type Database = {
           relay_location: string | null
           relay_time: string | null
           return_line_reference: string | null
+          saved_tour_id: string | null
           sector_manager: string | null
           start_date: string | null
           start_time: string | null
@@ -1124,6 +1125,7 @@ export type Database = {
           relay_location?: string | null
           relay_time?: string | null
           return_line_reference?: string | null
+          saved_tour_id?: string | null
           sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
@@ -1155,6 +1157,7 @@ export type Database = {
           relay_location?: string | null
           relay_time?: string | null
           return_line_reference?: string | null
+          saved_tour_id?: string | null
           sector_manager?: string | null
           start_date?: string | null
           start_time?: string | null
@@ -1185,6 +1188,13 @@ export type Database = {
             columns: ["parent_tour_id"]
             isOneToOne: false
             referencedRelation: "planning_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_entries_saved_tour_id_fkey"
+            columns: ["saved_tour_id"]
+            isOneToOne: false
+            referencedRelation: "saved_tours"
             referencedColumns: ["id"]
           },
         ]

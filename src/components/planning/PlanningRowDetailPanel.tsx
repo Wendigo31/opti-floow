@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X } from 'lucide-react';
+import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
@@ -35,6 +35,7 @@ interface PlanningRowDetailPanelProps {
   onUpdateEntry: (id: string, updates: Partial<PlanningEntryInput>) => Promise<boolean>;
   onDeleteEntry: (id: string) => Promise<boolean>;
   onDeleteTraction?: () => Promise<boolean>;
+  onSyncToSavedTour?: (savedTourId: string, updates: Record<string, any>) => Promise<void>;
 }
 
 interface StopAddress {
@@ -52,6 +53,7 @@ export function PlanningRowDetailPanel({
   onUpdateEntry,
   onDeleteEntry,
   onDeleteTraction,
+  onSyncToSavedTour,
 }: PlanningRowDetailPanelProps) {
   const first = entries.length > 0 ? entries[0] : null;
 
@@ -129,6 +131,26 @@ export function PlanningRowDetailPanel({
       const ok = await onUpdateEntry(entry.id, updates);
       if (!ok) success = false;
     }
+
+    // Sync to linked saved tour if exists
+    const savedTourId = first?.saved_tour_id;
+    if (success && savedTourId && onSyncToSavedTour) {
+      try {
+        await onSyncToSavedTour(savedTourId, {
+          name: tourName || 'Sans nom',
+          origin_address: originAddress || '',
+          destination_address: destinationAddress || '',
+          stops: stops.filter(s => s.address.trim()),
+          client_id: clientId || null,
+          vehicle_id: vehicleId || null,
+          driver_ids: driverId ? [driverId] : [],
+          notes: missionOrder || null,
+        });
+      } catch (e) {
+        console.error('Error syncing to saved tour:', e);
+      }
+    }
+
     if (success) {
       toast.success(`${entries.length} entrée(s) mise(s) à jour`);
       onOpenChange(false);
@@ -212,6 +234,11 @@ export function PlanningRowDetailPanel({
           <SheetTitle className="flex items-center gap-2">
             🚚 {tourName || 'Ligne sans nom'}
             <Badge variant="secondary" className="text-xs">{entries.length} jours</Badge>
+            {first?.saved_tour_id && (
+              <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
+                <Link2 className="h-3 w-3" /> Tournée liée
+              </Badge>
+            )}
           </SheetTitle>
         </SheetHeader>
 
