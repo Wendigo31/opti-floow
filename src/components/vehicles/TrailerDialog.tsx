@@ -7,6 +7,8 @@ import {
   Wrench,
   CircleDollarSign
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { getTrailerBrands, getTrailerModels } from '@/data/vehicleDefaults';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -217,19 +219,75 @@ export function TrailerDialog({ open, onOpenChange, trailer, onSave }: TrailerDi
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Marque</Label>
-                <Input
-                  value={formData.brand || ''}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  placeholder="Ex: Kögel"
-                />
+                <Select 
+                  value={formData.brand || ''} 
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, brand: value, model: '' });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getTrailerBrands().map(brand => (
+                      <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                    ))}
+                    <SelectItem value="__other">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.brand === '__other' && (
+                  <Input
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    placeholder="Saisir la marque"
+                    className="mt-1"
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Modèle</Label>
-                <Input
-                  value={formData.model || ''}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="Ex: S24"
-                />
+                {formData.brand && formData.brand !== '__other' && getTrailerModels(formData.brand).length > 0 ? (
+                  <Select 
+                    value={formData.model || ''} 
+                    onValueChange={(value) => {
+                      const models = getTrailerModels(formData.brand || '');
+                      const selected = models.find(m => m.name === value);
+                      if (selected) {
+                        setFormData({ 
+                          ...formData, 
+                          model: selected.name,
+                          type: selected.type,
+                          length: selected.length,
+                          width: selected.width,
+                          height: selected.height,
+                          weight: selected.weight,
+                          payload: selected.payload,
+                          axles: selected.axles,
+                          volume: selected.volume,
+                          expectedLifetimeKm: selected.expectedLifetimeKm,
+                          name: formData.name || `${formData.brand} ${selected.name}`,
+                        });
+                        toast.success(`Données par défaut appliquées`);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getTrailerModels(formData.brand).map(model => (
+                        <SelectItem key={model.name} value={model.name}>
+                          {model.name} — {model.payload.toLocaleString()} kg
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={formData.model || ''}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    placeholder="Ex: Profi Liner"
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Année</Label>

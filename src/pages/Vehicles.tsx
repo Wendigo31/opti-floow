@@ -70,6 +70,7 @@ import type { FixedCharge } from '@/types';
 import { TrailerDialog } from '@/components/vehicles/TrailerDialog';
 import { DepreciationReport } from '@/components/vehicles/DepreciationReport';
 import { calculateVehicleCosts, calculateTrailerCosts, formatCostPerKm, getCostPerKmColor } from '@/hooks/useVehicleCost';
+import { vehicleDefaults, getVehicleBrands, getVehicleModels } from '@/data/vehicleDefaults';
 import { toast } from 'sonner';
 import { parseExcelFile } from '@/utils/excelImport';
 import * as XLSX from 'xlsx';
@@ -582,19 +583,76 @@ export default function Vehicles() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Marque</Label>
-              <Input
-                value={formData.brand || ''}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                placeholder="Ex: Renault"
-              />
+              <Select 
+                value={formData.brand || ''} 
+                onValueChange={(value) => {
+                  setFormData({ ...formData, brand: value, model: '' });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une marque" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getVehicleBrands().map(brand => (
+                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                  ))}
+                  <SelectItem value="__other">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.brand === '__other' && (
+                <Input
+                  value={formData.brand === '__other' ? '' : formData.brand || ''}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  placeholder="Saisir la marque"
+                  className="mt-1"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Modèle</Label>
-              <Input
-                value={formData.model || ''}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                placeholder="Ex: T480"
-              />
+              {formData.brand && formData.brand !== '__other' && getVehicleModels(formData.brand).length > 0 ? (
+                <Select 
+                  value={formData.model || ''} 
+                  onValueChange={(value) => {
+                    const models = getVehicleModels(formData.brand || '');
+                    const selected = models.find(m => m.name === value);
+                    if (selected) {
+                      setFormData({ 
+                        ...formData, 
+                        model: selected.name,
+                        type: selected.type,
+                        fuelConsumption: selected.fuelConsumption,
+                        adBlueConsumption: selected.adBlueConsumption,
+                        weight: selected.weight,
+                        axles: selected.axles,
+                        length: selected.length,
+                        width: selected.width,
+                        height: selected.height,
+                        expectedLifetimeKm: selected.expectedLifetimeKm,
+                        name: formData.name || `${formData.brand} ${selected.name}`,
+                      });
+                      toast.success(`Données par défaut du ${formData.brand} ${selected.name} appliquées`);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un modèle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getVehicleModels(formData.brand).map(model => (
+                      <SelectItem key={model.name} value={model.name}>
+                        {model.name} {model.power ? `(${model.power})` : ''} — {model.fuelConsumption} L/100km
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={formData.model || ''}
+                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  placeholder="Ex: T480"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Année</Label>
