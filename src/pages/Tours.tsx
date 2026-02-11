@@ -56,6 +56,7 @@ import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { BulkActionsBar } from '@/components/shared/BulkActionsBar';
+import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -136,6 +137,21 @@ export default function Tours() {
     }
     toast.success(`${toDuplicate.length} tournée(s) dupliquée(s)`);
     setCheckedIds(new Set());
+  };
+
+  const handleMergeTours = async (keepId: string, mergeIds: string[]): Promise<boolean> => {
+    try {
+      for (const oldId of mergeIds) {
+        await deleteTour(oldId);
+      }
+      toast.success(`${mergeIds.length} tournée(s) fusionnée(s)`);
+      setCheckedIds(new Set());
+      return true;
+    } catch (e) {
+      console.error('Merge tours error:', e);
+      toast.error('Erreur lors de la fusion');
+      return false;
+    }
   };
 
   useEffect(() => {
@@ -442,6 +458,13 @@ export default function Tours() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Duplicate detection */}
+      <DuplicateDetectionBanner
+        items={tours.map(t => ({ id: t.id, name: t.name, extra: getClientName(t.client_id) }))}
+        entityLabel="tournées"
+        onMerge={handleMergeTours}
+      />
 
       {/* Bulk actions */}
       <BulkActionsBar
