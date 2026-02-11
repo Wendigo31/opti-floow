@@ -69,6 +69,7 @@ export default function Drivers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
+  const [formContractType, setFormContractType] = useState<'cdi' | 'cdd' | 'interim' | 'autre'>('cdi');
   const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'uncreated'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
@@ -249,6 +250,8 @@ export default function Drivers() {
 
   const handleAdd = () => {
     setIsAdding(true);
+    const currentType = activeTab === 'autre' ? 'autre' : activeTab === 'interim' ? 'interim' : activeTab === 'cdd' ? 'cdd' : 'cdi';
+    setFormContractType(currentType);
     const isInterim = activeTab === 'interim';
     const isAutre = activeTab === 'autre';
     setFormData({
@@ -278,11 +281,14 @@ export default function Drivers() {
   const handleEdit = (driver: ExtendedDriver, isInterim: boolean) => {
     setEditingId(driver.id);
     setFormData({ ...driver, isInterim });
+    // Detect current contract type from tab
+    const currentType: 'cdi' | 'cdd' | 'interim' | 'autre' = isInterim ? 'interim' : activeTab === 'cdd' ? 'cdd' : activeTab === 'autre' ? 'autre' : 'cdi';
+    setFormContractType(currentType);
   };
 
   const handleSave = async () => {
-    const isInterim = formData.isInterim || activeTab === 'interim';
-    const isAutre = activeTab === 'autre';
+    const isInterim = formContractType === 'interim';
+    const isAutre = formContractType === 'autre';
     
     if (isAdding) {
       const newDriver: ExtendedDriver = {
@@ -310,22 +316,15 @@ export default function Drivers() {
       };
       
       // Save to cloud
-      const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = isAutre ? 'autre' : isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : 'cdi');
-      await createCloudDriver(newDriver as Driver, driverType);
+      await createCloudDriver(newDriver as Driver, formContractType);
       setIsAdding(false);
     } else if (editingId) {
       // Find the existing driver to merge with formData
-      const existingDriver = isInterim
-        ? cloudInterimDrivers.find(d => d.id === editingId)
-        : activeTab === 'cdd'
-          ? cloudCddDrivers.find(d => d.id === editingId)
-          : activeTab === 'autre'
-            ? cloudAutreDrivers.find(d => d.id === editingId)
-            : cloudCdiDrivers.find(d => d.id === editingId);
+      const allDrivers = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers];
+      const existingDriver = allDrivers.find(d => d.id === editingId);
       
       const updatedDriver = { ...existingDriver, ...formData, id: editingId } as ExtendedDriver;
-      const driverType: 'cdi' | 'cdd' | 'interim' | 'autre' = isInterim ? 'interim' : (activeTab === 'cdd' ? 'cdd' : activeTab === 'autre' ? 'autre' : 'cdi');
-      await updateCloudDriver(updatedDriver as Driver, driverType);
+      await updateCloudDriver(updatedDriver as Driver, formContractType);
       setEditingId(null);
     }
     setFormData({});
@@ -461,14 +460,14 @@ export default function Drivers() {
   const autreDrivers = cloudAutreDrivers as ExtendedDriver[];
 
   const renderForm = () => {
-    const isInterim = formData.isInterim || activeTab === 'interim';
-    
+    const isInterim = formContractType === 'interim';
+    const isAutre = formContractType === 'autre';
     return (
       <div className="glass-card p-6 space-y-4 opacity-0 animate-scale-in" style={{ animationFillMode: 'forwards' }}>
         {/* Informations de base */}
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Informations</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom du conducteur</Label>
               <Input
@@ -477,6 +476,24 @@ export default function Drivers() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Nom complet"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Type de contrat</Label>
+              <Select value={formContractType} onValueChange={(v) => {
+                const val = v as 'cdi' | 'cdd' | 'interim' | 'autre';
+                setFormContractType(val);
+                setFormData({ ...formData, isInterim: val === 'interim' });
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cdi">CDI</SelectItem>
+                  <SelectItem value="cdd">CDD</SelectItem>
+                  <SelectItem value="interim">Intérim</SelectItem>
+                  <SelectItem value="autre">Autre</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="workingDaysPerMonth">Jours travaillés/mois</Label>
@@ -617,8 +634,8 @@ export default function Drivers() {
           </div>
         )}
 
-        {/* Rémunération - Seulement pour CDI */}
-        {!isInterim && (
+        {/* Rémunération - Seulement pour CDI/CDD */}
+        {!isInterim && !isAutre && (
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Rémunération</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -656,8 +673,8 @@ export default function Drivers() {
           </div>
         )}
 
-        {/* Charges & Primes - Seulement pour CDI */}
-        {!isInterim && (
+        {/* Charges & Primes - Seulement pour CDI/CDD */}
+        {!isInterim && !isAutre && (
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Primes</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
