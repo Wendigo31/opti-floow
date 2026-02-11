@@ -746,7 +746,7 @@ export default function Drivers() {
     );
   };
 
-  const renderDriverCard = (driver: ExtendedDriver, index: number, driverType: 'cdi' | 'cdd' | 'interim') => {
+  const renderDriverCard = (driver: ExtendedDriver, index: number, driverType: 'cdi' | 'cdd' | 'interim' | 'autre') => {
     const isInterim = driverType === 'interim';
     const driverInfo = getDriverInfo(driver.id);
     const isShared = !!driverInfo?.licenseId;
@@ -1167,7 +1167,7 @@ export default function Drivers() {
     );
   };
 
-  const renderDriversTable = (drivers: ExtendedDriver[], driverType: 'cdi' | 'cdd' | 'interim') => (
+  const renderDriversTable = (drivers: ExtendedDriver[], driverType: 'cdi' | 'cdd' | 'interim' | 'autre') => (
     (() => { const isInterim = driverType === 'interim'; return (
     <div className="glass-card overflow-hidden">
       <Table>
