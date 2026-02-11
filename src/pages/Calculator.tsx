@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
@@ -571,22 +572,18 @@ export default function Calculator() {
                 </Link>
               </div>
             ) : (
-              <Select
-                value={selectedVehicleId || "none"}
-                onValueChange={handleVehicleSelect}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionnez un véhicule..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">-- Sélectionnez un véhicule --</SelectItem>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.name} ({v.licensePlate}) - {v.fuelConsumption}L/100km
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={selectedVehicleId || ''}
+                onValueChange={(v) => handleVehicleSelect(v || 'none')}
+                options={vehicles.map((v) => ({
+                  value: v.id,
+                  label: `${v.name} (${v.licensePlate})`,
+                  sublabel: `${v.fuelConsumption}L/100km`,
+                }))}
+                placeholder="Sélectionnez un véhicule..."
+                emptyLabel="-- Aucun véhicule --"
+                searchPlaceholder="Rechercher un véhicule..."
+              />
             )}
             
             {/* Show vehicle cost breakdown if selected */}
@@ -649,22 +646,18 @@ export default function Calculator() {
                   </Link>
                 </div>
               ) : (
-                <Select
-                  value={selectedTrailerId || "none"}
-                  onValueChange={(id) => setSelectedTrailerId(id === 'none' ? null : id)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Sélectionnez une remorque..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">-- Sans remorque --</SelectItem>
-                    {trailers.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({t.licensePlate}) - {t.type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedTrailerId || ''}
+                  onValueChange={(v) => setSelectedTrailerId(v || null)}
+                  options={trailers.map((t) => ({
+                    value: t.id,
+                    label: `${t.name} (${t.licensePlate})`,
+                    sublabel: t.type,
+                  }))}
+                  placeholder="Sélectionnez une remorque..."
+                  emptyLabel="-- Sans remorque --"
+                  searchPlaceholder="Rechercher une remorque..."
+                />
               )}
               
               {/* Show trailer cost breakdown if selected */}
@@ -1070,30 +1063,25 @@ export default function Calculator() {
             ) : (
               <>
                 {/* Dropdown to add drivers */}
-                <Select
+                <SearchableSelect
                   value=""
                   onValueChange={(id) => {
-                    if (!selectedDriverIds.includes(id)) {
+                    if (id && !selectedDriverIds.includes(id)) {
                       setSelectedDriverIds([...selectedDriverIds, id]);
                     }
                   }}
-                >
-                  <SelectTrigger className="w-full h-9 text-sm">
-                    <SelectValue placeholder="+ Ajouter un conducteur..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {drivers
-                      .filter(d => !selectedDriverIds.includes(d.id))
-                      .map(d => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name} — {d.contractType?.toUpperCase() || 'CDI'}
-                        </SelectItem>
-                      ))}
-                    {drivers.filter(d => !selectedDriverIds.includes(d.id)).length === 0 && (
-                      <SelectItem value="__none__" disabled>Tous les conducteurs sont sélectionnés</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                  options={drivers
+                    .filter(d => !selectedDriverIds.includes(d.id))
+                    .map(d => ({
+                      value: d.id,
+                      label: d.name,
+                      sublabel: d.contractType?.toUpperCase() || 'CDI',
+                    }))}
+                  placeholder="+ Ajouter un conducteur..."
+                  emptyLabel="Aucun"
+                  searchPlaceholder="Rechercher un conducteur..."
+                  allowClear={false}
+                />
 
                 {/* Selected drivers compact list with employer cost */}
                 {selectedDrivers.length > 0 && (

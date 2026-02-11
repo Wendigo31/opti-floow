@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Dialog,
   DialogContent,
@@ -202,23 +203,18 @@ export function SaveTourDialog({
                 <Building2 className="w-4 h-4" />
                 Client associé
               </Label>
-              <Select value={clientId || "none"} onValueChange={(val) => setClientId(val === "none" ? "" : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un client (optionnel)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun client</SelectItem>
-                  {clients.filter(c => c.id).map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" />
-                        {client.name}
-                        {client.company && <span className="text-muted-foreground">({client.company})</span>}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={clientId || ''}
+                onValueChange={(val) => setClientId(val || '')}
+                options={clients.filter(c => c.id).map((client) => ({
+                  value: client.id,
+                  label: client.name,
+                  sublabel: client.company || undefined,
+                }))}
+                placeholder="Sélectionnez un client (optionnel)"
+                emptyLabel="Aucun client"
+                searchPlaceholder="Rechercher un client..."
+              />
             </div>
 
             {/* Multi-Vehicle selection */}
@@ -276,29 +272,18 @@ export function SaveTourDialog({
                 <Container className="w-4 h-4" />
                 Remorque assignée
               </Label>
-              <Select value={trailerId || "none"} onValueChange={(val) => setTrailerId(val === "none" ? "" : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une remorque (optionnel)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucune remorque</SelectItem>
-                  {trailers.filter(t => t.id).map((trailer) => (
-                    <SelectItem key={trailer.id} value={trailer.id}>
-                      <div className="flex items-center gap-2">
-                        <Container className="w-4 h-4" />
-                        {trailer.name}
-                        <span className="text-muted-foreground">({trailer.licensePlate})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedTrailer && (
-                <Badge variant="secondary" className="text-xs">
-                  <Container className="w-3 h-3 mr-1" />
-                  {selectedTrailer.name} - {selectedTrailer.brand} {selectedTrailer.model}
-                </Badge>
-              )}
+              <SearchableSelect
+                value={trailerId || ''}
+                onValueChange={(val) => setTrailerId(val || '')}
+                options={trailers.filter(t => t.id).map((trailer) => ({
+                  value: trailer.id,
+                  label: trailer.name,
+                  sublabel: trailer.licensePlate || undefined,
+                }))}
+                placeholder="Sélectionnez une remorque (optionnel)"
+                emptyLabel="Aucune remorque"
+                searchPlaceholder="Rechercher une remorque..."
+              />
             </div>
 
             {/* Driver selection */}

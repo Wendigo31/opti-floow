@@ -11,13 +11,14 @@
  import { Label } from '@/components/ui/label';
  import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
- import {
+  import {
    Select,
    SelectContent,
    SelectItem,
    SelectTrigger,
    SelectValue,
  } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Trash2, Save, UserPlus, Truck, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
@@ -244,42 +245,22 @@ interface PlanningEntryDialogProps {
                )}
              </div>
               <div className="space-y-2">
-                <Select
-                  value={formData.vehicle_id || 'none'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value === 'none' ? null : value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Définir une traction" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucune (Non assigné)</SelectItem>
-                    {vehicles.map((vehicle) => {
-                      const availability = getVehicleAvailability(vehicle.id);
-                      const isGeneric = !vehicle.licensePlate;
-                      return (
-                        <SelectItem 
-                          key={vehicle.id} 
-                          value={vehicle.id}
-                          disabled={availability.taken}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isGeneric ? (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal">TYPE</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-normal">{vehicle.licensePlate}</Badge>
-                            )}
-                            <span>{vehicle.name}</span>
-                            {availability.taken && (
-                              <span className="text-destructive text-[10px] ml-1">
-                                (Déjà affecté{availability.byTour ? ` - ${availability.byTour}` : ''})
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={formData.vehicle_id || ''}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value || null }))}
+                  options={vehicles.map((vehicle) => {
+                    const availability = getVehicleAvailability(vehicle.id);
+                    const isGeneric = !vehicle.licensePlate;
+                    return {
+                      value: vehicle.id,
+                      label: vehicle.name,
+                      sublabel: isGeneric ? 'TYPE' : (vehicle.licensePlate || '') + (availability.taken ? ` (Déjà affecté${availability.byTour ? ` - ${availability.byTour}` : ''})` : ''),
+                    };
+                  })}
+                  placeholder="Définir une traction"
+                  emptyLabel="Aucune (Non assigné)"
+                  searchPlaceholder="Rechercher un véhicule..."
+                />
                 
                 {/* Warning if selected vehicle has a conflict */}
                 {vehicleConflict && (
@@ -322,44 +303,35 @@ interface PlanningEntryDialogProps {
            <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
                <Label>Conducteur</Label>
-               <Select
-                 value={formData.driver_id || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, driver_id: value === 'none' ? null : (value || null) }))}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Sélectionner un conducteur" />
-                 </SelectTrigger>
-                 <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
-                   {drivers.map((driver) => (
-                     <SelectItem key={driver.id} value={driver.id}>
-                      {driver.firstName && driver.lastName
-                        ? `${driver.firstName} ${driver.lastName}`
-                        : driver.name}
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
+                <SearchableSelect
+                  value={formData.driver_id || ''}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, driver_id: value || null }))}
+                  options={drivers.map((driver) => ({
+                    value: driver.id,
+                    label: driver.firstName && driver.lastName
+                      ? `${driver.firstName} ${driver.lastName}`
+                      : driver.name,
+                  }))}
+                  placeholder="Sélectionner un conducteur"
+                  emptyLabel="Aucun"
+                  searchPlaceholder="Rechercher un conducteur..."
+                />
              </div>
  
              <div className="space-y-2">
                <Label>Client</Label>
-               <Select
-                 value={formData.client_id || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, client_id: value === 'none' ? null : (value || null) }))}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Sélectionner un client" />
-                 </SelectTrigger>
-                 <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
-                   {clients.map((client) => (
-                     <SelectItem key={client.id} value={client.id}>
-                       {client.name} {client.company && `(${client.company})`}
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
+                <SearchableSelect
+                  value={formData.client_id || ''}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, client_id: value || null }))}
+                  options={clients.map((client) => ({
+                    value: client.id,
+                    label: client.name,
+                    sublabel: client.company || undefined,
+                  }))}
+                  placeholder="Sélectionner un client"
+                  emptyLabel="Aucun"
+                  searchPlaceholder="Rechercher un client..."
+                />
              </div>
            </div>
  
@@ -433,24 +405,19 @@ interface PlanningEntryDialogProps {
                <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                  <div className="space-y-2">
                    <Label>Conducteur relais</Label>
-                   <Select
-                     value={formData.relay_driver_id || ''}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, relay_driver_id: value === 'none' ? null : (value || null) }))}
-                   >
-                     <SelectTrigger>
-                       <SelectValue placeholder="2ème conducteur" />
-                     </SelectTrigger>
-                     <SelectContent>
-                        <SelectItem value="none">Aucun</SelectItem>
-                       {drivers.filter(d => d.id !== formData.driver_id).map((driver) => (
-                         <SelectItem key={driver.id} value={driver.id}>
-                          {driver.firstName && driver.lastName
-                            ? `${driver.firstName} ${driver.lastName}`
-                            : driver.name}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
+                    <SearchableSelect
+                      value={formData.relay_driver_id || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, relay_driver_id: value || null }))}
+                      options={drivers.filter(d => d.id !== formData.driver_id).map((driver) => ({
+                        value: driver.id,
+                        label: driver.firstName && driver.lastName
+                          ? `${driver.firstName} ${driver.lastName}`
+                          : driver.name,
+                      }))}
+                      placeholder="2ème conducteur"
+                      emptyLabel="Aucun"
+                      searchPlaceholder="Rechercher..."
+                    />
                  </div>
                  <div className="space-y-2">
                    <Label htmlFor="relay_time">Heure de relais</Label>
