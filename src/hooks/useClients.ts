@@ -24,22 +24,19 @@ export function useClients() {
   const [loading, setLoading] = useState(false);
   const [membersMap, setMembersMap] = useState<Map<string, { email: string; displayName?: string; isActive: boolean }>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const fetchInProgressRef = useRef(false);
+  const inFlightRef = useRef<Promise<void> | null>(null);
  
   // Keep latest state in ref for realtime handlers
   const clientsRef = useRef<ClientWithCreator[]>(clients);
   useEffect(() => { clientsRef.current = clients; }, [clients]);
 
-  const fetchClients = useCallback(async () => {
-    if (fetchInProgressRef.current) return;
-
+  const fetchClientsCore = useCallback(async () => {
     // Use context values instead of separate DB calls
     if (!authUserId || !contextLicenseId) {
       setLoading(false);
       return;
     }
 
-    fetchInProgressRef.current = true;
     setLoading(true);
 
     try {
@@ -128,9 +125,19 @@ export function useClients() {
       toast.error('Erreur lors du chargement des clients');
     } finally {
       setLoading(false);
-      fetchInProgressRef.current = false;
     }
   }, [authUserId, contextLicenseId]);
+
+  const fetchClients = useCallback(async (): Promise<void> => {
+    if (inFlightRef.current) return inFlightRef.current;
+    const run = fetchClientsCore();
+    inFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      inFlightRef.current = null;
+    }
+  }, [fetchClientsCore]);
 
   // Store fetchClients in ref to avoid subscription churn
   const fetchClientsRef = useRef<() => Promise<void>>();
@@ -347,10 +354,6 @@ export function useClients() {
       )
       .subscribe((status) => {
         console.log('[Realtime] clients subscription:', status);
-        // Reconcile on subscribe
-        if (status === 'SUBSCRIBED') {
-          void fetchClientsRef.current?.();
-        }
       });
 
     return () => {

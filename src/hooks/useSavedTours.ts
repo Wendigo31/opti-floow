@@ -155,10 +155,6 @@ export function useSavedTours() {
       )
       .subscribe((status) => {
         console.log('[Realtime] saved_tours subscription:', status);
-        // After (re-)subscribe, reconcile any missed events
-        if (status === 'SUBSCRIBED') {
-          void fetchToursRef.current?.();
-        }
       });
 
     return () => {
