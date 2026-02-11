@@ -1,5 +1,5 @@
- import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Building2, Download } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Upload, FileSpreadsheet, Check, AlertCircle, Loader2, User, Phone, Building2, Download, Moon, Sun } from 'lucide-react';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
@@ -198,15 +198,16 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                </div>
                <ScrollArea className="flex-1 border rounded-lg">
                  <table className="w-full text-sm">
-                   <thead className="bg-muted/50 sticky top-0">
-                     <tr>
-                       <th className="text-left p-2">Nom</th>
-                       <th className="text-left p-2">Téléphone</th>
-                       <th className="text-left p-2">Contrat</th>
-                       <th className="text-left p-2">Agence / Service</th>
-                       <th className="text-left p-2">Fonction</th>
-                     </tr>
-                   </thead>
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left p-2">Nom</th>
+                        <th className="text-left p-2">Téléphone</th>
+                        <th className="text-left p-2">Contrat</th>
+                        <th className="text-left p-2">Horaire</th>
+                        <th className="text-left p-2">Agence / Service</th>
+                        <th className="text-left p-2">Fonction</th>
+                      </tr>
+                    </thead>
                    <tbody>
                      {preview.map((driver, index) => (
                        <tr key={index} className="border-t border-border/50 hover:bg-muted/30">
@@ -226,14 +227,29 @@ import { downloadDriversTemplate, downloadInterimDriversTemplate } from '@/utils
                              <span className="text-muted-foreground">-</span>
                            )}
                          </td>
-                         <td className="p-2">
-                           <Badge 
-                             variant={driver.contractType === 'interim' ? 'outline' : 'secondary'}
-                             className={driver.contractType === 'interim' ? 'border-orange-500 text-orange-600' : ''}
-                           >
-                             {driver.contractType.toUpperCase()}
-                           </Badge>
-                         </td>
+                          <td className="p-2">
+                            <Badge 
+                              variant={driver.contractType === 'interim' ? 'outline' : 'secondary'}
+                              className={driver.contractType === 'interim' ? 'border-orange-500 text-orange-600' : ''}
+                            >
+                              {driver.contractType.toUpperCase()}
+                            </Badge>
+                          </td>
+                          <td className="p-2">
+                            <div className="flex items-center gap-1 text-sm">
+                              {driver.shiftType === 'nuit' ? (
+                                <Badge variant="outline" className="border-indigo-500 text-indigo-600 gap-1">
+                                  <Moon className="w-3 h-3" />
+                                  Nuit
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1">
+                                  <Sun className="w-3 h-3" />
+                                  Jour
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
                          <td className="p-2 max-w-[150px]">
                            {driver.agencyName || driver.department ? (
                              <div className="flex items-center gap-1 text-muted-foreground truncate">
