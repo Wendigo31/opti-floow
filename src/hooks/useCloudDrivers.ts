@@ -84,7 +84,23 @@ export function useCloudDrivers() {
   const fetchDrivers = useCallback(async (): Promise<void> => {
     if (fetchInProgressRef.current) return;
 
-    if (!authUserId || !licenseId) {
+    // Use refs first, then context, then fallback
+    let lid = licenseIdRef.current || licenseId;
+    let uid = authUserIdRef.current || authUserId;
+
+    if (!lid || !uid) {
+      // Fallback: fetch directly from auth
+      try {
+        const fallbackLid = await getLicenseId();
+        const { data: { user } } = await supabase.auth.getUser();
+        lid = fallbackLid;
+        uid = user?.id || null;
+      } catch (e) {
+        console.warn('[useCloudDrivers] fetchDrivers fallback failed:', e);
+      }
+    }
+
+    if (!lid || !uid) {
       setCdiDrivers(getCachedCdiDrivers());
       setCddDrivers(getCachedCddDrivers());
       setInterimDrivers(getCachedInterimDrivers());
@@ -95,11 +111,10 @@ export function useCloudDrivers() {
     setLoading(true);
 
     try {
-      // Single optimized query - no need for getUser() since we have authUserId
       const { data, error } = await supabase
         .from('user_drivers')
         .select('driver_data, driver_type')
-        .eq('license_id', licenseId)
+        .eq('license_id', lid)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
