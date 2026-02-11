@@ -55,6 +55,8 @@ import { MapPreview } from '@/components/map/MapPreview';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useCalculations } from '@/hooks/useCalculations';
 import { FRENCH_TOLL_RATES, SEMI_TRAILER_SPECS } from '@/hooks/useTomTom';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -63,7 +65,8 @@ import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useItineraryState } from '@/hooks/useItineraryState';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { Label } from '@/components/ui/label';
 import type { LocalTrip, LocalClient, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
@@ -207,18 +210,28 @@ function SortableStop({ stop, index, onUpdate, onRemove, onSwap, isLast, onOpenA
 }
 
 export default function Itinerary() {
-  const { vehicle, trip, setTrip, setVehicle, selectedDriverIds, settings } = useApp();
+  const { vehicle, trip, setTrip, setVehicle, selectedDriverIds, setSelectedDriverIds, settings } = useApp();
   
   // Use cloud data for drivers and charges (shared company data)
   const { charges } = useCloudCharges();
   const { cdiDrivers, interimDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...interimDrivers];
+  const { vehicles: cloudVehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
   
   const { toast } = useToast();
   const [trips, setTrips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
+  
+  // Merge local and cloud vehicles, deduplicate by id
+  const allVehicles = useMemo(() => {
+    const map = new Map<string, Vehicle>();
+    vehicles.forEach(v => map.set(v.id, v));
+    cloudVehicles.forEach(v => map.set(v.id, v));
+    return Array.from(map.values());
+  }, [vehicles, cloudVehicles]);
   
   const {
     originAddress,
@@ -271,10 +284,11 @@ export default function Itinerary() {
   const [addressSelectorTarget, setAddressSelectorTarget] = useState<'origin' | 'destination' | 'stop'>('origin');
   const [addressSelectorStopId, setAddressSelectorStopId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'route' | 'options'>('route');
+  const [selectedTrailerId, setSelectedTrailerId] = useState<string | null>(null);
   
   const selectedVehicle = useMemo(() => 
-    vehicles.find(v => v.id === selectedVehicleId) || null,
-  [vehicles, selectedVehicleId]);
+    allVehicles.find(v => v.id === selectedVehicleId) || null,
+  [allVehicles, selectedVehicleId]);
   
   const vehicleCostBreakdown = useMemo(() => {
     if (!selectedVehicle) return null;
@@ -350,7 +364,7 @@ export default function Itinerary() {
     }));
     setStops(loadedStops);
     if (tour.vehicle_id) {
-      const vehicleExists = vehicles.find(v => v.id === tour.vehicle_id);
+      const vehicleExists = allVehicles.find(v => v.id === tour.vehicle_id);
       if (vehicleExists) {
         setSelectedVehicleId(tour.vehicle_id);
         setVehicle(prev => ({
@@ -419,7 +433,7 @@ export default function Itinerary() {
   const handleVehicleSelect = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId === 'none' ? null : vehicleId);
     if (vehicleId !== 'none') {
-      const selectedV = vehicles.find(v => v.id === vehicleId);
+      const selectedV = allVehicles.find(v => v.id === vehicleId);
       if (selectedV) {
         setVehicle(prev => ({
           ...prev,
@@ -934,35 +948,49 @@ export default function Itinerary() {
                 <span>Options du trajet</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select value={selectedVehicleId || "none"} onValueChange={handleVehicleSelect}>
-                  <SelectTrigger className="h-11 bg-background/80 border-border/50 hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-primary/70" />
-                      <SelectValue placeholder="Véhicule" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Par défaut</SelectItem>
-                    {vehicles.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedVehicleId || ''}
+                  onValueChange={(v) => handleVehicleSelect(v || 'none')}
+                  options={allVehicles.map(v => ({ value: v.id, label: v.name, sublabel: v.licensePlate || undefined }))}
+                  placeholder="Véhicule"
+                  emptyLabel="Par défaut"
+                  searchPlaceholder="Rechercher un véhicule..."
+                  icon={<Truck className="w-4 h-4 text-primary/70" />}
+                  triggerClassName="h-11"
+                />
 
-                <Select value={selectedClientId || "none"} onValueChange={(v) => setSelectedClientId(v === "none" ? null : v)}>
-                  <SelectTrigger className="h-11 bg-background/80 border-border/50 hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-secondary/70" />
-                      <SelectValue placeholder="Client" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedClientId || ''}
+                  onValueChange={(v) => setSelectedClientId(v || null)}
+                  options={clients.map(c => ({ value: c.id, label: c.name }))}
+                  placeholder="Client"
+                  emptyLabel="Aucun"
+                  searchPlaceholder="Rechercher un client..."
+                  icon={<User className="w-4 h-4 text-secondary/70" />}
+                  triggerClassName="h-11"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DriverSearchSelect
+                  drivers={drivers}
+                  value={selectedDriverIds[0] || ''}
+                  onChange={(id) => {
+                    setSelectedDriverIds(id ? [id] : []);
+                  }}
+                  placeholder="Conducteur"
+                />
+
+                <SearchableSelect
+                  value={selectedTrailerId || ''}
+                  onValueChange={(v) => setSelectedTrailerId(v || null)}
+                  options={trailers.filter(t => t.isActive).map(t => ({ value: t.id, label: t.name, sublabel: t.licensePlate || undefined }))}
+                  placeholder="Remorque"
+                  emptyLabel="Aucune"
+                  searchPlaceholder="Rechercher une remorque..."
+                  icon={<Truck className="w-4 h-4 text-warning/70" />}
+                  triggerClassName="h-11"
+                />
               </div>
 
               {selectedVehicle && vehicleCostBreakdown && (
@@ -1293,12 +1321,13 @@ export default function Itinerary() {
             </div>
             <div className="space-y-2">
               <Label>Client</Label>
-              <Select value={saveFormData.selectedClientId} onValueChange={(v) => setSaveFormData(prev => ({ ...prev, selectedClientId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map(c => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={saveFormData.selectedClientId}
+                onValueChange={(v) => setSaveFormData(prev => ({ ...prev, selectedClientId: v }))}
+                options={clients.map(c => ({ value: c.id, label: c.name }))}
+                placeholder="Sélectionner un client"
+                searchPlaceholder="Rechercher un client..."
+              />
             </div>
             <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
               <Label>Inclure les charges</Label>
