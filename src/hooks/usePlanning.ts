@@ -68,11 +68,21 @@ export interface ExcelTourInput {
    const entriesRef = useRef<PlanningEntry[]>(entries);
    useEffect(() => { entriesRef.current = entries; }, [entries]);
 
-   const fetchEntries = useCallback(async (startDate?: string, endDate?: string): Promise<void> => {
+    const fetchEntries = useCallback(async (startDate?: string, endDate?: string, force?: boolean): Promise<void> => {
      // If a fetch is already running, skip but don't block forever
-     if (fetchInProgressRef.current) {
+     if (fetchInProgressRef.current && !force) {
        console.log('[Planning] fetchEntries skipped (already in progress)');
        return;
+     }
+     // If force, wait for current to finish
+     if (fetchInProgressRef.current && force) {
+       console.log('[Planning] fetchEntries force — waiting for previous to finish');
+       await new Promise<void>((resolve) => {
+         const check = setInterval(() => {
+           if (!fetchInProgressRef.current) { clearInterval(check); resolve(); }
+         }, 200);
+         setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+       });
      }
       
       if (!authUserId || !licenseId) {
@@ -159,8 +169,8 @@ export interface ExcelTourInput {
    }, [authUserId, licenseId]);
  
   // Store fetchEntries in ref to avoid subscription churn
-  const fetchEntriesRef = useRef<(startDate?: string, endDate?: string) => Promise<void>>();
-  useEffect(() => { fetchEntriesRef.current = fetchEntries; }, [fetchEntries]);
+   const fetchEntriesRef = useRef<(startDate?: string, endDate?: string, force?: boolean) => Promise<void>>();
+   useEffect(() => { fetchEntriesRef.current = fetchEntries; }, [fetchEntries]);
 
    // Realtime subscription
    useEffect(() => {
@@ -669,13 +679,17 @@ export interface ExcelTourInput {
 
           toast.success(`${rows.length} missions importées avec succès`);
 
-          // Auto-refetch after import to ensure UI is up-to-date
-          setTimeout(() => {
-            fetchEntriesRef.current?.(
-              format(weekStartDate, 'yyyy-MM-dd'),
-              format(addDays(weekStartDate, 6), 'yyyy-MM-dd')
+          // Force refetch after import to ensure UI is up-to-date
+          // Use force=true to bypass fetchInProgressRef guard
+          try {
+            await fetchEntriesRef.current?.(
+              format(startOfWeek(weekStartDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+              format(addDays(startOfWeek(weekStartDate, { weekStartsOn: 1 }), 6), 'yyyy-MM-dd'),
+              true
             );
-          }, 1000);
+          } catch (e) {
+            console.warn('[Planning] post-import refetch failed, will retry:', e);
+          }
 
           // Auto-create saved tours from the imported tractions
           try {
