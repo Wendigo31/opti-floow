@@ -1,4 +1,4 @@
- import { useState, useEffect } from 'react';
+ import { useState, useEffect, useCallback } from 'react';
  import {
    Dialog,
    DialogContent,
@@ -18,14 +18,15 @@ import { Checkbox } from '@/components/ui/checkbox';
    SelectTrigger,
    SelectValue,
  } from '@/components/ui/select';
-import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
+import { Trash2, Save, UserPlus, Truck, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
  import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
  import { planningStatusLabels } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
  import type { Driver } from '@/types';
  import type { ClientWithCreator } from '@/hooks/useClients';
  
- interface PlanningEntryDialogProps {
+interface PlanningEntryDialogProps {
    open: boolean;
    onOpenChange: (open: boolean) => void;
    entry: PlanningEntry | null;
@@ -33,11 +34,12 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
    clients: ClientWithCreator[];
    drivers: Driver[];
    vehicles: Vehicle[];
+   allEntries?: PlanningEntry[];
    onSave: (input: PlanningEntryInput) => void;
    onDelete?: () => void;
   onApplyVehicleToTour?: (vehicleId: string, tourName: string) => void;
   onDeleteTourInWeek?: (tourName: string) => void;
- }
+}
  
  export function PlanningEntryDialog({
    open,
@@ -47,6 +49,7 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
    clients,
    drivers,
    vehicles,
+   allEntries = [],
    onSave,
    onDelete,
   onApplyVehicleToTour,
@@ -137,6 +140,34 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
  
    const selectedVehicle = vehicles.find(v => v.id === formData.vehicle_id);
 
+   // Check if a vehicle with a license plate is already assigned to another entry on the same date
+   const getVehicleConflict = useCallback((vehicleId: string | null): PlanningEntry | null => {
+     if (!vehicleId || !formData.planning_date) return null;
+     const vehicle = vehicles.find(v => v.id === vehicleId);
+     if (!vehicle || !vehicle.licensePlate) return null; // No plate = generic type, no conflict
+     
+     return allEntries.find(e => 
+       e.vehicle_id === vehicleId && 
+       e.planning_date === formData.planning_date && 
+       e.id !== entry?.id // Exclude current entry
+     ) || null;
+   }, [allEntries, vehicles, formData.planning_date, entry?.id]);
+
+   const vehicleConflict = getVehicleConflict(formData.vehicle_id);
+
+   // Check which vehicles are already taken on this date (with plate)
+   const getVehicleAvailability = useCallback((vehicleId: string): { taken: boolean; byTour?: string } => {
+     const vehicle = vehicles.find(v => v.id === vehicleId);
+     if (!vehicle || !vehicle.licensePlate) return { taken: false }; // No plate = always available
+     
+     const conflict = allEntries.find(e => 
+       e.vehicle_id === vehicleId && 
+       e.planning_date === formData.planning_date && 
+       e.id !== entry?.id
+     );
+     return conflict ? { taken: true, byTour: conflict.tour_name || undefined } : { taken: false };
+   }, [allEntries, vehicles, formData.planning_date, entry?.id]);
+
   const handleClearCell = () => {
     if (!entry) return;
     onSave({
@@ -212,41 +243,79 @@ import { Trash2, Save, UserPlus, Truck } from 'lucide-react';
                  <span className="text-xs text-muted-foreground">(Non assigné)</span>
                )}
              </div>
-             <div className="space-y-2">
-               <Select
-                 value={formData.vehicle_id || 'none'}
-                 onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value === 'none' ? null : value }))}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Définir une traction" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="none">Aucune (Non assigné)</SelectItem>
-                   {vehicles.map((vehicle) => (
-                     <SelectItem key={vehicle.id} value={vehicle.id}>
-                       {vehicle.name} ({vehicle.licensePlate})
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-               
-               {/* Checkbox to apply vehicle to all entries of this tour */}
-               {entry?.tour_name && formData.vehicle_id && onApplyVehicleToTour && (
-                 <div className="flex items-center space-x-2 pt-2">
-                   <Checkbox
-                     id="applyToAllTour"
-                     checked={applyToAllTour}
-                     onCheckedChange={(checked) => setApplyToAllTour(checked === true)}
-                   />
-                   <label
-                     htmlFor="applyToAllTour"
-                     className="text-sm text-muted-foreground cursor-pointer"
-                   >
-                     Appliquer à toutes les missions "{entry.tour_name}"
-                   </label>
-                 </div>
-               )}
-             </div>
+              <div className="space-y-2">
+                <Select
+                  value={formData.vehicle_id || 'none'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, vehicle_id: value === 'none' ? null : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Définir une traction" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune (Non assigné)</SelectItem>
+                    {vehicles.map((vehicle) => {
+                      const availability = getVehicleAvailability(vehicle.id);
+                      const isGeneric = !vehicle.licensePlate;
+                      return (
+                        <SelectItem 
+                          key={vehicle.id} 
+                          value={vehicle.id}
+                          disabled={availability.taken}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isGeneric ? (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal">TYPE</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-normal">{vehicle.licensePlate}</Badge>
+                            )}
+                            <span>{vehicle.name}</span>
+                            {availability.taken && (
+                              <span className="text-destructive text-[10px] ml-1">
+                                (Déjà affecté{availability.byTour ? ` - ${availability.byTour}` : ''})
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                
+                {/* Warning if selected vehicle has a conflict */}
+                {vehicleConflict && (
+                  <div className="flex items-center gap-2 p-2 bg-destructive/10 rounded-md text-destructive text-xs">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>
+                      Ce véhicule immatriculé est déjà affecté le {formData.planning_date}
+                      {vehicleConflict.tour_name && ` sur "${vehicleConflict.tour_name}"`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Info about generic vs registered */}
+                {selectedVehicle && !selectedVehicle.licensePlate && (
+                  <p className="text-[10px] text-muted-foreground">
+                    ℹ️ Véhicule-type (sans plaque) : peut être utilisé sur plusieurs tractions simultanément
+                  </p>
+                )}
+                
+                {/* Checkbox to apply vehicle to all entries of this tour */}
+                {entry?.tour_name && formData.vehicle_id && onApplyVehicleToTour && (
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox
+                      id="applyToAllTour"
+                      checked={applyToAllTour}
+                      onCheckedChange={(checked) => setApplyToAllTour(checked === true)}
+                    />
+                    <label
+                      htmlFor="applyToAllTour"
+                      className="text-sm text-muted-foreground cursor-pointer"
+                    >
+                      Appliquer à toutes les missions "{entry.tour_name}"
+                    </label>
+                  </div>
+                )}
+              </div>
            </div>
  
            {/* Driver, Client row */}

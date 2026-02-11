@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2 } from 'lucide-react';
+import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
@@ -29,6 +29,7 @@ interface PlanningRowDetailPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entries: PlanningEntry[];
+  allEntries?: PlanningEntry[];
   clients: ClientWithCreator[];
   drivers: Driver[];
   vehicles: Vehicle[];
@@ -47,6 +48,7 @@ export function PlanningRowDetailPanel({
   open,
   onOpenChange,
   entries,
+  allEntries = [],
   clients,
   drivers,
   vehicles,
@@ -302,9 +304,36 @@ export function PlanningRowDetailPanel({
               <SelectTrigger><SelectValue placeholder="Véhicule" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">Aucun</SelectItem>
-                {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.name} ({v.licensePlate})</SelectItem>)}
+                {vehicles.map(v => {
+                  const isGeneric = !v.licensePlate;
+                  // Check if this registered vehicle is already used on any date of this traction's entries
+                  const isConflict = !isGeneric && entries.length > 0 && allEntries.some(e => 
+                    e.vehicle_id === v.id && 
+                    entries.some(te => te.planning_date === e.planning_date) &&
+                    !entries.some(te => te.id === e.id)
+                  );
+                  return (
+                    <SelectItem key={v.id} value={v.id} disabled={isConflict}>
+                      <div className="flex items-center gap-2">
+                        {isGeneric ? (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal">TYPE</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-normal">{v.licensePlate}</Badge>
+                        )}
+                        <span>{v.name}</span>
+                        {isConflict && <span className="text-destructive text-[10px]">(Déjà affecté)</span>}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            {/* Info about generic vehicles */}
+            {vehicleId && vehicles.find(v => v.id === vehicleId && !v.licensePlate) && (
+              <p className="text-[10px] text-muted-foreground">
+                ℹ️ Véhicule-type : peut être utilisé sur plusieurs tractions
+              </p>
+            )}
           </div>
 
           {/* Time */}
