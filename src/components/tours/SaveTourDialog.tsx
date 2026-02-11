@@ -316,10 +316,12 @@ export function SaveTourDialog({
                     const typeLabel = driver.contractType === 'interim' ? 'Intérim'
                       : driver.contractType === 'cdd' ? 'CDD'
                       : driver.contractType === 'autre' ? 'Autre'
+                      : driver.contractType === 'joker' ? 'Joker'
                       : 'CDI';
                     const typeColor = driver.contractType === 'interim' ? 'bg-amber-500/10 text-amber-700 border-amber-500/30'
                       : driver.contractType === 'cdd' ? 'bg-blue-500/10 text-blue-700 border-blue-500/30'
                       : driver.contractType === 'autre' ? 'bg-muted text-muted-foreground border-border'
+                      : driver.contractType === 'joker' ? 'bg-purple-500/10 text-purple-700 border-purple-500/30'
                       : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30';
                     return (
                     <div 

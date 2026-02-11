@@ -42,8 +42,8 @@ export default function Calculator() {
   
   // Use cloud data for drivers and charges (shared company data)
   const { charges } = useCloudCharges();
-  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers } = useCloudDrivers();
-  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers];
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   
   // Role-based permissions
   const { canViewCostBreakdown, canViewFinancialData, canViewPricing, role } = useRolePermissions();

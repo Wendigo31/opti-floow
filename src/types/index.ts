@@ -7,7 +7,7 @@ export interface Driver {
   phone?: string;
   email?: string;
   hireDate?: string; // ISO date format (YYYY-MM-DD)
-  contractType?: 'cdi' | 'cdd' | 'interim' | 'autre'; // Type de contrat
+  contractType?: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker'; // Type de contrat
   baseSalary: number;
   hourlyRate: number; // Taux horaire brut
   hoursPerDay: number; // Heures travaillées par jour

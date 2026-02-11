@@ -17,7 +17,7 @@ export function generateDriversTemplate(): Blob {
       ['DUPONT Jean', '06 12 34 56 78', 'SPL', 'CDI', 'Jour', 'jean.dupont@email.com'],
       ['MARTIN Pierre', '06 98 76 54 32', 'PL', 'CDI', 'Nuit', 'pierre.martin@email.com'],
       ['DURAND Marie', '07 11 22 33 44', 'SPL', 'CDD', 'Jour', 'marie.durand@email.com'],
-      ['BERNARD Lucas', '06 55 66 77 88', 'TP', 'CDI', 'Nuit', 'lucas.bernard@email.com'],
+      ['BERNARD Lucas', '06 55 66 77 88', 'TP', 'Joker', 'Nuit', 'lucas.bernard@email.com'],
       ['PETIT Sophie', '06 44 33 22 11', 'VL', 'CDD', 'Jour', ''],
     ];
   
