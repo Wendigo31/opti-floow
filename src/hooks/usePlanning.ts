@@ -7,6 +7,7 @@ import { useLicenseContext } from '@/context/LicenseContext';
 import { format, addDays, addWeeks, parseISO, getDay, startOfWeek, endOfWeek, isWithinInterval, isBefore, isAfter, startOfDay } from 'date-fns';
 import { getLicenseId } from '@/context/LicenseContext';
 import type { Json } from '@/integrations/supabase/types';
+import { parseOdmAddresses } from '@/utils/odmAddressParser';
 
 function withTimeout<T>(work: () => Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -537,6 +538,16 @@ export function usePlanning() {
         if (existing && existing.length > 0) {
           savedTourId = existing[0].id;
         } else {
+          // Try to extract addresses from ODM if origin/destination are empty
+          let tourOrigin = first.origin_address || '';
+          let tourDestination = first.destination_address || '';
+
+          if ((!tourOrigin || !tourDestination) && first.mission_order) {
+            const odmAddresses = parseOdmAddresses(first.mission_order);
+            if (!tourOrigin && odmAddresses.origin) tourOrigin = odmAddresses.origin;
+            if (!tourDestination && odmAddresses.destination) tourDestination = odmAddresses.destination;
+          }
+
           // Create new saved tour
           const { data: newTour, error: createErr } = await supabase
             .from('saved_tours')
@@ -544,8 +555,8 @@ export function usePlanning() {
               user_id: uid,
               license_id: lid,
               name: tourName,
-              origin_address: first.origin_address || '',
-              destination_address: first.destination_address || '',
+              origin_address: tourOrigin,
+              destination_address: tourDestination,
               stops: (first.stops || []) as unknown as Json,
               client_id: first.client_id || null,
               vehicle_id: first.vehicle_id || null,
@@ -630,6 +641,16 @@ export function usePlanning() {
             const weekRows = tours.flatMap((t) => {
               const recurring = Array.isArray(t.recurring_days) ? t.recurring_days : [];
               const validDays = recurring.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+
+              // Extract addresses from ODM if origin/destination are empty
+              let entryOrigin = t.origin_address || null;
+              let entryDestination = t.destination_address || null;
+              if ((!entryOrigin || !entryDestination) && t.mission_order) {
+                const odmAddr = parseOdmAddresses(t.mission_order);
+                if (!entryOrigin && odmAddr.origin) entryOrigin = odmAddr.origin;
+                if (!entryDestination && odmAddr.destination) entryDestination = odmAddr.destination;
+              }
+
               return validDays.map((dayIdx) => {
                 const date = addDays(weekMonday, dayIdx);
                 const driverForDay = t.day_driver_ids?.[dayIdx] || t.driver_id || null;
@@ -644,8 +665,8 @@ export function usePlanning() {
                   driver_id: driverForDay,
                   vehicle_id: t.vehicle_id || null,
                   mission_order: t.mission_order || null,
-                  origin_address: t.origin_address || null,
-                  destination_address: t.destination_address || null,
+                  origin_address: entryOrigin,
+                  destination_address: entryDestination,
                   notes: notesForDay,
                   status: 'planned' as const,
                   tour_name: t.tour_name,

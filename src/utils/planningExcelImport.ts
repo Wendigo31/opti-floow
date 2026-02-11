@@ -1,5 +1,6 @@
- import * as XLSX from 'xlsx';
- import type { TourInput } from '@/types/planning';
+import * as XLSX from 'xlsx';
+import type { TourInput } from '@/types/planning';
+import { extractBestAddresses } from '@/utils/odmAddressParser';
  
  export interface ExcelPlanningRow {
    client?: string;
@@ -269,8 +270,8 @@ function extractDayCellText(cellValue: string | undefined): string {
      const ligneLower = ligne.toLowerCase();
      if (ligneLower.includes('information') || ligneLower.includes('total') || ligneLower.includes('sous-total')) continue;
      
-     // Parse addresses from ligne
-     const { origin, destination } = parseAddresses(ligne);
+      // Parse addresses from ligne AND ODM (fallback)
+      const { origin, destination, stops: parsedStops } = extractBestAddresses(ligne, odm);
      
      // Determine which days are active and who drives each day
      // Always import Mon..Sat. Sunday is intentionally excluded.
@@ -290,22 +291,22 @@ function extractDayCellText(cellValue: string | undefined): string {
          day_cells[dayIdx] = v;
      }
      
-     // Only add if we have meaningful data
-     if (client || ligne || odm) {
-       entries.push({
-         client,
-         ligne,
-         origin_address: origin,
-         destination_address: destination,
-         driver_name: extractDriverFromCell(titulaire),
-         mission_order: odm,
-         start_time: parseTime(startTime),
-         end_time: parseTime(endTime),
-         recurring_days,
-        day_cells,
-        sector_manager: sectorManager || null,
-       });
-     }
+      // Only add if we have meaningful data
+      if (client || ligne || odm) {
+        entries.push({
+          client,
+          ligne,
+          origin_address: origin,
+          destination_address: destination,
+          driver_name: extractDriverFromCell(titulaire),
+          mission_order: odm,
+          start_time: parseTime(startTime),
+          end_time: parseTime(endTime),
+          recurring_days,
+         day_cells,
+         sector_manager: sectorManager || null,
+        });
+      }
    }
    
    return entries;

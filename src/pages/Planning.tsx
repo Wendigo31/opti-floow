@@ -158,16 +158,22 @@ export default function Planning() {
     }
   }, [currentWeekStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch when background import completes
+  // Re-fetch when background import completes — but only with existing filters (search-first)
   useEffect(() => {
     if (importProgress.completedAt > 0) {
+      // Don't auto-load everything — respect search-first.
+      // Only refetch if the user had already searched.
+      if (!hasSearched) return;
       const startDate = format(currentWeekStart, 'yyyy-MM-dd');
       const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-      setHasSearched(true);
-      const timer = setTimeout(() => fetchEntries(startDate, endDate, true), 500);
+      const filters: PlanningServerFilters = {};
+      if (searchQuery.trim()) filters.search = searchQuery.trim();
+      if (filterClient) filters.clientId = filterClient;
+      if (filterSector) filters.sectorManager = filterSector;
+      const timer = setTimeout(() => fetchEntries(startDate, endDate, true, filters), 500);
       return () => clearTimeout(timer);
     }
-  }, [importProgress.completedAt, currentWeekStart, fetchEntries]);
+  }, [importProgress.completedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchVehicles();
