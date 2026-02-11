@@ -10,9 +10,9 @@ import { cn } from '@/lib/utils';
 
 interface DriverFormProps {
   driver?: Partial<Driver>;
-  driverType: 'cdi' | 'cdd' | 'interim';
+  driverType: 'cdi' | 'cdd' | 'interim' | 'autre';
   isLoading?: boolean;
-  onSave: (driver: Partial<Driver> & any, type: 'cdi' | 'cdd' | 'interim') => void;
+  onSave: (driver: Partial<Driver> & any, type: 'cdi' | 'cdd' | 'interim' | 'autre') => void;
   onCancel: () => void;
 }
 
