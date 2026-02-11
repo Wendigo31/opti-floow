@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,13 +13,14 @@ import {
   Building2, Mail, Phone, MapPin, Route, 
   Calculator, History, Receipt, Trash2, Calendar,
   TrendingUp, TrendingDown, Fuel, ReceiptText, Users, Truck, Droplet, Landmark,
-  FileDown, Copy, Edit3, RefreshCw, Euro
+  FileDown, Copy, Edit3, RefreshCw, Euro, Plus, Contact
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { LocalClient, LocalClientReport, LocalTrip, LocalQuote } from '@/types/local';
 import { generateId } from '@/types/local';
 import { format } from 'date-fns';
@@ -47,6 +48,127 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
   const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
   const [trips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
   const [quotes] = useLocalStorage<LocalQuote[]>('optiflow_quotes', []);
+
+  // Contacts state
+  interface ClientContact {
+    id: string;
+    client_id: string;
+    role: string | null;
+    first_name: string;
+    last_name: string | null;
+    email: string | null;
+    phone: string | null;
+    site_city: string | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+  }
+  const [contacts, setContacts] = useState<ClientContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactFormOpen, setContactFormOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ClientContact | null>(null);
+  const [contactForm, setContactForm] = useState({
+    role: '', first_name: '', last_name: '', email: '', phone: '', site_city: '', notes: ''
+  });
+
+  const fetchContacts = useCallback(async () => {
+    if (!client) return;
+    setContactsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('client_contacts')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (e) {
+      console.error('Error fetching contacts:', e);
+    } finally {
+      setContactsLoading(false);
+    }
+  }, [client]);
+
+  useEffect(() => {
+    if (open && client) {
+      fetchContacts();
+    }
+  }, [open, client, fetchContacts]);
+
+  const resetContactForm = () => {
+    setContactForm({ role: '', first_name: '', last_name: '', email: '', phone: '', site_city: '', notes: '' });
+    setEditingContact(null);
+    setContactFormOpen(false);
+  };
+
+  const handleSaveContact = async () => {
+    if (!client || !contactForm.first_name.trim()) return;
+    try {
+      if (editingContact) {
+        const { error } = await supabase
+          .from('client_contacts')
+          .update({
+            role: contactForm.role || null,
+            first_name: contactForm.first_name,
+            last_name: contactForm.last_name || null,
+            email: contactForm.email || null,
+            phone: contactForm.phone || null,
+            site_city: contactForm.site_city || null,
+            notes: contactForm.notes || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingContact.id);
+        if (error) throw error;
+        toast({ title: 'Contact mis à jour' });
+      } else {
+        const { error } = await supabase
+          .from('client_contacts')
+          .insert({
+            client_id: client.id,
+            role: contactForm.role || null,
+            first_name: contactForm.first_name,
+            last_name: contactForm.last_name || null,
+            email: contactForm.email || null,
+            phone: contactForm.phone || null,
+            site_city: contactForm.site_city || null,
+            notes: contactForm.notes || null,
+          });
+        if (error) throw error;
+        toast({ title: 'Contact ajouté' });
+      }
+      resetContactForm();
+      fetchContacts();
+    } catch (e) {
+      console.error('Error saving contact:', e);
+      toast({ title: 'Erreur', description: 'Impossible de sauvegarder le contact', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Supprimer ce contact ?')) return;
+    try {
+      const { error } = await supabase.from('client_contacts').delete().eq('id', contactId);
+      if (error) throw error;
+      setContacts(prev => prev.filter(c => c.id !== contactId));
+      toast({ title: 'Contact supprimé' });
+    } catch (e) {
+      console.error('Error deleting contact:', e);
+    }
+  };
+
+  const openEditContact = (contact: ClientContact) => {
+    setEditingContact(contact);
+    setContactForm({
+      role: contact.role || '',
+      first_name: contact.first_name,
+      last_name: contact.last_name || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+      site_city: contact.site_city || '',
+      notes: contact.notes || '',
+    });
+    setContactFormOpen(true);
+  };
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -424,8 +546,12 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
             )}
           </div>
 
-          <Tabs defaultValue="itineraries" className="flex-1">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="contacts" className="flex-1">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="contacts" className="flex items-center gap-1.5">
+                <Contact className="w-3.5 h-3.5" />
+                Contacts ({contacts.length})
+              </TabsTrigger>
               <TabsTrigger value="itineraries" className="flex items-center gap-1.5">
                 <Route className="w-3.5 h-3.5" />
                 Tournées ({itineraryReports.length})
@@ -445,6 +571,106 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
             </TabsList>
 
             <ScrollArea className="h-[400px] mt-4">
+              {/* Contacts Tab */}
+              <TabsContent value="contacts" className="space-y-3 m-0">
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={() => { resetContactForm(); setContactFormOpen(true); }}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter un contact
+                  </Button>
+                </div>
+
+                {contactFormOpen && (
+                  <Card>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Rôle</Label>
+                          <Input placeholder="Ex: Responsable transport" value={contactForm.role} onChange={e => setContactForm(f => ({ ...f, role: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Prénom *</Label>
+                          <Input value={contactForm.first_name} onChange={e => setContactForm(f => ({ ...f, first_name: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Nom</Label>
+                          <Input value={contactForm.last_name} onChange={e => setContactForm(f => ({ ...f, last_name: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Email</Label>
+                          <Input type="email" value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Téléphone</Label>
+                          <Input value={contactForm.phone} onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Ville du site</Label>
+                          <Input value={contactForm.site_city} onChange={e => setContactForm(f => ({ ...f, site_city: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={resetContactForm}>Annuler</Button>
+                        <Button size="sm" onClick={handleSaveContact} disabled={!contactForm.first_name.trim()}>
+                          {editingContact ? 'Mettre à jour' : 'Ajouter'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {contacts.length === 0 && !contactFormOpen ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Contact className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p>Aucun contact enregistré</p>
+                    <p className="text-xs mt-1">Ajoutez des contacts pour ce client</p>
+                  </div>
+                ) : (
+                  contacts.map(contact => (
+                    <Card key={contact.id} className="hover:border-primary/30 transition-colors">
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{contact.first_name} {contact.last_name || ''}</span>
+                              {contact.role && (
+                                <Badge variant="secondary" className="text-xs">{contact.role}</Badge>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                              {contact.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3" /> {contact.email}
+                                </span>
+                              )}
+                              {contact.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3" /> {contact.phone}
+                                </span>
+                              )}
+                              {contact.site_city && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" /> {contact.site_city}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditContact(contact)}>
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteContact(contact.id)}>
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </TabsContent>
               {/* Itineraries Tab */}
               <TabsContent value="itineraries" className="space-y-3 m-0">
                 {itineraryReports.length === 0 ? (
