@@ -34,6 +34,8 @@ export interface SavedTour {
   // Vehicle, trailer and drivers info
   vehicle_id: string | null;
   vehicle_data: any | null;
+  vehicle_ids: string[];
+  vehicles_data: any[];
   trailer_id: string | null;
   trailer_data: any | null;
   driver_ids: string[];
@@ -77,6 +79,8 @@ export interface SaveTourInput {
   profit_margin: number;
   vehicle_id?: string | null;
   vehicle_data?: any;
+  vehicle_ids?: string[];
+  vehicles_data?: any[];
   trailer_id?: string | null;
   trailer_data?: any;
   driver_ids?: string[];
