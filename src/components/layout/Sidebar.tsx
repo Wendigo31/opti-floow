@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Calculator, 
   Users, 
@@ -129,7 +129,6 @@ const navItems: NavItemConfig[] = navGroups.flatMap(g => g.items as NavItemConfi
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
-  const navigate = useNavigate();
   const { planType, hasFeature, licenseData } = useLicense();
   const { isDirection: isDirectionFromTeam } = useTeam();
   // Fallback: use userRole from cached license data when auth session isn't ready
@@ -164,13 +163,9 @@ export function Sidebar() {
   const handleLockedClick = (e: React.MouseEvent, label: string, requiredPlan: string) => {
     e.preventDefault();
     const planLabel = requiredPlan.toUpperCase();
-    toast.info(`"${label}" nécessite le forfait ${planLabel}`, {
-      description: 'Passez à un forfait supérieur pour accéder à cette fonctionnalité.',
-      action: {
-        label: 'Voir les forfaits',
-        onClick: () => navigate('/pricing')
-      }
-    });
+      toast.info(`"${label}" nécessite le forfait ${planLabel}`, {
+        description: 'Passez à un forfait supérieur pour accéder à cette fonctionnalité.',
+      });
   };
 
   return (

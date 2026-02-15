@@ -437,7 +437,8 @@ export default function Calculator() {
             </div>
           )}
           
-          {/* Comparison table */}
+          {/* Comparison table - only for roles with financial access */}
+          {(isDirection || canExploitationView('can_view_total_cost')) && (
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
               <CalculatorIcon className="w-4 h-4" />
@@ -454,6 +455,8 @@ export default function Calculator() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
+                  {(isDirection || canExploitationView('can_view_fuel_cost')) && (
+                  <>
                   <tr>
                     <td className="py-2">Coût carburant</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.fuel_cost)}</td>
@@ -470,6 +473,9 @@ export default function Calculator() {
                       {costs.adBlue - loadedTour.adblue_cost >= 0 ? '+' : ''}{formatCurrency(costs.adBlue - loadedTour.adblue_cost)}
                     </td>
                   </tr>
+                  </>
+                  )}
+                  {(isDirection || canExploitationView('can_view_toll_cost')) && (
                   <tr>
                     <td className="py-2">Péages</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.toll_cost)}</td>
@@ -478,6 +484,8 @@ export default function Calculator() {
                       {costs.tolls - loadedTour.toll_cost >= 0 ? '+' : ''}{formatCurrency(costs.tolls - loadedTour.toll_cost)}
                     </td>
                   </tr>
+                  )}
+                  {(isDirection || canExploitationView('can_view_driver_cost')) && (
                   <tr>
                     <td className="py-2">Coût chauffeur</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.driver_cost)}</td>
@@ -486,6 +494,8 @@ export default function Calculator() {
                       {costs.driverCost - loadedTour.driver_cost >= 0 ? '+' : ''}{formatCurrency(costs.driverCost - loadedTour.driver_cost)}
                     </td>
                   </tr>
+                  )}
+                  {(isDirection || canExploitationView('can_view_structure_cost')) && (
                   <tr>
                     <td className="py-2">Charges structure</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.structure_cost)}</td>
@@ -494,6 +504,7 @@ export default function Calculator() {
                       {costs.structureCost - loadedTour.structure_cost >= 0 ? '+' : ''}{formatCurrency(costs.structureCost - loadedTour.structure_cost)}
                     </td>
                   </tr>
+                  )}
                   <tr>
                     <td className="py-2">Coût véhicule</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.vehicle_cost)}</td>
@@ -510,6 +521,7 @@ export default function Calculator() {
                       {totalCostWithVehicle - loadedTour.total_cost >= 0 ? '+' : ''}{formatCurrency(totalCostWithVehicle - loadedTour.total_cost)}
                     </td>
                   </tr>
+                  {(isDirection || canExploitationView('can_view_revenue')) && (
                   <tr className="font-bold">
                     <td className="py-2">Chiffre d'affaires</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.revenue)}</td>
@@ -518,6 +530,8 @@ export default function Calculator() {
                       {revenueWithVehicle - loadedTour.revenue >= 0 ? '+' : ''}{formatCurrency(revenueWithVehicle - loadedTour.revenue)}
                     </td>
                   </tr>
+                  )}
+                  {(isDirection || canExploitationView('can_view_profit')) && (
                   <tr className="font-bold">
                     <td className="py-2">Bénéfice</td>
                     <td className="text-right text-muted-foreground">{formatCurrency(loadedTour.profit)}</td>
@@ -526,6 +540,8 @@ export default function Calculator() {
                       {profitWithVehicle - loadedTour.profit >= 0 ? '+' : ''}{formatCurrency(profitWithVehicle - loadedTour.profit)}
                     </td>
                   </tr>
+                  )}
+                  {(isDirection || canExploitationView('can_view_margin')) && (
                   <tr className="font-bold">
                     <td className="py-2">Marge</td>
                     <td className="text-right text-muted-foreground">{loadedTour.profit_margin.toFixed(1)}%</td>
@@ -534,10 +550,12 @@ export default function Calculator() {
                       {profitMarginWithVehicle - loadedTour.profit_margin >= 0 ? '+' : ''}{(profitMarginWithVehicle - loadedTour.profit_margin).toFixed(1)}%
                     </td>
                   </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -1090,11 +1108,27 @@ export default function Calculator() {
                 {selectedDrivers.length > 0 && (
                   <div className="mt-3 space-y-1.5">
                     {selectedDrivers.map(driver => {
-                      const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
-                      const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
-                      const dailyBonuses = ((driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0)) / driver.workingDaysPerMonth;
-                      const dailyAllowances = (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
-                      const totalDaily = dailyRate + dailyBonuses + dailyAllowances;
+                      const isInterim = driver.contractType === 'interim';
+                      const isAutre = driver.contractType === 'autre';
+                      
+                      let monthlyEmployerCost = 0;
+                      let totalDaily = 0;
+                      
+                      if (isAutre) {
+                        // No cost
+                      } else if (isInterim) {
+                        const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
+                        const coefficient = (driver as any).interimCoefficient || 1.85;
+                        const hoursPerDay = driver.hoursPerDay || 7;
+                        totalDaily = interimRate * coefficient * hoursPerDay + (driver.mealAllowance || 0);
+                        monthlyEmployerCost = totalDaily * driver.workingDaysPerMonth;
+                      } else {
+                        monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
+                        const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
+                        const dailyBonuses = ((driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0)) / driver.workingDaysPerMonth;
+                        const dailyAllowances = (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
+                        totalDaily = dailyRate + dailyBonuses + dailyAllowances;
+                      }
                       
                       return (
                         <div key={driver.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 group">
@@ -1105,10 +1139,12 @@ export default function Calculator() {
                                 {driver.contractType?.toUpperCase() || 'CDI'}
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                              <span>{formatCurrency(monthlyEmployerCost)}/mois chargé</span>
-                              <span className="text-primary font-medium">{formatCurrency(totalDaily)}/jour</span>
-                            </div>
+                            {(isDirection || canExploitationView('can_view_driver_cost')) && (
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                <span>{formatCurrency(monthlyEmployerCost)}/mois chargé</span>
+                                <span className="text-primary font-medium">{formatCurrency(totalDaily)}/jour</span>
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={() => toggleDriver(driver.id)}
@@ -1121,17 +1157,11 @@ export default function Calculator() {
                       );
                     })}
                     {/* Total driver cost summary */}
-                    {selectedDrivers.length > 1 && (
+                    {selectedDrivers.length > 1 && (isDirection || canExploitationView('can_view_driver_cost')) && (
                       <div className="flex justify-between items-center pt-1.5 border-t border-border/30 text-xs">
                         <span className="text-muted-foreground">Total conducteurs/jour</span>
                         <span className="font-semibold text-primary">
-                          {formatCurrency(selectedDrivers.reduce((sum, d) => {
-                            const mc = d.baseSalary * (1 + d.patronalCharges / 100);
-                            const dr = mc / d.workingDaysPerMonth;
-                            const db = ((d.nightBonus || 0) + (d.sundayBonus || 0) + (d.seniorityBonus || 0)) / d.workingDaysPerMonth;
-                            const da = (d.mealAllowance || 0) + (d.overnightAllowance || 0);
-                            return sum + dr + db + da;
-                          }, 0))}
+                          {formatCurrency(costs.driverCost + costs.driverBonuses + costs.driverAllowances)}
                         </span>
                       </div>
                     )}
@@ -1347,7 +1377,7 @@ export default function Calculator() {
           price_per_km: trip.pricePerKm,
           fixed_price: trip.fixedPrice,
           target_margin: trip.targetMargin,
-          revenue: costs.revenue,
+          revenue: revenueWithVehicle,
           profit: profitWithVehicle,
           profit_margin: profitMarginWithVehicle,
         }}
