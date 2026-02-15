@@ -133,7 +133,9 @@ export function useRolePermissions(): RolePermissions {
   const isLoading = contextLoading || isMetricLoading;
   
   const permissions = useMemo<RolePermissions>(() => {
-    const normalizedRole = normalizeRole(userRole);
+    // During loading, default to 'direction' to avoid flash of restricted content
+    // Once loaded, the actual role will be applied
+    const normalizedRole = contextLoading ? 'direction' : normalizeRole(userRole);
     const config = getRoleConfig(normalizedRole);
     
     const isDirection = normalizedRole === 'direction';
