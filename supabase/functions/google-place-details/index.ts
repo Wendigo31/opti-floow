@@ -24,16 +24,17 @@ serve(async (req) => {
 
     const { placeId } = await req.json();
     
-    if (!placeId) {
+    // Input validation
+    if (!placeId || typeof placeId !== 'string' || placeId.length > 300) {
       return new Response(
-        JSON.stringify({ error: 'Place ID required' }),
+        JSON.stringify({ error: 'Invalid or missing Place ID' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Use Google Place Details API to get coordinates
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_MAPS_API_KEY}&fields=geometry,address_components,formatted_address&language=fr`
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&key=${GOOGLE_MAPS_API_KEY}&fields=geometry,address_components,formatted_address&language=fr`
     );
 
     if (!response.ok) {

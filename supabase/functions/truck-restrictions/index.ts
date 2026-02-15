@@ -58,11 +58,27 @@ serve(async (req) => {
 
     const { routeCoordinates, vehicleHeight, vehicleWeight, vehicleWidth, vehicleLength } = await req.json();
     
-    if (!routeCoordinates || routeCoordinates.length < 2) {
+    // Input validation
+    if (!routeCoordinates || !Array.isArray(routeCoordinates) || routeCoordinates.length < 2) {
       return new Response(
         JSON.stringify({ error: 'Route coordinates required (at least 2 points)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    if (routeCoordinates.length > 5000) {
+      return new Response(
+        JSON.stringify({ error: 'Too many coordinates (max 5000)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // Validate numeric vehicle params
+    for (const [name, val] of Object.entries({ vehicleHeight, vehicleWeight, vehicleWidth, vehicleLength })) {
+      if (val !== undefined && val !== null && (typeof val !== 'number' || val < 0 || val > 100000)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid ${name}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Build waypoints string for TomTom (sample points along the route)

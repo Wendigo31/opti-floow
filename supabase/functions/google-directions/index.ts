@@ -24,11 +24,26 @@ serve(async (req) => {
 
     const { origin, destination, waypoints, avoidHighways } = await req.json();
     
-    if (!origin || !destination) {
+    // Input validation
+    if (!origin || typeof origin !== 'string' || origin.length > 500) {
       return new Response(
-        JSON.stringify({ error: 'Origin and destination required' }),
+        JSON.stringify({ error: 'Invalid or missing origin' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    if (!destination || typeof destination !== 'string' || destination.length > 500) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or missing destination' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (waypoints !== undefined && waypoints !== null) {
+      if (!Array.isArray(waypoints) || waypoints.length > 25 || !waypoints.every((w: unknown) => typeof w === 'string' && w.length <= 500)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid waypoints (max 25, each max 500 chars)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Try new Routes API first, fallback to legacy Directions API

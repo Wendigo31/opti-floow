@@ -11,11 +11,28 @@ serve(async (req) => {
   try {
     const { missionOrder, tourName, driverName, clientName, originAddress, destinationAddress, startTime } = await req.json();
 
-    if (!missionOrder) {
+    // Input validation
+    if (!missionOrder || typeof missionOrder !== 'string') {
       return new Response(JSON.stringify({ error: "Aucun ordre de mission fourni" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    if (missionOrder.length > 5000) {
+      return new Response(JSON.stringify({ error: "Ordre de mission trop long (max 5000 caractères)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Validate optional string fields
+    const optionalFields = { tourName, driverName, clientName, originAddress, destinationAddress, startTime };
+    for (const [fieldName, val] of Object.entries(optionalFields)) {
+      if (val !== undefined && val !== null && (typeof val !== 'string' || val.length > 500)) {
+        return new Response(JSON.stringify({ error: `Champ ${fieldName} invalide (max 500 caractères)` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -24,10 +24,17 @@ serve(async (req) => {
 
     const { query } = await req.json();
     
-    if (!query || query.length < 3) {
+    // Input validation
+    if (!query || typeof query !== 'string' || query.length < 3) {
       return new Response(
         JSON.stringify({ predictions: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (query.length > 500) {
+      return new Response(
+        JSON.stringify({ error: 'Query too long (max 500 chars)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

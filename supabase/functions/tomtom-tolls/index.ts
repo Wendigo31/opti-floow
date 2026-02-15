@@ -24,6 +24,30 @@ serve(async (req) => {
 
     const { waypoints, vehicleWeight, vehicleAxleWeight, avoidHighways, distanceKm } = await req.json();
     
+    // Input validation
+    if (waypoints !== undefined && waypoints !== null) {
+      if (!Array.isArray(waypoints) || waypoints.length > 50) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid waypoints (max 50)', tollCost: 0 }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      for (const wp of waypoints) {
+        if (typeof wp !== 'object' || typeof wp.lat !== 'number' || typeof wp.lon !== 'number') {
+          return new Response(
+            JSON.stringify({ error: 'Invalid waypoint format', tollCost: 0 }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+    if (distanceKm !== undefined && (typeof distanceKm !== 'number' || distanceKm < 0 || distanceKm > 100000)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid distance', tollCost: 0 }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // If avoiding highways, toll cost is minimal
     if (avoidHighways) {
       return new Response(
