@@ -3,6 +3,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { clearAllCaches } from "./utils/clearAllCaches";
+import { installProductionLogger } from "./utils/productionLogger";
+
+// Silence verbose logs in production builds
+installProductionLogger();
 
 // In Tauri, a previously registered PWA service worker can keep serving an older cached UI
 // even after you rebuild the executable. We explicitly unregister + clear caches in desktop builds.
