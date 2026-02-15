@@ -214,8 +214,8 @@ export default function Itinerary() {
   
   // Use cloud data for drivers and charges (shared company data)
   const { charges } = useCloudCharges();
-  const { cdiDrivers, interimDrivers } = useCloudDrivers();
-  const drivers = [...cdiDrivers, ...interimDrivers];
+  const { cdiDrivers, cddDrivers, interimDrivers, jokerDrivers, autreDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...jokerDrivers, ...autreDrivers];
   const { vehicles: cloudVehicles } = useCloudVehicles();
   const { trailers } = useCloudTrailers();
   
