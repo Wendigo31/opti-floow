@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
+import { useClients } from '@/hooks/useClients';
 import type { LocalClient, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
 import { cn } from '@/lib/utils';
@@ -42,7 +43,7 @@ interface SharedTractionsDialogProps {
 export function SharedTractionsDialog({ open, onOpenChange }: SharedTractionsDialogProps) {
   const { toast } = useToast();
   const { drivers } = useApp();
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const [tractions, setTractions] = useLocalStorage<SharedTraction[]>('optiflow_shared_tractions', []);
   
   const [showForm, setShowForm] = useState(false);

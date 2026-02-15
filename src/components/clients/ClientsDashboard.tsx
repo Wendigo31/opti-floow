@@ -6,6 +6,7 @@ import {
   Fuel, ReceiptText, Calendar, Building2, BarChart3
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useClients } from '@/hooks/useClients';
 import type { LocalClient, LocalClientReport } from '@/types/local';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -28,7 +29,7 @@ interface ClientStats {
 }
 
 export function ClientsDashboard() {
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const [reports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
 
   const itineraryReports = reports.filter(r => r.report_type === 'itinerary');

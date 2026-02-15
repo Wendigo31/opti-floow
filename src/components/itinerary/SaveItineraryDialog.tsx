@@ -21,10 +21,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSavedTours } from '@/hooks/useSavedTours';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useClients } from '@/hooks/useClients';
 import { useCalculations } from '@/hooks/useCalculations';
 import { calculateVehicleCosts, calculateTrailerCosts } from '@/hooks/useVehicleCost';
 import type { Vehicle } from '@/types/vehicle';
@@ -84,9 +86,9 @@ export function SaveItineraryDialog({
   const { cdiDrivers, interimDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...interimDrivers];
   
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { vehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
+  const { clients } = useClients();
   
   const [saving, setSaving] = useState(false);
   const [tourName, setTourName] = useState('');

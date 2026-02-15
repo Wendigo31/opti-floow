@@ -11,13 +11,13 @@ import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useClients } from '@/hooks/useClients';
 import { useTeam } from '@/hooks/useTeam';
 import { useLicense } from '@/hooks/useLicense';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { LocalClient } from '@/types/local';
 import type { FixedCharge } from '@/types';
 
 type PeriodType = '3' | '6' | '12';
@@ -49,7 +49,7 @@ export default function Forecast() {
   const { licenseData } = useLicense();
   const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
 

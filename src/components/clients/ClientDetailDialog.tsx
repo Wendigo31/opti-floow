@@ -20,6 +20,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useClients } from '@/hooks/useClients';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { LocalClient, LocalClientReport, LocalTrip, LocalQuote } from '@/types/local';
@@ -46,7 +47,7 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
   
   const { toast } = useToast();
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const [trips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
   const [quotes] = useLocalStorage<LocalQuote[]>('optiflow_quotes', []);
 

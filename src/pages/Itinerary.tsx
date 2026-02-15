@@ -224,15 +224,8 @@ export default function Itinerary() {
   const [trips, setTrips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
   const { clients } = useClients();
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  
-  // Merge local and cloud vehicles, deduplicate by id
-  const allVehicles = useMemo(() => {
-    const map = new Map<string, Vehicle>();
-    vehicles.forEach(v => map.set(v.id, v));
-    cloudVehicles.forEach(v => map.set(v.id, v));
-    return Array.from(map.values());
-  }, [vehicles, cloudVehicles]);
+  // Use cloud vehicles directly (no more localStorage fallback)
+  const allVehicles = cloudVehicles;
   
   const {
     originAddress,
