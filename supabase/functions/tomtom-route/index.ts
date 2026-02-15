@@ -50,21 +50,38 @@ serve(async (req) => {
 
     const { waypoints, params } = await req.json();
     
-    if (!waypoints) {
+    // Input validation
+    if (!waypoints || typeof waypoints !== 'string' || waypoints.length > 2000) {
       return new Response(
-        JSON.stringify({ error: 'Waypoints required' }),
+        JSON.stringify({ error: 'Invalid or missing waypoints (string, max 2000 chars)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // Validate waypoints format: lat,lon:lat,lon (only digits, dots, commas, colons, minus)
+    if (!/^[-\d.,: ]+$/.test(waypoints)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid waypoints format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const routeUrl = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${waypoints}/json`);
+    const routeUrl = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${encodeURIComponent(waypoints)}/json`);
     routeUrl.searchParams.set('key', TOMTOM_API_KEY);
     
-    // Apply all provided params
-    if (params) {
+    // Apply validated params - only allow known TomTom parameters
+    const ALLOWED_PARAMS = new Set([
+      'routeType', 'traffic', 'travelMode', 'vehicleWeight', 'vehicleAxleWeight',
+      'vehicleHeight', 'vehicleWidth', 'vehicleLength', 'vehicleMaxSpeed',
+      'vehicleCommercial', 'vehicleLoadType', 'avoid', 'sectionType', 'report',
+      'departAt', 'arriveAt', 'computeTravelTimeFor', 'routeRepresentation',
+    ]);
+    if (params && typeof params === 'object') {
       for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== null) {
-          routeUrl.searchParams.set(key, String(value));
+        if (value !== undefined && value !== null && ALLOWED_PARAMS.has(key)) {
+          const strValue = String(value);
+          if (strValue.length <= 200) {
+            routeUrl.searchParams.set(key, strValue);
+          }
         }
       }
     }
