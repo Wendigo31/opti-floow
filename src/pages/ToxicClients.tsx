@@ -10,6 +10,7 @@ import {
   ArrowUpRight, ArrowDownRight, BarChart3, FileText
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useClients } from '@/hooks/useClients';
 import type { LocalClient, LocalClientReport } from '@/types/local';
 import { format, differenceInHours, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -71,7 +72,7 @@ const categoryConfig: Record<ClientCategory, {
 };
 
 export default function ToxicClients() {
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const [reports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview');
   const [selectedCategory, setSelectedCategory] = useState<ClientCategory | 'all'>('all');

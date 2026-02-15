@@ -24,9 +24,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
 import { cn } from '@/lib/utils';
-import type { Vehicle } from '@/types/vehicle';
 import type { LocalClientReport } from '@/types/local';
+import type { Vehicle } from '@/types/vehicle';
 import { calculateVehicleCosts, calculateTrailerCosts, formatCostPerKm, getCostPerKmColor } from '@/hooks/useVehicleCost';
 import type { Trailer } from '@/types/trailer';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
@@ -71,8 +73,8 @@ interface MonthlyVehicleData {
 
 export default function VehicleReports() {
   const { vehicle } = useApp();
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
+  const { vehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
   const [reports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
   const [expandedVehicle, setExpandedVehicle] = useState<string | null>(null);

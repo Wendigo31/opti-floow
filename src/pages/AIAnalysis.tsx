@@ -39,6 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
@@ -182,7 +183,7 @@ type AnalysisMode = 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimi
 export default function AIAnalysis() {
   const { toast } = useToast();
   const { vehicle, drivers } = useApp();
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
+  const { vehicles } = useCloudVehicles();
   const { saveTour } = useSavedTours();
   
   const [loadTourOpen, setLoadTourOpen] = useState(false);

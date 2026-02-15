@@ -27,14 +27,14 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLicense } from '@/hooks/useLicense';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Vehicle } from '@/types/vehicle';
-import type { Trailer } from '@/types/trailer';
-import type { LocalClient } from '@/types/local';
 
 interface WidgetConfig {
   id: string;
@@ -77,9 +77,9 @@ export default function Home() {
   const { tours, fetchTours, loading: toursLoading } = useSavedTours();
   const { planType } = useLicense();
   
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
-  const [trailers] = useLocalStorage<Trailer[]>('optiflow_trailers', []);
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { vehicles } = useCloudVehicles();
+  const { trailers } = useCloudTrailers();
+  const { clients } = useClients();
   
   const [config, setConfig] = useLocalStorage<DashboardConfig>('optiflow_dashboard_config', {
     widgets: defaultWidgets,

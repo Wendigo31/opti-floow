@@ -23,9 +23,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLicense } from '@/hooks/useLicense';
@@ -60,7 +60,7 @@ export default function AIAnalysisPanel() {
   const { toast } = useToast();
   const { vehicle, drivers } = useApp();
   const { hasFeature, refreshLicense } = useLicense();
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
+  const { vehicles } = useCloudVehicles();
   const { saveTour } = useSavedTours();
   
   const [loadTourOpen, setLoadTourOpen] = useState(false);

@@ -8,8 +8,7 @@ import { useTrips } from '@/hooks/useTrips';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import type { Vehicle } from '@/types/vehicle';
+import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 
 /**
  * OperationalDashboard - A simplified dashboard for exploitation/member roles
@@ -21,7 +20,7 @@ export function OperationalDashboard() {
   const { clients } = useClients();
   const { tours } = useSavedTours();
   const { trips } = useTrips();
-  const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
+  const { vehicles } = useCloudVehicles();
 
   // Filter state
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
