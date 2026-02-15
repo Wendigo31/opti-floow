@@ -12,22 +12,21 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Search, Calendar, TrendingUp, TrendingDown, MapPin, Fuel, Scale, Trash2, Lock, Edit2, RefreshCw, Users, X, Check, FileSpreadsheet, Download, FileText } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSavedTours } from '@/hooks/useSavedTours';
-import type { LocalClient } from '@/types/local';
+import { useClients } from '@/hooks/useClients';
 import type { SavedTour } from '@/types/savedTour';
 import { useLicense } from '@/hooks/useLicense';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
-import { useNavigate } from 'react-router-dom';
+
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { exportTourDetailedPDF, exportToursSummaryPDF } from '@/utils/tourPdfExport';
 
 export default function TripHistory() {
   const { toast } = useToast();
   const { hasFeature } = useLicense();
-  const navigate = useNavigate();
-  const { tours, loading, fetchTours, deleteTour, updateTour } = useSavedTours();
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  
+  const { tours, loading, fetchTours, deleteTour, updateTour, saveTour } = useSavedTours();
+  const { clients } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [selectedTours, setSelectedTours] = useState<string[]>([]);
@@ -73,7 +72,7 @@ export default function TripHistory() {
     fetchTours();
   };
   
-  const { saveTour } = useSavedTours();
+  // saveTour already destructured above
 
   useEffect(() => {
     fetchTours();
@@ -202,7 +201,7 @@ export default function TripHistory() {
                 {compareMode ? 'Quitter comparaison' : 'Comparer'}
               </Button>
             ) : (
-              <Button variant="outline" onClick={() => navigate('/pricing')} className="gap-2">
+              <Button variant="outline" onClick={() => toast({ title: "Fonctionnalité PRO", description: "Contactez-nous pour accéder à la comparaison de tournées." })} className="gap-2">
                 <Lock className="w-4 h-4" />
                 Comparer (PRO)
               </Button>
