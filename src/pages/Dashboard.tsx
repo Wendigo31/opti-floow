@@ -53,11 +53,6 @@ export default function Dashboard() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   
-  // Show operational dashboard for non-direction users
-  // Wait for team loading to complete before deciding which view to show
-  if (!isTeamLoading && !isDirection) {
-    return <OperationalDashboard />;
-  }
   // Get filtered tours based on selected client
   const filteredTours = useMemo(() => {
     if (!selectedClientId) return tours;
@@ -297,6 +292,11 @@ export default function Dashboard() {
   };
   
   const hasActiveFilters = selectedClientId || selectedTourIds.length > 0;
+
+  // Show operational dashboard for non-direction users (after all hooks)
+  if (!isTeamLoading && !isDirection) {
+    return <OperationalDashboard />;
+  }
 
   return (
     <div className="space-y-6" id="dashboard-content">

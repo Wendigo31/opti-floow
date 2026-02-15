@@ -115,7 +115,9 @@ export default function Charges() {
     // Check limits before allowing add
     const canAdd = periodicity === 'daily' ? canAddDaily : periodicity === 'monthly' ? canAddMonthly : canAddYearly;
     if (!canAdd) {
-      navigate('/pricing');
+      toast.info('Limite atteinte pour votre forfait', {
+        description: 'Passez à un forfait supérieur pour ajouter plus de charges.',
+      });
       return;
     }
     
@@ -352,7 +354,7 @@ export default function Charges() {
               Ajouter
             </Button>
           ) : (
-            <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="gap-1">
+            <Button size="sm" variant="outline" onClick={() => toast.info('Limite atteinte pour votre forfait', { description: 'Passez à un forfait supérieur pour ajouter plus de charges.' })} className="gap-1">
               <Lock className="w-3 h-3" />
               Limite atteinte
             </Button>
