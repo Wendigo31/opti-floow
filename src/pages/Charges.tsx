@@ -74,8 +74,9 @@ export default function Charges() {
   }, []);
   
   // Only direction role can view and modify charges
-  const canViewCharges = isDirection;
-  const canModifyCharges = isDirection;
+  // Default to showing charges while team role is loading (avoid flash of "access denied")
+  const canViewCharges = isTeamLoading ? true : isDirection;
+  const canModifyCharges = isTeamLoading ? true : isDirection;
   
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -382,7 +383,8 @@ export default function Charges() {
   };
 
   // Show access denied message for non-direction users
-  if (isTeamLoading || chargesLoading) {
+  // Only show loading for charges data, not team role check (default to showing content)
+  if (chargesLoading && charges.length === 0) {
     return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

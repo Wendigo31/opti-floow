@@ -36,7 +36,7 @@ interface UseTeamReturn {
 
 export function useTeam(): UseTeamReturn {
   const { planType: validatedPlanType, isLoading: isLicenseLoading } = useLicense();
-  const { licenseId: contextLicenseId, authUserId, userRole: contextUserRole } = useLicenseContext();
+  const { licenseId: contextLicenseId, authUserId, userRole: contextUserRole, isLoading: isContextLoading } = useLicenseContext();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<TeamRole | null>(contextUserRole);
@@ -53,6 +53,7 @@ export function useTeam(): UseTeamReturn {
   const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
 
   // Only consider team loading, license loading shouldn't block team page
+  // If license context is done loading and there's no authUserId, stop loading
   const isLoading = isTeamLoading;
 
   const maxUsers = licenseMaxUsers;
@@ -76,6 +77,13 @@ export function useTeam(): UseTeamReturn {
       setLicenseId(contextLicenseId);
     }
   }, [contextUserRole, contextLicenseId, currentUserRole, licenseId]);
+
+  // Safety: if license context finished loading but no authUserId, stop team loading
+  useEffect(() => {
+    if (!isContextLoading && !authUserId && isTeamLoading) {
+      setIsTeamLoading(false);
+    }
+  }, [isContextLoading, authUserId, isTeamLoading]);
 
   // Fetch team data
   const fetchTeam = useCallback(async (): Promise<void> => {
