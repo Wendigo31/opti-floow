@@ -56,6 +56,7 @@ import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useClients } from '@/hooks/useClients';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useCalculations } from '@/hooks/useCalculations';
 import { FRENCH_TOLL_RATES, SEMI_TRAILER_SPECS } from '@/hooks/useTomTom';
@@ -68,7 +69,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { Label } from '@/components/ui/label';
-import type { LocalTrip, LocalClient, LocalClientReport } from '@/types/local';
+import type { LocalTrip, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { Vehicle } from '@/types/vehicle';
@@ -221,7 +222,7 @@ export default function Itinerary() {
   
   const { toast } = useToast();
   const [trips, setTrips] = useLocalStorage<LocalTrip[]>('optiflow_trips', []);
-  const [clients] = useLocalStorage<LocalClient[]>('optiflow_clients', []);
+  const { clients } = useClients();
   const [reports, setReports] = useLocalStorage<LocalClientReport[]>('optiflow_client_reports', []);
   const [vehicles] = useLocalStorage<Vehicle[]>('optiflow_vehicles', []);
   

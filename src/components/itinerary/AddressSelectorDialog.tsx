@@ -240,7 +240,7 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-visible">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-primary" />
