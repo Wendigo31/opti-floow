@@ -181,8 +181,18 @@ export default function Dashboard() {
     
     let monthlyDriver = 0;
     for (const driver of selectedDrivers) {
-      const monthlySalary = driver.baseSalary * (1 + driver.patronalCharges / 100);
-      monthlyDriver += monthlySalary;
+      const isInterim = driver.contractType === 'interim';
+      const isAutre = driver.contractType === 'autre';
+      if (isAutre) continue; // No cost for "autre" type
+      if (isInterim) {
+        const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
+        const coefficient = (driver as any).interimCoefficient || 1.85;
+        const hoursPerDay = driver.hoursPerDay || 7;
+        monthlyDriver += interimRate * coefficient * hoursPerDay * settings.workingDaysPerMonth;
+      } else {
+        const monthlySalary = driver.baseSalary * (1 + driver.patronalCharges / 100);
+        monthlyDriver += monthlySalary;
+      }
     }
     
     const totalCost = monthlyFuel + monthlyAdBlue + monthlyTolls + monthlyStructure + monthlyDriver;
