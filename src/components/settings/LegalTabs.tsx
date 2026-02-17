@@ -88,13 +88,13 @@ function MentionsLegales() {
                 Propriété intellectuelle
               </h2>
               <p className="text-muted-foreground">
-                L'ensemble du contenu des logiciels OptiFlow, Drive Profit et Line Optimizer 
+                L'ensemble du contenu des logiciels OptiFlow, OptiXpress et OptiFret 
                 (ci-après « les Logiciels ») — incluant sans s'y limiter les textes, graphismes, 
                 images, logos, icônes, sons, logiciels, bases de données, algorithmes, architecture 
                 technique et code source — est la propriété exclusive de {COMPANY.name} et est protégé 
                 par les lois françaises et internationales relatives à la propriété intellectuelle 
                 (Code de la propriété intellectuelle, directive européenne 2009/24/CE relative à la 
-                protection juridique des programmes d'ordinateur, Convention de Berne).
+                protection juridique des programmes d'ordinateur, Convention de Berne, accords ADPIC/TRIPS).
               </p>
             </div>
 
@@ -144,14 +144,14 @@ function CGV() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-0">Conditions Générales de Vente et d'Utilisation</h2>
-                <p className="text-sm text-muted-foreground">En vigueur au {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <p className="text-sm text-muted-foreground">Dernière mise à jour : février 2026</p>
               </div>
             </div>
 
             <div className="bg-primary/10 p-4 rounded-lg mb-6">
               <p className="text-sm text-foreground font-medium">
                 L'utilisation des Logiciels édités par {COMPANY.name} implique l'acceptation pleine et 
-                entière des présentes CGVU. Toute utilisation contraire aux présentes conditions expose 
+                entière des présentes CGVU. L'Éditeur se réserve le droit de modifier les présentes CGV à tout moment. Les CGV applicables sont celles en vigueur à la date de souscription ou de renouvellement. Toute utilisation contraire aux présentes conditions expose 
                 le contrevenant à des poursuites judiciaires.
               </p>
             </div>
@@ -159,135 +159,179 @@ function CGV() {
             {/* Article 1 */}
             <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 1 — Objet</h3>
             <p className="text-muted-foreground mb-4">
-              Les présentes Conditions Générales de Vente et d'Utilisation (CGVU) ont pour objet de 
-              définir les conditions dans lesquelles {COMPANY.name} (ci-après « l'Éditeur ») fournit 
-              au Client l'accès aux logiciels OptiFlow, Drive Profit et Line Optimizer (ci-après 
-              « les Logiciels ») dans le cadre d'un abonnement SaaS (Software as a Service).
+              Les présentes Conditions Générales de Vente et d'Utilisation (ci-après « CGVU ») régissent l'ensemble des conditions de commercialisation, de souscription et d'utilisation des licences logicielles et services proposés par {COMPANY.name} (ci-après « l'Éditeur »), incluant les solutions OptiFlow, OptiXpress et OptiFret (ci-après « les Logiciels » ou « la Solution »).
             </p>
 
             {/* Article 2 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 2 — Licence d'utilisation</h3>
-            <p className="text-muted-foreground mb-2">2.1. L'Éditeur concède au Client une licence d'utilisation non-exclusive, non-cessible et non-transférable sur les Logiciels, pour la durée de l'abonnement souscrit.</p>
-            <p className="text-muted-foreground mb-2">2.2. Cette licence est strictement limitée à l'usage interne et professionnel du Client, pour le nombre d'utilisateurs défini dans le forfait choisi.</p>
-            <p className="text-muted-foreground mb-4">2.3. La licence est attachée à un identifiant société unique. Tout partage, prêt, revente ou mise à disposition de cet identifiant à des tiers est formellement interdit.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 2 — Définitions</h3>
+            <ul className="list-disc list-inside text-muted-foreground mb-4 ml-2 space-y-2">
+              <li><strong>Client</strong> : toute personne physique ou morale ayant souscrit un abonnement aux Logiciels.</li>
+              <li><strong>Utilisateur</strong> : toute personne physique autorisée par le Client à accéder à la Solution.</li>
+              <li><strong>Licence</strong> : droit d'utilisation non exclusif, non transférable et non cessible concédé au Client.</li>
+              <li><strong>SaaS (Software as a Service)</strong> : mode de distribution logicielle dans lequel la Solution est hébergée par l'Éditeur et accessible via Internet.</li>
+              <li><strong>Données Client</strong> : ensemble des données saisies, importées ou générées par le Client dans le cadre de l'utilisation de la Solution.</li>
+            </ul>
 
             {/* Article 3 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 3 — Durée et engagement</h3>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 3 — Prix et paiement</h3>
+            <p className="text-muted-foreground mb-2">3.1. Les tarifs sont communiqués sur devis personnalisé ou selon la grille tarifaire en vigueur. Les prix s'entendent hors taxes (HT), la TVA applicable étant facturée en sus au taux en vigueur.</p>
+            <p className="text-muted-foreground mb-2">3.2. Le paiement s'effectue selon les modalités précisées dans le devis accepté par le Client. Sauf disposition contraire, les factures sont payables à 30 jours date de facture.</p>
+            <p className="text-muted-foreground mb-2">3.3. Tout retard de paiement entraîne de plein droit et sans mise en demeure préalable :</p>
+            <ul className="list-disc list-inside text-muted-foreground mb-4 ml-4 space-y-1">
+              <li>Des pénalités de retard calculées au taux d'intérêt légal majoré de 3 points par an ;</li>
+              <li>Une indemnité forfaitaire pour frais de recouvrement de 40 euros (article D.441-5 du Code de commerce) ;</li>
+              <li>La possibilité pour l'Éditeur de suspendre l'accès à la Solution jusqu'à complet paiement.</li>
+            </ul>
+
+            {/* Article 4 */}
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 4 — Abonnement et durée</h3>
             <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg mb-4">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-foreground mb-1">Engagement contractuel</p>
                   <p className="text-sm text-muted-foreground">
-                    Tout abonnement souscrit à l'un des forfaits proposés (Essentiel, Professionnel, 
-                    Entreprise ou tout autre forfait) engage le Client pour une durée minimale de douze (12) 
-                    mois à compter de la date d'activation de la licence.
+                    Les licences logicielles sont proposées sous forme d'abonnement mensuel ou annuel. Chaque forfait souscrit implique un engagement minimal d'un (1) an à compter de la date de souscription.
                   </p>
                 </div>
               </div>
             </div>
-            <p className="text-muted-foreground mb-2">3.1. L'abonnement est conclu pour une période initiale incompressible de douze (12) mois (ci-après « la Période d'Engagement »).</p>
-            <p className="text-muted-foreground mb-2">3.2. À l'expiration de la Période d'Engagement, l'abonnement est automatiquement reconduit par périodes successives de douze (12) mois, sauf dénonciation par l'une des parties adressée par lettre recommandée avec accusé de réception ou par email avec confirmation, avec un préavis de deux (2) mois avant l'échéance en cours.</p>
-            <p className="text-muted-foreground mb-2">3.3. En cas de résiliation anticipée par le Client avant le terme de la Période d'Engagement, l'intégralité des mensualités restantes jusqu'à la fin de la période d'engagement sera due à titre d'indemnité forfaitaire.</p>
-            <p className="text-muted-foreground mb-4">3.4. Le changement de forfait vers un forfait supérieur est possible à tout moment. Le passage à un forfait inférieur ne prendra effet qu'à l'échéance de la Période d'Engagement en cours.</p>
-
-            {/* Article 4 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 4 — Tarifs et paiement</h3>
-            <p className="text-muted-foreground mb-2">4.1. Les prix des abonnements sont ceux en vigueur au jour de la souscription, exprimés en euros hors taxes (HT). La TVA applicable sera ajoutée au taux en vigueur.</p>
-            <p className="text-muted-foreground mb-2">4.2. Le paiement est dû mensuellement ou annuellement selon la formule choisie, par prélèvement automatique, virement bancaire ou tout autre moyen accepté par l'Éditeur.</p>
-            <p className="text-muted-foreground mb-2">4.3. Tout retard de paiement entraînera de plein droit, sans mise en demeure préalable, l'application de pénalités de retard égales à trois (3) fois le taux d'intérêt légal, ainsi qu'une indemnité forfaitaire de recouvrement de 40 euros conformément aux articles L.441-10 et D.441-5 du Code de commerce.</p>
-            <p className="text-muted-foreground mb-4">4.4. L'Éditeur se réserve le droit de suspendre l'accès aux Logiciels en cas de défaut de paiement non régularisé dans un délai de quinze (15) jours suivant une mise en demeure adressée par email.</p>
+            <p className="text-muted-foreground mb-2">4.1. L'abonnement est conclu pour une période initiale incompressible de douze (12) mois (ci-après « la Période d'Engagement »).</p>
+            <p className="text-muted-foreground mb-2">4.2. Le contrat se renouvelle tacitement pour des périodes successives d'un (1) an, sauf résiliation dans les conditions prévues à l'article 5.</p>
+            <p className="text-muted-foreground mb-2">4.3. En cas de résiliation anticipée pendant la période d'engagement, le Client reste redevable de l'intégralité des sommes dues jusqu'à la fin de la période d'engagement en cours.</p>
+            <p className="text-muted-foreground mb-4">4.4. Le changement de forfait vers un forfait supérieur est possible à tout moment. Le passage à un forfait inférieur ne prendra effet qu'à l'échéance de la Période d'Engagement en cours.</p>
 
             {/* Article 5 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 5 — Interdictions et propriété intellectuelle</h3>
-            <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-lg mb-4">
-              <p className="text-sm font-semibold text-foreground mb-2">Il est formellement interdit au Client de :</p>
-              <ul className="text-sm text-muted-foreground list-disc list-inside ml-2 space-y-1">
-                <li>Copier, reproduire, dupliquer tout ou partie des Logiciels, de leur code source, de leur architecture ou de leurs algorithmes</li>
-                <li>Décompiler, désassembler, procéder à de l'ingénierie inverse (reverse engineering) ou tenter d'accéder au code source des Logiciels</li>
-                <li>Modifier, adapter, traduire ou créer des œuvres dérivées à partir des Logiciels</li>
-                <li>Sous-licencier, louer, prêter, distribuer ou mettre à disposition les Logiciels à des tiers</li>
-                <li>Supprimer ou altérer les mentions de propriété intellectuelle, marques, logos ou notices de copyright</li>
-                <li>Utiliser les Logiciels à des fins illicites, frauduleuses ou portant atteinte aux droits de tiers</li>
-                <li>Contourner, désactiver ou interférer avec les mécanismes de sécurité, de licence ou de limitation d'accès</li>
-                <li>Extraire ou réutiliser de manière systématique le contenu des bases de données des Logiciels</li>
-                <li>Utiliser des robots, scrapers ou tout moyen automatisé pour accéder aux Logiciels</li>
-                <li>Partager ses identifiants de connexion avec des personnes non autorisées</li>
-              </ul>
-            </div>
-            <p className="text-muted-foreground mb-4">
-              5.2. Les Logiciels, leur documentation, les mises à jour et toute création intellectuelle associée 
-              demeurent la propriété exclusive de l'Éditeur. Le Client ne dispose que d'un droit d'utilisation 
-              conformément à la licence concédée. Les droits de propriété intellectuelle sont protégés par le 
-              Code de la propriété intellectuelle (articles L.111-1 et suivants, L.122-4, L.335-2 et suivants) 
-              et la directive européenne 2009/24/CE.
-            </p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 5 — Résiliation</h3>
+            <p className="text-muted-foreground mb-2">5.1. Chaque partie peut résilier le contrat moyennant un préavis de trente (30) jours avant la date de renouvellement, par notification écrite envoyée à {COMPANY.email} ou par courrier recommandé avec accusé de réception.</p>
+            <p className="text-muted-foreground mb-2">5.2. L'Éditeur peut résilier le contrat de plein droit, sans préavis ni indemnité, en cas de :</p>
+            <ul className="list-disc list-inside text-muted-foreground mb-2 ml-4 space-y-1">
+              <li>Non-paiement des sommes dues dans un délai de 15 jours suivant une mise en demeure restée infructueuse ;</li>
+              <li>Violation des conditions d'utilisation, notamment des dispositions relatives à la propriété intellectuelle (article 7) ;</li>
+              <li>Utilisation frauduleuse ou illicite de la Solution ;</li>
+              <li>Comportement portant atteinte à l'intégrité technique de la Solution.</li>
+            </ul>
+            <p className="text-muted-foreground mb-4">5.3. En cas de résiliation pour faute du Client, aucun remboursement ne sera effectué pour la période restante de l'abonnement en cours.</p>
 
             {/* Article 6 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 6 — Données du Client</h3>
-            <p className="text-muted-foreground mb-2">6.1. Le Client reste propriétaire de l'ensemble des données qu'il saisit ou importe dans les Logiciels.</p>
-            <p className="text-muted-foreground mb-2">6.2. L'Éditeur s'engage à ne pas accéder aux données du Client sauf à des fins de support technique, avec l'accord préalable du Client, ou en cas d'obligation légale.</p>
-            <p className="text-muted-foreground mb-4">6.3. En cas de cessation du contrat, le Client dispose d'un délai de trente (30) jours pour exporter ses données via les fonctionnalités d'export des Logiciels. Passé ce délai, l'Éditeur pourra procéder à la suppression définitive des données.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 6 — Support et maintenance</h3>
+            <p className="text-muted-foreground mb-2">6.1. {COMPANY.name} assure un support technique par email à {COMPANY.email} et par téléphone au {COMPANY.phone}, aux horaires ouvrés (du lundi au vendredi, 9h-18h, hors jours fériés français).</p>
+            <p className="text-muted-foreground mb-2">6.2. Les mises à jour logicielles correctives et évolutives sont incluses dans l'abonnement.</p>
+            <p className="text-muted-foreground mb-4">6.3. L'Éditeur s'engage à déployer ses meilleurs efforts pour assurer une disponibilité de la Solution de 99,5 % hors périodes de maintenance programmée. Les maintenances programmées font l'objet d'un préavis d'au moins 48 heures.</p>
 
             {/* Article 7 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 7 — Disponibilité et maintenance</h3>
-            <p className="text-muted-foreground mb-2">7.1. L'Éditeur s'engage à mettre en œuvre tous les moyens raisonnables pour assurer la disponibilité des Logiciels 24h/24 et 7j/7, sous réserve des opérations de maintenance.</p>
-            <p className="text-muted-foreground mb-2">7.2. L'Éditeur se réserve le droit d'interrompre temporairement l'accès pour des opérations de maintenance, mise à jour ou amélioration. Le Client sera informé dans la mesure du possible avec un préavis raisonnable.</p>
-            <p className="text-muted-foreground mb-4">7.3. L'Éditeur ne saurait être tenu responsable des interruptions dues à des cas de force majeure, à des défaillances des réseaux de télécommunication ou à des actes de tiers.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 7 — Propriété intellectuelle et licence d'utilisation</h3>
+            <p className="text-muted-foreground mb-4">
+              Les Logiciels, leur code source, leur code objet, leur architecture, leur documentation, ainsi que tous les éléments qui les composent (textes, images, logos, bases de données, algorithmes, interfaces) sont et demeurent la propriété exclusive et intégrale d'{COMPANY.name}, protégés par le Code de la propriété intellectuelle français, le droit d'auteur (Directive 2009/24/CE relative à la protection juridique des programmes d'ordinateur) et les conventions internationales (Convention de Berne, accords ADPIC/TRIPS).
+            </p>
+            <p className="text-muted-foreground mb-4">
+              La souscription à un abonnement confère au Client un droit d'utilisation non exclusif, non transférable, non cessible et non sous-licenciable, limité à la durée de l'abonnement et aux seules fins internes du Client.
+            </p>
+            <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-lg mb-4">
+              <p className="text-sm font-semibold text-foreground mb-2">Il est strictement interdit au Client et à ses Utilisateurs de :</p>
+              <ul className="text-sm text-muted-foreground list-disc list-inside ml-2 space-y-1">
+                <li>Copier, reproduire, dupliquer tout ou partie des Logiciels, sauf copie de sauvegarde unique conformément à l'article L.122-6-1 du Code de la propriété intellectuelle</li>
+                <li>Décompiler, désassembler, procéder à de l'ingénierie inverse (reverse engineering) des Logiciels, sauf dans les cas strictement prévus par l'article L.122-6-1 du CPI</li>
+                <li>Modifier, adapter, traduire, créer des œuvres dérivées à partir des Logiciels</li>
+                <li>Distribuer, revendre, sous-licencier, louer, prêter ou mettre à disposition de tiers les Logiciels</li>
+                <li>Extraire, réutiliser ou exploiter une partie substantielle du contenu des bases de données intégrées aux Logiciels (articles L.342-1 et suivants du CPI)</li>
+                <li>Supprimer, masquer ou altérer toute mention de propriété intellectuelle, de copyright ou de marque figurant dans les Logiciels</li>
+                <li>Utiliser les Logiciels pour développer un produit concurrent ou similaire</li>
+                <li>Permettre l'accès aux Logiciels à des tiers non autorisés ou au-delà du nombre de licences souscrites</li>
+              </ul>
+            </div>
 
             {/* Article 8 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 8 — Responsabilité et garantie</h3>
-            <p className="text-muted-foreground mb-2">8.1. Les Logiciels sont fournis « en l'état ». L'Éditeur ne garantit pas que les Logiciels répondront à l'ensemble des besoins spécifiques du Client.</p>
-            <p className="text-muted-foreground mb-2">8.2. La responsabilité de l'Éditeur est limitée aux dommages directs et prévisibles. En tout état de cause, la responsabilité totale de l'Éditeur ne pourra excéder le montant des sommes effectivement versées par le Client au cours des douze (12) derniers mois.</p>
-            <p className="text-muted-foreground mb-2">8.3. L'Éditeur ne pourra en aucun cas être tenu responsable des dommages indirects, pertes de données, pertes d'exploitation, manque à gagner ou préjudice commercial.</p>
-            <p className="text-muted-foreground mb-4">8.4. Le Client est seul responsable de l'utilisation qu'il fait des Logiciels et des décisions prises sur la base des résultats fournis (calculs de coûts, optimisations, prévisions). Les données et calculs fournis par les Logiciels sont indicatifs et ne constituent pas un conseil professionnel.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 8 — Conditions d'utilisation et comportement</h3>
+            <p className="text-muted-foreground mb-2">Le Client s'engage à utiliser la Solution conformément à sa destination et dans le respect des lois et réglementations en vigueur. Il est notamment interdit de :</p>
+            <ul className="list-disc list-inside text-muted-foreground mb-4 ml-4 space-y-1">
+              <li>Utiliser la Solution à des fins illicites, frauduleuses ou contraires à l'ordre public</li>
+              <li>Introduire volontairement des virus, malwares, ou tout programme nuisible</li>
+              <li>Tenter de contourner les mesures de sécurité ou d'accéder à des parties non autorisées de l'infrastructure</li>
+              <li>Surcharger intentionnellement les serveurs par des requêtes massives ou des attaques (DDoS, brute force, etc.)</li>
+              <li>Utiliser des robots, scrapers ou tout procédé automatisé non autorisé</li>
+              <li>Stocker ou traiter des données en violation du RGPD ou de toute réglementation applicable</li>
+              <li>Partager ses identifiants de connexion avec des tiers non autorisés</li>
+            </ul>
+            <p className="text-muted-foreground mb-4">Le Client est responsable de la confidentialité de ses identifiants de connexion et de toute activité effectuée sous son compte.</p>
 
             {/* Article 9 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 9 — Résiliation pour manquement</h3>
-            <p className="text-muted-foreground mb-2">9.1. En cas de manquement grave par le Client à l'une quelconque des obligations prévues aux présentes CGVU, et notamment en cas de violation de l'Article 5 (Interdictions), l'Éditeur pourra résilier de plein droit le contrat, sans préavis ni indemnité, par notification écrite (email ou lettre recommandée).</p>
-            <p className="text-muted-foreground mb-2">9.2. La résiliation pour manquement ne dispense pas le Client du paiement des sommes restant dues au titre de la Période d'Engagement.</p>
-            <p className="text-muted-foreground mb-4">9.3. L'Éditeur se réserve le droit d'engager toute action en justice pour obtenir réparation du préjudice subi du fait de la violation des présentes CGVU, notamment en cas de contrefaçon (articles L.335-2 et suivants du Code de la propriété intellectuelle), de concurrence déloyale ou de parasitisme.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 9 — Sanctions et actions en justice</h3>
+            <p className="text-muted-foreground mb-2">Toute violation des présentes CGVU, et en particulier des dispositions relatives à la propriété intellectuelle (article 7) et aux conditions d'utilisation (article 8), peut entraîner :</p>
+            <ul className="list-disc list-inside text-muted-foreground mb-4 ml-4 space-y-1">
+              <li>La suspension immédiate de l'accès à la Solution, sans préavis ni indemnité</li>
+              <li>La résiliation de plein droit du contrat d'abonnement</li>
+              <li>La facturation de dommages-intérêts en réparation du préjudice subi par l'Éditeur</li>
+              <li>Des poursuites judiciaires, tant au civil qu'au pénal</li>
+            </ul>
+            <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-lg mb-4">
+              <p className="text-sm font-semibold text-foreground mb-2">Sanctions pénales applicables (à titre informatif) :</p>
+              <ul className="text-sm text-muted-foreground list-disc list-inside ml-2 space-y-1">
+                <li>La contrefaçon de logiciel est sanctionnée par les articles L.335-2 et suivants du Code de la propriété intellectuelle</li>
+                <li><strong>Personnes physiques</strong> : 3 ans d'emprisonnement et 300 000 € d'amende</li>
+                <li><strong>Personnes morales</strong> : 1 500 000 € d'amende (article 131-38 du Code pénal)</li>
+                <li><strong>Peines complémentaires</strong> : confiscation, fermeture d'établissement, interdiction d'exercer</li>
+              </ul>
+            </div>
+            <p className="text-muted-foreground mb-4">L'Éditeur se réserve le droit de procéder à des audits d'utilisation afin de vérifier le respect des conditions de la licence. Le Client s'engage à coopérer de bonne foi dans le cadre de ces audits.</p>
 
             {/* Article 10 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 10 — Confidentialité</h3>
-            <p className="text-muted-foreground mb-2">10.1. Chaque partie s'engage à traiter comme confidentielles toutes les informations échangées dans le cadre du contrat et à ne pas les divulguer à des tiers sans l'accord préalable écrit de l'autre partie.</p>
-            <p className="text-muted-foreground mb-4">10.2. Cette obligation de confidentialité survivra pendant une durée de cinq (5) ans après la cessation du contrat, quelle qu'en soit la cause.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 10 — Données du Client et réversibilité</h3>
+            <p className="text-muted-foreground mb-2">10.1. Les données saisies par le Client dans la Solution restent sa propriété.</p>
+            <p className="text-muted-foreground mb-2">10.2. L'Éditeur s'engage à ne pas accéder aux données du Client sauf à des fins de support technique, avec l'accord préalable du Client, ou en cas d'obligation légale.</p>
+            <p className="text-muted-foreground mb-4">10.3. En cas de cessation du contrat, le Client dispose d'un délai de trente (30) jours à compter de la fin du contrat pour demander l'export de ses données dans un format standard et exploitable. Passé ce délai, l'Éditeur procédera à la suppression définitive des données du Client, conformément au RGPD.</p>
 
             {/* Article 11 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 11 — Protection des données personnelles</h3>
-            <p className="text-muted-foreground mb-2">11.1. L'Éditeur agit en qualité de sous-traitant au sens du RGPD (Règlement UE 2016/679) pour le traitement des données personnelles saisies par le Client dans les Logiciels. Le Client est responsable de traitement.</p>
-            <p className="text-muted-foreground mb-2">11.2. L'Éditeur s'engage à traiter les données uniquement sur instruction documentée du Client, à assurer la confidentialité des données, à mettre en œuvre les mesures techniques et organisationnelles appropriées, et à notifier le Client en cas de violation de données dans un délai de 72 heures.</p>
-            <p className="text-muted-foreground mb-4">11.3. Les détails du traitement des données sont précisés dans la Politique de Confidentialité accessible depuis les paramètres de l'application.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 11 — Confidentialité</h3>
+            <p className="text-muted-foreground mb-2">11.1. Chaque partie s'engage à maintenir strictement confidentielle toute information confidentielle reçue de l'autre partie dans le cadre de l'exécution du contrat.</p>
+            <p className="text-muted-foreground mb-4">11.2. Cette obligation perdure pendant une durée de cinq (5) ans après la fin du contrat.</p>
 
             {/* Article 12 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 12 — Support technique</h3>
-            <p className="text-muted-foreground mb-2">12.1. Le support technique est accessible par email à {COMPANY.email} ou par téléphone au {COMPANY.phone}, du lundi au vendredi de 9h à 18h (heure de Paris), hors jours fériés.</p>
-            <p className="text-muted-foreground mb-4">12.2. L'Éditeur s'engage à répondre aux demandes de support dans un délai raisonnable. Les délais de résolution dépendent de la complexité et de la criticité de l'incident signalé.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 12 — Limitation de responsabilité</h3>
+            <p className="text-muted-foreground mb-2">12.1. {COMPANY.name} s'engage à fournir ses services avec diligence dans le cadre d'une obligation de moyens.</p>
+            <p className="text-muted-foreground mb-2">12.2. En aucun cas, l'Éditeur ne pourra être tenu responsable des dommages indirects, pertes de profit, pertes de données, manque à gagner ou préjudice commercial.</p>
+            <p className="text-muted-foreground mb-2">12.3. L'Éditeur ne pourra être tenu responsable des interruptions dues à un cas de force majeure (au sens de l'article 1218 du Code civil), des dysfonctionnements liés à l'environnement technique du Client (connexion Internet, matériel, logiciels tiers) ou de l'utilisation non conforme de la Solution.</p>
+            <p className="text-muted-foreground mb-4">12.4. En tout état de cause, la responsabilité totale de l'Éditeur est limitée au montant des sommes effectivement versées par le Client au cours des douze (12) derniers mois précédant le fait générateur de responsabilité.</p>
+            <p className="text-muted-foreground mb-4">12.5. Le Client est seul responsable de l'utilisation qu'il fait des Logiciels et des décisions prises sur la base des résultats fournis (calculs de coûts, optimisations, prévisions). Les données et calculs fournis par les Logiciels sont indicatifs et ne constituent pas un conseil professionnel.</p>
 
             {/* Article 13 */}
             <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 13 — Force majeure</h3>
             <p className="text-muted-foreground mb-4">
-              Aucune des parties ne pourra être tenue responsable de l'inexécution de ses obligations 
-              contractuelles en cas de survenance d'un événement de force majeure au sens de l'article 
-              1218 du Code civil, notamment : catastrophe naturelle, pandémie, guerre, acte de terrorisme, 
-              grève, incendie, inondation, panne de réseau Internet, cyberattaque, décision gouvernementale 
-              ou toute autre circonstance indépendante de la volonté des parties.
+              Aucune des parties ne sera responsable de l'inexécution de ses obligations en cas de force majeure telle que définie par l'article 1218 du Code civil, incluant notamment : catastrophes naturelles, guerres, pandémies, grèves, pannes de réseau, cyberattaques d'envergure, décisions gouvernementales ou réglementaires.
             </p>
 
             {/* Article 14 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 14 — Modification des CGVU</h3>
-            <p className="text-muted-foreground mb-2">14.1. L'Éditeur se réserve le droit de modifier les présentes CGVU à tout moment. Le Client sera informé de toute modification par notification dans l'application ou par email.</p>
-            <p className="text-muted-foreground mb-4">14.2. La poursuite de l'utilisation des Logiciels après notification des modifications vaut acceptation des nouvelles CGVU. En cas de désaccord, le Client pourra résilier son abonnement dans les conditions prévues à l'Article 3.</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 14 — Protection des données personnelles</h3>
+            <p className="text-muted-foreground mb-2">14.1. L'Éditeur traite les données personnelles du Client conformément au Règlement (UE) 2016/679 (RGPD) et à la loi Informatique et Libertés modifiée. Pour plus de détails, veuillez consulter notre Politique de Confidentialité.</p>
+            <p className="text-muted-foreground mb-4">14.2. Lorsque l'Éditeur agit en qualité de sous-traitant au sens du RGPD (traitement des données Client), un accord de traitement des données (DPA) peut être conclu sur demande.</p>
 
             {/* Article 15 */}
-            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 15 — Dispositions générales</h3>
-            <p className="text-muted-foreground mb-2">15.1. Si l'une quelconque des dispositions des présentes CGVU est déclarée nulle ou inapplicable, les autres dispositions resteront en vigueur.</p>
-            <p className="text-muted-foreground mb-2">15.2. Le fait pour l'Éditeur de ne pas se prévaloir à un moment donné de l'une des clauses des présentes ne peut être interprété comme valant renonciation à s'en prévaloir ultérieurement.</p>
-            <p className="text-muted-foreground mb-4">15.3. Les présentes CGVU sont régies par le droit français. En cas de litige, compétence exclusive est attribuée aux tribunaux de Toulouse (France).</p>
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 15 — Garanties</h3>
+            <p className="text-muted-foreground mb-2">15.1. L'Éditeur garantit que les Logiciels fonctionneront de manière substantiellement conforme à leur documentation. Cette garantie ne couvre pas les défauts résultant d'une utilisation non conforme, de modifications non autorisées ou de l'environnement technique du Client.</p>
+            <p className="text-muted-foreground mb-4">15.2. En dehors de cette garantie expresse, la Solution est fournie « en l'état » (« as is »). L'Éditeur exclut toute autre garantie, expresse ou implicite, y compris les garanties d'adéquation à un usage particulier.</p>
+
+            {/* Article 16 */}
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 16 — Cession</h3>
+            <p className="text-muted-foreground mb-4">Le Client ne peut céder tout ou partie du contrat à un tiers sans l'accord écrit préalable de l'Éditeur. L'Éditeur peut librement céder le contrat dans le cadre d'une restructuration ou d'un transfert d'activité.</p>
+
+            {/* Article 17 */}
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 17 — Modification des CGVU</h3>
+            <p className="text-muted-foreground mb-2">17.1. L'Éditeur se réserve le droit de modifier les présentes CGVU à tout moment. Le Client sera informé de toute modification par notification dans l'application ou par email.</p>
+            <p className="text-muted-foreground mb-4">17.2. La poursuite de l'utilisation des Logiciels après notification des modifications vaut acceptation des nouvelles CGVU. En cas de désaccord, le Client pourra résilier son abonnement dans les conditions prévues à l'Article 5.</p>
+
+            {/* Article 18 */}
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 18 — Intégralité et divisibilité</h3>
+            <p className="text-muted-foreground mb-2">18.1. Les présentes CGVU constituent l'intégralité de l'accord entre les parties. Elles prévalent sur tout autre document, sauf convention particulière signée par les deux parties.</p>
+            <p className="text-muted-foreground mb-2">18.2. Si l'une des clauses des présentes CGVU est déclarée nulle ou inapplicable, les autres clauses demeureront en vigueur et de plein effet.</p>
+            <p className="text-muted-foreground mb-4">18.3. Le fait pour l'Éditeur de ne pas se prévaloir à un moment donné de l'une des clauses des présentes ne peut être interprété comme valant renonciation à s'en prévaloir ultérieurement.</p>
+
+            {/* Article 19 */}
+            <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 19 — Droit applicable et juridiction compétente</h3>
+            <p className="text-muted-foreground mb-4">Les présentes CGVU sont soumises au droit français. En cas de litige, les parties s'efforceront de trouver une solution amiable. À défaut d'accord amiable dans un délai de trente (30) jours, tout litige sera soumis à la compétence exclusive des tribunaux de Toulouse.</p>
 
             <Separator className="my-6" />
             <p className="text-xs text-muted-foreground text-center">
-              Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              Dernière mise à jour : février 2026
             </p>
           </div>
         </ScrollArea>
