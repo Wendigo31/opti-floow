@@ -2,14 +2,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Lock, Database, Building2, Scale, MapPin, Phone, Mail, UserCheck, Shield, AlertTriangle, Gavel } from 'lucide-react';
+import { FileText, Lock, Database, Building2, Scale, Mail, UserCheck, Shield, AlertTriangle, Gavel } from 'lucide-react';
 
 const COMPANY = {
-  name: 'SAS OptiGroup',
-  form: 'Société par Actions Simplifiée',
-  address: '10B chemin de la claou',
-  city: '31790 Saint-Jory, France',
-  phone: '+33 6 46 69 14 62',
+  name: 'OptiGroup',
+  form: 'En cours d\'immatriculation',
   email: 'support@opti-group.fr',
   director: 'M. Yanis Dini',
   directorTitle: 'Président',
@@ -39,19 +36,8 @@ function MentionsLegales() {
                   <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                   <div>
                     <p className="font-semibold text-foreground">{COMPANY.name}</p>
-                    <p className="text-sm text-muted-foreground">{COMPANY.form}</p>
+                    <p className="text-sm text-muted-foreground">RCS : {COMPANY.form}</p>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-foreground">{COMPANY.address}</p>
-                    <p className="text-foreground">{COMPANY.city}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-foreground">{COMPANY.phone}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-muted-foreground" />
@@ -215,7 +201,7 @@ function CGV() {
 
             {/* Article 6 */}
             <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">Article 6 — Support et maintenance</h3>
-            <p className="text-muted-foreground mb-2">6.1. {COMPANY.name} assure un support technique par email à {COMPANY.email} et par téléphone au {COMPANY.phone}, aux horaires ouvrés (du lundi au vendredi, 9h-18h, hors jours fériés français).</p>
+            <p className="text-muted-foreground mb-2">6.1. {COMPANY.name} assure un support technique par email à {COMPANY.email}, aux horaires ouvrés (du lundi au vendredi, 9h-18h, hors jours fériés français).</p>
             <p className="text-muted-foreground mb-2">6.2. Les mises à jour logicielles correctives et évolutives sont incluses dans l'abonnement.</p>
             <p className="text-muted-foreground mb-4">6.3. L'Éditeur s'engage à déployer ses meilleurs efforts pour assurer une disponibilité de la Solution de 99,5 % hors périodes de maintenance programmée. Les maintenances programmées font l'objet d'un préavis d'au moins 48 heures.</p>
 
@@ -371,7 +357,7 @@ function PolitiqueConfidentialite() {
             <h3 className="text-lg font-semibold text-foreground mt-8 mb-3">1. Responsable du traitement</h3>
             <div className="bg-muted/30 p-4 rounded-lg mb-4">
               <p className="text-muted-foreground mb-1"><strong>Responsable :</strong> {COMPANY.name}</p>
-              <p className="text-muted-foreground mb-1"><strong>Adresse :</strong> {COMPANY.address}, {COMPANY.city}</p>
+              <p className="text-muted-foreground mb-1"><strong>Contact :</strong> {COMPANY.email}</p>
               <p className="text-muted-foreground mb-1"><strong>Délégué à la Protection des Données (DPO) :</strong> {COMPANY.dpo}</p>
               <p className="text-muted-foreground"><strong>Contact DPO :</strong> {COMPANY.email}</p>
             </div>
@@ -484,8 +470,7 @@ function PolitiqueConfidentialite() {
               ))}
             </div>
             <p className="text-muted-foreground mb-2">
-              Pour exercer vos droits, adressez votre demande à : <strong>{COMPANY.email}</strong> ou par 
-              courrier à : {COMPANY.name}, {COMPANY.address}, {COMPANY.city}.
+              Pour exercer vos droits, adressez votre demande à : <strong>{COMPANY.email}</strong>.
             </p>
             <p className="text-muted-foreground mb-4">
               Nous nous engageons à répondre dans un délai d'un (1) mois conformément à l'article 12.3 du RGPD. 
