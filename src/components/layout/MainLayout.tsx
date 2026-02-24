@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { LoadingScreen } from './LoadingScreen';
+import { TutorialDialog } from '../onboarding/TutorialDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarProvider, useSidebarContext } from '@/context/SidebarContext';
 
@@ -65,8 +66,17 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     }
   };
 
+  // Tutorial on first session
+  const [showTutorial, setShowTutorial] = useState(false);
+
   const handleLoadingComplete = () => {
     setIsLoading(false);
+    // Show tutorial if never seen
+    const seen = localStorage.getItem('optiflow_tutorial_seen');
+    if (!seen) {
+      setShowTutorial(true);
+      localStorage.setItem('optiflow_tutorial_seen', 'true');
+    }
   };
 
   // Calculate margin based on sidebar state
@@ -92,6 +102,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
           </div>
         </main>
       </div>
+
+      <TutorialDialog open={showTutorial} onOpenChange={setShowTutorial} />
     </>
   );
 }
