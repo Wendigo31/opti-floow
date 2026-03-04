@@ -497,7 +497,7 @@ export default function Presentation() {
   }, []);
 
   return (
-    <div className="h-screen bg-[hsl(210,10%,92%)] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[hsl(210,10%,92%)] flex flex-col overflow-hidden print:h-auto print:overflow-visible print:bg-white">
       {/* Controls */}
       <div className="print:hidden flex items-center justify-between px-6 py-3 flex-shrink-0 bg-white border-b border-[hsl(210,10%,88%)]">
         <div className="flex items-center gap-4">
