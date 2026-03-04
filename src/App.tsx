@@ -43,7 +43,8 @@ import Settings from "./pages/Settings";
 import MyRestrictions from "./pages/MyRestrictions";
 import Team from "./pages/Team";
 import Install from "./pages/Install";
- import Planning from "./pages/Planning";
+import Planning from "./pages/Planning";
+import Presentation from "./pages/Presentation";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -143,14 +144,15 @@ function AppRoutes() {
   const { isLicensed, isLoading } = useLicense();
   const location = useLocation();
 
-  // Permettre l'accès à /admin (y compris /admin/...) même sans licence
   const isAdminRoute = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
+  const isPresentationRoute = location.pathname === '/presentation';
 
-  // Wrap everything in AppProvider to ensure stable hook tree
   return (
     <AppProvider>
       {isAdminRoute ? (
         <AdminContent />
+      ) : isPresentationRoute ? (
+        <Presentation />
       ) : isLoading ? (
         <LoadingScreen />
       ) : !isLicensed ? (
