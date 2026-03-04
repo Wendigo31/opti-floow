@@ -111,7 +111,7 @@ const SLIDES = [
           <div className="grid grid-cols-3 gap-10 w-full max-w-[1400px]">
             {[
               { icon: Calculator, name: 'OptiFlow', desc: 'Calculateur de rentabilité & pilotage financier complet' },
-              { icon: Route, name: 'OptiXpress', desc: 'Optimisation d\'itinéraires PL & planification intelligente' },
+              { icon: Route, name: 'OptiXpress', desc: 'Calculateur de rentabilité & pilotage financier pour véhicules légers' },
               { icon: Truck, name: 'OptiFret', desc: 'Gestion de flotte, conducteurs & suivi d\'exploitation' },
             ].map((product, i) => (
               <div key={i} className="bg-white border border-[hsl(180,15%,88%)] rounded-3xl p-10 text-center shadow-sm">
