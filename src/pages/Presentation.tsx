@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, Printer, Calculator, Route, Users, Truck, Ba
 import { Button } from '@/components/ui/button';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import heroImg from '@/assets/presentation/hero-stylized.jpg';
-import dashboardImg from '@/assets/presentation/dashboard-mockup.jpg';
 import profitImg from '@/assets/presentation/profit-growth.jpg';
 import routeImg from '@/assets/presentation/route-optimization.jpg';
 import screenshotCalc from '@/assets/presentation/screenshot-calculator.jpg';
@@ -22,40 +21,39 @@ function SlideBox({ children }: { children: React.ReactNode }) {
 }
 
 const SLIDES = [
-  // SLIDE 1 — Couverture
+  // SLIDE 1 — Couverture (light)
   {
     id: 'cover',
     render: () => (
       <SlideBox>
-        <div className="absolute inset-0 bg-[hsl(210,45%,6%)]" />
-        <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[hsl(210,45%,6%)]/80 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(210,45%,6%)] via-transparent to-[hsl(210,45%,6%)]/40" />
+        <div className="absolute inset-0 bg-white" />
+        <img src={heroImg} alt="" className="absolute right-0 top-0 w-[55%] h-full object-cover opacity-90" />
+        <div className="absolute right-0 top-0 w-[55%] h-full bg-gradient-to-r from-white via-white/40 to-transparent" />
         <div className="relative z-10 flex flex-col justify-center h-full px-24">
-          <div className="max-w-[900px]">
-            <img src={optiflowLogo} alt="OptiFlow" className="w-36 h-36 mb-8" />
-            <h1 className="text-[78px] font-extrabold text-white leading-[0.95] mb-8">
+          <div className="max-w-[850px]">
+            <img src={optiflowLogo} alt="OptiFlow" className="w-32 h-32 mb-8" />
+            <h1 className="text-[74px] font-extrabold text-[hsl(210,45%,15%)] leading-[0.95] mb-8">
               Arrêtez de perdre<br />de l'argent
-              <br /><span className="text-[hsl(175,85%,50%)]">sur chaque kilomètre.</span>
+              <br /><span className="text-[hsl(175,85%,35%)]">sur chaque kilomètre.</span>
             </h1>
-            <p className="text-[26px] text-white/75 max-w-[700px] mb-10">
+            <p className="text-[24px] text-[hsl(210,20%,40%)] max-w-[650px] mb-10">
               La suite logicielle qui transforme votre exploitation transport en machine à rentabilité.
             </p>
             <div className="flex items-center gap-4 text-[20px] text-[hsl(24,95%,53%)] font-semibold">
               <span>OptiFlow</span>
-              <span className="text-white/30">•</span>
+              <span className="text-[hsl(210,20%,75%)]">•</span>
               <span>OptiXpress</span>
-              <span className="text-white/30">•</span>
+              <span className="text-[hsl(210,20%,75%)]">•</span>
               <span>OptiFret</span>
             </div>
-            <p className="mt-6 text-white/35 text-[15px]">Par OptiGroup — Édition 2026</p>
+            <p className="mt-6 text-[hsl(210,20%,65%)] text-[15px]">Par OptiGroup — Édition 2026</p>
           </div>
         </div>
       </SlideBox>
     ),
   },
 
-  // SLIDE 2 — Le problème
+  // SLIDE 2 — Le problème (already light)
   {
     id: 'problem',
     render: () => (
@@ -94,20 +92,20 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 3 — La solution OptiGroup
+  // SLIDE 3 — La solution OptiGroup (light)
   {
     id: 'solution',
     render: () => (
       <SlideBox>
-        <div className="w-full h-full bg-[hsl(210,45%,8%)] flex flex-col items-center justify-center px-24">
+        <div className="w-full h-full bg-[hsl(180,15%,98%)] flex flex-col items-center justify-center px-24">
           <div className="w-20 h-20 rounded-2xl bg-[hsl(175,85%,35%)] flex items-center justify-center mb-10">
             <Zap className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-[62px] font-extrabold text-white mb-8 text-center leading-[1.1]">
+          <h2 className="text-[62px] font-extrabold text-[hsl(210,45%,15%)] mb-8 text-center leading-[1.1]">
             Et si chaque décision était<br />
-            <span className="text-[hsl(175,85%,50%)]">guidée par vos vrais chiffres ?</span>
+            <span className="text-[hsl(175,85%,35%)]">guidée par vos vrais chiffres ?</span>
           </h2>
-          <p className="text-[26px] text-white/70 max-w-[900px] text-center mb-20">
+          <p className="text-[26px] text-[hsl(210,20%,45%)] max-w-[900px] text-center mb-20">
             OptiGroup développe les outils qui donnent aux transporteurs le pouvoir de piloter leur activité avec précision.
           </p>
           <div className="grid grid-cols-3 gap-10 w-full max-w-[1400px]">
@@ -116,10 +114,10 @@ const SLIDES = [
               { icon: Route, name: 'OptiXpress', desc: 'Optimisation d\'itinéraires PL & planification intelligente' },
               { icon: Truck, name: 'OptiFret', desc: 'Gestion de flotte, conducteurs & suivi d\'exploitation' },
             ].map((product, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-10 text-center">
+              <div key={i} className="bg-white border border-[hsl(180,15%,88%)] rounded-3xl p-10 text-center shadow-sm">
                 <product.icon className="w-12 h-12 text-[hsl(24,95%,53%)] mx-auto mb-5" />
-                <h3 className="text-[28px] font-bold text-white mb-3">{product.name}</h3>
-                <p className="text-[18px] text-white/60">{product.desc}</p>
+                <h3 className="text-[28px] font-bold text-[hsl(210,45%,15%)] mb-3">{product.name}</h3>
+                <p className="text-[18px] text-[hsl(210,20%,45%)]">{product.desc}</p>
               </div>
             ))}
           </div>
@@ -128,7 +126,7 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 4 — Calculateur avec screenshot
+  // SLIDE 4 — Calculateur avec screenshot (already light)
   {
     id: 'calculator',
     render: () => (
@@ -172,26 +170,24 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 5 — Itinéraires
+  // SLIDE 5 — Itinéraires (light)
   {
     id: 'itinerary',
     render: () => (
       <SlideBox>
-        <img src={routeImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-[hsl(210,45%,6%)]/75" />
-        <div className="relative z-10 flex flex-col justify-center h-full px-24">
-          <div className="max-w-[850px]">
+        <div className="w-full h-full bg-white flex">
+          <div className="flex-1 flex flex-col justify-center px-24 py-16">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-xl bg-[hsl(24,95%,53%)] flex items-center justify-center">
-                <Route className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 rounded-xl bg-[hsl(24,95%,92%)] flex items-center justify-center">
+                <Route className="w-7 h-7 text-[hsl(24,95%,53%)]" />
               </div>
               <p className="text-[hsl(24,95%,53%)] font-bold text-[18px] uppercase tracking-[0.15em]">Itinéraires intelligents</p>
             </div>
-            <h2 className="text-[56px] font-extrabold text-white leading-[1.1] mb-8">
+            <h2 className="text-[56px] font-extrabold text-[hsl(210,45%,15%)] leading-[1.1] mb-8">
               Optimisez chaque<br />trajet, maximisez<br />
-              <span className="text-[hsl(175,85%,50%)]">chaque euro.</span>
+              <span className="text-[hsl(175,85%,35%)]">chaque euro.</span>
             </h2>
-            <p className="text-[24px] text-white/70 mb-12">
+            <p className="text-[24px] text-[hsl(210,20%,45%)] mb-12">
               Itinéraires poids lourds avec restrictions, péages détaillés, comparaison autoroute vs nationale.
             </p>
             <div className="grid grid-cols-2 gap-5">
@@ -201,35 +197,38 @@ const SLIDES = [
                 { icon: TrendingUp, label: 'Coût péages par classe' },
                 { icon: MapPin, label: 'Adresses favorites & clients' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-4 bg-white/10 rounded-xl px-6 py-4 backdrop-blur-sm">
-                  <item.icon className="w-6 h-6 text-[hsl(175,85%,50%)]" />
-                  <span className="text-[20px] text-white font-medium">{item.label}</span>
+                <div key={i} className="flex items-center gap-4 bg-[hsl(180,15%,97%)] border border-[hsl(180,15%,90%)] rounded-xl px-6 py-4">
+                  <item.icon className="w-6 h-6 text-[hsl(175,85%,35%)]" />
+                  <span className="text-[20px] text-[hsl(210,45%,20%)] font-medium">{item.label}</span>
                 </div>
               ))}
             </div>
+          </div>
+          <div className="w-[45%] relative">
+            <img src={routeImg} alt="" className="absolute inset-0 w-full h-full object-cover rounded-l-3xl" />
           </div>
         </div>
       </SlideBox>
     ),
   },
 
-  // SLIDE 6 — Planning avec screenshot
+  // SLIDE 6 — Planning avec screenshot (light)
   {
     id: 'planning',
     render: () => (
       <SlideBox>
-        <div className="w-full h-full bg-[hsl(210,45%,8%)] flex">
+        <div className="w-full h-full bg-[hsl(180,15%,98%)] flex">
           <div className="w-[52%] flex items-center justify-center p-10">
-            <img src={screenshotPlanning} alt="Planning hebdomadaire" className="w-full rounded-xl shadow-2xl border border-white/10" />
+            <img src={screenshotPlanning} alt="Planning hebdomadaire" className="w-full rounded-xl shadow-2xl border border-[hsl(180,15%,88%)]" />
           </div>
           <div className="w-[48%] flex flex-col justify-center px-20 py-16">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-xl bg-[hsl(175,85%,35%)] flex items-center justify-center">
-                <CalendarDays className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 rounded-xl bg-[hsl(175,85%,92%)] flex items-center justify-center">
+                <CalendarDays className="w-7 h-7 text-[hsl(175,85%,35%)]" />
               </div>
-              <p className="text-[hsl(175,85%,50%)] font-bold text-[18px] uppercase tracking-[0.15em]">Planning</p>
+              <p className="text-[hsl(175,85%,35%)] font-bold text-[18px] uppercase tracking-[0.15em]">Planning</p>
             </div>
-            <h2 className="text-[50px] font-extrabold text-white leading-[1.1] mb-8">
+            <h2 className="text-[50px] font-extrabold text-[hsl(210,45%,15%)] leading-[1.1] mb-8">
               Planifiez votre<br />exploitation en<br />
               <span className="text-[hsl(24,95%,53%)]">un clin d'œil.</span>
             </h2>
@@ -240,9 +239,9 @@ const SLIDES = [
                 { icon: Truck, text: 'Affectation véhicules & remorques' },
                 { icon: Star, text: 'Tournées récurrentes automatisées' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-4 bg-white/5 rounded-xl px-6 py-4 border border-white/10">
-                  <item.icon className="w-6 h-6 text-[hsl(175,85%,50%)] flex-shrink-0" />
-                  <span className="text-[20px] text-white/80">{item.text}</span>
+                <div key={i} className="flex items-center gap-4 bg-white rounded-xl px-6 py-4 border border-[hsl(180,15%,90%)] shadow-sm">
+                  <item.icon className="w-6 h-6 text-[hsl(175,85%,35%)] flex-shrink-0" />
+                  <span className="text-[20px] text-[hsl(210,20%,30%)]">{item.text}</span>
                 </div>
               ))}
             </div>
@@ -252,7 +251,7 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 7 — Gestion de flotte
+  // SLIDE 7 — Gestion de flotte (already light)
   {
     id: 'fleet',
     render: () => (
@@ -296,49 +295,49 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 8 — Chiffres clés
+  // SLIDE 8 — Chiffres clés (light)
   {
     id: 'stats',
     render: () => (
       <SlideBox>
-        <div className="w-full h-full bg-[hsl(210,45%,8%)] flex flex-col items-center justify-center px-24">
-          <h2 className="text-[58px] font-extrabold text-white mb-5 text-center">
-            Des résultats <span className="text-[hsl(175,85%,50%)]">concrets.</span>
+        <div className="w-full h-full bg-white flex flex-col items-center justify-center px-24">
+          <h2 className="text-[58px] font-extrabold text-[hsl(210,45%,15%)] mb-5 text-center">
+            Des résultats <span className="text-[hsl(175,85%,35%)]">concrets.</span>
           </h2>
-          <p className="text-[24px] text-white/60 mb-20 text-center">Ce que nos utilisateurs constatent en moyenne après 3 mois.</p>
+          <p className="text-[24px] text-[hsl(210,20%,45%)] mb-20 text-center">Ce que nos utilisateurs constatent en moyenne après 3 mois.</p>
           <div className="grid grid-cols-4 gap-10 w-full max-w-[1500px] mb-20">
             {[
-              { value: '+12%', label: 'de marge\nrécupérée', color: 'hsl(158,70%,45%)' },
-              { value: '2h', label: 'gagnées par jour\nen administration', color: 'hsl(175,85%,50%)' },
+              { value: '+12%', label: 'de marge\nrécupérée', color: 'hsl(158,70%,40%)' },
+              { value: '2h', label: 'gagnées par jour\nen administration', color: 'hsl(175,85%,35%)' },
               { value: '100%', label: 'de visibilité\nsur vos coûts', color: 'hsl(24,95%,53%)' },
-              { value: '30s', label: 'pour calculer\nun prix de revient', color: 'hsl(175,85%,50%)' },
+              { value: '30s', label: 'pour calculer\nun prix de revient', color: 'hsl(175,85%,35%)' },
             ].map((stat, i) => (
               <div key={i} className="text-center">
                 <p className="text-[90px] font-black leading-none mb-5" style={{ color: stat.color }}>{stat.value}</p>
-                <p className="text-[20px] text-white/70 whitespace-pre-line">{stat.label}</p>
+                <p className="text-[20px] text-[hsl(210,20%,40%)] whitespace-pre-line">{stat.label}</p>
               </div>
             ))}
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-3xl px-14 py-8 max-w-[1100px] text-center">
-            <p className="text-[24px] text-white/80 italic leading-relaxed">
+          <div className="bg-[hsl(180,15%,97%)] border border-[hsl(180,15%,90%)] rounded-3xl px-14 py-8 max-w-[1100px] text-center">
+            <p className="text-[24px] text-[hsl(210,20%,30%)] italic leading-relaxed">
               « Depuis qu'on utilise OptiFlow, on a découvert qu'on vendait 3 lignes à perte. 
               On a ajusté nos prix et récupéré 18 000 € de marge en 4 mois. »
             </p>
-            <p className="text-[hsl(175,85%,50%)] mt-4 font-semibold text-[20px]">— Directeur, Transport régional · 44 véhicules</p>
+            <p className="text-[hsl(175,85%,35%)] mt-4 font-semibold text-[20px]">— Directeur, Transport régional · 44 véhicules</p>
           </div>
         </div>
       </SlideBox>
     ),
   },
 
-  // SLIDE 9 — Sécurité & Rôles
+  // SLIDE 9 — Sécurité & Rôles (already light)
   {
     id: 'security',
     render: () => (
       <SlideBox>
         <div className="w-full h-full bg-white flex flex-col items-center justify-center px-24">
-          <div className="w-20 h-20 rounded-2xl bg-[hsl(210,45%,12%)] flex items-center justify-center mb-10">
-            <Shield className="w-10 h-10 text-[hsl(175,85%,50%)]" />
+          <div className="w-20 h-20 rounded-2xl bg-[hsl(175,85%,35%)] flex items-center justify-center mb-10">
+            <Shield className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-[56px] font-extrabold text-[hsl(210,45%,15%)] mb-5 text-center leading-[1.1]">
             Sécurisé, collaboratif,<br />
@@ -367,7 +366,7 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 10 — Tarification
+  // SLIDE 10 — Tarification (light)
   {
     id: 'pricing',
     render: () => (
@@ -384,15 +383,15 @@ const SLIDES = [
               { plan: 'Pro', desc: 'Pour les PME ambitieuses', features: ['Tout Start +', 'Itinéraires optimisés', 'Multi-utilisateurs', 'Dashboard analytics', 'Import Excel', 'Alertes de marge'], highlight: true },
               { plan: 'Enterprise', desc: 'Pour les grandes flottes', features: ['Tout Pro +', 'Utilisateurs illimités', 'IA & prédictions', 'API & intégration TMS', 'Support prioritaire'], highlight: false },
             ].map((item, i) => (
-              <div key={i} className={`rounded-3xl p-10 ${item.highlight ? 'bg-[hsl(210,45%,8%)] text-white ring-4 ring-[hsl(175,85%,35%)] scale-105' : 'bg-white border border-[hsl(180,15%,88%)]'}`}>
-                {item.highlight && <p className="text-[hsl(24,95%,53%)] text-[14px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Le plus populaire</p>}
+              <div key={i} className={`rounded-3xl p-10 ${item.highlight ? 'bg-[hsl(175,85%,35%)] text-white ring-4 ring-[hsl(175,85%,28%)] scale-105' : 'bg-white border border-[hsl(180,15%,88%)]'}`}>
+                {item.highlight && <p className="text-white/80 text-[14px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Le plus populaire</p>}
                 <h3 className={`text-[34px] font-bold mb-3 text-center ${item.highlight ? 'text-white' : 'text-[hsl(210,45%,15%)]'}`}>{item.plan}</h3>
-                <p className={`mb-8 text-center text-[18px] ${item.highlight ? 'text-white/60' : 'text-[hsl(210,20%,45%)]'}`}>{item.desc}</p>
+                <p className={`mb-8 text-center text-[18px] ${item.highlight ? 'text-white/75' : 'text-[hsl(210,20%,45%)]'}`}>{item.desc}</p>
                 <div className="space-y-4">
                   {item.features.map((f, j) => (
                     <div key={j} className="flex items-center gap-3">
-                      <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${item.highlight ? 'text-[hsl(175,85%,50%)]' : 'text-[hsl(158,70%,40%)]'}`} />
-                      <span className={`text-[18px] ${item.highlight ? 'text-white/80' : 'text-[hsl(210,20%,35%)]'}`}>{f}</span>
+                      <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${item.highlight ? 'text-white' : 'text-[hsl(158,70%,40%)]'}`} />
+                      <span className={`text-[18px] ${item.highlight ? 'text-white/90' : 'text-[hsl(210,20%,35%)]'}`}>{f}</span>
                     </div>
                   ))}
                 </div>
@@ -404,36 +403,36 @@ const SLIDES = [
     ),
   },
 
-  // SLIDE 11 — CTA final
+  // SLIDE 11 — CTA final (light)
   {
     id: 'cta',
     render: () => (
       <SlideBox>
-        <div className="w-full h-full bg-[hsl(210,45%,8%)] flex flex-col items-center justify-center px-24 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
+        <div className="w-full h-full bg-white flex flex-col items-center justify-center px-24 text-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]">
             <div className="absolute top-32 left-32 w-[500px] h-[500px] rounded-full bg-[hsl(175,85%,50%)] blur-[150px]" />
             <div className="absolute bottom-32 right-32 w-[500px] h-[500px] rounded-full bg-[hsl(24,95%,53%)] blur-[150px]" />
           </div>
           <div className="relative z-10">
             <img src={optiflowLogo} alt="OptiFlow" className="w-32 h-32 mx-auto mb-10" />
-            <h2 className="text-[66px] font-extrabold text-white mb-8 leading-[1.05]">
+            <h2 className="text-[66px] font-extrabold text-[hsl(210,45%,15%)] mb-8 leading-[1.05]">
               Prêt à reprendre le contrôle<br />
-              <span className="text-[hsl(175,85%,50%)]">de votre rentabilité ?</span>
+              <span className="text-[hsl(175,85%,35%)]">de votre rentabilité ?</span>
             </h2>
-            <p className="text-[28px] text-white/70 max-w-[800px] mx-auto mb-14">
+            <p className="text-[28px] text-[hsl(210,20%,40%)] max-w-[800px] mx-auto mb-14">
               Demandez votre démonstration gratuite et découvrez combien vous pourriez économiser.
             </p>
             <div className="flex items-center justify-center gap-8 mb-20">
-              <div className="flex items-center gap-4 bg-white/10 rounded-2xl px-8 py-5 border border-white/10">
-                <Mail className="w-6 h-6 text-[hsl(175,85%,50%)]" />
-                <span className="text-[22px] text-white font-medium">support@opti-group.fr</span>
+              <div className="flex items-center gap-4 bg-[hsl(180,15%,97%)] rounded-2xl px-8 py-5 border border-[hsl(180,15%,90%)]">
+                <Mail className="w-6 h-6 text-[hsl(175,85%,35%)]" />
+                <span className="text-[22px] text-[hsl(210,45%,15%)] font-medium">support@opti-group.fr</span>
               </div>
-              <div className="flex items-center gap-4 bg-white/10 rounded-2xl px-8 py-5 border border-white/10">
-                <Globe className="w-6 h-6 text-[hsl(175,85%,50%)]" />
-                <span className="text-[22px] text-white font-medium">opti-group.fr</span>
+              <div className="flex items-center gap-4 bg-[hsl(180,15%,97%)] rounded-2xl px-8 py-5 border border-[hsl(180,15%,90%)]">
+                <Globe className="w-6 h-6 text-[hsl(175,85%,35%)]" />
+                <span className="text-[22px] text-[hsl(210,45%,15%)] font-medium">opti-group.fr</span>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-3 text-white/30 text-[16px]">
+            <div className="flex items-center justify-center gap-3 text-[hsl(210,20%,70%)] text-[16px]">
               <span>OptiFlow</span><span>•</span><span>OptiXpress</span><span>•</span><span>OptiFret</span>
               <span className="ml-6">© 2026 OptiGroup — Tous droits réservés</span>
             </div>
@@ -488,7 +487,6 @@ export default function Presentation() {
   const prev = () => setCurrent(c => Math.max(0, c - 1));
   const next = () => setCurrent(c => Math.min(SLIDES.length - 1, c + 1));
 
-  // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
@@ -499,21 +497,21 @@ export default function Presentation() {
   }, []);
 
   return (
-    <div className="h-screen bg-[hsl(210,45%,6%)] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[hsl(210,10%,92%)] flex flex-col overflow-hidden">
       {/* Controls */}
-      <div className="print:hidden flex items-center justify-between px-6 py-3 flex-shrink-0">
+      <div className="print:hidden flex items-center justify-between px-6 py-3 flex-shrink-0 bg-white border-b border-[hsl(210,10%,88%)]">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={prev} disabled={current === 0} className="bg-white/10 border-white/20 text-white hover:bg-white/20 h-9 w-9">
+          <Button variant="outline" size="icon" onClick={prev} disabled={current === 0} className="h-9 w-9">
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-white/70 text-sm font-medium min-w-[80px] text-center">
+          <span className="text-[hsl(210,20%,40%)] text-sm font-medium min-w-[80px] text-center">
             {current + 1} / {SLIDES.length}
           </span>
-          <Button variant="outline" size="icon" onClick={next} disabled={current === SLIDES.length - 1} className="bg-white/10 border-white/20 text-white hover:bg-white/20 h-9 w-9">
+          <Button variant="outline" size="icon" onClick={next} disabled={current === SLIDES.length - 1} className="h-9 w-9">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        <Button variant="outline" onClick={() => window.print()} className="bg-white/10 border-white/20 text-white hover:bg-white/20 h-9 text-sm">
+        <Button variant="outline" onClick={() => window.print()} className="h-9 text-sm">
           <Printer className="w-4 h-4 mr-2" />
           Imprimer / PDF
         </Button>
@@ -525,14 +523,14 @@ export default function Presentation() {
       </div>
 
       {/* Thumbnail strip */}
-      <div className="print:hidden flex-shrink-0 px-4 py-3 border-t border-white/10">
+      <div className="print:hidden flex-shrink-0 px-4 py-3 bg-white border-t border-[hsl(210,10%,88%)]">
         <div className="flex gap-2 overflow-x-auto justify-center">
           {SLIDES.map((slide, i) => (
             <button
               key={slide.id}
               onClick={() => setCurrent(i)}
               className={`flex-shrink-0 w-24 h-[54px] rounded-md overflow-hidden border-2 transition-all ${
-                i === current ? 'border-[hsl(175,85%,50%)] shadow-lg shadow-[hsl(175,85%,50%)]/20' : 'border-white/10 opacity-50 hover:opacity-80'
+                i === current ? 'border-[hsl(175,85%,35%)] shadow-md' : 'border-[hsl(210,10%,85%)] opacity-60 hover:opacity-90'
               }`}
             >
               <div className="w-full h-full relative">
