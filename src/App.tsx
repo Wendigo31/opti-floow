@@ -165,8 +165,11 @@ function AppRoutes() {
 }
 
 function AppContent() {
+  // Detect presentation route from actual browser URL for MemoryRouter
+  const initialEntry = window.location.pathname === '/presentation' ? '/presentation' : '/';
+  
   return (
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <GlobalShortcuts>
         <AppRoutes />
       </GlobalShortcuts>
