@@ -406,20 +406,17 @@
   @apply bg-card;
 }
 
-/* Print styles - Professional Report Layout */
+/* Print styles */
 @media print {
-  /* Hide navigation and interactive elements */
   .no-print,
   .sidebar,
   aside,
   nav,
-  button,
   .leaflet-control-zoom,
   .leaflet-control-attribution {
     display: none !important;
   }
 
-  /* Reset colors for print */
   * {
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
@@ -428,115 +425,28 @@
 
   body {
     background: white !important;
-    color: #1a1a1a !important;
-    font-size: 12pt;
-    line-height: 1.4;
-    margin: 0;
-    padding: 20mm;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* Page setup */
   @page {
     size: A4 landscape;
     margin: 0;
   }
 
-  /* Main content area */
-  main {
-    margin: 0 !important;
-    padding: 0 !important;
-    max-width: 100% !important;
+  .print-slide-page {
+    width: 297mm !important;
+    height: 210mm !important;
+    overflow: hidden !important;
+    page-break-after: always;
   }
 
-  /* Cards styling for print */
-  .glass-card {
-    background: white !important;
-    border: 1px solid #d1d5db !important;
-    box-shadow: none !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-bottom: 10mm;
-    padding: 15px !important;
+  .print-slide-page:last-child {
+    page-break-after: auto;
   }
 
-  /* Headers */
-  h1, h2, h3 {
-    color: #1a1a1a !important;
-    page-break-after: avoid;
-  }
-
-  h1 {
-    font-size: 18pt !important;
-    border-bottom: 2px solid #0ea5e9;
-    padding-bottom: 5mm;
-    margin-bottom: 8mm;
-  }
-
-  h2 {
-    font-size: 14pt !important;
-    margin-top: 0 !important;
-  }
-
-  /* Text colors */
-  .text-foreground {
-    color: #1a1a1a !important;
-  }
-
-  .text-muted-foreground {
-    color: #6b7280 !important;
-  }
-
-  .text-primary {
-    color: #0ea5e9 !important;
-  }
-
-  .text-success {
-    color: #16a34a !important;
-  }
-
-  .text-destructive {
-    color: #dc2626 !important;
-  }
-
-  /* Backgrounds for colored sections */
-  .bg-success\/10,
-  .bg-destructive\/10 {
-    border: 2px solid currentColor !important;
-    background: transparent !important;
-  }
-
-  /* Grid layout for print */
-  .grid {
-    display: block !important;
-  }
-
-  .xl\:col-span-2,
-  .lg\:col-span-2 {
-    width: 100% !important;
-  }
-
-  /* Hide animations */
   [class*="animate-"] {
     animation: none !important;
     opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* Company header for print */
-  body::before {
-    content: '';
-    display: block;
-  }
-
-  /* Footer with date */
-  body::after {
-    content: 'Document généré par OptiFlow - Line Optimizer';
-    position: fixed;
-    bottom: 10mm;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 9pt;
-    color: #9ca3af;
   }
 }

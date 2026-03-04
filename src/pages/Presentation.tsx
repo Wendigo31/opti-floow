@@ -545,9 +545,14 @@ export default function Presentation() {
 
       {/* Print: all slides one per page */}
       <div className="hidden print:block">
-        {SLIDES.map((slide, i) => (
-          <div key={slide.id} className="overflow-hidden" style={{ width: '297mm', height: '210mm', pageBreakAfter: i < SLIDES.length - 1 ? 'always' : 'auto' }}>
-            <div style={{ transform: `scale(${(210 * 3.78) / SLIDE_H})`, transformOrigin: 'top left', width: SLIDE_W, height: SLIDE_H }}>
+        {SLIDES.map((slide) => (
+          <div key={slide.id} className="print-slide-page">
+            <div style={{
+              transform: `scale(${(297 * 3.7795) / SLIDE_W})`,
+              transformOrigin: 'top left',
+              width: SLIDE_W,
+              height: SLIDE_H,
+            }}>
               {slide.render()}
             </div>
           </div>
