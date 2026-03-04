@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Printer, Calculator, Route, Users, Truck, BarChart3, Shield, Clock, Target, Zap, CheckCircle2, Star, Mail, Globe, TrendingUp, MapPin, FileText, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
-import heroImg from '@/assets/presentation/hero-trucks.jpg';
+import heroImg from '@/assets/presentation/hero-stylized.jpg';
 import dashboardImg from '@/assets/presentation/dashboard-mockup.jpg';
 import profitImg from '@/assets/presentation/profit-growth.jpg';
 import routeImg from '@/assets/presentation/route-optimization.jpg';
@@ -27,25 +27,29 @@ const SLIDES = [
     id: 'cover',
     render: () => (
       <SlideBox>
-        <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-35" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(210,45%,6%)] via-[hsl(210,45%,8%)]/70 to-[hsl(210,45%,12%)]/30" />
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-32">
-          <img src={optiflowLogo} alt="OptiFlow" className="w-48 h-48 mb-10" />
-          <h1 className="text-[82px] font-extrabold text-white leading-[0.95] mb-8">
-            Arrêtez de perdre de l'argent<br />
-            <span className="text-[hsl(175,85%,50%)]">sur chaque kilomètre.</span>
-          </h1>
-          <p className="text-[28px] text-white/80 max-w-[1100px] mb-12">
-            La suite logicielle qui transforme votre exploitation transport en machine à rentabilité.
-          </p>
-          <div className="flex items-center gap-4 text-[22px] text-[hsl(24,95%,53%)] font-semibold">
-            <span>OptiFlow</span>
-            <span className="text-white/30">•</span>
-            <span>OptiXpress</span>
-            <span className="text-white/30">•</span>
-            <span>OptiFret</span>
+        <div className="absolute inset-0 bg-[hsl(210,45%,6%)]" />
+        <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[hsl(210,45%,6%)]/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(210,45%,6%)] via-transparent to-[hsl(210,45%,6%)]/40" />
+        <div className="relative z-10 flex flex-col justify-center h-full px-24">
+          <div className="max-w-[900px]">
+            <img src={optiflowLogo} alt="OptiFlow" className="w-36 h-36 mb-8" />
+            <h1 className="text-[78px] font-extrabold text-white leading-[0.95] mb-8">
+              Arrêtez de perdre<br />de l'argent
+              <br /><span className="text-[hsl(175,85%,50%)]">sur chaque kilomètre.</span>
+            </h1>
+            <p className="text-[26px] text-white/75 max-w-[700px] mb-10">
+              La suite logicielle qui transforme votre exploitation transport en machine à rentabilité.
+            </p>
+            <div className="flex items-center gap-4 text-[20px] text-[hsl(24,95%,53%)] font-semibold">
+              <span>OptiFlow</span>
+              <span className="text-white/30">•</span>
+              <span>OptiXpress</span>
+              <span className="text-white/30">•</span>
+              <span>OptiFret</span>
+            </div>
+            <p className="mt-6 text-white/35 text-[15px]">Par OptiGroup — Édition 2026</p>
           </div>
-          <p className="mt-8 text-white/40 text-[16px]">Par OptiGroup — Édition 2026</p>
         </div>
       </SlideBox>
     ),
