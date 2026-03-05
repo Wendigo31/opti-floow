@@ -221,6 +221,7 @@ export function MapPreview({
   const restrictionMarkersRef = useRef<MapMarker[]>([]);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize map
@@ -252,6 +253,7 @@ export function MapPreview({
 
       mapInstanceRef.current = new google.maps.Map(mapRef.current, mapOptions);
       setIsLoading(false);
+      setMapReady(true);
     } catch (err) {
       console.error('Failed to initialize Google Maps:', err);
       setError('Impossible de charger la carte');
@@ -295,7 +297,7 @@ export function MapPreview({
   // Update route polyline
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !isGoogleMapsLoaded) return;
+    if (!map || !mapReady) return;
 
     // Remove existing polyline
     if (polylineRef.current) {
@@ -323,12 +325,12 @@ export function MapPreview({
       path.forEach(point => bounds.extend(point));
       map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
     }
-  }, [routeCoordinates]);
+  }, [routeCoordinates, mapReady]);
 
   // Update markers using AdvancedMarkerElement
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !isGoogleMapsLoaded) return;
+    if (!map || !mapReady) return;
 
     // Remove existing markers
     markersRef.current.forEach(m => {
@@ -386,12 +388,12 @@ export function MapPreview({
         map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
       }
     }
-  }, [markers, routeCoordinates.length]);
+  }, [markers, routeCoordinates.length, mapReady]);
 
   // Update restriction markers using AdvancedMarkerElement
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !isGoogleMapsLoaded) return;
+    if (!map || !mapReady) return;
 
     // Remove existing restriction markers
     restrictionMarkersRef.current.forEach(m => {
@@ -446,24 +448,24 @@ export function MapPreview({
 
       restrictionMarkersRef.current.push(marker);
     });
-  }, [restrictions]);
+  }, [restrictions, mapReady]);
 
   // Update center when no route/markers
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !isGoogleMapsLoaded) return;
+    if (!map || !mapReady) return;
 
     if (routeCoordinates.length === 0 && markers.length === 0) {
       map.setCenter({ lat: center[0], lng: center[1] });
       map.setZoom(zoom);
     }
-  }, [center, zoom, routeCoordinates.length, markers.length]);
+  }, [center, zoom, routeCoordinates.length, markers.length, mapReady]);
 
   // Retry function
   const retryLoadMap = useCallback(() => {
     setError(null);
     setIsLoading(true);
-    // Reset global state to force reload
+    setMapReady(false);
     googleMapsPromise = null;
     isGoogleMapsLoaded = false;
     mapInstanceRef.current = null;
