@@ -1,127 +1,84 @@
 
 
-# Audit complet OptiFlow - Plan de corrections
+# Séparation OptiFlow en deux apps avec base partagée
 
-## Problemes identifies
+## Analyse
 
-### 1. BUG CRITIQUE : useCalculations ne gere pas les conducteurs interim/autre/joker
+L'idée est solide : séparer l'app actuelle en deux produits distincts partageant la même base de données. C'est exactement ce que font des suites comme la suite Google (Docs, Sheets, Drive = mêmes données, apps différentes).
 
-**Fichier** : `src/hooks/useCalculations.ts` (lignes 28-43)
+### Répartition proposée
 
-Le hook `useCalculations` applique la formule CDI/CDD a TOUS les conducteurs sans distinction. Il calcule `baseSalary * (1 + patronalCharges/100)` meme pour les interim, autre et joker. Cela produit des couts errones.
+**App 1 — OptiFlow (Rentabilité)**
+- Calculateur de coûts
+- Itinéraires PL
+- Tournées sauvegardées
+- Dashboard financier + Forecast
+- Devis / Quotes
+- Clients (lecture seule ou partagé)
+- Paramètres société
 
-En comparaison, `src/utils/tourCostCalculation.ts` (le moteur centralise) gere correctement ces cas avec des branches specifiques pour `interim` (taux horaire x coefficient), `autre` (cout zero) et `joker`.
+**App 2 — OptiPlan (Opérationnel)**
+- Planning hebdomadaire (grille)
+- Répertoire conducteurs (CDI/CDD/Intérim)
+- Comptabilité des heures
+- Gestion véhicules + remorques
+- Clients (partagé)
+- Ordres de mission
 
-**Correction** : Aligner `useCalculations.ts` sur la logique de `tourCostCalculation.ts` pour traiter correctement chaque type de contrat.
+### Architecture technique
 
----
+```text
+┌─────────────┐     ┌─────────────┐
+│  OptiFlow   │     │  OptiPlan   │
+│  (Projet 1) │     │  (Projet 2) │
+│  Lovable    │     │  Lovable    │
+└──────┬──────┘     └──────┬──────┘
+       │                   │
+       │  même clé anon    │
+       │  même project_id  │
+       └────────┬──────────┘
+                │
+        ┌───────▼───────┐
+        │  Lovable Cloud │
+        │  (Supabase)    │
+        │  Tables partagées │
+        │  RLS par license_id │
+        └───────────────┘
+```
 
-### 2. BUG : Erreur console - LoadTourDialog ref warning
+### Comment le faire
 
-**Fichier** : `src/components/ai/LoadTourDialog.tsx`
+1. **Créer un nouveau projet Lovable** (OptiPlan)
+2. **Connecter le même backend Cloud** en configurant manuellement le client Supabase avec l'URL et la clé anon du projet actuel
+3. **Copier les composants nécessaires** : planning, conducteurs, véhicules, layout, auth
+4. **Les deux apps partagent** :
+   - Les mêmes tables (user_drivers, user_vehicles, planning_entries, etc.)
+   - Le même système d'auth (même utilisateur connecté aux deux)
+   - Le même realtime (modifications instantanées dans les deux apps)
+5. **Chaque app a son propre routing** simplifié (moitié moins de pages)
 
-La console affiche : `Function components cannot be given refs. Check the render method of LoadTourDialog.`
+### Avantages
+- Interface plus légère et ciblée par rôle
+- L'exploitant n'ouvre qu'OptiPlan, le dirigeant OptiFlow (ou les deux)
+- Performance améliorée (bundle JS divisé par ~2)
+- Maintenabilité : chaque app évolue indépendamment
+- Offre commerciale possible en bundle ou séparé
 
-Le composant `LoadTourDialog` est un composant fonctionnel passe comme enfant d'un `Dialog` Radix qui tente de lui passer un `ref`. Il doit etre enveloppe avec `React.forwardRef`.
+### Limites à anticiper
+- **Auth partagée** : l'utilisateur devra se connecter séparément sur chaque app (même identifiants, mais deux sessions)
+- **Clients partagés** : les deux apps lisent/écrivent la même table clients — pas de conflit car RLS par license_id
+- **Edge Functions** : déjà déployées sur le backend actuel, accessibles par les deux apps
+- **Maintenance double** : les composants UI communs (layout, auth, sidebar) devront être dupliqués initialement
 
-**Correction** : Convertir `LoadTourDialog` en composant `forwardRef` ou wrapper le Dialog correctement.
+### Étapes de mise en oeuvre
 
----
+1. Créer le projet Lovable "OptiPlan"
+2. Configurer la connexion au même backend (URL + clé anon)
+3. Migrer les pages : Planning, Conducteurs, Véhicules, Remorques
+4. Migrer les hooks associés : usePlanning, useCloudDrivers, useCloudVehicles, useCloudTrailers
+5. Adapter le layout/sidebar pour OptiPlan (navigation réduite)
+6. Retirer les pages migrées d'OptiFlow pour l'alléger
+7. Tester la synchronisation temps réel entre les deux apps
 
-### 3. BUG : SaveTourDialog recoit `costs.revenue` au lieu de `revenueWithVehicle`
-
-**Fichier** : `src/pages/Calculator.tsx` (ligne 1350)
-
-Quand on sauvegarde une tournee, le champ `revenue` est defini a `costs.revenue` (qui n'inclut PAS les couts vehicule/remorque) au lieu de `revenueWithVehicle`. Cela cause un decalage entre ce qui est affiche a l'ecran et ce qui est sauvegarde.
-
-**Correction** : Remplacer `revenue: costs.revenue` par `revenue: revenueWithVehicle` dans le `tourData` du `SaveTourDialog`.
-
----
-
-### 4. BUG POTENTIEL : Dashboard - hook conditionnel avant useMemo
-
-**Fichier** : `src/pages/Dashboard.tsx` (lignes 58-65)
-
-Le `return` conditionnel a la ligne 58 (`if (!isTeamLoading && !isDirection) return <OperationalDashboard />`) est place AVANT les appels `useMemo` aux lignes 62-80. Cela viole la regle des hooks React (les hooks doivent etre appeles inconditionnellement).
-
-**Correction** : Deplacer le `return` conditionnel APRES tous les `useMemo` et hooks.
-
----
-
-### 5. AMELIORATION : Bouton "Limite atteinte" redirige vers /pricing qui n'existe plus
-
-**Fichier** : `src/pages/Charges.tsx` (ligne 118, 355)
-
-Quand la limite de charges est atteinte, le bouton redirige vers `/pricing`, mais cette route a ete supprimee (commentaire dans App.tsx : "Pricing page removed"). Cela mene vers la page 404.
-
-**Correction** : Remplacer `navigate('/pricing')` par un `toast.info()` expliquant la limite du forfait, ou rediriger vers `/settings`.
-
----
-
-### 6. AMELIORATION : Sidebar redirige aussi vers /pricing
-
-**Fichier** : `src/components/layout/Sidebar.tsx` (ligne 173)
-
-Le `handleLockedClick` redirige vers `/pricing` qui n'existe plus.
-
-**Correction** : Remplacer par un toast sans redirection, ou rediriger vers une page existante.
-
----
-
-### 7. COHERENCE : Le masquage financier du Calculateur est incomplet pour les conducteurs
-
-**Fichier** : `src/pages/Calculator.tsx` (lignes 1090-1138)
-
-La section "Conducteurs selectionnes" affiche le `monthlyEmployerCost` (cout mensuel charge) et le `totalDaily` (cout journalier) pour TOUS les roles, y compris Exploitation et Membre. Ces donnees salariales devraient etre masquees pour les roles non-Direction, conformement a la politique de securite financiere.
-
-**Correction** : Conditionner l'affichage des couts salariaux avec `isDirection || canExploitationView('can_view_driver_cost')`.
-
----
-
-### 8. COHERENCE : La comparaison de tournee chargee affiche les finances pour tous les roles
-
-**Fichier** : `src/pages/Calculator.tsx` (lignes 440-542)
-
-Le tableau de comparaison "Ancien vs Nouveau" affiche les couts detailles, CA, benefice et marge sans verifier les permissions du role. Un utilisateur `membre` voit tout.
-
-**Correction** : Envelopper le tableau de comparaison dans les conditions de role appropriees.
-
----
-
-## Plan d'implementation
-
-### Etape 1 : Corriger useCalculations pour les types de contrat (critique)
-- Ajouter les branches `interim`, `autre`, `joker` dans la boucle des conducteurs
-- Aligner le calcul sur `tourCostCalculation.ts`
-
-### Etape 2 : Corriger le ref warning de LoadTourDialog
-- Ajouter `React.forwardRef` au composant ou restructurer le JSX
-
-### Etape 3 : Corriger la sauvegarde de tournee (revenue incorrect)
-- Remplacer `costs.revenue` par `revenueWithVehicle` dans le SaveTourDialog du Calculator
-
-### Etape 4 : Corriger le hook conditionnel dans Dashboard
-- Deplacer le return conditionnel apres tous les hooks
-
-### Etape 5 : Supprimer les redirections vers /pricing
-- Charges.tsx : remplacer par toast
-- Sidebar.tsx : remplacer par toast
-
-### Etape 6 : Masquer les donnees financieres des conducteurs selon le role
-- Conditionner l'affichage des couts salariaux dans la section conducteurs du Calculator
-
-### Etape 7 : Masquer le tableau de comparaison selon le role
-- Appliquer les conditions `canViewCostBreakdown` / `canViewFinancialData`
-
-### Section technique
-
-Les modifications impactent les fichiers suivants :
-- `src/hooks/useCalculations.ts`
-- `src/components/ai/LoadTourDialog.tsx`
-- `src/pages/Calculator.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/pages/Charges.tsx`
-- `src/components/layout/Sidebar.tsx`
-
-Aucune modification de base de donnees ou de schema n'est requise. Toutes les corrections sont cote client (React/TypeScript).
+Veux-tu que je crée le projet OptiPlan et commence la migration ?
 
