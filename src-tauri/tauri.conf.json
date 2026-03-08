@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OptiFlow - Line Optimizer",
+        "title": "OptiFlow",
         "width": 1400,
         "height": 900,
         "minWidth": 1024,
