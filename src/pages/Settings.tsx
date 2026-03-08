@@ -298,6 +298,7 @@ export default function Settings() {
         {/* Licence & Features */}
         <TabsContent value="license" className="space-y-6">
           <LicenseSyncSettings />
+          <AddonMarketplace />
         </TabsContent>
 
         {/* Notifications */}
