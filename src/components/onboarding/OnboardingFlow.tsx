@@ -95,6 +95,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
   const [stripeSessionId, setStripeSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [yearly, setYearly] = useState(false);
 
   // SIREN step
   const { lookup, loading: sirenLoading, error: sirenError, company, reset: resetSiren } = useSireneLookup();
