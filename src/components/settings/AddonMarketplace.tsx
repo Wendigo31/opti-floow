@@ -181,7 +181,7 @@ export function AddonMarketplace() {
   }, 0);
 
   const handleCheckout = async () => {
-    if (!cart.length || !licenseData?.licenseId || !licenseData?.email) return;
+    if (!cart.length || !licenseId || !licenseData?.email) return;
 
     setLoading(true);
     try {
