@@ -364,6 +364,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
                     </CardContent>
                   </Card>
                 );
+              })}
             </div>
           </div>
         )}
