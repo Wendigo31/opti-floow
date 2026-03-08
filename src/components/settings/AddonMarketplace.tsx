@@ -131,19 +131,19 @@ export function AddonMarketplace() {
 
   // Fetch active addons
   useEffect(() => {
-    if (!licenseData?.licenseId) return;
+    if (!licenseId) return;
     const fetchActiveAddons = async () => {
       const { data } = await supabase
         .from('license_addons')
         .select('addon_id')
-        .eq('license_id', licenseData.licenseId)
+        .eq('license_id', licenseId)
         .eq('is_active', true);
       if (data) {
         setActiveAddons(data.map(a => a.addon_id));
       }
     };
     fetchActiveAddons();
-  }, [licenseData?.licenseId]);
+  }, [licenseId]);
 
   const activateAddons = async (sessionId: string) => {
     setActivating(true);
