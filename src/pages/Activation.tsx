@@ -11,6 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LegalTabs from '@/components/settings/LegalTabs';
+import PricingSection from '@/components/activation/PricingSection';
+import PricingFAQ from '@/components/activation/PricingFAQ';
 
 export default function Activation() {
   const activationSchema = z.object({
@@ -73,7 +75,7 @@ export default function Activation() {
 
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-8 gap-8">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-8 gap-8 pb-16">
       {/* Logo */}
       <div className="text-center">
         <img src={optiflowLogo} alt="OptiFlow Logo" className="w-48 h-48 mx-auto mb-2 object-contain" />
@@ -81,7 +83,7 @@ export default function Activation() {
       </div>
 
       {/* Main grid: Login + Comparison */}
-      <div className="w-full max-w-3xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         
         {/* Login Card */}
         <div className="glass-card p-8">
@@ -230,6 +232,12 @@ export default function Activation() {
           </p>
         </div>
       </div>
+
+      {/* Detailed Pricing Section */}
+      <PricingSection onChoosePlan={() => setShowOnboarding(true)} />
+
+      {/* FAQ Section */}
+      <PricingFAQ />
 
       <p className="text-xs text-center text-muted-foreground">
         © {new Date().getFullYear()} OptiFlow - Tous droits réservés
