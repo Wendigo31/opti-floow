@@ -149,7 +149,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
       // For simplicity, go to Stripe directly with the plan
       const { data, error: invokeError } = await supabase.functions.invoke('create-checkout', {
         body: {
-          priceId: plan.priceId,
+          priceId: yearly ? plan.yearlyPriceId : plan.monthlyPriceId,
           email: email || `onboarding-${Date.now()}@temp.optiflow.fr`,
           planType: plan.id,
         },
