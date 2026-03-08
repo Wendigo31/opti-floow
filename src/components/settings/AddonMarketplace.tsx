@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  ShoppingCart, Map, CalendarDays, Route, Truck, Users2, UserPlus, Brain, 
+  ShoppingCart, Route, Truck, Users2, UserPlus, Brain, 
   Shield, Check, Loader2, RefreshCw, Sparkles, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,29 +22,18 @@ interface Addon {
   category: 'feature' | 'capacity';
 }
 
+// Features included by plan - used to hide already-included add-ons
+const PLAN_INCLUDED_FEATURES: Record<string, string[]> = {
+  start: ['itinerary_planning'],
+  pro: ['itinerary_planning', 'monthly_tracking', 'ai_optimization'],
+  enterprise: ['itinerary_planning', 'monthly_tracking', 'ai_optimization', 'multi_users'],
+};
+
 const ADDONS: Addon[] = [
   {
-    id: 'itinerary',
-    name: 'Itinéraire',
-    description: 'Calcul de routes poids-lourds avec restrictions, péages et alternatives.',
-    price: 19.99,
-    priceId: 'price_1T8pHL0uHa1YT0odtxr3m9GV',
-    icon: Map,
-    category: 'feature',
-  },
-  {
-    id: 'planning',
-    name: 'Planning',
-    description: 'Gestion complète du planning conducteurs et tournées hebdomadaires.',
-    price: 29.99,
-    priceId: 'price_1T8pHM0uHa1YT0odtoWug7QH',
-    icon: CalendarDays,
-    category: 'feature',
-  },
-  {
     id: 'ai_analysis',
-    name: 'Analyse IA',
-    description: 'Analyses avancées par intelligence artificielle pour optimiser vos coûts.',
+    name: 'Analyse IA (3/jour)',
+    description: 'Analyses avancées par intelligence artificielle pour optimiser vos coûts. Réservé au forfait Start.',
     price: 14.99,
     priceId: 'price_1T8pHS0uHa1YT0odE2QHlcn9',
     icon: Brain,
@@ -61,37 +50,37 @@ const ADDONS: Addon[] = [
   },
   {
     id: 'extra_tours',
-    name: '+5 Tournées',
-    description: '5 tournées supplémentaires pour votre forfait.',
-    price: 9.99,
-    priceId: 'price_1T8pHN0uHa1YT0odJ3ZhMVsi',
+    name: '+10 Tournées',
+    description: '10 tournées supplémentaires pour votre forfait.',
+    price: 4.99,
+    priceId: 'price_1T8pX80uHa1YT0odiz1jfTAh',
     icon: Route,
     category: 'capacity',
   },
   {
     id: 'extra_vehicles',
-    name: '+5 Véhicules',
-    description: '5 véhicules supplémentaires à gérer dans votre flotte.',
-    price: 4.99,
-    priceId: 'price_1T8pHO0uHa1YT0odjo0w6zF2',
+    name: '+10 Véhicules',
+    description: '10 véhicules supplémentaires à gérer dans votre flotte.',
+    price: 9.99,
+    priceId: 'price_1T8pX50uHa1YT0odFmezVKaV',
     icon: Truck,
     category: 'capacity',
   },
   {
     id: 'extra_drivers',
-    name: '+5 Conducteurs',
-    description: '5 conducteurs supplémentaires à enregistrer.',
-    price: 4.99,
-    priceId: 'price_1T8pHQ0uHa1YT0od21VgppjY',
+    name: '+10 Conducteurs',
+    description: '10 conducteurs supplémentaires à enregistrer.',
+    price: 9.99,
+    priceId: 'price_1T8pX60uHa1YT0odlbLxTVFt',
     icon: UserPlus,
     category: 'capacity',
   },
   {
     id: 'extra_clients',
-    name: '+5 Clients',
-    description: '5 clients supplémentaires dans votre carnet.',
+    name: '+10 Clients',
+    description: '10 clients supplémentaires dans votre carnet.',
     price: 4.99,
-    priceId: 'price_1T8pHR0uHa1YT0odx7PtBNx5',
+    priceId: 'price_1T8pX70uHa1YT0odiCwaIHsO',
     icon: Users2,
     category: 'capacity',
   },
