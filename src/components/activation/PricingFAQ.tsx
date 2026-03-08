@@ -15,7 +15,7 @@ const FAQ_CATEGORIES = [
       },
       {
         question: 'Puis-je installer l\'application sur mon ordinateur ?',
-        answer: 'Oui, Line Optimizer est disponible en tant qu\'application de bureau (PWA) et application native Tauri pour Windows et macOS. Vous pouvez l\'installer directement depuis votre navigateur ou télécharger l\'installeur depuis la page dédiée.',
+        answer: 'Oui, OptiFlow est disponible en tant qu\'application de bureau (PWA) et application native Tauri pour Windows et macOS. Vous pouvez l\'installer directement depuis votre navigateur ou télécharger l\'installeur depuis la page dédiée.',
       },
       {
         question: 'L\'application fonctionne-t-elle hors connexion ?',
