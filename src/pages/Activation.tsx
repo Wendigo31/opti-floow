@@ -25,6 +25,8 @@ export default function Activation() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showLegal, setShowLegal] = useState(false);
 
   // Check if returning from Stripe checkout
   useEffect(() => {
