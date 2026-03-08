@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
         manifest: {
-          name: "OptiFlow - Line Optimizer",
+          name: "OptiFlow",
           short_name: "OptiFlow",
           description:
             "Application professionnelle de pilotage de rentabilité pour les entreprises de transport routier",

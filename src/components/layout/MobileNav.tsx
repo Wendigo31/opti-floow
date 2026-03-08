@@ -128,7 +128,7 @@ export function MobileNav() {
             <img src={optiflowLogo} alt="OptiFlow" className="w-8 h-8 object-contain" />
             <div>
               <h1 className="font-bold text-sidebar-foreground">OptiFlow</h1>
-              <span className="text-xs text-sidebar-accent-foreground">Line Optimizer</span>
+              <span className="text-xs text-sidebar-accent-foreground">Pilotage de rentabilité</span>
             </div>
           </NavLink>
           <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="text-sidebar-foreground">
