@@ -300,55 +300,71 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
 
         {/* Step 1: Plan Selection */}
         {step === 'plan' && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {PLANS.map((plan) => {
-              const Icon = plan.icon;
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
-                    selectedPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => handleSelectPlan(plan)}
-                >
-                  {plan.popular && (
-                    <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
-                      Populaire
-                    </Badge>
-                  )}
-                  <CardHeader className="text-center pb-2">
-                    <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    <CardDescription>
-                      <span className="text-2xl font-bold text-foreground">{plan.price}€</span>
-                      <span className="text-muted-foreground">/mois</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <ul className="space-y-1 text-xs text-muted-foreground">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      variant="gradient"
-                      className="w-full mt-4"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      {loading && selectedPlan?.id === plan.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>Choisir</>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
+          <div className="space-y-4">
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-3">
+              <span className={`text-sm ${!yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Mensuel</span>
+              <Switch checked={yearly} onCheckedChange={setYearly} />
+              <span className={`text-sm ${yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Annuel</span>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {PLANS.map((plan) => {
+                const Icon = plan.icon;
+                const displayPrice = yearly ? plan.yearlyPrice : plan.monthlyPrice;
+                const period = yearly ? '/an' : '/mois';
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
+                      selectedPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => handleSelectPlan(plan)}
+                  >
+                    {plan.popular && (
+                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
+                        Populaire
+                      </Badge>
+                    )}
+                    <CardHeader className="text-center pb-2">
+                      <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <CardTitle className="text-lg">{plan.name}</CardTitle>
+                      <CardDescription>
+                        <span className="text-2xl font-bold text-foreground">{displayPrice.toFixed(2)}€</span>
+                        <span className="text-muted-foreground"> TTC{period}</span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ul className="space-y-1 text-xs">
+                        {plan.features.map((f) => (
+                          <li key={f.label} className={`flex items-center gap-1 ${f.included ? 'text-muted-foreground' : 'text-muted-foreground/50 line-through'}`}>
+                            {f.included ? (
+                              <Check className="w-3 h-3 text-primary flex-shrink-0" />
+                            ) : (
+                              <X className="w-3 h-3 text-destructive/50 flex-shrink-0" />
+                            )}
+                            {f.label}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        variant="gradient"
+                        className="w-full mt-4"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        {loading && selectedPlan?.id === plan.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>Choisir</>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
               );
             })}
           </div>
