@@ -6,7 +6,7 @@ const FAQ_CATEGORIES = [
     title: '🚀 Prise en main & Inscription',
     items: [
       {
-        question: 'Comment créer mon compte Line Optimizer ?',
+        question: 'Comment créer mon compte OptiFlow ?',
         answer: 'Depuis la page d\'accueil, cliquez sur « Choisir ce forfait » sous l\'offre souhaitée. Vous serez redirigé vers notre paiement sécurisé Stripe, puis vers un formulaire d\'onboarding pour renseigner votre société (SIREN, nom, email). Votre identifiant société et vos accès sont créés automatiquement.',
       },
       {
