@@ -387,13 +387,17 @@ serve(async (req) => {
     }
 
     // 10. Create default features for the plan
+    const planFeatures = PLAN_FEATURE_DEFAULTS[effectivePlan] || PLAN_FEATURE_DEFAULTS['start'];
     const { error: featError } = await supabase.from("license_features").insert({
       license_id: newLicense.id,
+      ...planFeatures,
     });
 
     if (featError) {
       console.error("[self-register] Features creation error:", featError);
     }
+
+    console.log("[self-register] Plan features created for plan:", effectivePlan);
 
     // 11. Log the action
     await supabase.from("admin_audit_log").insert({
