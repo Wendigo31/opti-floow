@@ -237,8 +237,8 @@ const FAQ_CATEGORIES = [
         answer: 'Oui, un tutoriel interactif est intégré à l\'application lors de la première connexion. Des guides utilisateurs sont disponibles. Pour les clients Enterprise, nous proposons des sessions de formation personnalisées à distance.',
       },
       {
-        question: 'Qui développe Line Optimizer ?',
-        answer: 'Line Optimizer est développé par OptiGroup (en cours d\'immatriculation), une société spécialisée dans les solutions digitales pour le transport routier. Le logiciel est conçu par et pour des professionnels du transport.',
+        question: 'Qui développe OptiFlow ?',
+        answer: 'OptiFlow est développé par OptiGroup (en cours d\'immatriculation), une société spécialisée dans les solutions digitales pour le transport routier. Le logiciel est conçu par et pour des professionnels du transport.',
       },
     ],
   },
