@@ -127,7 +127,7 @@ export function AddonMarketplace() {
       url.searchParams.delete('addon_cancelled');
       window.history.replaceState({}, '', url.pathname + url.search);
     }
-  }, [licenseData?.licenseId]);
+  }, [licenseId]);
 
   // Fetch active addons
   useEffect(() => {
