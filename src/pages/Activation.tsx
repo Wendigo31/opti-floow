@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 
 export default function Activation() {
   const activationSchema = z.object({
