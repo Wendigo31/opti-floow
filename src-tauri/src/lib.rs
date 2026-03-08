@@ -15,7 +15,7 @@ pub fn run() {
             // Get the main window
             if let Some(window) = app.get_webview_window("main") {
                 // Set window title
-                let _ = window.set_title("OptiFlow - Line Optimizer");
+                let _ = window.set_title("OptiFlow");
             }
             Ok(())
         })
