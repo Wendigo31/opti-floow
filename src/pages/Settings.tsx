@@ -5,6 +5,7 @@ import { NotificationSettings } from '@/components/settings/NotificationSettings
 import { LicenseSyncSettings } from '@/components/settings/LicenseSyncSettings';
 import { ActivityHistory } from '@/components/shared/ActivityHistory';
 import LegalTabs from '@/components/settings/LegalTabs';
+import { AddonMarketplace } from '@/components/settings/AddonMarketplace';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -297,6 +298,7 @@ export default function Settings() {
         {/* Licence & Features */}
         <TabsContent value="license" className="space-y-6">
           <LicenseSyncSettings />
+          <AddonMarketplace />
         </TabsContent>
 
         {/* Notifications */}
