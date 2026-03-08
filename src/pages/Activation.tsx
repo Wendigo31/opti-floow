@@ -74,16 +74,22 @@ export default function Activation() {
       period: '/mois TTC',
       yearly: '549€/an (-8%)',
       color: 'from-emerald-500 to-teal-600',
+      subtitle: 'Découverte',
+      description: 'Pour tester les bases du calcul de coûts.',
+      limitations: ['Limité à 5 calculs/jour', 'Pas de planning ni d\'IA', 'Pas de gestion d\'équipe'],
       features: {
         calculs: '5 / jour',
-        itineraire: true,
+        itineraire: 'Basique',
         tournees: '5 max',
         planning: false,
         analyse: false,
         vehicules: '5 max',
         conducteurs: '5 max',
         clients: '10 max',
+        devis: false,
         equipe: false,
+        previsions: false,
+        exportPdf: false,
       },
     },
     {
@@ -94,16 +100,22 @@ export default function Activation() {
       yearly: '1 399€/an (-12%)',
       color: 'from-blue-500 to-indigo-600',
       popular: true,
+      subtitle: 'Croissance',
+      description: 'Pour les PME qui veulent optimiser leurs coûts.',
+      limitations: ['Limité à 25 calculs/jour', '15 véhicules max', 'Pas de gestion d\'équipe'],
       features: {
         calculs: '25 / jour',
-        itineraire: true,
+        itineraire: 'Complet',
         tournees: '20 max',
         planning: true,
         analyse: '5 / jour',
         vehicules: '15 max',
         conducteurs: '15 max',
         clients: '30 max',
+        devis: false,
         equipe: false,
+        previsions: false,
+        exportPdf: true,
       },
     },
     {
@@ -114,30 +126,39 @@ export default function Activation() {
       yearly: '2 199€/an (-27%)',
       color: 'from-amber-500 to-orange-600',
       bestValue: true,
+      subtitle: 'Performance maximale',
+      description: 'Tout illimité. L\'outil complet pour piloter votre rentabilité.',
+      limitations: [],
       features: {
         calculs: 'Illimité',
-        itineraire: true,
+        itineraire: 'Complet + PL',
         tournees: 'Illimité',
         planning: true,
         analyse: 'Illimité',
         vehicules: 'Illimité',
         conducteurs: 'Illimité',
         clients: 'Illimité',
+        devis: true,
         equipe: true,
+        previsions: true,
+        exportPdf: true,
       },
     },
   ];
 
   const featureLabels: Record<string, string> = {
-    calculs: 'Calculs',
-    itineraire: 'Itinéraire',
-    tournees: 'Tournées',
-    planning: 'Planning',
+    calculs: 'Calculs de coûts',
+    itineraire: 'Itinéraire PL',
+    tournees: 'Tournées sauvegardées',
+    planning: 'Planning conducteurs',
     analyse: 'Analyse IA',
     vehicules: 'Véhicules',
     conducteurs: 'Conducteurs',
     clients: 'Clients',
-    equipe: 'Équipe & confidentialité',
+    devis: 'Devis & facturation',
+    equipe: 'Multi-utilisateurs & équipe',
+    previsions: 'Prévisions & forecast',
+    exportPdf: 'Export PDF avancé',
   };
 
   const renderFeatureValue = (value: string | boolean) => {
@@ -155,7 +176,7 @@ export default function Activation() {
       </div>
 
       {/* Main grid: Login + Comparison */}
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 items-start">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 items-start">
         
         {/* Login Card */}
         <div className="glass-card p-8">
@@ -257,30 +278,46 @@ export default function Activation() {
         {/* Plans Comparison */}
         <div className="glass-card p-6">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Nos forfaits</h2>
-            <p className="text-sm text-muted-foreground mt-1">Choisissez l'offre adaptée à votre activité</p>
+            <h2 className="text-xl font-semibold text-foreground">Comparez nos forfaits</h2>
+            <p className="text-sm text-muted-foreground mt-1">Investissez dans la rentabilité de votre flotte</p>
           </div>
 
-          {/* Plan headers */}
+          {/* Plan headers with descriptions */}
           <div className="grid grid-cols-[1fr_repeat(3,minmax(0,1fr))] gap-0">
             {/* Empty top-left */}
             <div />
             {plans.map((plan) => {
               const Icon = plan.icon;
               return (
-                <div key={plan.name} className="text-center pb-4 relative">
+                <div key={plan.name} className={`text-center pb-4 relative px-2 ${plan.bestValue ? 'bg-primary/5 rounded-t-xl border-t-2 border-x border-primary/20' : ''}`}>
                   {plan.popular && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                       Populaire
                     </span>
                   )}
-                  <div className={`w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
+                  {plan.bestValue && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full whitespace-nowrap shadow-md">
+                      🏆 Meilleur choix
+                    </span>
+                  )}
+                  <div className={`w-10 h-10 rounded-lg mx-auto mb-2 mt-3 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <p className="font-bold text-foreground">{plan.name}</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">{plan.subtitle}</p>
                   <p className="text-lg font-bold text-foreground">{plan.price}</p>
                   <p className="text-[10px] text-muted-foreground">{plan.period}</p>
-                  <p className="text-[10px] text-muted-foreground">ou {plan.yearly}</p>
+                  <p className={`text-[10px] font-semibold ${plan.bestValue ? 'text-primary' : 'text-muted-foreground'}`}>
+                    ou {plan.yearly}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground mt-1 leading-tight px-1">{plan.description}</p>
+                  {plan.limitations && plan.limitations.length > 0 && (
+                    <div className="mt-2 space-y-0.5">
+                      {plan.limitations.map((lim, i) => (
+                        <p key={i} className="text-[9px] text-destructive/70 leading-tight">⚠ {lim}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -292,7 +329,7 @@ export default function Activation() {
                   {label}
                 </div>
                 {plans.map((plan) => (
-                  <div key={`${plan.name}-${key}`} className={`flex items-center justify-center py-2.5 ${i % 2 === 0 ? 'bg-muted/30' : ''} ${plan.name === 'Enterprise' ? 'rounded-r-md' : ''}`}>
+                  <div key={`${plan.name}-${key}`} className={`flex items-center justify-center py-2.5 ${i % 2 === 0 ? 'bg-muted/30' : ''} ${plan.bestValue ? 'bg-primary/5' : ''} ${plan.name === 'Enterprise' ? 'rounded-r-md' : ''}`}>
                     {renderFeatureValue(plan.features[key as keyof typeof plan.features])}
                   </div>
                 ))}
@@ -300,17 +337,24 @@ export default function Activation() {
             ))}
           </div>
 
-          {/* CTA */}
-          <div className="mt-6 pt-4 border-t border-border text-center">
-            <p className="text-sm text-muted-foreground mb-3">Pas encore de compte ?</p>
+          {/* CTA - push Enterprise */}
+          <div className="mt-6 pt-4 border-t border-border">
+            <div className="text-center mb-3">
+              <p className="text-sm font-medium text-foreground">🚀 87% de nos clients choisissent Enterprise</p>
+              <p className="text-xs text-muted-foreground">Pas de limites = pas de surprises. Concentrez-vous sur votre activité.</p>
+            </div>
             <Button
               variant="gradient"
               size="lg"
+              className="w-full"
               onClick={() => setShowOnboarding(true)}
             >
               <CreditCard className="w-4 h-4 mr-2" />
-              Prendre un abonnement
+              Prendre un abonnement Enterprise
             </Button>
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
+              Économisez jusqu'à 27% avec l'abonnement annuel
+            </p>
           </div>
         </div>
       </div>
