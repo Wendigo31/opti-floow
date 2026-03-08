@@ -42,7 +42,7 @@
     "copyright": "© 2024 OptiFlow - SAS OptiGroup",
     "category": "Business",
     "shortDescription": "Logiciel de gestion et optimisation de transport",
-    "longDescription": "OptiFlow - Line Optimizer est un logiciel professionnel de calcul de coûts et d'optimisation de lignes de transport routier.",
+    "longDescription": "OptiFlow est un logiciel professionnel de calcul de coûts et d'optimisation de lignes de transport routier.",
     "createUpdaterArtifacts": false,
     "windows": {
       "certificateThumbprint": null,
