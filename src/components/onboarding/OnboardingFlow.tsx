@@ -84,64 +84,8 @@ const PLANS = [
     color: 'from-amber-500 to-orange-600',
   },
 ];
-    icon: Rocket,
-    features: [
-      { label: '5 calculs par jour', included: true },
-      { label: 'Itinéraire PL', included: true },
-      { label: '5 tournées', included: true },
-      { label: 'Planning', included: false },
-      { label: 'Analyse IA', included: false },
-      { label: '5 véhicules', included: true },
-      { label: '5 conducteurs', included: true },
-      { label: '10 clients', included: true },
-      { label: 'Équipe & confidentialité', included: false },
-    ],
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    monthlyPrice: 79.99,
-    yearlyPrice: 799,
-    monthlyPriceId: 'price_1T8pX10uHa1YT0odbVOIixGF',
-    yearlyPriceId: 'price_1T8pX20uHa1YT0odYthsResr',
-    icon: Star,
-    popular: true,
-    features: [
-      { label: '25 calculs par jour', included: true },
-      { label: 'Itinéraire PL complet', included: true },
-      { label: '20 tournées', included: true },
-      { label: 'Planning conducteurs', included: true },
-      { label: '5 analyses IA / jour', included: true },
-      { label: '15 véhicules', included: true },
-      { label: '15 conducteurs', included: true },
-      { label: '30 clients', included: true },
-      { label: 'Équipe & confidentialité', included: false },
-    ],
-    color: 'from-blue-500 to-indigo-600',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyPrice: 149.99,
-    yearlyPrice: 1499,
-    monthlyPriceId: 'price_1T8pX30uHa1YT0od9DLH5rPK',
-    yearlyPriceId: 'price_1T8pX40uHa1YT0od1yKHAEc7',
-    icon: Crown,
-    features: [
-      { label: 'Calculs illimités', included: true },
-      { label: 'Itinéraire complet', included: true },
-      { label: 'Tournées illimitées', included: true },
-      { label: 'Planning complet', included: true },
-      { label: 'Analyses IA illimitées', included: true },
-      { label: 'Véhicules illimités', included: true },
-      { label: 'Conducteurs illimités', included: true },
-      { label: 'Clients illimités', included: true },
-      { label: 'Équipe & confidentialité', included: true },
-    ],
-    color: 'from-amber-500 to-orange-600',
-  },
-];
+
+
 
 interface OnboardingFlowProps {
   open: boolean;
