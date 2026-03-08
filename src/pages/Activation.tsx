@@ -240,6 +240,15 @@ export default function Activation() {
         onOpenChange={setShowOnboarding}
         onComplete={handleOnboardingComplete}
       />
+
+      <Dialog open={showLegal} onOpenChange={setShowLegal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Conditions Générales & Politique de Confidentialité</DialogTitle>
+          </DialogHeader>
+          <LegalTabs />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
