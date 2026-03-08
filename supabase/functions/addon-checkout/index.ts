@@ -238,12 +238,10 @@ serve(async (req) => {
 
 function getAddonName(addonId: string): string {
   const names: Record<string, string> = {
-    itinerary: "Itinéraire",
-    planning: "Planning",
-    extra_tours: "+5 Tournées",
-    extra_vehicles: "+5 Véhicules",
-    extra_drivers: "+5 Conducteurs",
-    extra_clients: "+5 Clients",
+    extra_tours: "+10 Tournées",
+    extra_vehicles: "+10 Véhicules",
+    extra_drivers: "+10 Conducteurs",
+    extra_clients: "+10 Clients",
     ai_analysis: "Analyse IA",
     team: "Équipe & Confidentialité",
   };
