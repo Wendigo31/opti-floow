@@ -380,7 +380,7 @@ export function AddonMarketplace() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-500" />
+              <Check className="w-5 h-5 text-success" />
               Modules activés avec succès !
             </DialogTitle>
             <DialogDescription>
