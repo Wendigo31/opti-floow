@@ -19,7 +19,7 @@ export default function Activation() {
     code: z.string().min(1, 'Code licence requis'),
     email: z.string().email('Email invalide').min(1, 'Email requis')
   });
-  
+
   const { validateLicense } = useLicense();
   const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
@@ -43,18 +43,18 @@ export default function Activation() {
     setEmail(userEmail);
     setShowOnboarding(false);
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
-    
+
     const validation = activationSchema.safeParse({ code, email });
     if (!validation.success) {
       setError(validation.error.errors[0].message);
       return;
     }
-    
+
     setLoading(true);
     try {
       const result = await validateLicense(code, email);
@@ -79,7 +79,7 @@ export default function Activation() {
       {/* Logo */}
       <div className="text-center">
         <img src={optiflowLogo} alt="OptiFlow Logo" className="w-48 h-48 mx-auto mb-2 object-contain" />
-        <h1 className="text-3xl font-bold text-foreground">OptiFlow</h1>
+        
       </div>
 
       {/* Main content */}
@@ -100,15 +100,15 @@ export default function Activation() {
                 <Key className="w-4 h-4 text-primary" />
                 Identifiant société
               </Label>
-              <Input 
-                id="code" 
-                type="text" 
-                value={code} 
-                onChange={e => setCode(e.target.value.toUpperCase())} 
-                placeholder="TRANSPORT-MARTIN" 
-                className="font-mono text-center tracking-wider" 
-                disabled={loading || success} 
-              />
+              <Input
+                id="code"
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="TRANSPORT-MARTIN"
+                className="font-mono text-center tracking-wider"
+                disabled={loading || success} />
+              
             </div>
 
             <div className="space-y-2">
@@ -116,76 +116,76 @@ export default function Activation() {
                 <Mail className="w-4 h-4 text-primary" />
                 Email
               </Label>
-              <Input 
-                id="email" 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                placeholder="votre@email.com" 
-                disabled={loading || success} 
-              />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="votre@email.com"
+                disabled={loading || success} />
+              
             </div>
 
-            {error && (
-              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
-                error.includes('simultanée') 
-                  ? 'bg-warning/10 border border-warning/30 text-warning-foreground' 
-                  : 'bg-destructive/10 border border-destructive/30 text-destructive'
-              }`}>
-                {error.includes('simultanée') ? (
-                  <Users className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                )}
+            {error &&
+            <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+            error.includes('simultanée') ?
+            'bg-warning/10 border border-warning/30 text-warning-foreground' :
+            'bg-destructive/10 border border-destructive/30 text-destructive'}`
+            }>
+                {error.includes('simultanée') ?
+              <Users className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" /> :
+
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              }
                 <div>
                   <p className="font-medium">{error.includes('simultanée') ? 'Connexion simultanée détectée' : 'Erreur'}</p>
                   <p className="text-xs mt-1 opacity-80">{error}</p>
                 </div>
               </div>
-            )}
+            }
 
-            {success && (
-              <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm">
+            {success &&
+            <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 Connexion réussie !
               </div>
-            )}
+            }
 
             <div className="flex items-start gap-2">
               <Checkbox
                 id="terms"
                 checked={acceptedTerms}
                 onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                disabled={loading || success}
-              />
+                disabled={loading || success} />
+              
               <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
                 J'accepte les{' '}
                 <button
                   type="button"
                   onClick={() => setShowLegal(true)}
-                  className="text-primary hover:underline font-medium"
-                >
+                  className="text-primary hover:underline font-medium">
+                  
                   Conditions Générales de Vente et d'Utilisation (CGVU)
                 </button>
                 {' '}et la{' '}
                 <button
                   type="button"
                   onClick={() => setShowLegal(true)}
-                  className="text-primary hover:underline font-medium"
-                >
+                  className="text-primary hover:underline font-medium">
+                  
                   Politique de Confidentialité
                 </button>
               </label>
             </div>
 
             <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success || !acceptedTerms}>
-              {loading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</>
-              ) : success ? (
-                <><CheckCircle2 className="w-4 h-4 mr-2" />Connecté</>
-              ) : (
-                <><Key className="w-4 h-4 mr-2" />Se connecter</>
-              )}
+              {loading ?
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</> :
+              success ?
+              <><CheckCircle2 className="w-4 h-4 mr-2" />Connecté</> :
+
+              <><Key className="w-4 h-4 mr-2" />Se connecter</>
+              }
             </Button>
           </form>
 
@@ -223,8 +223,8 @@ export default function Activation() {
       <OnboardingFlow
         open={showOnboarding}
         onOpenChange={setShowOnboarding}
-        onComplete={handleOnboardingComplete}
-      />
+        onComplete={handleOnboardingComplete} />
+      
 
       <Dialog open={showLegal} onOpenChange={setShowLegal}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -234,6 +234,6 @@ export default function Activation() {
           <LegalTabs />
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 }
