@@ -11,7 +11,7 @@ const FAQ_CATEGORIES = [
       },
       {
         question: 'Quels navigateurs sont compatibles ?',
-        answer: 'Line Optimizer fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Edge, Safari. L\'application est responsive et s\'utilise aussi sur tablette et smartphone. Une version desktop (Windows/Mac) est également disponible via notre installeur.',
+        answer: 'OptiFlow fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Edge, Safari. L\'application est responsive et s\'utilise aussi sur tablette et smartphone. Une version desktop (Windows/Mac) est également disponible via notre installeur.',
       },
       {
         question: 'Puis-je installer l\'application sur mon ordinateur ?',
