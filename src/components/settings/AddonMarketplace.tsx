@@ -112,7 +112,7 @@ export function AddonMarketplace() {
     const sessionId = params.get('session_id');
     const addonSuccess = params.get('addon_success');
 
-    if (addonSuccess === 'true' && sessionId && licenseData?.licenseId) {
+    if (addonSuccess === 'true' && sessionId && licenseId) {
       activateAddons(sessionId);
       // Clean URL
       const url = new URL(window.location.href);
