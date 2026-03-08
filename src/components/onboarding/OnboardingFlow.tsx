@@ -10,36 +10,73 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
   Loader2, Search, Building2, User, CheckCircle2, Copy, ArrowRight, ArrowLeft,
-  Rocket, Star, Crown, AlertCircle, LogIn
+  Rocket, Star, Crown, AlertCircle, LogIn, X, Check
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const PLANS = [
   {
     id: 'start',
     name: 'Start',
-    price: 29,
-    priceId: 'price_1T8oxh0uHa1YT0odJaawwaL0',
+    monthlyPrice: 29.99,
+    yearlyPrice: 359.88,
+    monthlyPriceId: 'price_1T8p4v0uHa1YT0odgsK4Qkmx',
+    yearlyPriceId: 'price_1T8p4x0uHa1YT0odm57ZUl9h',
     icon: Rocket,
-    features: ['Calculateur de base', 'Tableau de bord basique', '2 véhicules', '2 conducteurs', '1 utilisateur'],
+    features: [
+      { label: '2 calculs par jour', included: true },
+      { label: 'Itinéraire', included: false },
+      { label: 'Tournées', included: false },
+      { label: 'Planning', included: false },
+      { label: 'Analyse', included: false },
+      { label: '2 véhicules max', included: true },
+      { label: '2 conducteurs max', included: true },
+      { label: '2 clients max', included: true },
+      { label: 'Équipe & confidentialité', included: false },
+    ],
     color: 'from-emerald-500 to-teal-600',
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: 79,
-    priceId: 'price_1T8oxj0uHa1YT0od3phOngMq',
+    monthlyPrice: 79.99,
+    yearlyPrice: 959.88,
+    monthlyPriceId: 'price_1T8p4y0uHa1YT0od8ORpx0f5',
+    yearlyPriceId: 'price_1T8p4z0uHa1YT0odmWpzApAh',
     icon: Star,
     popular: true,
-    features: ['Itinéraire complet', 'Analyse des coûts', 'Export PDF/Excel', 'Alertes marge', '10 véhicules', '5 conducteurs', '3 utilisateurs'],
+    features: [
+      { label: '10 calculs par jour', included: true },
+      { label: 'Itinéraire', included: false },
+      { label: '5 tournées max', included: true },
+      { label: 'Planning', included: false },
+      { label: '1 analyse par jour', included: true },
+      { label: '5 véhicules max', included: true },
+      { label: '5 conducteurs max', included: true },
+      { label: '5 clients max', included: true },
+      { label: 'Équipe & confidentialité', included: false },
+    ],
     color: 'from-blue-500 to-indigo-600',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 149,
-    priceId: 'price_1T8oxk0uHa1YT0odtM22Jen4',
+    monthlyPrice: 149.99,
+    yearlyPrice: 1799.88,
+    monthlyPriceId: 'price_1T8p500uHa1YT0odBcqW2Xw8',
+    yearlyPriceId: 'price_1T8p510uHa1YT0odfc0Zlsl0',
     icon: Crown,
-    features: ['Toutes fonctionnalités', 'IA & optimisation', 'Multi-agences', 'Intégration TMS/ERP', 'Véhicules illimités', 'Conducteurs illimités', 'Utilisateurs illimités'],
+    features: [
+      { label: 'Calculs illimités', included: true },
+      { label: 'Itinéraire complet', included: true },
+      { label: 'Tournées illimitées', included: true },
+      { label: 'Planning complet', included: true },
+      { label: 'Analyses illimitées', included: true },
+      { label: 'Véhicules illimités', included: true },
+      { label: 'Conducteurs illimités', included: true },
+      { label: 'Clients illimités', included: true },
+      { label: 'Équipe & confidentialité', included: true },
+    ],
     color: 'from-amber-500 to-orange-600',
   },
 ];
