@@ -83,7 +83,7 @@ export default function Activation() {
       </div>
 
       {/* Main grid: Login + Comparison */}
-      <div className="w-full max-w-3xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         
         {/* Login Card */}
         <div className="glass-card p-8">
