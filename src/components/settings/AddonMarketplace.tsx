@@ -151,7 +151,7 @@ export function AddonMarketplace() {
       const { data, error } = await supabase.functions.invoke('addon-checkout', {
         body: {
           action: 'activate',
-          license_id: licenseData?.licenseId,
+          license_id: licenseId,
           session_id: sessionId,
         },
       });
