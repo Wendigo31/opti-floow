@@ -140,10 +140,10 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
     return false;
   }, []);
 
-  // Initialize on open
-  useState(() => {
+  // Initialize on open - check if returning from Stripe
+  useEffect(() => {
     checkStripeReturn();
-  });
+  }, [checkStripeReturn]);
 
   const handleSelectPlan = async (plan: typeof PLANS[0]) => {
     setSelectedPlan(plan);
