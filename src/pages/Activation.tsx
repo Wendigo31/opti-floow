@@ -208,29 +208,6 @@ export default function Activation() {
             </Accordion>
           </div>
         </div>
-
-      {/* Plans CTA */}
-        <div className="glass-card p-8 flex flex-col items-center text-center max-w-md lg:max-w-none">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
-            <Crown className="w-7 h-7 text-white" />
-          </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Pas encore de compte ?</h2>
-          <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-            Choisissez le forfait adapté à votre flotte et commencez à optimiser vos coûts dès aujourd'hui.
-          </p>
-          <Button
-            variant="gradient"
-            size="lg"
-            className="w-full max-w-xs"
-            onClick={() => setShowOnboarding(true)}
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            Choisir un forfait
-          </Button>
-          <p className="text-xs text-muted-foreground mt-3">
-            3 forfaits disponibles · Essai sans engagement
-          </p>
-        </div>
       </div>
 
       {/* Detailed Pricing Section */}
