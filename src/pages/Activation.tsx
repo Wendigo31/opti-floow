@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users, CreditCard } from 'lucide-react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users, CreditCard, Check, X, Rocket, Star, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,19 +66,100 @@ export default function Activation() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img src={optiflowLogo} alt="OptiFlow Logo" className="w-64 h-64 mx-auto mb-4 object-contain" />
-          <h1 className="text-3xl font-bold text-foreground">Line Optimizer</h1>
-        </div>
+  const plans = [
+    {
+      name: 'Start',
+      icon: Rocket,
+      price: '29,99€',
+      period: '/mois TTC',
+      yearly: '359,88€/an',
+      color: 'from-emerald-500 to-teal-600',
+      features: {
+        calculs: '2 / jour',
+        itineraire: false,
+        tournees: false,
+        planning: false,
+        analyse: false,
+        vehicules: '2 max',
+        conducteurs: '2 max',
+        clients: '2 max',
+        equipe: false,
+      },
+    },
+    {
+      name: 'Pro',
+      icon: Star,
+      price: '79,99€',
+      period: '/mois TTC',
+      yearly: '959,88€/an',
+      color: 'from-blue-500 to-indigo-600',
+      popular: true,
+      features: {
+        calculs: '10 / jour',
+        itineraire: false,
+        tournees: '5 max',
+        planning: false,
+        analyse: '1 / jour',
+        vehicules: '5 max',
+        conducteurs: '5 max',
+        clients: '5 max',
+        equipe: false,
+      },
+    },
+    {
+      name: 'Enterprise',
+      icon: Crown,
+      price: '149,99€',
+      period: '/mois TTC',
+      yearly: '1 799,88€/an',
+      color: 'from-amber-500 to-orange-600',
+      features: {
+        calculs: 'Illimité',
+        itineraire: true,
+        tournees: 'Illimité',
+        planning: true,
+        analyse: 'Illimité',
+        vehicules: 'Illimité',
+        conducteurs: 'Illimité',
+        clients: 'Illimité',
+        equipe: true,
+      },
+    },
+  ];
 
-        {/* Activation Card */}
+  const featureLabels: Record<string, string> = {
+    calculs: 'Calculs',
+    itineraire: 'Itinéraire',
+    tournees: 'Tournées',
+    planning: 'Planning',
+    analyse: 'Analyse IA',
+    vehicules: 'Véhicules',
+    conducteurs: 'Conducteurs',
+    clients: 'Clients',
+    equipe: 'Équipe & confidentialité',
+  };
+
+  const renderFeatureValue = (value: string | boolean) => {
+    if (value === true) return <Check className="w-4 h-4 text-primary mx-auto" />;
+    if (value === false) return <X className="w-4 h-4 text-destructive/50 mx-auto" />;
+    return <span className="text-sm font-medium text-foreground">{value}</span>;
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-8 gap-8">
+      {/* Logo */}
+      <div className="text-center">
+        <img src={optiflowLogo} alt="OptiFlow Logo" className="w-48 h-48 mx-auto mb-2 object-contain" />
+        <h1 className="text-3xl font-bold text-foreground">Line Optimizer</h1>
+      </div>
+
+      {/* Main grid: Login + Comparison */}
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 items-start">
+        
+        {/* Login Card */}
         <div className="glass-card p-8">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Connexion à votre compte</h2>
+            <h2 className="text-xl font-semibold text-foreground">Connexion</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Entrez vos identifiants pour accéder à votre espace
             </p>
@@ -99,15 +180,12 @@ export default function Activation() {
                 className="font-mono text-center tracking-wider" 
                 disabled={loading || success} 
               />
-              <p className="text-xs text-muted-foreground">
-                L'identifiant de votre société vous a été communiqué par votre administrateur.
-              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-primary" />
-                Email associé à la licence
+                Email
               </Label>
               <Input 
                 id="email" 
@@ -140,31 +218,21 @@ export default function Activation() {
             {success && (
               <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                Connexion réussie ! Redirection en cours...
+                Connexion réussie !
               </div>
             )}
 
             <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success}>
               {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connexion...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</>
               ) : success ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Connecté
-                </>
+                <><CheckCircle2 className="w-4 h-4 mr-2" />Connecté</>
               ) : (
-                <>
-                  <Key className="w-4 h-4 mr-2" />
-                  Se connecter
-                </>
+                <><Key className="w-4 h-4 mr-2" />Se connecter</>
               )}
             </Button>
           </form>
 
-          {/* Help Section */}
           <div className="mt-6 pt-6 border-t border-border">
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="help" className="border-none">
@@ -175,44 +243,67 @@ export default function Activation() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-sm space-y-3 pt-2">
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Où trouver mon identifiant société ?</p>
-                    <p className="text-muted-foreground">
-                      Votre identifiant société vous a été communiqué par votre administrateur. 
-                      Si vous ne l'avez pas, contactez la direction de votre entreprise.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Je n'ai pas reçu mon identifiant</p>
-                    <p className="text-muted-foreground">
-                      Contactez votre administrateur ou notre support à l'adresse{' '}
-                      <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">
-                        support@opti-group.fr
-                      </a>
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">Je souhaite acheter une licence</p>
-                    <Button variant="outline" size="sm" className="w-full mt-1" asChild>
-                      <a href="https://optiflow.fr/tarifs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                        <ExternalLink className="w-4 h-4" />
-                        Contactez-nous
-                      </a>
-                    </Button>
-                  </div>
+                  <p className="text-muted-foreground">
+                    Contactez votre administrateur ou{' '}
+                    <a href="mailto:support@opti-group.fr" className="text-primary hover:underline">support@opti-group.fr</a>
+                  </p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           </div>
+        </div>
 
-          {/* Subscription CTA */}
-          <div className="mt-6 pt-6 border-t border-border text-center">
-            <p className="text-sm text-muted-foreground mb-3">
-              Pas encore de compte ?
-            </p>
+        {/* Plans Comparison */}
+        <div className="glass-card p-6">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-foreground">Nos forfaits</h2>
+            <p className="text-sm text-muted-foreground mt-1">Choisissez l'offre adaptée à votre activité</p>
+          </div>
+
+          {/* Plan headers */}
+          <div className="grid grid-cols-[1fr_repeat(3,minmax(0,1fr))] gap-0">
+            {/* Empty top-left */}
+            <div />
+            {plans.map((plan) => {
+              const Icon = plan.icon;
+              return (
+                <div key={plan.name} className="text-center pb-4 relative">
+                  {plan.popular && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                      Populaire
+                    </span>
+                  )}
+                  <div className={`w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <p className="font-bold text-foreground">{plan.name}</p>
+                  <p className="text-lg font-bold text-foreground">{plan.price}</p>
+                  <p className="text-[10px] text-muted-foreground">{plan.period}</p>
+                  <p className="text-[10px] text-muted-foreground">ou {plan.yearly}</p>
+                </div>
+              );
+            })}
+
+            {/* Feature rows */}
+            {Object.entries(featureLabels).map(([key, label], i) => (
+              <>
+                <div key={`label-${key}`} className={`flex items-center text-sm text-muted-foreground py-2.5 px-2 ${i % 2 === 0 ? 'bg-muted/30' : ''} rounded-l-md`}>
+                  {label}
+                </div>
+                {plans.map((plan) => (
+                  <div key={`${plan.name}-${key}`} className={`flex items-center justify-center py-2.5 ${i % 2 === 0 ? 'bg-muted/30' : ''} ${plan.name === 'Enterprise' ? 'rounded-r-md' : ''}`}>
+                    {renderFeatureValue(plan.features[key as keyof typeof plan.features])}
+                  </div>
+                ))}
+              </>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-6 pt-4 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground mb-3">Pas encore de compte ?</p>
             <Button
               variant="gradient"
-              className="w-full"
               size="lg"
               onClick={() => setShowOnboarding(true)}
             >
@@ -221,11 +312,11 @@ export default function Activation() {
             </Button>
           </div>
         </div>
-
-        <p className="text-xs text-center text-muted-foreground mt-6">
-          © {new Date().getFullYear()} OptiFlow - Tous droits réservés
-        </p>
       </div>
+
+      <p className="text-xs text-center text-muted-foreground">
+        © {new Date().getFullYear()} OptiFlow - Tous droits réservés
+      </p>
 
       <OnboardingFlow
         open={showOnboarding}
