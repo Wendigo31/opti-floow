@@ -186,7 +186,7 @@ export function Sidebar() {
           {!collapsed && (
             <div className="animate-fade-in">
               <h1 className="font-bold text-lg text-foreground">OptiFlow</h1>
-              <span className="text-xs text-muted-foreground">Line Optimizer</span>
+              <span className="text-xs text-muted-foreground">Pilotage de rentabilité</span>
             </div>
           )}
         </NavLink>

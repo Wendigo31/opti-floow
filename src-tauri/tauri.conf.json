@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OptiFlow - Line Optimizer",
+  "productName": "OptiFlow",
   "version": "1.0.0",
   "identifier": "com.optiflow.lineoptimizer",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OptiFlow - Line Optimizer",
+        "title": "OptiFlow",
         "width": 1400,
         "height": 900,
         "minWidth": 1024,
@@ -42,7 +42,7 @@
     "copyright": "© 2024 OptiFlow - SAS OptiGroup",
     "category": "Business",
     "shortDescription": "Logiciel de gestion et optimisation de transport",
-    "longDescription": "OptiFlow - Line Optimizer est un logiciel professionnel de calcul de coûts et d'optimisation de lignes de transport routier.",
+    "longDescription": "OptiFlow est un logiciel professionnel de calcul de coûts et d'optimisation de lignes de transport routier.",
     "createUpdaterArtifacts": false,
     "windows": {
       "certificateThumbprint": null,

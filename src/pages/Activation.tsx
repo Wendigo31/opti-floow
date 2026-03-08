@@ -79,7 +79,7 @@ export default function Activation() {
       {/* Logo */}
       <div className="text-center">
         <img src={optiflowLogo} alt="OptiFlow Logo" className="w-48 h-48 mx-auto mb-2 object-contain" />
-        <h1 className="text-3xl font-bold text-foreground">Line Optimizer</h1>
+        <h1 className="text-3xl font-bold text-foreground">OptiFlow</h1>
       </div>
 
       {/* Main content */}

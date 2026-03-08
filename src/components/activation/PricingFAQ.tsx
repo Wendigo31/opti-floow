@@ -6,16 +6,16 @@ const FAQ_CATEGORIES = [
     title: '🚀 Prise en main & Inscription',
     items: [
       {
-        question: 'Comment créer mon compte Line Optimizer ?',
+        question: 'Comment créer mon compte OptiFlow ?',
         answer: 'Depuis la page d\'accueil, cliquez sur « Choisir ce forfait » sous l\'offre souhaitée. Vous serez redirigé vers notre paiement sécurisé Stripe, puis vers un formulaire d\'onboarding pour renseigner votre société (SIREN, nom, email). Votre identifiant société et vos accès sont créés automatiquement.',
       },
       {
         question: 'Quels navigateurs sont compatibles ?',
-        answer: 'Line Optimizer fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Edge, Safari. L\'application est responsive et s\'utilise aussi sur tablette et smartphone. Une version desktop (Windows/Mac) est également disponible via notre installeur.',
+        answer: 'OptiFlow fonctionne sur tous les navigateurs modernes : Chrome, Firefox, Edge, Safari. L\'application est responsive et s\'utilise aussi sur tablette et smartphone. Une version desktop (Windows/Mac) est également disponible via notre installeur.',
       },
       {
         question: 'Puis-je installer l\'application sur mon ordinateur ?',
-        answer: 'Oui, Line Optimizer est disponible en tant qu\'application de bureau (PWA) et application native Tauri pour Windows et macOS. Vous pouvez l\'installer directement depuis votre navigateur ou télécharger l\'installeur depuis la page dédiée.',
+        answer: 'Oui, OptiFlow est disponible en tant qu\'application de bureau (PWA) et application native Tauri pour Windows et macOS. Vous pouvez l\'installer directement depuis votre navigateur ou télécharger l\'installeur depuis la page dédiée.',
       },
       {
         question: 'L\'application fonctionne-t-elle hors connexion ?',
@@ -217,7 +217,7 @@ const FAQ_CATEGORIES = [
       },
       {
         question: 'Qu\'en est-il de la conformité RGPD ?',
-        answer: 'Line Optimizer est conforme au RGPD. Les données personnelles sont traitées uniquement dans le cadre du service. Aucune donnée n\'est revendue. La politique de confidentialité détaille les traitements, durées de conservation et vos droits (accès, rectification, suppression, portabilité).',
+        answer: 'OptiFlow est conforme au RGPD. Les données personnelles sont traitées uniquement dans le cadre du service. Aucune donnée n\'est revendue. La politique de confidentialité détaille les traitements, durées de conservation et vos droits (accès, rectification, suppression, portabilité).',
       },
       {
         question: 'Combien de temps mes données de facturation sont-elles conservées ?',
@@ -237,8 +237,8 @@ const FAQ_CATEGORIES = [
         answer: 'Oui, un tutoriel interactif est intégré à l\'application lors de la première connexion. Des guides utilisateurs sont disponibles. Pour les clients Enterprise, nous proposons des sessions de formation personnalisées à distance.',
       },
       {
-        question: 'Qui développe Line Optimizer ?',
-        answer: 'Line Optimizer est développé par OptiGroup (en cours d\'immatriculation), une société spécialisée dans les solutions digitales pour le transport routier. Le logiciel est conçu par et pour des professionnels du transport.',
+        question: 'Qui développe OptiFlow ?',
+        answer: 'OptiFlow est développé par OptiGroup (en cours d\'immatriculation), une société spécialisée dans les solutions digitales pour le transport routier. Le logiciel est conçu par et pour des professionnels du transport.',
       },
     ],
   },
@@ -253,7 +253,7 @@ export default function PricingFAQ() {
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-1">Foire aux questions</h2>
         <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-          Tout ce que vous devez savoir sur Line Optimizer, ses fonctionnalités, sa tarification et sa sécurité.
+          Tout ce que vous devez savoir sur OptiFlow, ses fonctionnalités, sa tarification et sa sécurité.
         </p>
       </div>
 

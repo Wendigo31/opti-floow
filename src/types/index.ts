@@ -1,4 +1,4 @@
-// Drive Profit - Line Optimizer Types
+// OptiFlow Types
 export interface Driver {
   id: string;
   name: string;
