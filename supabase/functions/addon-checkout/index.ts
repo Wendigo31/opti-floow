@@ -9,23 +9,17 @@ const corsHeaders = {
 
 // Add-on definitions mapping addon_id to feature keys and limits to apply
 const ADDON_FEATURES: Record<string, { feature_keys?: Record<string, boolean>; limit_increases?: Record<string, number> }> = {
-  itinerary: {
-    feature_keys: { itinerary_planning: true },
-  },
-  planning: {
-    feature_keys: { monthly_tracking: true },
-  },
   extra_tours: {
-    limit_increases: { max_saved_tours: 5 },
+    limit_increases: { max_saved_tours: 10 },
   },
   extra_vehicles: {
-    limit_increases: { max_vehicles: 5 },
+    limit_increases: { max_vehicles: 10 },
   },
   extra_drivers: {
-    limit_increases: { max_drivers: 5 },
+    limit_increases: { max_drivers: 10 },
   },
   extra_clients: {
-    limit_increases: { max_clients: 5 },
+    limit_increases: { max_clients: 10 },
   },
   ai_analysis: {
     feature_keys: { ai_optimization: true, ai_pdf_analysis: true, cost_analysis: true },
