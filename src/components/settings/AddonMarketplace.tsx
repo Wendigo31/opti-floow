@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  ShoppingCart, Map, CalendarDays, Route, Truck, Users2, UserPlus, Brain, 
+  ShoppingCart, Route, Truck, Users2, UserPlus, Brain, 
   Shield, Check, Loader2, RefreshCw, Sparkles, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
