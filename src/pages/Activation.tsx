@@ -204,12 +204,34 @@ export default function Activation() {
               </AccordionItem>
             </Accordion>
           </div>
+
+          {/* Subscription CTA */}
+          <div className="mt-6 pt-6 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Pas encore de compte ?
+            </p>
+            <Button
+              variant="gradient"
+              className="w-full"
+              size="lg"
+              onClick={() => setShowOnboarding(true)}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Prendre un abonnement
+            </Button>
+          </div>
         </div>
 
         <p className="text-xs text-center text-muted-foreground mt-6">
           © {new Date().getFullYear()} OptiFlow - Tous droits réservés
         </p>
       </div>
+
+      <OnboardingFlow
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }
