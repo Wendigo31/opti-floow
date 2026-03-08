@@ -21,6 +21,21 @@ export default function Activation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if returning from Stripe checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('onboarding') === 'success' && params.get('session_id')) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = (companyIdentifier: string, userEmail: string) => {
+    setCode(companyIdentifier);
+    setEmail(userEmail);
+    setShowOnboarding(false);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
