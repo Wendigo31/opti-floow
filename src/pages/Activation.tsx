@@ -3,11 +3,14 @@ import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, Users, Credi
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LegalTabs from '@/components/settings/LegalTabs';
 
 export default function Activation() {
   const activationSchema = z.object({
