@@ -332,6 +332,11 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
                         Populaire
                       </Badge>
                     )}
+                    {'bestValue' in plan && plan.bestValue && (
+                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0">
+                        🏆 Meilleur rapport qualité/prix
+                      </Badge>
+                    )}
                     <CardHeader className="text-center pb-2">
                       <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
                         <Icon className="w-6 h-6" />
