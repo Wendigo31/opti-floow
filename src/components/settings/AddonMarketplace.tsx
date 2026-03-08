@@ -264,8 +264,7 @@ export function AddonMarketplace() {
                 } ${isActive ? 'opacity-60' : ''}`}
                 onClick={() => !isActive && toggleCart(addon.id)}
               >
-                {isActive && (
-                  <Badge className="absolute top-2 right-2 bg-green-500/20 text-green-600 border-green-500/30">
+                  <Badge className="absolute top-2 right-2 bg-success/20 text-success border-success/30">
                     <Check className="w-3 h-3 mr-1" /> Actif
                   </Badge>
                 )}
