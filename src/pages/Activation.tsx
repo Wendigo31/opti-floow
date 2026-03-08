@@ -149,7 +149,34 @@ export default function Activation() {
               </div>
             )}
 
-            <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success}>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                disabled={loading || success}
+              />
+              <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                J'accepte les{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowLegal(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Conditions Générales de Vente et d'Utilisation (CGVU)
+                </button>
+                {' '}et la{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowLegal(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Politique de Confidentialité
+                </button>
+              </label>
+            </div>
+
+            <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success || !acceptedTerms}>
               {loading ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</>
               ) : success ? (
