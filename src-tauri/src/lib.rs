@@ -20,5 +20,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running OptiFlow - Line Optimizer");
+        .expect("error while running OptiFlow");
 }

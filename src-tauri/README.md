@@ -1,4 +1,4 @@
-# OptiFlow - Line Optimizer
+# OptiFlow
 
 Application professionnelle de pilotage de rentabilité pour les entreprises de transport routier.
 
