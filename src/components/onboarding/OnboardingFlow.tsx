@@ -10,36 +10,73 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
   Loader2, Search, Building2, User, CheckCircle2, Copy, ArrowRight, ArrowLeft,
-  Rocket, Star, Crown, AlertCircle, LogIn
+  Rocket, Star, Crown, AlertCircle, LogIn, X, Check
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const PLANS = [
   {
     id: 'start',
     name: 'Start',
-    price: 29,
-    priceId: 'price_1T8oxh0uHa1YT0odJaawwaL0',
+    monthlyPrice: 29.99,
+    yearlyPrice: 359.88,
+    monthlyPriceId: 'price_1T8p4v0uHa1YT0odgsK4Qkmx',
+    yearlyPriceId: 'price_1T8p4x0uHa1YT0odm57ZUl9h',
     icon: Rocket,
-    features: ['Calculateur de base', 'Tableau de bord basique', '2 véhicules', '2 conducteurs', '1 utilisateur'],
+    features: [
+      { label: '2 calculs par jour', included: true },
+      { label: 'Itinéraire', included: false },
+      { label: 'Tournées', included: false },
+      { label: 'Planning', included: false },
+      { label: 'Analyse', included: false },
+      { label: '2 véhicules max', included: true },
+      { label: '2 conducteurs max', included: true },
+      { label: '2 clients max', included: true },
+      { label: 'Équipe & confidentialité', included: false },
+    ],
     color: 'from-emerald-500 to-teal-600',
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: 79,
-    priceId: 'price_1T8oxj0uHa1YT0od3phOngMq',
+    monthlyPrice: 79.99,
+    yearlyPrice: 959.88,
+    monthlyPriceId: 'price_1T8p4y0uHa1YT0od8ORpx0f5',
+    yearlyPriceId: 'price_1T8p4z0uHa1YT0odmWpzApAh',
     icon: Star,
     popular: true,
-    features: ['Itinéraire complet', 'Analyse des coûts', 'Export PDF/Excel', 'Alertes marge', '10 véhicules', '5 conducteurs', '3 utilisateurs'],
+    features: [
+      { label: '10 calculs par jour', included: true },
+      { label: 'Itinéraire', included: false },
+      { label: '5 tournées max', included: true },
+      { label: 'Planning', included: false },
+      { label: '1 analyse par jour', included: true },
+      { label: '5 véhicules max', included: true },
+      { label: '5 conducteurs max', included: true },
+      { label: '5 clients max', included: true },
+      { label: 'Équipe & confidentialité', included: false },
+    ],
     color: 'from-blue-500 to-indigo-600',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 149,
-    priceId: 'price_1T8oxk0uHa1YT0odtM22Jen4',
+    monthlyPrice: 149.99,
+    yearlyPrice: 1799.88,
+    monthlyPriceId: 'price_1T8p500uHa1YT0odBcqW2Xw8',
+    yearlyPriceId: 'price_1T8p510uHa1YT0odfc0Zlsl0',
     icon: Crown,
-    features: ['Toutes fonctionnalités', 'IA & optimisation', 'Multi-agences', 'Intégration TMS/ERP', 'Véhicules illimités', 'Conducteurs illimités', 'Utilisateurs illimités'],
+    features: [
+      { label: 'Calculs illimités', included: true },
+      { label: 'Itinéraire complet', included: true },
+      { label: 'Tournées illimitées', included: true },
+      { label: 'Planning complet', included: true },
+      { label: 'Analyses illimitées', included: true },
+      { label: 'Véhicules illimités', included: true },
+      { label: 'Conducteurs illimités', included: true },
+      { label: 'Clients illimités', included: true },
+      { label: 'Équipe & confidentialité', included: true },
+    ],
     color: 'from-amber-500 to-orange-600',
   },
 ];
@@ -58,6 +95,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
   const [stripeSessionId, setStripeSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [yearly, setYearly] = useState(false);
 
   // SIREN step
   const { lookup, loading: sirenLoading, error: sirenError, company, reset: resetSiren } = useSireneLookup();
@@ -111,7 +149,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
       // For simplicity, go to Stripe directly with the plan
       const { data, error: invokeError } = await supabase.functions.invoke('create-checkout', {
         body: {
-          priceId: plan.priceId,
+          priceId: yearly ? plan.yearlyPriceId : plan.monthlyPriceId,
           email: email || `onboarding-${Date.now()}@temp.optiflow.fr`,
           planType: plan.id,
         },
@@ -262,57 +300,72 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
 
         {/* Step 1: Plan Selection */}
         {step === 'plan' && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {PLANS.map((plan) => {
-              const Icon = plan.icon;
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
-                    selectedPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => handleSelectPlan(plan)}
-                >
-                  {plan.popular && (
-                    <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
-                      Populaire
-                    </Badge>
-                  )}
-                  <CardHeader className="text-center pb-2">
-                    <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    <CardDescription>
-                      <span className="text-2xl font-bold text-foreground">{plan.price}€</span>
-                      <span className="text-muted-foreground">/mois</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <ul className="space-y-1 text-xs text-muted-foreground">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      variant="gradient"
-                      className="w-full mt-4"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      {loading && selectedPlan?.id === plan.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>Choisir</>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="space-y-4">
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-3">
+              <span className={`text-sm ${!yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Mensuel</span>
+              <Switch checked={yearly} onCheckedChange={setYearly} />
+              <span className={`text-sm ${yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Annuel</span>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {PLANS.map((plan) => {
+                const Icon = plan.icon;
+                const displayPrice = yearly ? plan.yearlyPrice : plan.monthlyPrice;
+                const period = yearly ? '/an' : '/mois';
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
+                      selectedPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => handleSelectPlan(plan)}
+                  >
+                    {plan.popular && (
+                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
+                        Populaire
+                      </Badge>
+                    )}
+                    <CardHeader className="text-center pb-2">
+                      <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <CardTitle className="text-lg">{plan.name}</CardTitle>
+                      <CardDescription>
+                        <span className="text-2xl font-bold text-foreground">{displayPrice.toFixed(2)}€</span>
+                        <span className="text-muted-foreground"> TTC{period}</span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ul className="space-y-1 text-xs">
+                        {plan.features.map((f) => (
+                          <li key={f.label} className={`flex items-center gap-1 ${f.included ? 'text-muted-foreground' : 'text-muted-foreground/50 line-through'}`}>
+                            {f.included ? (
+                              <Check className="w-3 h-3 text-primary flex-shrink-0" />
+                            ) : (
+                              <X className="w-3 h-3 text-destructive/50 flex-shrink-0" />
+                            )}
+                            {f.label}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        variant="gradient"
+                        className="w-full mt-4"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        {loading && selectedPlan?.id === plan.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>Choisir</>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         )}
 
