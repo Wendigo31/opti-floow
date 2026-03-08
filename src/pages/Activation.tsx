@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users, CreditCard, Check, X, Rocket, Star, Crown } from 'lucide-react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, Users, CreditCard, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
