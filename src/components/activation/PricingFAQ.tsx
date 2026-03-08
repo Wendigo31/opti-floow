@@ -217,7 +217,7 @@ const FAQ_CATEGORIES = [
       },
       {
         question: 'Qu\'en est-il de la conformité RGPD ?',
-        answer: 'Line Optimizer est conforme au RGPD. Les données personnelles sont traitées uniquement dans le cadre du service. Aucune donnée n\'est revendue. La politique de confidentialité détaille les traitements, durées de conservation et vos droits (accès, rectification, suppression, portabilité).',
+        answer: 'OptiFlow est conforme au RGPD. Les données personnelles sont traitées uniquement dans le cadre du service. Aucune donnée n\'est revendue. La politique de confidentialité détaille les traitements, durées de conservation et vos droits (accès, rectification, suppression, portabilité).',
       },
       {
         question: 'Combien de temps mes données de facturation sont-elles conservées ?',
