@@ -99,6 +99,7 @@ const ADDONS: Addon[] = [
 
 export function AddonMarketplace() {
   const { licenseData } = useLicense();
+  const { licenseId } = useLicenseContext();
   const [cart, setCart] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
