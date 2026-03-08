@@ -213,8 +213,6 @@ export default function Activation() {
       {/* Detailed Pricing Section */}
       <PricingSection onChoosePlan={() => setShowOnboarding(true)} />
 
-      {/* FAQ Section */}
-      <PricingFAQ />
 
       <p className="text-xs text-center text-muted-foreground">
         © {new Date().getFullYear()} OptiFlow - Tous droits réservés
