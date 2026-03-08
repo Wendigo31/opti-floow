@@ -343,8 +343,15 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
                       </div>
                       <CardTitle className="text-lg">{plan.name}</CardTitle>
                       <CardDescription>
-                        <span className="text-2xl font-bold text-foreground">{displayPrice.toFixed(2)}€</span>
+                        <span className="text-2xl font-bold text-foreground">
+                          {Number.isInteger(displayPrice) ? displayPrice : displayPrice.toFixed(2)}€
+                        </span>
                         <span className="text-muted-foreground"> TTC{period}</span>
+                        {yearly && 'yearlyDiscount' in plan && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {(plan as any).yearlyDiscount}
+                          </Badge>
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
