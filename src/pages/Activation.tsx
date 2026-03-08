@@ -12,7 +12,7 @@ import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LegalTabs from '@/components/settings/LegalTabs';
 import PricingSection from '@/components/activation/PricingSection';
-import PricingFAQ from '@/components/activation/PricingFAQ';
+
 
 export default function Activation() {
   const activationSchema = z.object({
