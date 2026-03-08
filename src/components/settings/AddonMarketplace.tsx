@@ -193,7 +193,7 @@ export function AddonMarketplace() {
       const { data, error } = await supabase.functions.invoke('addon-checkout', {
         body: {
           action: 'checkout',
-          license_id: licenseData.licenseId,
+          license_id: licenseId,
           email: licenseData.email,
           items,
           origin_url: window.location.origin,
