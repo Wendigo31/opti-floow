@@ -253,7 +253,7 @@ export default function PricingFAQ() {
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-1">Foire aux questions</h2>
         <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-          Tout ce que vous devez savoir sur Line Optimizer, ses fonctionnalités, sa tarification et sa sécurité.
+          Tout ce que vous devez savoir sur OptiFlow, ses fonctionnalités, sa tarification et sa sécurité.
         </p>
       </div>
 
