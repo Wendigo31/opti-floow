@@ -75,7 +75,7 @@ export default function Activation() {
 
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-8 gap-8">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-8 gap-8 pb-16">
       {/* Logo */}
       <div className="text-center">
         <img src={optiflowLogo} alt="OptiFlow Logo" className="w-48 h-48 mx-auto mb-2 object-contain" />
