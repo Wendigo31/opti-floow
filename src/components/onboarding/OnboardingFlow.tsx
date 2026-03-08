@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,10 +140,10 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
     return false;
   }, []);
 
-  // Initialize on open
-  useState(() => {
+  // Initialize on open - check if returning from Stripe
+  useEffect(() => {
     checkStripeReturn();
-  });
+  }, [checkStripeReturn]);
 
   const handleSelectPlan = async (plan: typeof PLANS[0]) => {
     setSelectedPlan(plan);
