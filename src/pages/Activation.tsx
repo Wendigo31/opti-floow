@@ -82,11 +82,11 @@ export default function Activation() {
         <h1 className="text-3xl font-bold text-foreground">Line Optimizer</h1>
       </div>
 
-      {/* Main grid: Login + Comparison */}
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      {/* Main content */}
+      <div className="w-full max-w-5xl flex flex-col items-center gap-8">
         
         {/* Login Card */}
-        <div className="glass-card p-8">
+        <div className="glass-card p-8 w-full max-w-md">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-foreground">Connexion</h2>
             <p className="text-sm text-muted-foreground mt-1">
