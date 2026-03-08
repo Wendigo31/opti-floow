@@ -3,11 +3,14 @@ import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, Users, Credi
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LegalTabs from '@/components/settings/LegalTabs';
 
 export default function Activation() {
   const activationSchema = z.object({
@@ -22,6 +25,8 @@ export default function Activation() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showLegal, setShowLegal] = useState(false);
 
   // Check if returning from Stripe checkout
   useEffect(() => {
@@ -144,7 +149,34 @@ export default function Activation() {
               </div>
             )}
 
-            <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success}>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                disabled={loading || success}
+              />
+              <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                J'accepte les{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowLegal(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Conditions Générales de Vente et d'Utilisation (CGVU)
+                </button>
+                {' '}et la{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowLegal(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Politique de Confidentialité
+                </button>
+              </label>
+            </div>
+
+            <Button type="submit" variant="gradient" className="w-full" size="lg" disabled={loading || success || !acceptedTerms}>
               {loading ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</>
               ) : success ? (
@@ -208,6 +240,15 @@ export default function Activation() {
         onOpenChange={setShowOnboarding}
         onComplete={handleOnboardingComplete}
       />
+
+      <Dialog open={showLegal} onOpenChange={setShowLegal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Conditions Générales & Politique de Confidentialité</DialogTitle>
+          </DialogHeader>
+          <LegalTabs />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
