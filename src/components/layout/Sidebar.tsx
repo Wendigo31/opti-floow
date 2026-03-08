@@ -309,24 +309,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* OptiPlan Cross-Link */}
-      <div className={cn("px-3 pb-2", collapsed && "px-2")}>
-        <a
-          href="https://opti-plan.lovable.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            "flex items-center gap-2 px-3 py-2.5 rounded-lg bg-accent/50 border border-border/50 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
-            collapsed && "justify-center px-2"
-          )}
-          title="Ouvrir OptiPlan"
-        >
-          <CalendarDays className="w-4 h-4 text-blue-500 flex-shrink-0" />
-          {!collapsed && (
-            <span className="truncate">OptiPlan</span>
-          )}
-        </a>
-      </div>
 
       {/* Collapse Toggle */}
       <div className="p-4 border-t border-sidebar-border">
