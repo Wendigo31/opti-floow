@@ -18,10 +18,11 @@ const PLANS = [
   {
     id: 'start',
     name: 'Start',
-    monthlyPrice: 29.99,
-    yearlyPrice: 299,
-    monthlyPriceId: 'price_1T8pWz0uHa1YT0od7syDr4a7',
-    yearlyPriceId: 'price_1T8pX00uHa1YT0odoIosnHG8',
+    monthlyPrice: 49.99,
+    yearlyPrice: 549,
+    yearlyDiscount: '-8%',
+    monthlyPriceId: 'price_1T8pcw0uHa1YT0odfh13WBL6',
+    yearlyPriceId: 'price_1T8pcx0uHa1YT0odnP2Dz7hZ',
     icon: Rocket,
     features: [
       { label: '5 calculs par jour', included: true },
@@ -39,10 +40,11 @@ const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    monthlyPrice: 79.99,
-    yearlyPrice: 799,
-    monthlyPriceId: 'price_1T8pX10uHa1YT0odbVOIixGF',
-    yearlyPriceId: 'price_1T8pX20uHa1YT0odYthsResr',
+    monthlyPrice: 132.99,
+    yearlyPrice: 1399,
+    yearlyDiscount: '-12%',
+    monthlyPriceId: 'price_1T8pcy0uHa1YT0odcYAOnyiu',
+    yearlyPriceId: 'price_1T8pcz0uHa1YT0odsdZbUiJx',
     icon: Star,
     popular: true,
     features: [
@@ -61,11 +63,13 @@ const PLANS = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: 149.99,
-    yearlyPrice: 1499,
-    monthlyPriceId: 'price_1T8pX30uHa1YT0od9DLH5rPK',
-    yearlyPriceId: 'price_1T8pX40uHa1YT0od1yKHAEc7',
+    monthlyPrice: 249,
+    yearlyPrice: 2199,
+    yearlyDiscount: '-27%',
+    monthlyPriceId: 'price_1T8pd00uHa1YT0odMBjYg3ZB',
+    yearlyPriceId: 'price_1T8pd10uHa1YT0odLx2Dgeyp',
     icon: Crown,
+    bestValue: true,
     features: [
       { label: 'Calculs illimités', included: true },
       { label: 'Itinéraire complet', included: true },
@@ -80,6 +84,8 @@ const PLANS = [
     color: 'from-amber-500 to-orange-600',
   },
 ];
+
+
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -326,14 +332,26 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
                         Populaire
                       </Badge>
                     )}
+                    {'bestValue' in plan && plan.bestValue && (
+                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0">
+                        🏆 Meilleur rapport qualité/prix
+                      </Badge>
+                    )}
                     <CardHeader className="text-center pb-2">
                       <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
                         <Icon className="w-6 h-6" />
                       </div>
                       <CardTitle className="text-lg">{plan.name}</CardTitle>
                       <CardDescription>
-                        <span className="text-2xl font-bold text-foreground">{displayPrice.toFixed(2)}€</span>
+                        <span className="text-2xl font-bold text-foreground">
+                          {Number.isInteger(displayPrice) ? displayPrice : displayPrice.toFixed(2)}€
+                        </span>
                         <span className="text-muted-foreground"> TTC{period}</span>
+                        {yearly && 'yearlyDiscount' in plan && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {(plan as any).yearlyDiscount}
+                          </Badge>
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
