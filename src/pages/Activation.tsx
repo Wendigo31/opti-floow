@@ -70,9 +70,9 @@ export default function Activation() {
     {
       name: 'Start',
       icon: Rocket,
-      price: '29,99€',
+      price: '49,99€',
       period: '/mois TTC',
-      yearly: '299€/an (-17%)',
+      yearly: '549€/an (-8%)',
       color: 'from-emerald-500 to-teal-600',
       features: {
         calculs: '5 / jour',
@@ -89,9 +89,9 @@ export default function Activation() {
     {
       name: 'Pro',
       icon: Star,
-      price: '79,99€',
+      price: '132,99€',
       period: '/mois TTC',
-      yearly: '799€/an (-17%)',
+      yearly: '1 399€/an (-12%)',
       color: 'from-blue-500 to-indigo-600',
       popular: true,
       features: {
@@ -109,10 +109,11 @@ export default function Activation() {
     {
       name: 'Enterprise',
       icon: Crown,
-      price: '149,99€',
+      price: '249€',
       period: '/mois TTC',
-      yearly: '1 499€/an (-17%)',
+      yearly: '2 199€/an (-27%)',
       color: 'from-amber-500 to-orange-600',
+      bestValue: true,
       features: {
         calculs: 'Illimité',
         itineraire: true,
