@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, ExternalLink, Users, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { useLicense } from '@/hooks/useLicense';
 import { z } from 'zod';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 
 export default function Activation() {
   const activationSchema = z.object({
@@ -20,6 +21,21 @@ export default function Activation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if returning from Stripe checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('onboarding') === 'success' && params.get('session_id')) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = (companyIdentifier: string, userEmail: string) => {
+    setCode(companyIdentifier);
+    setEmail(userEmail);
+    setShowOnboarding(false);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,12 +204,34 @@ export default function Activation() {
               </AccordionItem>
             </Accordion>
           </div>
+
+          {/* Subscription CTA */}
+          <div className="mt-6 pt-6 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Pas encore de compte ?
+            </p>
+            <Button
+              variant="gradient"
+              className="w-full"
+              size="lg"
+              onClick={() => setShowOnboarding(true)}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Prendre un abonnement
+            </Button>
+          </div>
         </div>
 
         <p className="text-xs text-center text-muted-foreground mt-6">
           © {new Date().getFullYear()} OptiFlow - Tous droits réservés
         </p>
       </div>
+
+      <OnboardingFlow
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }
