@@ -49,7 +49,7 @@ const PLANS = [
     popular: true,
     color: 'from-blue-500 to-indigo-600',
     limits: [
-      { icon: Users, label: 'Jusqu\'à 3 utilisateurs' },
+      { icon: Users, label: '3 utilisateurs inclus', extra: '+2,50€/mois par utilisateur suppl.' },
       { icon: Truck, label: '15 véhicules / conducteurs' },
       { icon: Calculator, label: '25 calculs / jour' },
       { icon: Users, label: '30 clients' },
