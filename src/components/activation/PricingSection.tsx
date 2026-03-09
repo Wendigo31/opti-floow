@@ -78,7 +78,9 @@ const PLANS = [
     yearlyDiscount: '-27%',
     icon: Crown,
     bestValue: true,
-    color: 'from-amber-500 to-orange-600',5 utilisateurs inclus', extra: '+2,50€/mois par utilisateur suppl.icon: Users, label: 'Utilisateurs illimités' },
+    color: 'from-amber-500 to-orange-600',
+    limits: [
+      { icon: Users, label: '5 utilisateurs inclus (+2,50\u20AC/utilisateur suppl.)' },
       { icon: Truck, label: 'Véhicules & conducteurs illimités' },
       { icon: Calculator, label: 'Calculs illimités' },
       { icon: Users, label: 'Clients illimités' },
