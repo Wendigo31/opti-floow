@@ -37,5 +37,8 @@ export const ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
 export const MAX_USERS_PER_PLAN = {
   start: 1,
   pro: 3,
-  enterprise: 999,
+  enterprise: 5,
 } as const;
+
+// Price per additional user beyond plan's included count
+export const EXTRA_USER_PRICE = 2.50;
