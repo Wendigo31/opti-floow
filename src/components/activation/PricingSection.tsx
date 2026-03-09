@@ -49,7 +49,7 @@ const PLANS = [
     popular: true,
     color: 'from-blue-500 to-indigo-600',
     limits: [
-      { icon: Users, label: 'Jusqu\'à 3 utilisateurs' },
+      { icon: Users, label: '3 utilisateurs inclus (+2,50\u20AC/utilisateur suppl.)' },
       { icon: Truck, label: '15 véhicules / conducteurs' },
       { icon: Calculator, label: '25 calculs / jour' },
       { icon: Users, label: '30 clients' },
@@ -80,7 +80,7 @@ const PLANS = [
     bestValue: true,
     color: 'from-amber-500 to-orange-600',
     limits: [
-      { icon: Users, label: 'Utilisateurs illimités' },
+      { icon: Users, label: '5 utilisateurs inclus (+2,50\u20AC/utilisateur suppl.)' },
       { icon: Truck, label: 'Véhicules & conducteurs illimités' },
       { icon: Calculator, label: 'Calculs illimités' },
       { icon: Users, label: 'Clients illimités' },
