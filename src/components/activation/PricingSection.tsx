@@ -71,11 +71,12 @@ const PLANS = [
     id: 'enterprise',
     name: 'Enterprise',
     subtitle: 'Performance',
-    description: 'La solution complète pour les flottes structurées avec gestion d\'équipe et IA illimitée.',
+    description: 'La solution complète pour les flottes structurées avec gestion d\'équipe et IA illimitée. Tarification sur devis.',
     monthlyPrice: 249,
     yearlyPrice: 2199,
     yearlyMonthly: 183.25,
     yearlyDiscount: '-27%',
+    isCustomPricing: true,
     icon: Crown,
     bestValue: true,
     color: 'from-amber-500 to-orange-600',
@@ -134,6 +135,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
           const price = isYearly ? plan.yearlyMonthly : plan.monthlyPrice;
           const isBest = plan.bestValue;
           const isPopular = plan.popular;
+          const isCustom = plan.isCustomPricing;
 
           return (
             <div
@@ -172,12 +174,15 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
               {/* Price */}
               <div className="text-center mb-4">
                 <div className="flex items-baseline justify-center gap-1">
+                  {isCustom && (
+                    <span className="text-sm font-medium text-muted-foreground mr-1">À partir de</span>
+                  )}
                   <span className="text-3xl font-extrabold text-foreground">
                     {price.toFixed(2).replace('.', ',')}€
                   </span>
                   <span className="text-sm text-muted-foreground">/mois</span>
                 </div>
-                {isYearly && (
+                {isYearly && !isCustom && (
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <span className="text-xs text-muted-foreground line-through">
                       {plan.monthlyPrice.toFixed(2).replace('.', ',')}€/mois
@@ -187,9 +192,14 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
                     </Badge>
                   </div>
                 )}
-                {isYearly && (
+                {isYearly && !isCustom && (
                   <p className="text-xs text-muted-foreground mt-1">
                     soit {plan.yearlyPrice.toFixed(0)}€ facturé annuellement
+                  </p>
+                )}
+                {isCustom && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tarification personnalisée sur devis
                   </p>
                 )}
               </div>
@@ -205,7 +215,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
                 className="w-full mb-5"
                 onClick={onChoosePlan}
               >
-                Choisir {plan.name}
+                {isCustom ? 'Nous contacter' : `Choisir ${plan.name}`}
               </Button>
 
               {/* Limits */}
