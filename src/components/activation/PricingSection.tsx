@@ -215,7 +215,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
                 className="w-full mb-5"
                 onClick={onChoosePlan}
               >
-                Choisir {plan.name}
+                {isCustom ? 'Nous contacter' : `Choisir ${plan.name}`}
               </Button>
 
               {/* Limits */}
