@@ -174,12 +174,15 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
               {/* Price */}
               <div className="text-center mb-4">
                 <div className="flex items-baseline justify-center gap-1">
+                  {isCustom && (
+                    <span className="text-sm font-medium text-muted-foreground mr-1">À partir de</span>
+                  )}
                   <span className="text-3xl font-extrabold text-foreground">
                     {price.toFixed(2).replace('.', ',')}€
                   </span>
                   <span className="text-sm text-muted-foreground">/mois</span>
                 </div>
-                {isYearly && (
+                {isYearly && !isCustom && (
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <span className="text-xs text-muted-foreground line-through">
                       {plan.monthlyPrice.toFixed(2).replace('.', ',')}€/mois
@@ -189,9 +192,14 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
                     </Badge>
                   </div>
                 )}
-                {isYearly && (
+                {isYearly && !isCustom && (
                   <p className="text-xs text-muted-foreground mt-1">
                     soit {plan.yearlyPrice.toFixed(0)}€ facturé annuellement
+                  </p>
+                )}
+                {isCustom && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tarification personnalisée sur devis
                   </p>
                 )}
               </div>
