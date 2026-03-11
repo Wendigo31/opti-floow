@@ -135,6 +135,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
           const price = isYearly ? plan.yearlyMonthly : plan.monthlyPrice;
           const isBest = plan.bestValue;
           const isPopular = plan.popular;
+          const isCustom = plan.isCustomPricing;
 
           return (
             <div
