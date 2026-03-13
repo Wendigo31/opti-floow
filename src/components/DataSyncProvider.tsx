@@ -59,7 +59,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [syncErrors, setSyncErrors] = useState<SyncError[]>([]);
   
-  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
   const hasSyncedRef = useRef(false);
 
