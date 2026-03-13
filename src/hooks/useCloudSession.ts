@@ -57,7 +57,7 @@ export function useCloudSession({
 
   const userIdRef = useRef<string | null>(null);
   const licenseIdRef = useRef<string | null>(null);
-  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
   const onSessionLoadedRef = useRef(onSessionLoaded);
