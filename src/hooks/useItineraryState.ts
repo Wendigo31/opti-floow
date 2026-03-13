@@ -152,7 +152,7 @@ export function useItineraryState() {
   const [teamSessions, setTeamSessions] = useState<TeamMemberSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(authUserId);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitializedRef = useRef(false);
 
   // Sync currentUserId from context

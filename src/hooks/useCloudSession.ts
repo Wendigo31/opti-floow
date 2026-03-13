@@ -57,7 +57,7 @@ export function useCloudSession({
 
   const userIdRef = useRef<string | null>(null);
   const licenseIdRef = useRef<string | null>(null);
-  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
   const onSessionLoadedRef = useRef(onSessionLoaded);
@@ -250,7 +250,7 @@ export function useCloudSession({
   // Save on auth state change (before logout)
   // Use a debounce to avoid rapid re-loads during auth state transitions
   useEffect(() => {
-    let debounceTimeout: NodeJS.Timeout | null = null;
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_OUT') {

@@ -50,7 +50,7 @@ export function useUserPreferences() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(authUserId);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentUserIdRef = useRef<string | null>(authUserId);
 
   // Sync userId from context
