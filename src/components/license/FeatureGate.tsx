@@ -147,7 +147,7 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
   auto_pricing_basic: 'pro',
   fleet_management: 'pro',
   dashboard_analytics: 'pro',
-  forecast: 'pro',
+  forecast: 'enterprise',
   multi_drivers: 'pro',
   cost_analysis: 'pro',
   margin_alerts: 'pro',

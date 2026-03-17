@@ -110,7 +110,7 @@ const navGroups: { label: string; items: NavItemConfig[] }[] = [
     label: 'Analyse',
     items: [
       { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro', userFeatureKey: 'page_dashboard' },
-      { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'pro', directionOnly: true },
+      { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'enterprise', directionOnly: true },
     ]
   },
   {
