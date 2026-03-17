@@ -33,11 +33,11 @@ export const ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
   membre: 'Accès limité aux données partagées de l\'entreprise',
 };
 
-// Maximum users per plan
+// Maximum users per plan - SYNCHRONIZED WITH PricingSection.tsx and shared.ts
 export const MAX_USERS_PER_PLAN = {
   start: 1,
   pro: 3,
-  enterprise: 5,
+  enterprise: 999, // Illimité (sur devis)
 } as const;
 
 // Price per additional user beyond plan's included count

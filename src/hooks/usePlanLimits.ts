@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useLicense, PlanType, FeatureKey } from '@/hooks/useLicense';
 
-// Default limits per plan
+// Default limits per plan - SYNCHRONIZED WITH PricingSection.tsx and shared.ts
 const PLAN_LIMITS: Record<PlanType, {
   maxDrivers: number;
   maxClients: number;
@@ -11,20 +11,20 @@ const PLAN_LIMITS: Record<PlanType, {
   maxVehicles: number;
 }> = {
   start: {
-    maxDrivers: 2,
-    maxClients: 5,
-    maxDailyCharges: 10,
-    maxMonthlyCharges: 10,
-    maxYearlyCharges: 5,
-    maxVehicles: 2,
+    maxDrivers: 5,
+    maxClients: 10,
+    maxDailyCharges: 20,
+    maxMonthlyCharges: 20,
+    maxYearlyCharges: 10,
+    maxVehicles: 5,
   },
   pro: {
-    maxDrivers: 5,
-    maxClients: 20,
+    maxDrivers: 15,
+    maxClients: 30,
     maxDailyCharges: 50,
     maxMonthlyCharges: 50,
     maxYearlyCharges: 25,
-    maxVehicles: 10,
+    maxVehicles: 15,
   },
   enterprise: {
     maxDrivers: Infinity,

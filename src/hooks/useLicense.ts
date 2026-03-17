@@ -190,19 +190,26 @@ export type FeatureKey =
   | 'section_vehicle_stats'
   | 'section_driver_stats';
 
-// SYNCHRONIZED WITH src/types/pricing.ts PRICING_PLANS.features
-// Update both files when changing features!
+// SYNCHRONIZED WITH: shared.ts PLAN_DEFAULTS, src/types/features.ts PLAN_DEFAULTS,
+// src/hooks/usePlanLimits.ts, PricingSection.tsx
+// This is the CLIENT-SIDE fallback when customFeatures from server are not available.
 const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
   start: [
-    // Core START features - restricted set
+    // Core START features
     'basic_calculator',
     'dashboard_basic',
     'cost_analysis_basic',
-    'pdf_export_basic',
     'fleet_basic',
+    // Itinéraire PL inclus dans Start
+    'itinerary_planning',
+    // Tournées sauvegardées (5 max)
+    'saved_tours',
+    'auto_pricing_basic',
     // Navigation/Pages - START
     'page_dashboard',
     'page_calculator',
+    'page_itinerary',
+    'page_tours',
     'page_clients',
     'page_vehicles',
     'page_drivers',
@@ -211,8 +218,10 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     // UI Components - START
     'btn_map_preview',
     'btn_contact_support',
+    'btn_save_tour',
+    'btn_load_tour',
     'section_cost_breakdown',
-    // UI Components - CRUD buttons (START)
+    // CRUD buttons
     'btn_add_client',
     'btn_add_vehicle',
     'btn_add_driver',
@@ -226,19 +235,21 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'btn_delete_driver',
     'btn_edit_charge',
     'btn_delete_charge',
-    // UI Components - Stats sections (START)
     'section_client_stats',
     'section_vehicle_stats',
     'section_driver_stats',
   ],
   pro: [
-    // START features included
+    // All START features
     'basic_calculator',
     'dashboard_basic',
     'cost_analysis_basic',
-    'pdf_export_basic',
     'fleet_basic',
-    // UI Components - CRUD buttons (START)
+    'itinerary_planning',
+    'saved_tours',
+    'auto_pricing_basic',
+    'btn_save_tour',
+    'btn_load_tour',
     'btn_add_client',
     'btn_add_vehicle',
     'btn_add_driver',
@@ -252,18 +263,12 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'btn_delete_driver',
     'btn_edit_charge',
     'btn_delete_charge',
-    // UI Components - Stats sections (START)
     'section_client_stats',
     'section_vehicle_stats',
     'section_driver_stats',
-    // PRO features unlocked
-    'itinerary_planning',
-    'saved_tours',
-    'trip_history',
-    'auto_pricing_basic',
-    'fleet_management',
+    // PRO features
     'dashboard_analytics',
-    'forecast',
+    'trip_history',
     'multi_drivers',
     'cost_analysis',
     'margin_alerts',
@@ -273,10 +278,13 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'monthly_tracking',
     'auto_pricing',
     'client_analysis_basic',
-    // Company management features - PRO
+    'client_analysis',
+    'fleet_management',
+    'ai_optimization',           // 5 analyses IA/jour
+    'ai_pdf_analysis',
+    // Company management - PRO (basic)
     'company_invite_members',
     'company_remove_members',
-    'company_change_roles',
     'company_view_activity',
     'company_manage_settings',
     'company_data_sharing',
@@ -290,22 +298,19 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'page_vehicles',
     'page_drivers',
     'page_charges',
-    'page_forecast',
     'page_trip_history',
+    'page_ai_analysis',
     'page_vehicle_reports',
     'page_team',
     'page_settings',
     // UI Components - PRO
     'btn_export_pdf',
     'btn_export_excel',
-    'btn_save_tour',
-    'btn_load_tour',
     'btn_map_preview',
     'btn_contact_support',
     'section_cost_breakdown',
     'section_margin_alerts',
     'section_charts',
-    // UI Components - Add/Create buttons (PRO)
     'btn_add_trip',
     'btn_add_quote',
   ],
@@ -314,9 +319,12 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'basic_calculator',
     'dashboard_basic',
     'cost_analysis_basic',
-    'pdf_export_basic',
     'fleet_basic',
-    // UI Components - CRUD buttons (START)
+    'itinerary_planning',
+    'saved_tours',
+    'auto_pricing_basic',
+    'btn_save_tour',
+    'btn_load_tour',
     'btn_add_client',
     'btn_add_vehicle',
     'btn_add_driver',
@@ -330,17 +338,11 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'btn_delete_driver',
     'btn_edit_charge',
     'btn_delete_charge',
-    // UI Components - Stats sections (START)
     'section_client_stats',
     'section_vehicle_stats',
     'section_driver_stats',
-    'itinerary_planning',
-    'saved_tours',
-    'trip_history',
-    'auto_pricing_basic',
-    'fleet_management',
     'dashboard_analytics',
-    'forecast',
+    'trip_history',
     'multi_drivers',
     'cost_analysis',
     'margin_alerts',
@@ -350,23 +352,33 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'monthly_tracking',
     'auto_pricing',
     'client_analysis_basic',
-    // Company management features
+    'client_analysis',
+    'fleet_management',
+    'ai_optimization',
+    'ai_pdf_analysis',
     'company_invite_members',
     'company_remove_members',
-    'company_change_roles',
     'company_view_activity',
     'company_manage_settings',
     'company_data_sharing',
     'realtime_notifications',
-    // ENTERPRISE exclusive
-    'ai_optimization',
-    'ai_pdf_analysis',
+    'btn_export_pdf',
+    'btn_export_excel',
+    'btn_map_preview',
+    'btn_contact_support',
+    'section_cost_breakdown',
+    'section_margin_alerts',
+    'section_charts',
+    'btn_add_trip',
+    'btn_add_quote',
+    // ENTERPRISE exclusive features
+    'forecast',
+    'smart_quotes',
     'multi_agency',
     'tms_erp_integration',
     'multi_users',
     'unlimited_vehicles',
-    'client_analysis',
-    'smart_quotes',
+    'company_change_roles',
     // Navigation/Pages - ENTERPRISE (all)
     'page_dashboard',
     'page_calculator',
@@ -384,19 +396,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
     'page_team',
     'page_settings',
     // UI Components - ENTERPRISE (all)
-    'btn_export_pdf',
-    'btn_export_excel',
-    'btn_save_tour',
-    'btn_load_tour',
     'btn_ai_optimize',
-    'btn_map_preview',
-    'btn_contact_support',
-    'section_cost_breakdown',
-    'section_margin_alerts',
-    'section_charts',
-    // UI Components - Add/Create buttons (PRO)
-    'btn_add_trip',
-    'btn_add_quote',
   ],
 };
 

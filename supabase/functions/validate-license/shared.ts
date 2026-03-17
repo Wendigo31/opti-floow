@@ -1,25 +1,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Plan defaults - features enabled by default based on plan type
+// SYNCHRONIZED WITH: src/types/features.ts PLAN_DEFAULTS, src/hooks/useLicense.ts PLAN_FEATURES,
+// src/hooks/usePlanLimits.ts PLAN_LIMITS, src/components/activation/PricingSection.tsx
+// UPDATE ALL FILES WHEN CHANGING!
 export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | null>> = {
   start: {
+    // Core features
     basic_calculator: true,
-    itinerary_planning: true,
+    itinerary_planning: true,    // Itinéraire PL inclus dans Start
     dashboard_basic: true,
+    cost_analysis_basic: true,
+    auto_pricing_basic: true,    // Calcul prix/km basique
+    saved_tours: true,           // 5 tournées max
+    // Pro/Enterprise features OFF
     dashboard_analytics: false,
     forecast: false,
-    trip_history: true,
+    trip_history: false,         // Pro uniquement
     multi_drivers: false,
     cost_analysis: false,
-    cost_analysis_basic: true,
     margin_alerts: false,
     dynamic_charts: false,
     pdf_export_pro: false,
     excel_export: false,
     monthly_tracking: false,
     auto_pricing: false,
-    auto_pricing_basic: true,
-    saved_tours: true,
     client_analysis_basic: false,
     ai_optimization: false,
     ai_pdf_analysis: false,
@@ -29,6 +34,7 @@ export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | nul
     unlimited_vehicles: false,
     client_analysis: false,
     smart_quotes: false,
+    // Limites START - synchronized with PricingSection
     max_drivers: 5,
     max_clients: 10,
     max_vehicles: 5,
@@ -41,32 +47,36 @@ export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | nul
     max_daily_analyses: 0,
   },
   pro: {
+    // All Start features
     basic_calculator: true,
     itinerary_planning: true,
     dashboard_basic: true,
+    cost_analysis_basic: true,
+    auto_pricing_basic: true,
+    saved_tours: true,
+    // Pro features ON
     dashboard_analytics: true,
-    forecast: false,
     trip_history: true,
     multi_drivers: true,
     cost_analysis: true,
-    cost_analysis_basic: true,
     margin_alerts: true,
     dynamic_charts: true,
     pdf_export_pro: true,
     excel_export: true,
     monthly_tracking: true,
     auto_pricing: true,
-    auto_pricing_basic: true,
-    saved_tours: true,
     client_analysis_basic: true,
-    ai_optimization: true,
+    ai_optimization: true,       // 5 analyses IA/jour
     ai_pdf_analysis: true,
+    client_analysis: true,
+    // Enterprise features OFF
+    forecast: false,             // Enterprise uniquement
+    smart_quotes: false,         // Enterprise uniquement
     multi_agency: false,
     tms_erp_integration: false,
     multi_users: false,
     unlimited_vehicles: false,
-    client_analysis: true,
-    smart_quotes: false,
+    // Limites PRO - synchronized with PricingSection
     max_drivers: 15,
     max_clients: 30,
     max_vehicles: 15,
@@ -79,6 +89,7 @@ export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | nul
     max_daily_analyses: 5,
   },
   enterprise: {
+    // All features ON
     basic_calculator: true,
     itinerary_planning: true,
     dashboard_basic: true,
@@ -105,6 +116,7 @@ export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | nul
     unlimited_vehicles: true,
     client_analysis: true,
     smart_quotes: true,
+    // Tout illimité
     max_drivers: null,
     max_clients: null,
     max_vehicles: null,

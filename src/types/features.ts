@@ -137,27 +137,30 @@ export interface FeatureDefinition {
 
 // convertPlanToFeatures function removed - pricing system disabled
 
-// Default features by plan - Generated from new pricing system
+// SYNCHRONIZED WITH: shared.ts PLAN_DEFAULTS, useLicense.ts PLAN_FEATURES,
+// usePlanLimits.ts PLAN_LIMITS, PricingSection.tsx
+// UPDATE ALL FILES WHEN CHANGING!
 export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<LicenseFeatures>> = {
   start: {
-    // Base - 29€/mois : Essentiel pour les artisans (features restreintes)
+    // Core features - Start includes calculator, itinerary PL, basic dashboard
     basic_calculator: true,
-    itinerary_planning: false, // Add-on
+    itinerary_planning: true,    // Itinéraire PL inclus dans Start
     dashboard_basic: true,
+    cost_analysis_basic: true,
+    auto_pricing_basic: true,    // Calcul prix/km basique
+    saved_tours: true,           // 5 tournées max
+    // Pro/Enterprise features OFF
     dashboard_analytics: false,
     forecast: false,
-    trip_history: false, // Add-on
+    trip_history: false,
     multi_drivers: false,
     cost_analysis: false,
-    cost_analysis_basic: true,
     margin_alerts: false,
     dynamic_charts: false,
     pdf_export_pro: false,
     excel_export: false,
     monthly_tracking: false,
     auto_pricing: false,
-    auto_pricing_basic: false, // Add-on
-    saved_tours: false, // Add-on
     client_analysis_basic: false,
     ai_optimization: false,
     ai_pdf_analysis: false,
@@ -167,7 +170,7 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     unlimited_vehicles: false,
     client_analysis: false,
     smart_quotes: false,
-    // Company features - START: basic only
+    // Company features - START: none
     company_invite_members: false,
     company_remove_members: false,
     company_change_roles: false,
@@ -175,11 +178,11 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     company_manage_settings: false,
     company_data_sharing: false,
     realtime_notifications: false,
-    // Navigation/Pages - START: limited pages
+    // Navigation/Pages - START
     page_dashboard: true,
     page_calculator: true,
-    page_itinerary: false,
-    page_tours: false,
+    page_itinerary: true,        // Itinéraire PL inclus
+    page_tours: true,            // Tournées sauvegardées (limitées)
     page_clients: true,
     page_vehicles: true,
     page_drivers: true,
@@ -191,64 +194,85 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     page_vehicle_reports: false,
     page_team: false,
     page_settings: true,
-    // UI Components - START: basic only
+    // UI Components - START
     btn_export_pdf: false,
     btn_export_excel: false,
-    btn_save_tour: false,
-    btn_load_tour: false,
+    btn_save_tour: true,         // Needed for saving tours (limited)
+    btn_load_tour: true,
     btn_ai_optimize: false,
     btn_map_preview: true,
     btn_contact_support: true,
     section_cost_breakdown: true,
     section_margin_alerts: false,
     section_charts: false,
-    // Limites START
-    max_drivers: 2,
-    max_clients: 15,
-    max_vehicles: 2,
-    max_daily_charges: 10,
-    max_monthly_charges: 10,
-    max_yearly_charges: 5,
-    max_saved_tours: 0, // Add-on requis
+    // CRUD buttons - available on all plans
+    btn_add_client: true,
+    btn_add_vehicle: true,
+    btn_add_driver: true,
+    btn_add_charge: true,
+    btn_add_trailer: true,
+    btn_add_trip: false,
+    btn_add_quote: false,
+    btn_edit_client: true,
+    btn_delete_client: true,
+    btn_edit_vehicle: true,
+    btn_delete_vehicle: true,
+    btn_edit_driver: true,
+    btn_delete_driver: true,
+    btn_edit_charge: true,
+    btn_delete_charge: true,
+    section_client_stats: true,
+    section_vehicle_stats: true,
+    section_driver_stats: true,
+    // Limites START - synchronized with PricingSection
+    max_drivers: 5,
+    max_clients: 10,
+    max_vehicles: 5,
+    max_daily_charges: 20,
+    max_monthly_charges: 20,
+    max_yearly_charges: 10,
+    max_saved_tours: 5,
     max_company_users: 1,
   },
   pro: {
-    // Pro - 79€/mois : Pour les PME
+    // All Start features
     basic_calculator: true,
     itinerary_planning: true,
     dashboard_basic: true,
+    cost_analysis_basic: true,
+    auto_pricing_basic: true,
+    saved_tours: true,
+    // Pro features ON
     dashboard_analytics: true,
-    forecast: true,
     trip_history: true,
     multi_drivers: true,
     cost_analysis: true,
-    cost_analysis_basic: true,
     margin_alerts: true,
     dynamic_charts: true,
     pdf_export_pro: true,
     excel_export: true,
     monthly_tracking: true,
     auto_pricing: true,
-    auto_pricing_basic: true,
-    saved_tours: true,
     client_analysis_basic: true,
-    ai_optimization: false,
-    ai_pdf_analysis: false,
+    ai_optimization: true,       // 5 analyses IA/jour
+    ai_pdf_analysis: true,
+    client_analysis: true,
+    // Enterprise features OFF
+    forecast: false,             // Enterprise uniquement
+    smart_quotes: false,         // Enterprise uniquement
     multi_agency: false,
     tms_erp_integration: false,
     multi_users: false,
     unlimited_vehicles: false,
-    client_analysis: false,
-    smart_quotes: false,
-    // Company features - PRO: team features
+    // Company features - PRO: basic team management
     company_invite_members: true,
     company_remove_members: true,
-    company_change_roles: true,
+    company_change_roles: false,  // Enterprise uniquement
     company_view_activity: true,
     company_manage_settings: true,
     company_data_sharing: true,
     realtime_notifications: true,
-    // Navigation/Pages - PRO: most pages
+    // Navigation/Pages - PRO
     page_dashboard: true,
     page_calculator: true,
     page_itinerary: true,
@@ -257,36 +281,55 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     page_vehicles: true,
     page_drivers: true,
     page_charges: true,
-    page_forecast: true,
+    page_forecast: false,        // Enterprise uniquement
     page_trip_history: true,
-    page_ai_analysis: false,
-    page_toxic_clients: false,
+    page_ai_analysis: true,      // 5 analyses IA/jour
+    page_toxic_clients: false,   // Enterprise uniquement
     page_vehicle_reports: true,
     page_team: true,
     page_settings: true,
-    // UI Components - PRO: most features
+    // UI Components - PRO
     btn_export_pdf: true,
     btn_export_excel: true,
     btn_save_tour: true,
     btn_load_tour: true,
-    btn_ai_optimize: false,
+    btn_ai_optimize: false,      // Enterprise uniquement
     btn_map_preview: true,
     btn_contact_support: true,
     section_cost_breakdown: true,
     section_margin_alerts: true,
     section_charts: true,
-    // Limites PRO
+    // CRUD buttons
+    btn_add_client: true,
+    btn_add_vehicle: true,
+    btn_add_driver: true,
+    btn_add_charge: true,
+    btn_add_trailer: true,
+    btn_add_trip: true,
+    btn_add_quote: true,
+    btn_edit_client: true,
+    btn_delete_client: true,
+    btn_edit_vehicle: true,
+    btn_delete_vehicle: true,
+    btn_edit_driver: true,
+    btn_delete_driver: true,
+    btn_edit_charge: true,
+    btn_delete_charge: true,
+    section_client_stats: true,
+    section_vehicle_stats: true,
+    section_driver_stats: true,
+    // Limites PRO - synchronized with PricingSection
     max_drivers: 15,
-    max_clients: 100,
-    max_vehicles: 50,
+    max_clients: 30,
+    max_vehicles: 15,
     max_daily_charges: 50,
     max_monthly_charges: 50,
     max_yearly_charges: 25,
-    max_saved_tours: 200,
-    max_company_users: 5,
+    max_saved_tours: 20,
+    max_company_users: 3,
   },
   enterprise: {
-    // Enterprise - 199€/mois : Pour les grands comptes
+    // All features ON
     basic_calculator: true,
     itinerary_planning: true,
     dashboard_basic: true,
@@ -348,6 +391,25 @@ export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<Licen
     section_cost_breakdown: true,
     section_margin_alerts: true,
     section_charts: true,
+    // CRUD buttons
+    btn_add_client: true,
+    btn_add_vehicle: true,
+    btn_add_driver: true,
+    btn_add_charge: true,
+    btn_add_trailer: true,
+    btn_add_trip: true,
+    btn_add_quote: true,
+    btn_edit_client: true,
+    btn_delete_client: true,
+    btn_edit_vehicle: true,
+    btn_delete_vehicle: true,
+    btn_edit_driver: true,
+    btn_delete_driver: true,
+    btn_edit_charge: true,
+    btn_delete_charge: true,
+    section_client_stats: true,
+    section_vehicle_stats: true,
+    section_driver_stats: true,
     // Tout illimité
     max_drivers: null,
     max_clients: null,
