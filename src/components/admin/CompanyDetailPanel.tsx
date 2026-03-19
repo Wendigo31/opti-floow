@@ -488,7 +488,7 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
                                 <AvatarFallback>
-                                  {user.display_name?.[0] || user.email[0].toUpperCase()}
+                                  {(user.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
