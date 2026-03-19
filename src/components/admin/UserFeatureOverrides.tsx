@@ -341,7 +341,7 @@ export function UserFeatureOverrides({ getAdminToken }: Props) {
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback>
-                    {selectedUser.display_name?.[0] || selectedUser.email[0].toUpperCase()}
+                    {(selectedUser.display_name?.[0] || selectedUser.email?.[0] || '?').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
