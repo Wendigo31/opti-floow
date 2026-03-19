@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,7 +14,6 @@ import {
   Mail,
   Loader2,
   AlertCircle,
-  Check
 } from 'lucide-react';
 import { TeamRole } from '@/types/team';
 
@@ -84,11 +82,6 @@ export function RoleManagement() {
     }
   };
 
-  // Only direction can see this component
-  if (!isDirection) {
-    return null;
-  }
-
   if (isLoading) {
     return (
       <Card>
@@ -97,6 +90,11 @@ export function RoleManagement() {
         </CardContent>
       </Card>
     );
+  }
+
+  // Only direction can see this component
+  if (!isDirection) {
+    return null;
   }
 
   if (error) {
@@ -151,7 +149,7 @@ export function RoleManagement() {
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="bg-amber-500/20 text-amber-600 text-sm">
-                        {member.display_name?.[0] || member.email[0].toUpperCase()}
+                        {(member.display_name?.[0] || member.email?.[0] || '?').toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -197,7 +195,7 @@ export function RoleManagement() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarFallback className="text-sm">
-                          {member.display_name?.[0] || member.email[0].toUpperCase()}
+                          {(member.display_name?.[0] || member.email?.[0] || '?').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>

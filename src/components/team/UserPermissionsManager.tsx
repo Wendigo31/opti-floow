@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,11 +24,8 @@ import {
   Building2,
   UserCircle,
   DollarSign,
-  Eye,
   EyeOff,
   Save,
-  Plus,
-  Trash2
 } from 'lucide-react';
 import { TeamMember } from '@/types/team';
 
@@ -78,21 +75,27 @@ export function UserPermissionsManager() {
   const [memberPermissions, setMemberPermissions] = useState<MemberPermissions[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
 
   // Filter out direction users - they have full access
   const editableMembers = members.filter(m => 
     m.role !== 'direction' && !m.isCurrentUser
   );
 
-  // Fetch existing overrides
-  const fetchOverrides = useCallback(async () => {
-    if (!editableMembers.length) {
+  // Fetch existing overrides - stabilized with ref to avoid infinite loops
+  const fetchOverrides = useCallback(async (membersList: TeamMember[]) => {
+    const filteredMembers = membersList.filter(m => 
+      m.role !== 'direction' && !m.isCurrentUser
+    );
+
+    if (!filteredMembers.length) {
+      setMemberPermissions([]);
       setIsLoading(false);
       return;
     }
 
     try {
-      const memberIds = editableMembers.map(m => m.id);
+      const memberIds = filteredMembers.map(m => m.id);
       
       const { data, error } = await supabase
         .from('user_feature_overrides')
@@ -103,7 +106,7 @@ export function UserPermissionsManager() {
         console.error('Error fetching overrides:', error);
       }
 
-      const permissions: MemberPermissions[] = editableMembers.map(member => ({
+      const permissions: MemberPermissions[] = filteredMembers.map(member => ({
         member,
         overrides: (data || [])
           .filter(o => o.company_user_id === member.id)
@@ -122,15 +125,18 @@ export function UserPermissionsManager() {
     } finally {
       setIsLoading(false);
     }
-  }, [editableMembers]);
+  }, []);
 
+  // Fetch overrides when team data is ready
   useEffect(() => {
-    if (!teamLoading && editableMembers.length > 0) {
-      fetchOverrides();
-    } else if (!teamLoading) {
+    if (teamLoading) return;
+    
+    if (members.length > 0) {
+      fetchOverrides(members);
+    } else {
       setIsLoading(false);
     }
-  }, [teamLoading, members]);
+  }, [teamLoading, members, fetchOverrides]);
 
   // Toggle expansion for a member
   const toggleExpanded = (memberId: string) => {
@@ -233,10 +239,6 @@ export function UserPermissionsManager() {
     return acc;
   }, {} as Record<string, { key: FeatureKey; label: string; icon: any; category: string }[]>);
 
-  if (!isDirection) {
-    return null;
-  }
-
   if (isLoading || teamLoading) {
     return (
       <Card>
@@ -245,6 +247,10 @@ export function UserPermissionsManager() {
         </CardContent>
       </Card>
     );
+  }
+
+  if (!isDirection) {
+    return null;
   }
 
   if (editableMembers.length === 0) {
@@ -299,7 +305,7 @@ export function UserPermissionsManager() {
                     )}
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-sm">
-                        {member.display_name?.[0] || member.email[0].toUpperCase()}
+                        {(member.display_name?.[0] || member.email?.[0] || '?').toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="text-left">

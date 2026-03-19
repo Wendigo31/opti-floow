@@ -154,8 +154,33 @@ export function TeamManagement() {
     }
   };
 
-  // Check if multi-users is available
-  if (licensePlanType !== 'pro' && licensePlanType !== 'enterprise') {
+  // Show loading FIRST before any plan-based decisions
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+            <p className="text-destructive">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Check if multi-users is available (AFTER loading is done)
+  const effectivePlan = licensePlanType || 'start';
+  if (effectivePlan !== 'pro' && effectivePlan !== 'enterprise') {
     return (
       <Card>
         <CardHeader>
@@ -174,30 +199,7 @@ export function TeamManagement() {
             <p className="text-muted-foreground mb-4">
               La gestion d'équipe multi-utilisateurs est disponible avec les forfaits Pro et Enterprise.
             </p>
-            <Badge variant="outline">Forfait actuel : {(licensePlanType || 'start').toUpperCase()}</Badge>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-            <p className="text-destructive">{error}</p>
+            <Badge variant="outline">Forfait actuel : {effectivePlan.toUpperCase()}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -316,7 +318,7 @@ export function TeamManagement() {
                   <div className="flex items-center gap-4">
                     <Avatar>
                       <AvatarFallback>
-                        {member.display_name?.[0] || member.email[0].toUpperCase()}
+                        {(member.display_name?.[0] || member.email?.[0] || '?').toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -338,7 +340,7 @@ export function TeamManagement() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant={getRoleBadgeVariant(member.role)} className="flex items-center gap-1">
+                    <Badge variant={getRoleBadgeVariant(member.role) as any} className="flex items-center gap-1">
                       {getRoleIcon(member.role)}
                       {ROLE_LABELS[member.role]}
                     </Badge>
