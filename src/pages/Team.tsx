@@ -7,12 +7,23 @@ import { useTeam } from '@/hooks/useTeam';
 import { useLicense } from '@/hooks/useLicense';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Settings, UserCog, Shield } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function Team() {
-  const { isDirection: isDirectionFromTeam } = useTeam();
-  const { licenseData } = useLicense();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const { licenseData, isLoading: isLicenseLoading } = useLicense();
   const [activeTab, setActiveTab] = useState('team');
+
+  const isLoading = isTeamLoading || isLicenseLoading;
+  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 px-4 max-w-5xl flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-5xl">
