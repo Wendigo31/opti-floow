@@ -1382,7 +1382,7 @@ export default function Drivers() {
       )}
 
       {/* Tabs CDI / Intérim */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated' | 'absences')}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
