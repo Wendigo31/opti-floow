@@ -89,6 +89,7 @@ export function useRealtimeNotifications() {
       client: 'client',
       quote: 'devis',
       trip: 'trajet',
+      absence: 'absence conducteur',
     };
 
     const icons = {
@@ -99,6 +100,7 @@ export function useRealtimeNotifications() {
       client: '🏢',
       quote: '📋',
       trip: '📍',
+      absence: '🏥',
     };
 
     toast.info(
