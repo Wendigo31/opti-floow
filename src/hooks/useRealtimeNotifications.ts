@@ -38,7 +38,7 @@ export function useRealtimeNotifications() {
   const isSubscribedRef = useRef(false);
 
   const showNotification = useCallback((
-    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client' | 'quote' | 'trip',
+    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client' | 'quote' | 'trip' | 'absence',
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
     creatorEmail?: string,
