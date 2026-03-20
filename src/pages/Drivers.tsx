@@ -1642,6 +1642,10 @@ export default function Drivers() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="absences" className="mt-6">
+          <DriverAbsencesTab allDrivers={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers] as Driver[]} />
+        </TabsContent>
       </Tabs>
        
        <ImportDriversDialog
