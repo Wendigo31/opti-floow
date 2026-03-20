@@ -72,7 +72,7 @@ export default function Drivers() {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
   const [formContractType, setFormContractType] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker'>('cdi');
-  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated'>('cdi');
+  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated' | 'absences'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
