@@ -676,6 +676,45 @@ export type Database = {
           },
         ]
       }
+      driver_absences: {
+        Row: {
+          absence_type: string
+          created_at: string
+          driver_id: string
+          end_date: string | null
+          id: string
+          license_id: string
+          notes: string | null
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          absence_type: string
+          created_at?: string
+          driver_id: string
+          end_date?: string | null
+          id?: string
+          license_id: string
+          notes?: string | null
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          absence_type?: string
+          created_at?: string
+          driver_id?: string
+          end_date?: string | null
+          id?: string
+          license_id?: string
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exploitation_metric_settings: {
         Row: {
           can_view_dashboard_financials: boolean | null

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle, Merge, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle, Merge, Copy, CalendarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ import { useLicenseContext } from '@/context/LicenseContext';
 import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
 import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
+import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
@@ -71,7 +72,7 @@ export default function Drivers() {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<ExtendedDriver>>({});
   const [formContractType, setFormContractType] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker'>('cdi');
-  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated'>('cdi');
+  const [activeTab, setActiveTab] = useState<'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated' | 'absences'>('cdi');
   const [searchTerm, setSearchTerm] = useState('');
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>('all');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -1381,7 +1382,7 @@ export default function Drivers() {
       )}
 
       {/* Tabs CDI / Intérim */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated' | 'absences')}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
@@ -1403,6 +1404,10 @@ export default function Drivers() {
             <TabsTrigger value="autre" className="gap-2">
               <User className="w-4 h-4" />
               Autres ({filteredAutreDrivers.length})
+            </TabsTrigger>
+            <TabsTrigger value="absences" className="gap-2">
+              <CalendarOff className="w-4 h-4" />
+              <span className="hidden sm:inline">Absences</span>
             </TabsTrigger>
             {uncreatedDrivers.length > 0 && (
               <TabsTrigger value="uncreated" className="gap-2">
@@ -1636,6 +1641,10 @@ export default function Drivers() {
               </Table>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="absences" className="mt-6">
+          <DriverAbsencesTab allDrivers={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers] as Driver[]} />
         </TabsContent>
       </Tabs>
        

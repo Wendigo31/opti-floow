@@ -38,7 +38,7 @@ export function useRealtimeNotifications() {
   const isSubscribedRef = useRef(false);
 
   const showNotification = useCallback((
-    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client' | 'quote' | 'trip',
+    type: 'vehicle' | 'tour' | 'trailer' | 'driver' | 'client' | 'quote' | 'trip' | 'absence',
     action: 'INSERT' | 'UPDATE' | 'DELETE',
     itemName: string,
     creatorEmail?: string,
@@ -89,6 +89,7 @@ export function useRealtimeNotifications() {
       client: 'client',
       quote: 'devis',
       trip: 'trajet',
+      absence: 'absence conducteur',
     };
 
     const icons = {
@@ -99,6 +100,7 @@ export function useRealtimeNotifications() {
       client: '🏢',
       quote: '📋',
       trip: '📍',
+      absence: '🏥',
     };
 
     toast.info(
@@ -297,6 +299,35 @@ export function useRealtimeNotifications() {
       )
       .subscribe();
 
+    // Subscribe to driver absences changes
+    const absenceChannel = supabase
+      .channel('company-absences')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'driver_absences',
+          filter: `license_id=eq.${licenseId}`,
+        },
+        (payload: RealtimePayload) => {
+          const record = payload.new || payload.old;
+          const userId = record.user_id;
+          const isOwnAction = userId === currentUserIdRef.current;
+          
+          const memberInfo = memberMap.get(userId);
+          const absenceTypes: Record<string, string> = {
+            maladie: 'Arrêt maladie',
+            accident_travail: 'Accident de travail',
+            conges: 'Congés',
+            autre: 'Absence',
+          };
+          const absenceName = absenceTypes[record.absence_type] || 'Absence';
+          showNotification('absence', payload.eventType, absenceName, memberInfo?.email, isOwnAction, memberInfo?.displayName);
+        }
+      )
+      .subscribe();
+
     console.log('[Realtime] Subscribed to company data changes');
 
     // Return cleanup function
@@ -308,6 +339,7 @@ export function useRealtimeNotifications() {
       supabase.removeChannel(clientChannel);
       supabase.removeChannel(quoteChannel);
       supabase.removeChannel(tripChannel);
+      supabase.removeChannel(absenceChannel);
       isSubscribedRef.current = false;
     };
   }, [showNotification]);
