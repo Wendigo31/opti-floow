@@ -1405,6 +1405,10 @@ export default function Drivers() {
               <User className="w-4 h-4" />
               Autres ({filteredAutreDrivers.length})
             </TabsTrigger>
+            <TabsTrigger value="absences" className="gap-2">
+              <CalendarOff className="w-4 h-4" />
+              <span className="hidden sm:inline">Absences</span>
+            </TabsTrigger>
             {uncreatedDrivers.length > 0 && (
               <TabsTrigger value="uncreated" className="gap-2">
                 <AlertTriangle className="w-4 h-4 text-warning" />
