@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import { ImportPlanningDialog } from '@/components/planning/ImportPlanningDialog
 import { PlanningFilters } from '@/components/planning/PlanningFilters';
 import { PlanningRowDetailPanel } from '@/components/planning/PlanningRowDetailPanel';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+// ScrollArea removed — using native virtualized scroll
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
@@ -34,6 +34,9 @@ const DAY_COLUMNS = [
   { label: 'Dim. soir', idx: 6 },
 ];
 
+const ROW_HEIGHT = 56; // px per row
+const OVERSCAN = 10; // extra rows rendered above/below
+
 /** Compound key for grouping entries into traction rows */
 function tractionKey(e: PlanningEntry): string {
   return `${e.tour_name || ''}|||${e.mission_order || ''}`;
@@ -46,6 +49,197 @@ interface TractionGroup {
   clientId: string | null;
   driverId: string | null;
   entries: PlanningEntry[];
+}
+
+interface VirtualizedGridProps {
+  filteredGroups: TractionGroup[];
+  weekDays: Date[];
+  getDriverDisplay: (id: string | null) => { name: string; type: string } | null;
+  getClientName: (id: string | null) => string | null;
+  getGroupEntryForDay: (group: TractionGroup, date: Date) => PlanningEntry | undefined;
+  handleRowClick: (group: TractionGroup) => void;
+}
+
+function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClientName, getGroupEntryForDay, handleRowClick }: VirtualizedGridProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      if (entries[0]) setContainerHeight(entries[0].contentRect.height);
+    });
+    ro.observe(el);
+    setContainerHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  const totalHeight = filteredGroups.length * ROW_HEIGHT;
+  const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const endIdx = Math.min(filteredGroups.length, Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + OVERSCAN);
+  const visibleGroups = filteredGroups.slice(startIdx, endIdx);
+
+  return (
+    <div ref={containerRef} className="h-full overflow-auto" onScroll={handleScroll}>
+      <div className="min-w-[1200px]">
+        {/* Header row */}
+        <div className="grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
+          <div className="p-2.5 font-medium text-xs border-r">Resp. secteur</div>
+          <div className="p-2.5 font-medium text-xs border-r">Client</div>
+          <div className="p-2.5 font-medium text-xs border-r">Ligne</div>
+          <div className="p-2.5 font-medium text-xs border-r">Titulaire</div>
+          {DAY_COLUMNS.map((col, i) => {
+            const day = weekDays[col.idx];
+            const isToday = day ? isSameDay(day, new Date()) : false;
+            return (
+              <div
+                key={i}
+                className={cn("p-2 text-center border-r last:border-r-0", isToday && "bg-primary/10")}
+              >
+                <div className="font-medium text-xs">{col.label}</div>
+                {day && (
+                  <div className={cn("text-[10px]", isToday ? "text-primary font-bold" : "text-muted-foreground")}>
+                    {format(day, 'd MMM', { locale: fr })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Virtual spacer + visible rows */}
+        <div style={{ height: totalHeight, position: 'relative' }}>
+          <div style={{ position: 'absolute', top: startIdx * ROW_HEIGHT, left: 0, right: 0 }}>
+            {visibleGroups.map((group, vi) => {
+              const gi = startIdx + vi;
+              const driverInfo = getDriverDisplay(group.driverId);
+              const clientName = getClientName(group.clientId);
+
+              return (
+                <div
+                  key={gi}
+                  className={cn(
+                    "grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-accent/40 transition-colors",
+                    gi % 2 === 1 && "bg-muted/30"
+                  )}
+                  style={{ height: ROW_HEIGHT }}
+                  onClick={() => handleRowClick(group)}
+                >
+                  {/* Resp. secteur */}
+                  <div className="p-2 border-r flex items-center">
+                    <span className="text-xs truncate">{group.sectorManager || <span className="text-muted-foreground">-</span>}</span>
+                  </div>
+
+                  {/* Client */}
+                  <div className="p-2 border-r flex items-center">
+                    <span className="text-xs truncate">{clientName || <span className="text-muted-foreground">-</span>}</span>
+                  </div>
+
+                  {/* Ligne */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-2 border-r flex items-center bg-muted/20">
+                        <span className="text-xs font-medium truncate">🚚 {group.tourName}</span>
+                      </div>
+                    </TooltipTrigger>
+                    {group.missionOrder && (
+                      <TooltipContent side="right" className="max-w-md text-xs whitespace-pre-line max-h-60 overflow-y-auto">
+                        <p className="font-semibold mb-1">Ordre de mission</p>
+                        {group.missionOrder}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+
+                  {/* Titulaire */}
+                  <div className="p-2 border-r flex items-center">
+                    {driverInfo ? (
+                      <div className="text-xs truncate">
+                        <span>👤 {driverInfo.name}</span>
+                        {driverInfo.type && (
+                          <Badge variant="outline" className="ml-1 text-[9px] px-1 py-0">{driverInfo.type}</Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </div>
+
+                  {/* Day cells */}
+                  {DAY_COLUMNS.map((col) => {
+                    const day = weekDays[col.idx];
+                    const dayEntry = day ? getGroupEntryForDay(group, day) : undefined;
+                    const isToday = day ? isSameDay(day, new Date()) : false;
+
+                    let cellContent: string | null = null;
+                    let cellDriverType: string | null = null;
+
+                    if (dayEntry) {
+                      if (dayEntry.notes) {
+                        cellContent = dayEntry.notes;
+                      } else if (dayEntry.driver_id) {
+                        const di = getDriverDisplay(dayEntry.driver_id);
+                        if (di) {
+                          cellContent = di.name;
+                          cellDriverType = di.type;
+                        }
+                      }
+                    }
+
+                    const contractBg = cellDriverType === 'joker'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40'
+                      : cellDriverType === 'interim'
+                      ? 'bg-amber-100 dark:bg-amber-900/40'
+                      : cellDriverType === 'cdd'
+                      ? 'bg-purple-100 dark:bg-purple-900/40'
+                      : cellDriverType === 'autre'
+                      ? 'bg-gray-100 dark:bg-gray-900/40'
+                      : '';
+
+                    return (
+                      <div
+                        key={col.idx}
+                        className={cn(
+                          "p-1.5 border-r last:border-r-0 flex items-center justify-center",
+                          isToday && "bg-primary/5",
+                          contractBg
+                        )}
+                      >
+                        {cellContent ? (
+                          <div className="text-[11px] text-center leading-tight">
+                            <span className="font-medium">{cellContent}</span>
+                            {cellDriverType && (
+                              <Badge variant="outline" className={cn(
+                                "block mt-0.5 text-[8px] px-1 py-0 mx-auto w-fit",
+                                cellDriverType === 'joker' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+                                cellDriverType === 'interim' && 'bg-amber-500/10 text-amber-700 border-amber-500/30',
+                                cellDriverType === 'cdd' && 'bg-purple-500/10 text-purple-700 border-purple-500/30',
+                                cellDriverType === 'autre' && 'bg-gray-500/10 text-gray-700 border-gray-500/30',
+                                cellDriverType === 'cdi' && 'bg-blue-500/10 text-blue-700 border-blue-500/30'
+                              )}>
+                                {cellDriverType === 'joker' ? 'Joker' : cellDriverType === 'interim' ? 'Intérim' : cellDriverType === 'cdd' ? 'CDD' : cellDriverType === 'autre' ? 'Autre' : cellDriverType === 'cdi' ? 'CDI' : cellDriverType}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : dayEntry ? (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Planning() {
@@ -444,156 +638,14 @@ export default function Planning() {
               </div>
             </div>
           ) : (
-            <ScrollArea className="h-full">
-              <div className="min-w-[1200px]">
-                {/* Header row */}
-                <div className="grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b bg-muted/50 sticky top-0 z-10">
-                  <div className="p-2.5 font-medium text-xs border-r">Resp. secteur</div>
-                  <div className="p-2.5 font-medium text-xs border-r">Client</div>
-                  <div className="p-2.5 font-medium text-xs border-r">Ligne</div>
-                  <div className="p-2.5 font-medium text-xs border-r">Titulaire</div>
-                  {DAY_COLUMNS.map((col, i) => {
-                    const day = weekDays[col.idx];
-                    const isToday = day ? isSameDay(day, new Date()) : false;
-                    return (
-                      <div
-                        key={i}
-                        className={cn("p-2 text-center border-r last:border-r-0", isToday && "bg-primary/10")}
-                      >
-                        <div className="font-medium text-xs">{col.label}</div>
-                        {day && (
-                          <div className={cn("text-[10px]", isToday ? "text-primary font-bold" : "text-muted-foreground")}>
-                            {format(day, 'd MMM', { locale: fr })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Rows */}
-                {filteredGroups.map((group, gi) => {
-                  const driverInfo = getDriverDisplay(group.driverId);
-                  const clientName = getClientName(group.clientId);
-
-                  return (
-                    <div
-                      key={gi}
-                      className={cn(
-                        "grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-accent/40 transition-colors",
-                        gi % 2 === 1 && "bg-muted/30"
-                      )}
-                      onClick={() => handleRowClick(group)}
-                    >
-                      {/* Resp. secteur */}
-                      <div className="p-2 border-r flex items-center">
-                        <span className="text-xs truncate">{group.sectorManager || <span className="text-muted-foreground">-</span>}</span>
-                      </div>
-
-                      {/* Client */}
-                      <div className="p-2 border-r flex items-center">
-                        <span className="text-xs truncate">{clientName || <span className="text-muted-foreground">-</span>}</span>
-                      </div>
-
-                      {/* Ligne */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="p-2 border-r flex items-center bg-muted/20">
-                            <span className="text-xs font-medium truncate">🚚 {group.tourName}</span>
-                          </div>
-                        </TooltipTrigger>
-                        {group.missionOrder && (
-                          <TooltipContent side="right" className="max-w-md text-xs whitespace-pre-line max-h-60 overflow-y-auto">
-                            <p className="font-semibold mb-1">Ordre de mission</p>
-                            {group.missionOrder}
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-
-                      {/* Titulaire */}
-                      <div className="p-2 border-r flex items-center">
-                        {driverInfo ? (
-                          <div className="text-xs truncate">
-                            <span>👤 {driverInfo.name}</span>
-                            {driverInfo.type && (
-                              <Badge variant="outline" className="ml-1 text-[9px] px-1 py-0">{driverInfo.type}</Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        )}
-                      </div>
-
-                      {/* Day cells */}
-                      {DAY_COLUMNS.map((col) => {
-                        const day = weekDays[col.idx];
-                        const dayEntry = day ? getGroupEntryForDay(group, day) : undefined;
-                        const isToday = day ? isSameDay(day, new Date()) : false;
-
-                        // Day cell shows the driver assigned for that specific day (from notes or driver_id)
-                        let cellContent: string | null = null;
-                        let cellDriverType: string | null = null;
-
-                        if (dayEntry) {
-                          // notes contain the driver name from Excel, or we use the driver_id
-                          if (dayEntry.notes) {
-                            cellContent = dayEntry.notes;
-                          } else if (dayEntry.driver_id) {
-                            const di = getDriverDisplay(dayEntry.driver_id);
-                            if (di) {
-                              cellContent = di.name;
-                              cellDriverType = di.type;
-                            }
-                          }
-                        }
-
-                        const contractBg = cellDriverType === 'joker'
-                          ? 'bg-emerald-100 dark:bg-emerald-900/40'
-                          : cellDriverType === 'interim'
-                          ? 'bg-amber-100 dark:bg-amber-900/40'
-                          : cellDriverType === 'cdd'
-                          ? 'bg-purple-100 dark:bg-purple-900/40'
-                          : cellDriverType === 'autre'
-                          ? 'bg-gray-100 dark:bg-gray-900/40'
-                          : '';
-
-                        return (
-                          <div
-                            key={col.idx}
-                            className={cn(
-                              "min-h-[56px] p-1.5 border-r last:border-r-0 flex items-center justify-center",
-                              isToday && "bg-primary/5",
-                              contractBg
-                            )}
-                          >
-                            {cellContent ? (
-                              <div className="text-[11px] text-center leading-tight">
-                                <span className="font-medium">{cellContent}</span>
-                                {cellDriverType && (
-                                  <Badge variant="outline" className={cn(
-                                    "block mt-0.5 text-[8px] px-1 py-0 mx-auto w-fit",
-                                    cellDriverType === 'joker' && 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
-                                    cellDriverType === 'interim' && 'bg-amber-500/10 text-amber-700 border-amber-500/30',
-                                    cellDriverType === 'cdd' && 'bg-purple-500/10 text-purple-700 border-purple-500/30',
-                                    cellDriverType === 'autre' && 'bg-gray-500/10 text-gray-700 border-gray-500/30',
-                                    cellDriverType === 'cdi' && 'bg-blue-500/10 text-blue-700 border-blue-500/30'
-                                  )}>
-                                    {cellDriverType === 'joker' ? 'Joker' : cellDriverType === 'interim' ? 'Intérim' : cellDriverType === 'cdd' ? 'CDD' : cellDriverType === 'autre' ? 'Autre' : cellDriverType === 'cdi' ? 'CDI' : cellDriverType}
-                                  </Badge>
-                                )}
-                              </div>
-                            ) : dayEntry ? (
-                              <span className="text-[10px] text-muted-foreground">—</span>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            <VirtualizedGrid
+              filteredGroups={filteredGroups}
+              weekDays={weekDays}
+              getDriverDisplay={getDriverDisplay}
+              getClientName={getClientName}
+              getGroupEntryForDay={getGroupEntryForDay}
+              handleRowClick={handleRowClick}
+            />
           )}
         </CardContent>
       </Card>
