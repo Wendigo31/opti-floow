@@ -110,38 +110,51 @@ export function usePlanning() {
       }, 30000);
  
      try {
-      let query = supabase
-          .from('planning_entries')
-          .select('*')
-          .eq('license_id', licenseId)
-          .order('planning_date', { ascending: true })
-          .order('start_time', { ascending: true })
-          .limit(1000);
- 
-       if (startDate) {
-         query = query.gte('planning_date', startDate);
-       }
-       if (endDate) {
-         query = query.lte('planning_date', endDate);
-       }
+      // Supabase limits to 1000 rows per request — paginate to get all results
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let page = 0;
+      let hasMore = true;
 
-       // Server-side filtering
-       if (filters?.search) {
-         const q = filters.search.trim();
-         query = query.or(`tour_name.ilike.%${q}%,notes.ilike.%${q}%,sector_manager.ilike.%${q}%,mission_order.ilike.%${q}%`);
-       }
-       if (filters?.clientId) {
-         query = query.eq('client_id', filters.clientId);
-       }
-       if (filters?.sectorManager) {
-         query = query.ilike('sector_manager', `%${filters.sectorManager}%`);
-       }
- 
+      while (hasMore) {
+        let query = supabase
+            .from('planning_entries')
+            .select('*')
+            .eq('license_id', licenseId)
+            .order('planning_date', { ascending: true })
+            .order('start_time', { ascending: true })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+   
+        if (startDate) {
+          query = query.gte('planning_date', startDate);
+        }
+        if (endDate) {
+          query = query.lte('planning_date', endDate);
+        }
+
+        // Server-side filtering
+        if (filters?.search) {
+          const q = filters.search.trim();
+          query = query.or(`tour_name.ilike.%${q}%,notes.ilike.%${q}%,sector_manager.ilike.%${q}%,mission_order.ilike.%${q}%`);
+        }
+        if (filters?.clientId) {
+          query = query.eq('client_id', filters.clientId);
+        }
+        if (filters?.sectorManager) {
+          query = query.ilike('sector_manager', `%${filters.sectorManager}%`);
+        }
+   
         const { data, error } = await query;
-  
         if (error) throw error;
 
-        console.log(`[Planning] fetchEntries got ${data?.length || 0} entries`, { startDate, endDate });
+        allData = allData.concat(data || []);
+        hasMore = (data?.length || 0) === PAGE_SIZE;
+        page++;
+      }
+
+      const data = allData;
+
+      console.log(`[Planning] fetchEntries got ${data.length} entries (${page} page(s))`, { startDate, endDate });
  
        const mappedEntries: PlanningEntry[] = (data || []).map(row => ({
          id: row.id,
