@@ -16,7 +16,7 @@ import { ImportPlanningDialog } from '@/components/planning/ImportPlanningDialog
 import { PlanningFilters } from '@/components/planning/PlanningFilters';
 import { PlanningRowDetailPanel } from '@/components/planning/PlanningRowDetailPanel';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+// ScrollArea removed — using native virtualized scroll
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
