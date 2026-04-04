@@ -31,7 +31,8 @@ import {
   Navigation,
   Plus,
   X,
-  Edit3
+  Edit3,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
@@ -48,6 +50,7 @@ import { FeatureGate } from '@/components/license/FeatureGate';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
 import { VisualSchedule } from '@/components/ai/VisualSchedule';
 import { AIRouteMap } from '@/components/ai/AIRouteMap';
+import { LineMontageTab } from '@/components/ai/LineMontageTab';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { validateAIRequest } from '@/utils/aiValidation';
 import { AddressInput } from '@/components/route/AddressInput';
