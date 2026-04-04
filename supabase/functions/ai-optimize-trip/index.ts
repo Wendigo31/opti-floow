@@ -42,7 +42,7 @@ interface TripRequest {
     vehicleHeight?: number;
     vehicleWeight?: number;
   };
-  mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization';
+  mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization' | 'line_montage';
   stops?: string[];
   currentCosts?: {
     fuel: number;
@@ -59,6 +59,14 @@ interface TripRequest {
   };
   structureCosts?: {
     dailyCost: number;
+  };
+  montageOptions?: {
+    driverCount: number;
+    allowOvernight: boolean;
+    frequency: string;
+    loadingTime?: string;
+    deliveryTime?: string;
+    budgetTarget?: number;
   };
 }
 
