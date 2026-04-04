@@ -1519,6 +1519,12 @@ export default function AIAnalysis() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="montage">
+            <LineMontageTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Load Tour Dialog */}
