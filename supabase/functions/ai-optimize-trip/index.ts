@@ -42,7 +42,7 @@ interface TripRequest {
     vehicleHeight?: number;
     vehicleWeight?: number;
   };
-  mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization';
+  mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization' | 'line_montage';
   stops?: string[];
   currentCosts?: {
     fuel: number;
@@ -59,6 +59,14 @@ interface TripRequest {
   };
   structureCosts?: {
     dailyCost: number;
+  };
+  montageOptions?: {
+    driverCount: number;
+    allowOvernight: boolean;
+    frequency: string;
+    loadingTime?: string;
+    deliveryTime?: string;
+    budgetTarget?: number;
   };
 }
 
@@ -349,6 +357,97 @@ Pour CHAQUE stratégie:
 
 RECOMMANDE la stratégie avec le meilleur rapport COÛT/TEMPS.
 Identifie les POINTS DE RELAIS PRÉCIS si applicable.`;
+
+    } else if (tripRequest.mode === 'line_montage') {
+      const mo = tripRequest.montageOptions;
+      userPrompt = `MISSION: CRÉATION D'UN MONTAGE DE LIGNE ÉCONOMIQUE ET COMPÉTITIF
+
+LIGNE:
+- Origine: ${tripRequest.origin}
+- Destination: ${tripRequest.destination}
+${tripRequest.stops?.length ? `- Arrêts: ${tripRequest.stops.join(' → ')}` : ''}
+
+${vehicleDetail}
+
+PARAMÈTRES DU MONTAGE:
+- Nombre de conducteurs souhaités: ${mo?.driverCount || 2}
+- Découché autorisé: ${mo?.allowOvernight ? 'OUI' : 'NON'}
+- Fréquence: ${mo?.frequency === 'daily_round' ? 'Aller-retour quotidien' : mo?.frequency === 'weekly' ? 'Hebdomadaire' : 'Aller simple'}
+${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
+${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
+${mo?.budgetTarget ? `- Budget cible: ${mo.budgetTarget}€` : ''}
+
+CONDUCTEURS:
+${driversDetail}
+
+${constraintsDetail}
+
+OBJECTIF: Propose PLUSIEURS SCÉNARIOS de montage de ligne comparés. Pour chaque scénario, détaille:
+1. Organisation des rotations conducteurs sur la semaine
+2. Planning horaire jour par jour (lundi à vendredi minimum)
+3. Respect strict RSE avec vérification de chaque contrainte
+4. Calcul des coûts détaillés (carburant, péages, conducteurs, repas, découché, véhicule, structure)
+5. Avantages et inconvénients
+
+Réponds en JSON avec ce format:
+{
+  "recommendation": {
+    "summary": "Résumé de la meilleure stratégie",
+    "bestScenario": "Nom du scénario recommandé",
+    "estimatedWeeklyCost": number,
+    "estimatedMonthlyCost": number
+  },
+  "scenarios": [
+    {
+      "name": "Nom du scénario",
+      "driverCount": number,
+      "overnightStays": boolean,
+      "totalCost": number (coût hebdomadaire),
+      "totalDuration": number (heures par trajet),
+      "weeklySchedule": [
+        {
+          "day": "Lundi",
+          "segments": [
+            {
+              "driver": "Conducteur 1",
+              "startTime": "06:00",
+              "endTime": "10:30",
+              "activity": "Conduite Départ → Relais Beaune",
+              "notes": "pause 45min à 10:30"
+            }
+          ]
+        }
+      ],
+      "costBreakdown": {
+        "fuel": number,
+        "tolls": number,
+        "drivers": number,
+        "meals": number,
+        "overnight": number,
+        "vehicleCost": number,
+        "structureCost": number,
+        "total": number
+      },
+      "rseCompliance": {
+        "valid": boolean,
+        "notes": ["Temps de conduite respecté: max 9h/jour"],
+        "warnings": ["éventuels avertissements"]
+      },
+      "pros": ["avantages"],
+      "cons": ["inconvénients"],
+      "isRecommended": boolean
+    }
+  ],
+  "regulatoryNotes": ["notes réglementaires"],
+  "tips": ["conseils pratiques"],
+  "warnings": ["avertissements"]
+}
+
+IMPORTANT:
+- Compare au minimum 2 scénarios (ex: avec/sans découché, ou 2 vs 3 conducteurs)
+- Le scénario recommandé doit avoir isRecommended: true
+- Sois très précis sur les horaires et le respect des temps de repos RSE
+- Calcule les coûts de manière réaliste`;
 
     } else {
       userPrompt = `MISSION: ANALYSE ET OPTIMISATION DE TRAJET
