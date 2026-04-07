@@ -310,6 +310,41 @@ export function LineMontageTab() {
             <Switch checked={allowOvernight} onCheckedChange={setAllowOvernight} />
           </div>
 
+          {/* Route type */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <Route className="w-4 h-4" /> Type de route
+            </Label>
+            <Select value={routeType} onValueChange={(v: any) => setRouteType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="highway">100% Autoroute</SelectItem>
+                <SelectItem value="national">100% Nationale / Départementale</SelectItem>
+                <SelectItem value="mixed">Mixte (autoroute + nationale)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Relay count */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <ArrowLeftRight className="w-4 h-4" /> Nombre de relais
+            </Label>
+            <Select value={String(relayCount)} onValueChange={v => setRelayCount(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Aucun relais (conducteur unique bout en bout)</SelectItem>
+                <SelectItem value="1">1 relais</SelectItem>
+                <SelectItem value="2">2 relais</SelectItem>
+                <SelectItem value="3">3 relais</SelectItem>
+                <SelectItem value="4">4 relais</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Un relais = changement de conducteur en cours de route
+            </p>
+          </div>
+
           {/* Frequency */}
           <div>
             <Label>Fréquence</Label>
