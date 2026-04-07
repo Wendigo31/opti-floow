@@ -374,6 +374,8 @@ ${vehicleDetail}
 PARAMÈTRES DU MONTAGE:
 - Nombre de conducteurs souhaités: ${mo?.driverCount || 2}
 - Découché autorisé: ${mo?.allowOvernight ? 'OUI' : 'NON'}
+- Type de route: ${mo?.routeType === 'national' ? '100% Nationale/Départementale (pas de péages)' : mo?.routeType === 'mixed' ? 'MIXTE: moitié autoroute, moitié nationale (optimise coût péages vs temps)' : '100% Autoroute'}
+- Nombre de relais souhaités: ${mo?.relayCount || 0} (${mo?.relayCount ? `${mo.relayCount} changement(s) de conducteur en cours de route, identifie les points de relais géographiques optimaux` : 'pas de relais, conducteur(s) bout en bout'})
 - Fréquence: ${mo?.frequency === 'daily_round' ? 'Aller-retour quotidien' : mo?.frequency === 'weekly' ? 'Hebdomadaire' : 'Aller simple'}
 ${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
 ${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
