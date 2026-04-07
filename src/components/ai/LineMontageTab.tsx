@@ -18,6 +18,8 @@ import {
   Save,
   Plus,
   X,
+  Route,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +110,8 @@ export function LineMontageTab() {
   const [driverCount, setDriverCount] = useState(2);
   const [allowOvernight, setAllowOvernight] = useState(false);
   const [frequency, setFrequency] = useState<'single' | 'daily_round' | 'weekly'>('daily_round');
+  const [routeType, setRouteType] = useState<'highway' | 'national' | 'mixed'>('highway');
+  const [relayCount, setRelayCount] = useState(0);
   const [loadingTime, setLoadingTime] = useState('06:00');
   const [deliveryTime, setDeliveryTime] = useState('');
   const [budgetTarget, setBudgetTarget] = useState('');
