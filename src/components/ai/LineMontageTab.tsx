@@ -180,6 +180,8 @@ export function LineMontageTab() {
             driverCount,
             allowOvernight,
             frequency,
+            routeType,
+            relayCount,
             loadingTime: loadingTime || undefined,
             deliveryTime: deliveryTime || undefined,
             budgetTarget: budgetTarget ? parseFloat(budgetTarget) : undefined,

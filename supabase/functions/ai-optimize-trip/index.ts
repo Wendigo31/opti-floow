@@ -64,6 +64,8 @@ interface TripRequest {
     driverCount: number;
     allowOvernight: boolean;
     frequency: string;
+    routeType?: 'highway' | 'national' | 'mixed';
+    relayCount?: number;
     loadingTime?: string;
     deliveryTime?: string;
     budgetTarget?: number;
