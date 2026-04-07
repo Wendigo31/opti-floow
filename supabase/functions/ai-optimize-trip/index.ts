@@ -386,8 +386,12 @@ ${driversDetail}
 
 ${constraintsDetail}
 
-OBJECTIF: Propose PLUSIEURS SCÉNARIOS de montage de ligne comparés. Pour chaque scénario, détaille:
-1. Organisation des rotations conducteurs sur la semaine
+OBJECTIF: Propose PLUSIEURS SCÉNARIOS de montage de ligne comparés. IMPORTANT:
+- Si route MIXTE: calcule les km autoroute vs nationale séparément, et les péages uniquement sur la partie autoroute
+- Si route NATIONALE: aucun péage, temps de trajet plus long
+- Si des RELAIS sont demandés: identifie les villes/aires de repos idéales pour le changement de conducteur, en tenant compte de la distance et du temps de conduite RSE
+- Pour chaque scénario, détaille:
+1. Organisation des rotations conducteurs sur la semaine (avec points de relais si applicable)
 2. Planning horaire jour par jour (lundi à vendredi minimum)
 3. Respect strict RSE avec vérification de chaque contrainte
 4. Calcul des coûts détaillés (carburant, péages, conducteurs, repas, découché, véhicule, structure)
