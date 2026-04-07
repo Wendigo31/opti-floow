@@ -18,6 +18,8 @@ import {
   Save,
   Plus,
   X,
+  Route,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +110,8 @@ export function LineMontageTab() {
   const [driverCount, setDriverCount] = useState(2);
   const [allowOvernight, setAllowOvernight] = useState(false);
   const [frequency, setFrequency] = useState<'single' | 'daily_round' | 'weekly'>('daily_round');
+  const [routeType, setRouteType] = useState<'highway' | 'national' | 'mixed'>('highway');
+  const [relayCount, setRelayCount] = useState(0);
   const [loadingTime, setLoadingTime] = useState('06:00');
   const [deliveryTime, setDeliveryTime] = useState('');
   const [budgetTarget, setBudgetTarget] = useState('');
@@ -176,6 +180,8 @@ export function LineMontageTab() {
             driverCount,
             allowOvernight,
             frequency,
+            routeType,
+            relayCount,
             loadingTime: loadingTime || undefined,
             deliveryTime: deliveryTime || undefined,
             budgetTarget: budgetTarget ? parseFloat(budgetTarget) : undefined,
@@ -304,6 +310,41 @@ export function LineMontageTab() {
               <Moon className="w-4 h-4" /> Découché autorisé
             </Label>
             <Switch checked={allowOvernight} onCheckedChange={setAllowOvernight} />
+          </div>
+
+          {/* Route type */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <Route className="w-4 h-4" /> Type de route
+            </Label>
+            <Select value={routeType} onValueChange={(v: any) => setRouteType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="highway">100% Autoroute</SelectItem>
+                <SelectItem value="national">100% Nationale / Départementale</SelectItem>
+                <SelectItem value="mixed">Mixte (autoroute + nationale)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Relay count */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <ArrowLeftRight className="w-4 h-4" /> Nombre de relais
+            </Label>
+            <Select value={String(relayCount)} onValueChange={v => setRelayCount(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Aucun relais (conducteur unique bout en bout)</SelectItem>
+                <SelectItem value="1">1 relais</SelectItem>
+                <SelectItem value="2">2 relais</SelectItem>
+                <SelectItem value="3">3 relais</SelectItem>
+                <SelectItem value="4">4 relais</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Un relais = changement de conducteur en cours de route
+            </p>
           </div>
 
           {/* Frequency */}

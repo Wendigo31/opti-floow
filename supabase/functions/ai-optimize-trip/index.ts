@@ -64,6 +64,8 @@ interface TripRequest {
     driverCount: number;
     allowOvernight: boolean;
     frequency: string;
+    routeType?: 'highway' | 'national' | 'mixed';
+    relayCount?: number;
     loadingTime?: string;
     deliveryTime?: string;
     budgetTarget?: number;
@@ -372,6 +374,8 @@ ${vehicleDetail}
 PARAMÈTRES DU MONTAGE:
 - Nombre de conducteurs souhaités: ${mo?.driverCount || 2}
 - Découché autorisé: ${mo?.allowOvernight ? 'OUI' : 'NON'}
+- Type de route: ${mo?.routeType === 'national' ? '100% Nationale/Départementale (pas de péages)' : mo?.routeType === 'mixed' ? 'MIXTE: moitié autoroute, moitié nationale (optimise coût péages vs temps)' : '100% Autoroute'}
+- Nombre de relais souhaités: ${mo?.relayCount || 0} (${mo?.relayCount ? `${mo.relayCount} changement(s) de conducteur en cours de route, identifie les points de relais géographiques optimaux` : 'pas de relais, conducteur(s) bout en bout'})
 - Fréquence: ${mo?.frequency === 'daily_round' ? 'Aller-retour quotidien' : mo?.frequency === 'weekly' ? 'Hebdomadaire' : 'Aller simple'}
 ${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
 ${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
@@ -382,8 +386,12 @@ ${driversDetail}
 
 ${constraintsDetail}
 
-OBJECTIF: Propose PLUSIEURS SCÉNARIOS de montage de ligne comparés. Pour chaque scénario, détaille:
-1. Organisation des rotations conducteurs sur la semaine
+OBJECTIF: Propose PLUSIEURS SCÉNARIOS de montage de ligne comparés. IMPORTANT:
+- Si route MIXTE: calcule les km autoroute vs nationale séparément, et les péages uniquement sur la partie autoroute
+- Si route NATIONALE: aucun péage, temps de trajet plus long
+- Si des RELAIS sont demandés: identifie les villes/aires de repos idéales pour le changement de conducteur, en tenant compte de la distance et du temps de conduite RSE
+- Pour chaque scénario, détaille:
+1. Organisation des rotations conducteurs sur la semaine (avec points de relais si applicable)
 2. Planning horaire jour par jour (lundi à vendredi minimum)
 3. Respect strict RSE avec vérification de chaque contrainte
 4. Calcul des coûts détaillés (carburant, péages, conducteurs, repas, découché, véhicule, structure)
