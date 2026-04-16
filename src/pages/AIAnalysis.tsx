@@ -31,8 +31,7 @@ import {
   Navigation,
   Plus,
   X,
-  Edit3,
-  Layers
+  Edit3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +39,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
@@ -50,7 +48,6 @@ import { FeatureGate } from '@/components/license/FeatureGate';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
 import { VisualSchedule } from '@/components/ai/VisualSchedule';
 import { AIRouteMap } from '@/components/ai/AIRouteMap';
-import { LineMontageTab } from '@/components/ai/LineMontageTab';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { validateAIRequest } from '@/utils/aiValidation';
 import { AddressInput } from '@/components/route/AddressInput';
@@ -541,19 +538,6 @@ export default function AIAnalysis() {
           </div>
         </div>
 
-        <Tabs defaultValue="optimization" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="optimization" className="gap-2">
-              <Route className="w-4 h-4" />
-              Optimisation trajet
-            </TabsTrigger>
-            <TabsTrigger value="montage" className="gap-2">
-              <Layers className="w-4 h-4" />
-              Créer un montage
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="optimization">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Input Panel */}
           <div className="space-y-4">
@@ -1519,12 +1503,6 @@ export default function AIAnalysis() {
             )}
           </div>
         </div>
-          </TabsContent>
-
-          <TabsContent value="montage">
-            <LineMontageTab />
-          </TabsContent>
-        </Tabs>
       </div>
 
       {/* Load Tour Dialog */}

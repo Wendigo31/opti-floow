@@ -20,6 +20,7 @@ import {
   X,
   Route,
   ArrowLeftRight,
+  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,12 +28,17 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudCharges } from '@/hooks/useCloudCharges';
+import { useCloudTrailers } from '@/hooks/useCloudTrailers';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AddressInput } from '@/components/route/AddressInput';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import type { Driver } from '@/types';
 
 interface Position {
   lat: number;
@@ -94,11 +100,60 @@ interface MontageResponse {
   warnings: string[];
 }
 
+// Helper: compute daily cost for a driver (matching tourCostCalculation logic)
+function computeDriverDailyCost(driver: Driver): {
+  dailyCost: number;
+  dailyBonuses: number;
+  dailyAllowances: number;
+  contractLabel: string;
+} {
+  const isInterim = driver.contractType === 'interim';
+  const isAutre = driver.contractType === 'autre';
+
+  if (isAutre) {
+    return { dailyCost: 0, dailyBonuses: 0, dailyAllowances: 0, contractLabel: 'Autre' };
+  }
+
+  if (isInterim) {
+    const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
+    const coefficient = (driver as any).interimCoefficient || 1.85;
+    const hoursPerDay = driver.hoursPerDay || 7;
+    return {
+      dailyCost: interimRate * coefficient * hoursPerDay,
+      dailyBonuses: 0,
+      dailyAllowances: driver.mealAllowance || 0,
+      contractLabel: 'Intérim',
+    };
+  }
+
+  // CDI / CDD / Joker
+  const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
+  const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
+  const monthlyBonuses = (driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0);
+  const dailyBonuses = monthlyBonuses / driver.workingDaysPerMonth;
+  const dailyAllowances = (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
+
+  const contractLabels: Record<string, string> = { cdi: 'CDI', cdd: 'CDD', joker: 'Joker' };
+  return {
+    dailyCost: dailyRate,
+    dailyBonuses,
+    dailyAllowances,
+    contractLabel: contractLabels[driver.contractType || 'cdi'] || 'CDI',
+  };
+}
+
 export function LineMontageTab() {
   const { toast } = useToast();
-  const { vehicle } = useApp();
+  const { vehicle, charges: localCharges, settings } = useApp();
   const { vehicles } = useCloudVehicles();
+  const { charges: cloudCharges } = useCloudCharges();
+  const { cdiDrivers, cddDrivers, interimDrivers, jokerDrivers } = useCloudDrivers();
   const { saveTour } = useSavedTours();
+
+  // Merge all drivers
+  const allDrivers: Driver[] = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...jokerDrivers];
+  // Use cloud charges if available, otherwise local
+  const effectiveCharges = cloudCharges.length > 0 ? cloudCharges : localCharges;
 
   const [origin, setOrigin] = useState('');
   const [originPosition, setOriginPosition] = useState<Position | null>(null);
@@ -107,6 +162,7 @@ export function LineMontageTab() {
   const [stops, setStops] = useState<StopWaypoint[]>([]);
 
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   const [driverCount, setDriverCount] = useState(2);
   const [allowOvernight, setAllowOvernight] = useState(false);
   const [frequency, setFrequency] = useState<'single' | 'daily_round' | 'weekly'>('daily_round');
@@ -121,6 +177,7 @@ export function LineMontageTab() {
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+  const selectedDrivers = allDrivers.filter(d => selectedDriverIds.includes(d.id));
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -137,6 +194,25 @@ export function LineMontageTab() {
     setStops(stops.map(s => (s.id === id ? { ...s, address, position } : s)));
   };
 
+  const toggleDriver = (driverId: string) => {
+    setSelectedDriverIds(prev =>
+      prev.includes(driverId)
+        ? prev.filter(id => id !== driverId)
+        : [...prev, driverId]
+    );
+  };
+
+  // Compute structure cost (daily) from charges
+  const structureDailyCost = effectiveCharges.reduce((total, charge) => {
+    const amount = charge.amount || 0;
+    switch (charge.periodicity) {
+      case 'yearly': return total + amount / (settings.workingDaysPerYear || 252);
+      case 'monthly': return total + amount / (settings.workingDaysPerMonth || 21);
+      case 'daily': return total + amount;
+      default: return total;
+    }
+  }, 0);
+
   const handleGenerate = async () => {
     if (!origin || !destination) {
       toast({ title: 'Champs requis', description: "Renseignez l'origine et la destination", variant: 'destructive' });
@@ -146,6 +222,38 @@ export function LineMontageTab() {
       toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
       return;
     }
+
+    // Build real driver cost data
+    const driversForAI = selectedDrivers.length > 0
+      ? selectedDrivers.map(d => {
+          const costs = computeDriverDailyCost(d);
+          return {
+            name: d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim(),
+            hourlyCost: d.hourlyRate || (costs.dailyCost / (d.hoursPerDay || 8)),
+            dailyCost: costs.dailyCost,
+            dailyBonuses: costs.dailyBonuses,
+            dailyAllowances: costs.dailyAllowances,
+            contractType: costs.contractLabel,
+            nightBonus: d.nightBonus || 0,
+            sundayBonus: d.sundayBonus || 0,
+            mealAllowance: d.mealAllowance || 0,
+            overnightAllowance: d.overnightAllowance || 0,
+            hoursPerDay: d.hoursPerDay || 8,
+          };
+        })
+      : Array.from({ length: driverCount }, (_, i) => ({
+          name: `Conducteur ${i + 1}`,
+          hourlyCost: 15,
+          dailyCost: 120,
+          dailyBonuses: 0,
+          dailyAllowances: 15,
+          contractType: 'CDI',
+          nightBonus: 0,
+          sundayBonus: 0,
+          mealAllowance: 15,
+          overnightAllowance: 0,
+          hoursPerDay: 8,
+        }));
 
     setLoading(true);
     setResult(null);
@@ -166,10 +274,7 @@ export function LineMontageTab() {
           fuelConsumption: selectedVehicle.fuelConsumption,
           fuelPrice: vehicle.fuelPriceHT,
           tollClass: 2,
-          drivers: Array.from({ length: driverCount }, (_, i) => ({
-            name: `Conducteur ${i + 1}`,
-            hourlyCost: 15,
-          })),
+          drivers: driversForAI,
           constraints: {
             respectRSE: true,
             includeRestBreaks: true,
@@ -177,7 +282,7 @@ export function LineMontageTab() {
             requireOvernightRest: allowOvernight,
           },
           montageOptions: {
-            driverCount,
+            driverCount: selectedDrivers.length > 0 ? selectedDrivers.length : driverCount,
             allowOvernight,
             frequency,
             routeType,
@@ -190,6 +295,15 @@ export function LineMontageTab() {
             dailyCost: (selectedVehicle as any).dailyCost || 150,
             kmCost: (selectedVehicle as any).kmCost || 0.25,
           },
+          structureCosts: {
+            dailyCost: structureDailyCost,
+          },
+          chargesDetail: effectiveCharges.map(c => ({
+            name: c.name,
+            amount: c.amount,
+            periodicity: c.periodicity,
+            category: c.category,
+          })),
         }),
       });
 
@@ -276,7 +390,9 @@ export function LineMontageTab() {
 
           {/* Vehicle */}
           <div>
-            <Label>Véhicule</Label>
+            <Label className="flex items-center gap-2">
+              <Truck className="w-4 h-4" /> Véhicule
+            </Label>
             <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
               <SelectTrigger><SelectValue placeholder="Choisir un véhicule" /></SelectTrigger>
               <SelectContent>
@@ -289,19 +405,54 @@ export function LineMontageTab() {
             </Select>
           </div>
 
-          {/* Driver count */}
+          {/* Driver selection from real data */}
           <div>
             <Label className="flex items-center gap-2">
-              <Users className="w-4 h-4" /> Nombre de conducteurs
+              <Users className="w-4 h-4" /> Conducteurs
             </Label>
-            <Select value={String(driverCount)} onValueChange={v => setDriverCount(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5, 6].map(n => (
-                  <SelectItem key={n} value={String(n)}>{n} conducteur{n > 1 ? 's' : ''}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {allDrivers.length > 0 ? (
+              <div className="space-y-2 mt-2 max-h-48 overflow-y-auto rounded-lg border p-2">
+                {allDrivers.map(d => {
+                  const costs = computeDriverDailyCost(d);
+                  const driverName = d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Sans nom';
+                  return (
+                    <label key={d.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
+                      <Checkbox
+                        checked={selectedDriverIds.includes(d.id)}
+                        onCheckedChange={() => toggleDriver(d.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{driverName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {costs.contractLabel} · {formatCurrency(costs.dailyCost + costs.dailyBonuses + costs.dailyAllowances)}/jour
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-muted-foreground">Aucun conducteur enregistré. Nombre souhaité :</p>
+                <Select value={String(driverCount)} onValueChange={v => setDriverCount(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map(n => (
+                      <SelectItem key={n} value={String(n)}>{n} conducteur{n > 1 ? 's' : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {selectedDrivers.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedDrivers.length} sélectionné{selectedDrivers.length > 1 ? 's' : ''} ·
+                Coût total/jour: {formatCurrency(selectedDrivers.reduce((s, d) => {
+                  const c = computeDriverDailyCost(d);
+                  return s + c.dailyCost + c.dailyBonuses + c.dailyAllowances;
+                }, 0))}
+              </p>
+            )}
           </div>
 
           {/* Overnight */}
@@ -335,16 +486,13 @@ export function LineMontageTab() {
             <Select value={String(relayCount)} onValueChange={v => setRelayCount(Number(v))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Aucun relais (conducteur unique bout en bout)</SelectItem>
+                <SelectItem value="0">Aucun relais</SelectItem>
                 <SelectItem value="1">1 relais</SelectItem>
                 <SelectItem value="2">2 relais</SelectItem>
                 <SelectItem value="3">3 relais</SelectItem>
                 <SelectItem value="4">4 relais</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Un relais = changement de conducteur en cours de route
-            </p>
           </div>
 
           {/* Frequency */}
@@ -382,6 +530,16 @@ export function LineMontageTab() {
               onChange={e => setBudgetTarget(e.target.value)}
             />
           </div>
+
+          {/* Structure costs summary */}
+          {structureDailyCost > 0 && (
+            <div className="p-3 rounded-lg bg-muted/30 text-sm">
+              <p className="text-muted-foreground">
+                📊 Charges de structure détectées : <span className="font-semibold text-foreground">{formatCurrency(structureDailyCost)}/jour</span>
+                <span className="text-xs ml-1">({effectiveCharges.length} poste{effectiveCharges.length > 1 ? 's' : ''})</span>
+              </p>
+            </div>
+          )}
 
           <Button
             className="w-full gap-2"
@@ -488,6 +646,7 @@ export function LineMontageTab() {
                           <div className="flex justify-between"><span className="text-muted-foreground">Découché</span><span>{formatCurrency(scenario.costBreakdown.overnight)}</span></div>
                         )}
                         <div className="flex justify-between"><span className="text-muted-foreground">Véhicule</span><span>{formatCurrency(scenario.costBreakdown.vehicleCost)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Structure</span><span>{formatCurrency(scenario.costBreakdown.structureCost)}</span></div>
                       </div>
                     </div>
 
@@ -582,6 +741,9 @@ export function LineMontageTab() {
               <p className="text-sm text-muted-foreground">
                 Configurez les paramètres à gauche puis cliquez sur "Générer le montage" pour obtenir
                 un plan optimisé avec rotations conducteurs et respect RSE.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                L'IA utilise vos données réelles : véhicules, conducteurs (CDI/CDD/Intérim), charges fixes et variables.
               </p>
             </div>
           </div>

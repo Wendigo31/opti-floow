@@ -8,6 +8,10 @@ const corsHeaders = {
 interface DriverInfo {
   name: string;
   hourlyCost: number;
+  dailyCost?: number;
+  dailyBonuses?: number;
+  dailyAllowances?: number;
+  contractType?: string;
   nightBonus?: number;
   sundayBonus?: number;
   mealAllowance?: number;
@@ -60,6 +64,12 @@ interface TripRequest {
   structureCosts?: {
     dailyCost: number;
   };
+  chargesDetail?: {
+    name: string;
+    amount: number;
+    periodicity: string;
+    category: string;
+  }[];
   montageOptions?: {
     driverCount: number;
     allowOvernight: boolean;
@@ -232,12 +242,20 @@ Réponds TOUJOURS en JSON structuré avec ce format enrichi:
     const driversDetail = (tripRequest.drivers || []).map(d => {
       const name = d.name || 'Conducteur';
       const hourlyCost = typeof d.hourlyCost === 'number' ? d.hourlyCost.toFixed(2) : '0.00';
-      const nightBonus = d.nightBonus ? `, prime nuit: ${d.nightBonus}€` : '';
-      const sundayBonus = d.sundayBonus ? `, prime dimanche: ${d.sundayBonus}€` : '';
-      const mealAllowance = d.mealAllowance ? `, repas: ${d.mealAllowance}€` : '';
-      const overnightAllowance = d.overnightAllowance ? `, découcher: ${d.overnightAllowance}€` : '';
-      return `- ${name}: ${hourlyCost}€/h base${nightBonus}${sundayBonus}${mealAllowance}${overnightAllowance}`;
+      const dailyCost = d.dailyCost ? `, coût/jour: ${d.dailyCost.toFixed(2)}€` : '';
+      const dailyBonuses = d.dailyBonuses ? `, primes/jour: ${d.dailyBonuses.toFixed(2)}€` : '';
+      const dailyAllowances = d.dailyAllowances ? `, indemnités/jour: ${d.dailyAllowances.toFixed(2)}€` : '';
+      const contractType = d.contractType ? ` (${d.contractType})` : '';
+      const nightBonus = d.nightBonus ? `, prime nuit: ${d.nightBonus}€/mois` : '';
+      const sundayBonus = d.sundayBonus ? `, prime dimanche: ${d.sundayBonus}€/mois` : '';
+      const mealAllowance = d.mealAllowance ? `, repas: ${d.mealAllowance}€/jour` : '';
+      const overnightAllowance = d.overnightAllowance ? `, découcher: ${d.overnightAllowance}€/nuit` : '';
+      return `- ${name}${contractType}: ${hourlyCost}€/h${dailyCost}${dailyBonuses}${dailyAllowances}${nightBonus}${sundayBonus}${mealAllowance}${overnightAllowance}`;
     }).join('\n') || 'Aucun conducteur défini';
+
+    const chargesDetail = (tripRequest.chargesDetail || []).length > 0
+      ? `\nCHARGES FIXES DE L'ENTREPRISE:\n${tripRequest.chargesDetail!.map(c => `- ${c.name}: ${c.amount}€/${c.periodicity === 'daily' ? 'jour' : c.periodicity === 'monthly' ? 'mois' : 'an'} (${c.category})`).join('\n')}\n- Coût structure total/jour: ${tripRequest.structureCosts?.dailyCost?.toFixed(2) || '0'}€`
+      : '';
 
     const constraintsDetail = `
 CONTRAINTES RÉGLEMENTAIRES ET OPÉRATIONNELLES:
@@ -381,8 +399,9 @@ ${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
 ${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
 ${mo?.budgetTarget ? `- Budget cible: ${mo.budgetTarget}€` : ''}
 
-CONDUCTEURS:
+CONDUCTEURS (données réelles de l'entreprise):
 ${driversDetail}
+${chargesDetail}
 
 ${constraintsDetail}
 

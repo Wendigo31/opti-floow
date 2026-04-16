@@ -37,6 +37,7 @@ import NotFound from "./pages/NotFound";
 
 import Admin from "./pages/Admin";
 import AIAnalysis from "./pages/AIAnalysis";
+import LineMontage from "./pages/LineMontage";
 import VehicleReports from "./pages/VehicleReports";
 import Tours from "./pages/Tours";
 import Settings from "./pages/Settings";
@@ -113,6 +114,7 @@ function LicensedAppContent() {
                   {/* Pricing page removed */}
                   
                   <Route path="/ai-analysis" element={<AIAnalysis />} />
+                  <Route path="/line-montage" element={<LineMontage />} />
                   <Route path="/vehicle-reports" element={<VehicleReports />} />
                   <Route path="/tours" element={<Tours />} />
                   <Route path="/planning" element={<Planning />} />
