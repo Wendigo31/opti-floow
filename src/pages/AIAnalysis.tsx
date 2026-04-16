@@ -539,19 +539,6 @@ export default function AIAnalysis() {
           </div>
         </div>
 
-        <Tabs defaultValue="optimization" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="optimization" className="gap-2">
-              <Route className="w-4 h-4" />
-              Optimisation trajet
-            </TabsTrigger>
-            <TabsTrigger value="montage" className="gap-2">
-              <Layers className="w-4 h-4" />
-              Créer un montage
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="optimization">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Input Panel */}
           <div className="space-y-4">
@@ -1517,12 +1504,6 @@ export default function AIAnalysis() {
             )}
           </div>
         </div>
-          </TabsContent>
-
-          <TabsContent value="montage">
-            <LineMontageTab />
-          </TabsContent>
-        </Tabs>
       </div>
 
       {/* Load Tour Dialog */}
