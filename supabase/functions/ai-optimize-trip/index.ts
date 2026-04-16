@@ -399,8 +399,9 @@ ${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
 ${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
 ${mo?.budgetTarget ? `- Budget cible: ${mo.budgetTarget}€` : ''}
 
-CONDUCTEURS:
+CONDUCTEURS (données réelles de l'entreprise):
 ${driversDetail}
+${chargesDetail}
 
 ${constraintsDetail}
 
