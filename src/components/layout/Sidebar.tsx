@@ -92,11 +92,12 @@ const navGroups: { label: string; items: NavItemConfig[] }[] = [
     ]
   },
   {
-    label: 'Gestion',
+   label: 'Gestion',
     items: [
       { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
        { to: '/planning', icon: CalendarDays, labelKey: 'planning', requiredPlan: 'pro' },
       { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
+      { to: '/line-montage', icon: Layers, labelKey: 'lineMontage', requiredPlan: 'pro' },
     ]
   },
   {
