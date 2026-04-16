@@ -31,8 +31,7 @@ import {
   Navigation,
   Plus,
   X,
-  Edit3,
-  Layers
+  Edit3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
