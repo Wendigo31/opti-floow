@@ -8,6 +8,10 @@ const corsHeaders = {
 interface DriverInfo {
   name: string;
   hourlyCost: number;
+  dailyCost?: number;
+  dailyBonuses?: number;
+  dailyAllowances?: number;
+  contractType?: string;
   nightBonus?: number;
   sundayBonus?: number;
   mealAllowance?: number;
@@ -60,6 +64,12 @@ interface TripRequest {
   structureCosts?: {
     dailyCost: number;
   };
+  chargesDetail?: {
+    name: string;
+    amount: number;
+    periodicity: string;
+    category: string;
+  }[];
   montageOptions?: {
     driverCount: number;
     allowOvernight: boolean;
