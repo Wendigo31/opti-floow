@@ -15,7 +15,8 @@ import {
   Settings,
   EyeOff,
    UsersRound,
-   CalendarDays
+   CalendarDays,
+   Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLicense, FeatureKey } from '@/hooks/useLicense';
@@ -69,6 +70,7 @@ const NAV_LABELS = {
   clients: 'Clients',
   settings: 'Paramètres',
   team: 'Équipe',
+  lineMontage: 'Création de ligne',
 };
 
 // Type for nav items
