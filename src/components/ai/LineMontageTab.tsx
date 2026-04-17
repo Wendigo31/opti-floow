@@ -38,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AddressInput } from '@/components/route/AddressInput';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { QuickDriverDialog } from '@/components/ai/QuickDriverDialog';
 import type { Driver } from '@/types';
 
 interface Position {
