@@ -185,6 +185,10 @@ export function LineMontageTab() {
   const [allowWeekendDriving, setAllowWeekendDriving] = useState(false);
   const [vehicleHeight, setVehicleHeight] = useState('4.0');
   const [vehicleWeight, setVehicleWeight] = useState('40');
+  // Optional filter toggles
+  const [enableTollBudget, setEnableTollBudget] = useState(false);
+  const [enableVehicleHeight, setEnableVehicleHeight] = useState(false);
+  const [enableVehicleWeight, setEnableVehicleWeight] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
@@ -322,7 +326,7 @@ export function LineMontageTab() {
             deliveryTime: deliveryTime || undefined,
             budgetTarget: budgetTarget ? parseFloat(budgetTarget) : undefined,
             routePriority,
-            maxTollBudget: maxTollBudget ? parseFloat(maxTollBudget) : undefined,
+            maxTollBudget: enableTollBudget && maxTollBudget ? parseFloat(maxTollBudget) : undefined,
             avoidUrbanZones,
             avoidLowEmissionZones,
             avoidFerries,
@@ -331,8 +335,8 @@ export function LineMontageTab() {
             maxSpeedKmh,
             allowNightDriving,
             allowWeekendDriving,
-            vehicleHeight: parseFloat(vehicleHeight) || undefined,
-            vehicleWeight: parseFloat(vehicleWeight) || undefined,
+            vehicleHeight: enableVehicleHeight ? parseFloat(vehicleHeight) || undefined : undefined,
+            vehicleWeight: enableVehicleWeight ? parseFloat(vehicleWeight) || undefined : undefined,
           },
           vehicleCosts: {
             dailyCost: (selectedVehicle as any).dailyCost || 150,
@@ -561,12 +565,16 @@ export function LineMontageTab() {
 
             <div className="grid grid-cols-2 gap-2 mt-2">
               <div>
-                <Label className="text-xs">Budget péages max (€)</Label>
+                <Label className="text-xs flex items-center gap-2">
+                  <Checkbox checked={enableTollBudget} onCheckedChange={(v) => setEnableTollBudget(!!v)} />
+                  <span>Budget péages max (€)</span>
+                </Label>
                 <Input
                   type="number"
-                  placeholder="Illimité"
+                  placeholder={enableTollBudget ? 'Ex: 200' : 'Illimité (désactivé)'}
                   value={maxTollBudget}
                   onChange={e => setMaxTollBudget(e.target.value)}
+                  disabled={!enableTollBudget}
                   className="h-9"
                 />
               </div>
@@ -583,22 +591,32 @@ export function LineMontageTab() {
 
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
-                <Label className="text-xs">Hauteur véhicule (m)</Label>
+                <Label className="text-xs flex items-center gap-2">
+                  <Checkbox checked={enableVehicleHeight} onCheckedChange={(v) => setEnableVehicleHeight(!!v)} />
+                  <span>Hauteur véhicule (m)</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.1"
+                  placeholder={enableVehicleHeight ? '4.0' : 'Non spécifié'}
                   value={vehicleHeight}
                   onChange={e => setVehicleHeight(e.target.value)}
+                  disabled={!enableVehicleHeight}
                   className="h-9"
                 />
               </div>
               <div>
-                <Label className="text-xs">Poids véhicule (t)</Label>
+                <Label className="text-xs flex items-center gap-2">
+                  <Checkbox checked={enableVehicleWeight} onCheckedChange={(v) => setEnableVehicleWeight(!!v)} />
+                  <span>Poids véhicule (t)</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.5"
+                  placeholder={enableVehicleWeight ? '40' : 'Non spécifié'}
                   value={vehicleWeight}
                   onChange={e => setVehicleWeight(e.target.value)}
+                  disabled={!enableVehicleWeight}
                   className="h-9"
                 />
               </div>
