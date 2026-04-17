@@ -38,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AddressInput } from '@/components/route/AddressInput';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { QuickDriverDialog } from '@/components/ai/QuickDriverDialog';
 import type { Driver } from '@/types';
 
 interface Position {
@@ -188,6 +189,23 @@ export function LineMontageTab() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
+  const [quickDriverOpen, setQuickDriverOpen] = useState(false);
+
+  // Compute traction hours per day from loadingTime → deliveryTime (default to 8h)
+  const tractionHoursPerDay = (() => {
+    if (!loadingTime || !deliveryTime) return 8;
+    const [lh, lm] = loadingTime.split(':').map(Number);
+    const [dh, dm] = deliveryTime.split(':').map(Number);
+    let diff = (dh * 60 + dm) - (lh * 60 + lm);
+    if (diff <= 0) diff += 24 * 60; // crossing midnight
+    const hours = diff / 60;
+    // For round trips, double; for weekly, base on single trip
+    if (frequency === 'daily_round') return Math.min(hours * 2, 12);
+    return Math.min(hours, 12);
+  })();
+
+  // Days per month deduced from frequency
+  const tractionDaysPerMonth = frequency === 'weekly' ? 4 : (settings.workingDaysPerMonth || 21);
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
   const selectedDrivers = allDrivers.filter(d => selectedDriverIds.includes(d.id));
@@ -432,9 +450,20 @@ export function LineMontageTab() {
 
           {/* Driver selection from real data */}
           <div>
-            <Label className="flex items-center gap-2">
-              <Users className="w-4 h-4" /> Conducteurs
-            </Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="flex items-center gap-2">
+                <Users className="w-4 h-4" /> Conducteurs
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => setQuickDriverOpen(true)}
+              >
+                <Plus className="w-3 h-3" /> Créer (CDI/CDD/Intérim)
+              </Button>
+            </div>
             {allDrivers.length > 0 ? (
               <div className="space-y-2 mt-2 max-h-48 overflow-y-auto rounded-lg border p-2">
                 {allDrivers.map(d => {
@@ -458,7 +487,9 @@ export function LineMontageTab() {
               </div>
             ) : (
               <div className="mt-2 space-y-2">
-                <p className="text-xs text-muted-foreground">Aucun conducteur enregistré. Nombre souhaité :</p>
+                <p className="text-xs text-muted-foreground">
+                  Aucun conducteur enregistré. Cliquez « Créer » ci-dessus pour ajouter un CDI, CDD ou intérimaire — ou indiquez un nombre théorique :
+                </p>
                 <Select value={String(driverCount)} onValueChange={v => setDriverCount(Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -479,6 +510,15 @@ export function LineMontageTab() {
               </p>
             )}
           </div>
+
+          {/* Quick driver dialog */}
+          <QuickDriverDialog
+            open={quickDriverOpen}
+            onOpenChange={setQuickDriverOpen}
+            tractionHoursPerDay={tractionHoursPerDay}
+            tractionDaysPerMonth={tractionDaysPerMonth}
+            onCreated={(id) => setSelectedDriverIds(prev => [...prev, id])}
+          />
 
           {/* Overnight */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
