@@ -166,11 +166,24 @@ export function LineMontageTab() {
   const [driverCount, setDriverCount] = useState(2);
   const [allowOvernight, setAllowOvernight] = useState(false);
   const [frequency, setFrequency] = useState<'single' | 'daily_round' | 'weekly'>('daily_round');
-  const [routeType, setRouteType] = useState<'highway' | 'national' | 'mixed'>('highway');
+  const [routeType, setRouteType] = useState<'highway' | 'national' | 'mixed_70_30' | 'mixed_50_50' | 'mixed_30_70' | 'eco' | 'fastest' | 'shortest'>('highway');
   const [relayCount, setRelayCount] = useState(0);
   const [loadingTime, setLoadingTime] = useState('06:00');
   const [deliveryTime, setDeliveryTime] = useState('');
   const [budgetTarget, setBudgetTarget] = useState('');
+  // Enriched route filters
+  const [routePriority, setRoutePriority] = useState<'cost' | 'time' | 'distance' | 'comfort' | 'emissions'>('cost');
+  const [maxTollBudget, setMaxTollBudget] = useState('');
+  const [avoidUrbanZones, setAvoidUrbanZones] = useState(false);
+  const [avoidLowEmissionZones, setAvoidLowEmissionZones] = useState(false);
+  const [avoidFerries, setAvoidFerries] = useState(true);
+  const [avoidBorderCrossings, setAvoidBorderCrossings] = useState(false);
+  const [preferTruckRoutes, setPreferTruckRoutes] = useState(true);
+  const [maxSpeedKmh, setMaxSpeedKmh] = useState(90);
+  const [allowNightDriving, setAllowNightDriving] = useState(true);
+  const [allowWeekendDriving, setAllowWeekendDriving] = useState(false);
+  const [vehicleHeight, setVehicleHeight] = useState('4.0');
+  const [vehicleWeight, setVehicleWeight] = useState('40');
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
