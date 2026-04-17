@@ -185,6 +185,10 @@ export function LineMontageTab() {
   const [allowWeekendDriving, setAllowWeekendDriving] = useState(false);
   const [vehicleHeight, setVehicleHeight] = useState('4.0');
   const [vehicleWeight, setVehicleWeight] = useState('40');
+  // Optional filter toggles
+  const [enableTollBudget, setEnableTollBudget] = useState(false);
+  const [enableVehicleHeight, setEnableVehicleHeight] = useState(false);
+  const [enableVehicleWeight, setEnableVehicleWeight] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
