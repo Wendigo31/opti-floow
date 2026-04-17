@@ -404,12 +404,40 @@ ${vehicleDetail}
 PARAMÈTRES DU MONTAGE:
 - Nombre de conducteurs souhaités: ${mo?.driverCount || 2}
 - Découché autorisé: ${mo?.allowOvernight ? 'OUI' : 'NON'}
-- Type de route: ${mo?.routeType === 'national' ? '100% Nationale/Départementale (pas de péages)' : mo?.routeType === 'mixed' ? 'MIXTE: moitié autoroute, moitié nationale (optimise coût péages vs temps)' : '100% Autoroute'}
+- Type de route: ${
+        mo?.routeType === 'national' ? '100% Nationale/Départementale (PAS DE PÉAGES, temps +30%, consommation -10%)' :
+        mo?.routeType === 'mixed_70_30' ? 'MIXTE 70% Autoroute / 30% Nationale (péages réduits ~30%)' :
+        mo?.routeType === 'mixed_50_50' ? 'MIXTE 50/50 (péages réduits ~50%, temps +15%)' :
+        mo?.routeType === 'mixed_30_70' ? 'MIXTE 30% Autoroute / 70% Nationale (péages réduits ~70%, temps +25%)' :
+        mo?.routeType === 'eco' ? 'ÉCO: minimiser la consommation carburant (vitesse 80 km/h max, éviter dénivelés)' :
+        mo?.routeType === 'fastest' ? 'LE PLUS RAPIDE: temps minimum sans contrainte de coût' :
+        mo?.routeType === 'shortest' ? 'LE PLUS COURT: distance kilométrique minimale' :
+        '100% Autoroute (péages standards, temps optimal)'
+      }
+- Critère prioritaire: ${
+        mo?.routePriority === 'time' ? 'TEMPS minimum' :
+        mo?.routePriority === 'distance' ? 'DISTANCE minimum' :
+        mo?.routePriority === 'comfort' ? 'CONFORT conducteur (pauses fréquentes, pas de nuit)' :
+        mo?.routePriority === 'emissions' ? 'ÉMISSIONS CO₂ minimum' :
+        'COÛT TOTAL minimum'
+      }
 - Nombre de relais souhaités: ${mo?.relayCount || 0} (${mo?.relayCount ? `${mo.relayCount} changement(s) de conducteur en cours de route, identifie les points de relais géographiques optimaux` : 'pas de relais, conducteur(s) bout en bout'})
 - Fréquence: ${mo?.frequency === 'daily_round' ? 'Aller-retour quotidien' : mo?.frequency === 'weekly' ? 'Hebdomadaire' : 'Aller simple'}
+- Vitesse max imposée: ${mo?.maxSpeedKmh || 90} km/h
+- Caractéristiques véhicule: hauteur ${mo?.vehicleHeight || 4}m, poids ${mo?.vehicleWeight || 40}t
+${mo?.maxTollBudget ? `- Budget péages MAX: ${mo.maxTollBudget}€ (NE PAS DÉPASSER)` : ''}
 ${mo?.loadingTime ? `- Heure de chargement: ${mo.loadingTime}` : ''}
 ${mo?.deliveryTime ? `- Heure de livraison souhaitée: ${mo.deliveryTime}` : ''}
-${mo?.budgetTarget ? `- Budget cible: ${mo.budgetTarget}€` : ''}
+${mo?.budgetTarget ? `- Budget cible global: ${mo.budgetTarget}€` : ''}
+
+CONTRAINTES D'ITINÉRAIRE:
+- Itinéraires PL adaptés: ${mo?.preferTruckRoutes !== false ? 'OUI (privilégier réseau PL)' : 'Non spécifié'}
+- Éviter zones urbaines denses: ${mo?.avoidUrbanZones ? 'OUI' : 'NON'}
+- Éviter ZFE (Zones Faibles Émissions): ${mo?.avoidLowEmissionZones ? 'OUI (contournement obligatoire)' : 'NON'}
+- Éviter ferries: ${mo?.avoidFerries !== false ? 'OUI' : 'NON'}
+- Éviter passages frontaliers: ${mo?.avoidBorderCrossings ? 'OUI' : 'NON'}
+- Conduite de nuit (22h-6h) autorisée: ${mo?.allowNightDriving !== false ? 'OUI (avec majoration nuit)' : 'NON (interdit)'}
+- Conduite weekend autorisée: ${mo?.allowWeekendDriving ? 'OUI (avec majoration dimanche)' : 'NON (lun-ven uniquement)'}
 
 CONDUCTEURS (données réelles de l'entreprise):
 ${driversDetail}
