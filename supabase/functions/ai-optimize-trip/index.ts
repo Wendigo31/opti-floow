@@ -74,11 +74,23 @@ interface TripRequest {
     driverCount: number;
     allowOvernight: boolean;
     frequency: string;
-    routeType?: 'highway' | 'national' | 'mixed';
+    routeType?: 'highway' | 'national' | 'mixed_70_30' | 'mixed_50_50' | 'mixed_30_70' | 'eco' | 'fastest' | 'shortest';
     relayCount?: number;
     loadingTime?: string;
     deliveryTime?: string;
     budgetTarget?: number;
+    routePriority?: 'cost' | 'time' | 'distance' | 'comfort' | 'emissions';
+    maxTollBudget?: number;
+    avoidUrbanZones?: boolean;
+    avoidLowEmissionZones?: boolean;
+    avoidFerries?: boolean;
+    avoidBorderCrossings?: boolean;
+    preferTruckRoutes?: boolean;
+    maxSpeedKmh?: number;
+    allowNightDriving?: boolean;
+    allowWeekendDriving?: boolean;
+    vehicleHeight?: number;
+    vehicleWeight?: number;
   };
 }
 
