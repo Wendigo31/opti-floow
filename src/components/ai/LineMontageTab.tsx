@@ -488,19 +488,112 @@ export function LineMontageTab() {
             <Switch checked={allowOvernight} onCheckedChange={setAllowOvernight} />
           </div>
 
-          {/* Route type */}
-          <div>
-            <Label className="flex items-center gap-2">
+          {/* Route type — enriched */}
+          <div className="space-y-2 p-3 rounded-lg border border-border/60 bg-muted/20">
+            <Label className="flex items-center gap-2 text-sm font-semibold">
               <Route className="w-4 h-4" /> Type de route
             </Label>
             <Select value={routeType} onValueChange={(v: any) => setRouteType(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="highway">100% Autoroute</SelectItem>
-                <SelectItem value="national">100% Nationale / Départementale</SelectItem>
-                <SelectItem value="mixed">Mixte (autoroute + nationale)</SelectItem>
+                <SelectItem value="highway">🛣️ 100% Autoroute (rapide, péages)</SelectItem>
+                <SelectItem value="national">🛤️ 100% Nationale / Départementale (sans péage)</SelectItem>
+                <SelectItem value="mixed_70_30">⚖️ Mixte 70% Autoroute / 30% Nationale</SelectItem>
+                <SelectItem value="mixed_50_50">⚖️ Mixte 50% / 50%</SelectItem>
+                <SelectItem value="mixed_30_70">⚖️ Mixte 30% Autoroute / 70% Nationale</SelectItem>
+                <SelectItem value="eco">🌱 Éco (consommation minimale)</SelectItem>
+                <SelectItem value="fastest">⚡ Le plus rapide (sans contrainte)</SelectItem>
+                <SelectItem value="shortest">📏 Le plus court (km min)</SelectItem>
               </SelectContent>
             </Select>
+
+            <Label className="flex items-center gap-2 text-xs mt-2">Critère prioritaire</Label>
+            <Select value={routePriority} onValueChange={(v: any) => setRoutePriority(v)}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cost">💰 Coût total minimum</SelectItem>
+                <SelectItem value="time">⏱️ Temps minimum</SelectItem>
+                <SelectItem value="distance">📏 Distance minimum</SelectItem>
+                <SelectItem value="comfort">😌 Confort conducteur</SelectItem>
+                <SelectItem value="emissions">🌍 Émissions CO₂ minimum</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <Label className="text-xs">Budget péages max (€)</Label>
+                <Input
+                  type="number"
+                  placeholder="Illimité"
+                  value={maxTollBudget}
+                  onChange={e => setMaxTollBudget(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Vitesse max (km/h)</Label>
+                <Input
+                  type="number"
+                  value={maxSpeedKmh}
+                  onChange={e => setMaxSpeedKmh(Number(e.target.value))}
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div>
+                <Label className="text-xs">Hauteur véhicule (m)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={vehicleHeight}
+                  onChange={e => setVehicleHeight(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Poids véhicule (t)</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={vehicleWeight}
+                  onChange={e => setVehicleWeight(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 mt-2">
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={preferTruckRoutes} onCheckedChange={(v) => setPreferTruckRoutes(!!v)} />
+                <span>Privilégier itinéraires PL adaptés</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={avoidUrbanZones} onCheckedChange={(v) => setAvoidUrbanZones(!!v)} />
+                <span>Éviter zones urbaines denses</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={avoidLowEmissionZones} onCheckedChange={(v) => setAvoidLowEmissionZones(!!v)} />
+                <span>Éviter ZFE (Zones Faibles Émissions)</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={avoidFerries} onCheckedChange={(v) => setAvoidFerries(!!v)} />
+                <span>Éviter ferries / navettes</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={avoidBorderCrossings} onCheckedChange={(v) => setAvoidBorderCrossings(!!v)} />
+                <span>Éviter passages frontaliers</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={allowNightDriving} onCheckedChange={(v) => setAllowNightDriving(!!v)} />
+                <span>Autoriser conduite de nuit (22h-6h)</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox checked={allowWeekendDriving} onCheckedChange={(v) => setAllowWeekendDriving(!!v)} />
+                <span>Autoriser conduite weekend</span>
+              </label>
+            </div>
           </div>
 
           {/* Relay count */}
@@ -516,6 +609,8 @@ export function LineMontageTab() {
                 <SelectItem value="2">2 relais</SelectItem>
                 <SelectItem value="3">3 relais</SelectItem>
                 <SelectItem value="4">4 relais</SelectItem>
+                <SelectItem value="5">5 relais</SelectItem>
+                <SelectItem value="6">6 relais</SelectItem>
               </SelectContent>
             </Select>
           </div>
