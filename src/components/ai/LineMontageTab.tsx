@@ -189,6 +189,23 @@ export function LineMontageTab() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
+  const [quickDriverOpen, setQuickDriverOpen] = useState(false);
+
+  // Compute traction hours per day from loadingTime → deliveryTime (default to 8h)
+  const tractionHoursPerDay = (() => {
+    if (!loadingTime || !deliveryTime) return 8;
+    const [lh, lm] = loadingTime.split(':').map(Number);
+    const [dh, dm] = deliveryTime.split(':').map(Number);
+    let diff = (dh * 60 + dm) - (lh * 60 + lm);
+    if (diff <= 0) diff += 24 * 60; // crossing midnight
+    const hours = diff / 60;
+    // For round trips, double; for weekly, base on single trip
+    if (frequency === 'daily_round') return Math.min(hours * 2, 12);
+    return Math.min(hours, 12);
+  })();
+
+  // Days per month deduced from frequency
+  const tractionDaysPerMonth = frequency === 'weekly' ? 4 : (settings.workingDaysPerMonth || 21);
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
   const selectedDrivers = allDrivers.filter(d => selectedDriverIds.includes(d.id));
