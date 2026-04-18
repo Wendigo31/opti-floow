@@ -77,6 +77,7 @@ export function EditTourDialog({
   const [trailerId, setTrailerId] = useState<string>('');
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
+  const [missionOrder, setMissionOrder] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [originAddress, setOriginAddress] = useState('');
@@ -99,6 +100,7 @@ export function EditTourDialog({
       setTrailerId(tour.trailer_id || '');
       setSelectedDriverIds(tour.driver_ids || []);
       setNotes(tour.notes || '');
+      setMissionOrder((tour as any).mission_order || '');
       setTags(tour.tags || []);
       setOriginAddress(tour.origin_address);
       setDestinationAddress(tour.destination_address);
@@ -186,6 +188,7 @@ export function EditTourDialog({
       driver_ids: selectedDriverIds,
       drivers_data: driversData,
       notes: notes.trim() || undefined,
+      mission_order: missionOrder.trim() || null,
       tags,
       // Updated costs
       fuel_cost: calculatedCosts.fuelCost,
