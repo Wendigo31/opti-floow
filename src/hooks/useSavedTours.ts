@@ -218,6 +218,7 @@ export function useSavedTours() {
         driver_ids: input.driver_ids || [],
         drivers_data: (input.drivers_data || []) as unknown as Json,
         notes: input.notes || null,
+        mission_order: input.mission_order || null,
         tags: input.tags || [],
       };
 

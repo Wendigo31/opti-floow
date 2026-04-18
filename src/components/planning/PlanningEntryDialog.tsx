@@ -440,18 +440,8 @@ interface PlanningEntryDialogProps {
                </div>
              )}
            </div>
- 
-            {/* Mission Order */}
-            <div className="space-y-2">
-              <Label htmlFor="mission_order">Ordre de mission</Label>
-              <Textarea
-                id="mission_order"
-                value={formData.mission_order || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, mission_order: e.target.value || null }))}
-                placeholder="Détails de la mission : instructions, références, contacts..."
-                rows={4}
-              />
-            </div>
+
+            {/* Mission Order moved to Tours page */}
 
             {/* Sector Manager */}
             <div className="space-y-2">

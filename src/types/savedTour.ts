@@ -43,6 +43,7 @@ export interface SavedTour {
   
   // Metadata
   notes: string | null;
+  mission_order: string | null;
   tags: string[];
   is_favorite: boolean;
   created_at: string;
@@ -86,5 +87,6 @@ export interface SaveTourInput {
   driver_ids?: string[];
   drivers_data?: any[];
   notes?: string;
+  mission_order?: string | null;
   tags?: string[];
 }

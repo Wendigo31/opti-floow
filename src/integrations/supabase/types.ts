@@ -1160,6 +1160,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          event_type: string
+          id: string
+          is_read: boolean
+          license_id: string
+          link_url: string | null
+          message: string | null
+          read_at: string | null
+          recipient_user_id: string
+          title: string
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          event_type: string
+          id?: string
+          is_read?: boolean
+          license_id: string
+          link_url?: string | null
+          message?: string | null
+          read_at?: string | null
+          recipient_user_id: string
+          title: string
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          event_type?: string
+          id?: string
+          is_read?: boolean
+          license_id?: string
+          link_url?: string | null
+          message?: string | null
+          read_at?: string | null
+          recipient_user_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       planning_entries: {
         Row: {
           client_id: string | null
@@ -1416,6 +1464,7 @@ export type Database = {
           id: string
           is_favorite: boolean | null
           license_id: string | null
+          mission_order: string | null
           name: string
           notes: string | null
           origin_address: string
@@ -1456,6 +1505,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           license_id?: string | null
+          mission_order?: string | null
           name: string
           notes?: string | null
           origin_address: string
@@ -1496,6 +1546,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           license_id?: string | null
+          mission_order?: string | null
           name?: string
           notes?: string | null
           origin_address?: string

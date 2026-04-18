@@ -77,6 +77,7 @@ export function EditTourDialog({
   const [trailerId, setTrailerId] = useState<string>('');
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
+  const [missionOrder, setMissionOrder] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [originAddress, setOriginAddress] = useState('');
@@ -99,6 +100,7 @@ export function EditTourDialog({
       setTrailerId(tour.trailer_id || '');
       setSelectedDriverIds(tour.driver_ids || []);
       setNotes(tour.notes || '');
+      setMissionOrder((tour as any).mission_order || '');
       setTags(tour.tags || []);
       setOriginAddress(tour.origin_address);
       setDestinationAddress(tour.destination_address);
@@ -186,6 +188,7 @@ export function EditTourDialog({
       driver_ids: selectedDriverIds,
       drivers_data: driversData,
       notes: notes.trim() || undefined,
+      mission_order: missionOrder.trim() || null,
       tags,
       // Updated costs
       fuel_cost: calculatedCosts.fuelCost,
@@ -451,6 +454,23 @@ export function EditTourDialog({
                   placeholder="Notes additionnelles..."
                   rows={2}
                 />
+              </div>
+
+              {/* Mission Order (moved from Planning) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Ordre de mission
+                </Label>
+                <Textarea
+                  value={missionOrder}
+                  onChange={(e) => setMissionOrder(e.target.value)}
+                  placeholder="Détails complets de la mission : instructions, références, contacts, consignes spécifiques..."
+                  rows={6}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  L'ordre de mission est désormais rattaché à la tournée. Il sera accessible depuis le planning en cliquant sur la traction.
+                </p>
               </div>
             </div>
 

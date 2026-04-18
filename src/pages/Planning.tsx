@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -244,6 +245,7 @@ function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClient
 
 export default function Planning() {
   const { licenseId } = useLicenseContext();
+  const navigate = useNavigate();
   const { progress: importProgress } = usePlanningImport();
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -468,6 +470,12 @@ export default function Planning() {
   };
 
   const handleRowClick = (group: TractionGroup) => {
+    // If linked to a saved tour, open Tours page directly
+    const linkedTourId = group.entries.find(e => (e as any).saved_tour_id)?.['saved_tour_id' as keyof PlanningEntry] as string | undefined;
+    if (linkedTourId) {
+      navigate(`/tours?openTour=${linkedTourId}`);
+      return;
+    }
     setSelectedGroup(group);
     setIsDetailOpen(true);
   };

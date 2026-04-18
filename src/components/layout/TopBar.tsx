@@ -28,6 +28,7 @@ import { MobileNav } from './MobileNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CloudSyncIndicator } from '@/components/shared/CloudSyncIndicator';
 import { useCloudDataSafe } from '@/hooks/useCloudDataSafe';
+import { NotificationCenter } from '@/components/layout/NotificationCenter';
 
 interface TopBarProps {
   isDark: boolean | null;
@@ -166,6 +167,9 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
               isLoading={cloudSyncState.isLoading}
               recentActivity={cloudSyncState.recentActivity}
             />
+
+            {/* Notification Center */}
+            <NotificationCenter />
 
             {/* Role Badge */}
             {roleInfo && (
