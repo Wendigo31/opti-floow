@@ -155,22 +155,8 @@ export function PlanningCell({
                  </div>
                )}
                
-                {/* Mission preview */}
-                {!isSelectionMode && entry.mission_order && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="mt-1 text-[10px] opacity-70 line-clamp-2 break-words cursor-help">
-                        📋 {entry.mission_order}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-sm whitespace-pre-line text-xs">
-                      {entry.mission_order}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-
-                {/* Notes preview */}
-                {!isSelectionMode && !entry.mission_order && entry.notes && (
+                {/* Notes preview (ODM removed - now lives in Tours) */}
+                {!isSelectionMode && entry.notes && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="mt-1 text-[10px] opacity-70 line-clamp-2 break-words cursor-help">
