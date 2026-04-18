@@ -477,29 +477,12 @@ export function PlanningRowDetailPanel({
             )}
           </div>
 
-          {/* Mission order */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> Ordre de mission</Label>
-              {missionOrder.trim() && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-xs h-7"
-                  disabled={isRewriting}
-                  onClick={handleRewriteODM}
-                >
-                  {isRewriting ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> Réécriture…</>
-                  ) : (
-                    <><Sparkles className="h-3 w-3" /> Régénérer</>
-                  )}
-                </Button>
-              )}
+          {/* Mission orders are now managed in the Tours page (linked via saved_tour_id). */}
+          {first?.saved_tour_id && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+              📋 L'ordre de mission de cette tournée est désormais géré dans la page <strong>Tournées</strong>. Cliquez sur la traction sur le planning pour ouvrir directement la tournée liée.
             </div>
-            <Textarea value={missionOrder} onChange={e => setMissionOrder(e.target.value)} placeholder="Instructions, références..." rows={4} />
-          </div>
+          )}
 
           {/* Delete section */}
           <div className="pt-4 border-t space-y-2">
