@@ -455,6 +455,23 @@ export function EditTourDialog({
                   rows={2}
                 />
               </div>
+
+              {/* Mission Order (moved from Planning) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Ordre de mission
+                </Label>
+                <Textarea
+                  value={missionOrder}
+                  onChange={(e) => setMissionOrder(e.target.value)}
+                  placeholder="Détails complets de la mission : instructions, références, contacts, consignes spécifiques..."
+                  rows={6}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  L'ordre de mission est désormais rattaché à la tournée. Il sera accessible depuis le planning en cliquant sur la traction.
+                </p>
+              </div>
             </div>
 
             {/* ── Right column: Costs & Financials ── */}
