@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Route,
   Search,
@@ -187,6 +188,20 @@ export default function Tours() {
   useEffect(() => {
     fetchTours();
   }, [fetchTours]);
+
+  // Auto-open a tour when navigated from Planning with ?openTour=<id>
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const id = searchParams.get('openTour');
+    if (id && tours.length > 0) {
+      const t = tours.find((x) => x.id === id);
+      if (t) {
+        setEditingTour(t);
+        searchParams.delete('openTour');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [tours, searchParams, setSearchParams]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
