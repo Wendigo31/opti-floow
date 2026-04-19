@@ -1278,6 +1278,10 @@ export default function Drivers() {
               Débloquer plus de conducteurs
             </Button>
           )}
+         <Button variant="outline" size="sm" onClick={() => setIsDeclareAbsenceOpen(true)} className="gap-2">
+           <CalendarOff className="w-4 h-4 text-amber-500" />
+           Déclarer une absence
+         </Button>
          <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="gap-2">
            <Upload className="w-4 h-4" />
            Importer Excel
