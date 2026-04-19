@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useDriverAbsences } from '@/hooks/useDriverAbsences';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
@@ -271,19 +273,64 @@ export function DeclareAbsenceDialog({ open, onOpenChange, allDrivers, initialDr
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Date de début</Label>
-              <Input
-                type="date"
-                value={formData.start_date}
-                onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !formData.start_date && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.start_date
+                      ? format(parseISO(formData.start_date), 'PPP', { locale: fr })
+                      : <span>Choisir une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.start_date ? parseISO(formData.start_date) : undefined}
+                    onSelect={(d) => setFormData({ ...formData, start_date: d ? format(d, 'yyyy-MM-dd') : '' })}
+                    initialFocus
+                    locale={fr}
+                    className={cn('p-3 pointer-events-auto')}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label>Date de fin (optionnelle)</Label>
-              <Input
-                type="date"
-                value={formData.end_date}
-                onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !formData.end_date && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.end_date
+                      ? format(parseISO(formData.end_date), 'PPP', { locale: fr })
+                      : <span>Choisir une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.end_date ? parseISO(formData.end_date) : undefined}
+                    onSelect={(d) => setFormData({ ...formData, end_date: d ? format(d, 'yyyy-MM-dd') : '' })}
+                    disabled={(date) => formData.start_date ? date < parseISO(formData.start_date) : false}
+                    initialFocus
+                    locale={fr}
+                    className={cn('p-3 pointer-events-auto')}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
