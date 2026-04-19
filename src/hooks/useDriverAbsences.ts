@@ -8,7 +8,7 @@ export interface DriverAbsence {
   driver_id: string;
   license_id: string;
   user_id: string;
-  absence_type: 'maladie' | 'accident_travail' | 'conges' | 'autre';
+  absence_type: string;
   start_date: string;
   end_date: string | null;
   notes: string | null;
