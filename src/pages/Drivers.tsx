@@ -1685,6 +1685,12 @@ export default function Drivers() {
       />
 
       <DriverImportProgress progress={importProgress} onDismiss={dismissImportProgress} />
+
+      <DeclareAbsenceDialog
+        open={isDeclareAbsenceOpen}
+        onOpenChange={setIsDeclareAbsenceOpen}
+        allDrivers={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers]}
+      />
     </div>
   );
 }
