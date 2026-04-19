@@ -29,6 +29,7 @@ import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
 import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
+import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
