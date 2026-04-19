@@ -19,14 +19,14 @@ export default function Team() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 px-4 max-w-5xl flex items-center justify-center min-h-[300px]">
+      <div className="w-full py-6 px-4 flex items-center justify-center min-h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-5xl">
+    <div className="w-full py-6 px-4">
       {isDirection ? (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
