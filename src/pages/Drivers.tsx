@@ -29,6 +29,7 @@ import { useUncreatedDrivers } from '@/hooks/useUncreatedDrivers';
 import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
+import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
 // Extended driver type with new fields
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
@@ -82,6 +83,7 @@ export default function Drivers() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [isDeclareAbsenceOpen, setIsDeclareAbsenceOpen] = useState(false);
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudCddDrivers.length + cloudInterimDrivers.length + cloudAutreDrivers.length + cloudJokerDrivers.length;
   const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
@@ -1278,6 +1280,10 @@ export default function Drivers() {
               Débloquer plus de conducteurs
             </Button>
           )}
+         <Button variant="outline" size="sm" onClick={() => setIsDeclareAbsenceOpen(true)} className="gap-2">
+           <CalendarOff className="w-4 h-4 text-amber-500" />
+           Déclarer une absence
+         </Button>
          <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="gap-2">
            <Upload className="w-4 h-4" />
            Importer Excel
@@ -1680,6 +1686,12 @@ export default function Drivers() {
       />
 
       <DriverImportProgress progress={importProgress} onDismiss={dismissImportProgress} />
+
+      <DeclareAbsenceDialog
+        open={isDeclareAbsenceOpen}
+        onOpenChange={setIsDeclareAbsenceOpen}
+        allDrivers={[...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers]}
+      />
     </div>
   );
 }
