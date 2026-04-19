@@ -262,13 +262,29 @@ export function LineMontageTab() {
   }, 0);
 
   const handleGenerate = async () => {
-    if (!origin || !destination) {
-      toast({ title: 'Champs requis', description: "Renseignez l'origine et la destination", variant: 'destructive' });
-      return;
-    }
-    if (!selectedVehicle) {
-      toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
-      return;
+    // Free-text mode: send raw text + minimal context
+    if (inputMode === 'text') {
+      if (!freeText.trim()) {
+        toast({ title: 'Texte requis', description: 'Décrivez votre besoin de ligne en texte libre', variant: 'destructive' });
+        return;
+      }
+      if (!selectedVehicle) {
+        toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
+        return;
+      }
+    } else {
+      if (!origin || !destination) {
+        toast({ title: 'Champs requis', description: "Renseignez l'origine et la destination", variant: 'destructive' });
+        return;
+      }
+      if (!selectedVehicle) {
+        toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
+        return;
+      }
+      if (crossRoundTrip && (!returnOrigin || !returnDestination)) {
+        toast({ title: 'Retour requis', description: "Renseignez l'origine et la destination du retour", variant: 'destructive' });
+        return;
+      }
     }
 
     // Build real driver cost data
