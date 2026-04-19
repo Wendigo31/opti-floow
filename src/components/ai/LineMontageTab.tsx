@@ -596,25 +596,87 @@ export function LineMontageTab() {
               </Button>
             </div>
             {allDrivers.length > 0 ? (
-              <div className="space-y-2 mt-2 max-h-48 overflow-y-auto rounded-lg border p-2">
-                {allDrivers.map(d => {
-                  const costs = computeDriverDailyCost(d);
-                  const driverName = d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Sans nom';
-                  return (
-                    <label key={d.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
-                      <Checkbox
-                        checked={selectedDriverIds.includes(d.id)}
-                        onCheckedChange={() => toggleDriver(d.id)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{driverName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {costs.contractLabel} · {formatCurrency(costs.dailyCost + costs.dailyBonuses + costs.dailyAllowances)}/jour
+              <div className="mt-2 space-y-2">
+                {/* Search + contract filter */}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher un conducteur..."
+                      value={driverSearch}
+                      onChange={(e) => setDriverSearch(e.target.value)}
+                      className="pl-8 h-8 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {([
+                      { key: 'all', label: 'Tous' },
+                      { key: 'cdi', label: 'CDI' },
+                      { key: 'cdd', label: 'CDD' },
+                      { key: 'interim', label: 'Intérim' },
+                      { key: 'joker', label: 'Joker' },
+                      { key: 'autre', label: 'Autre' },
+                    ] as const).map((f) => {
+                      const count = f.key === 'all'
+                        ? allDrivers.length
+                        : allDrivers.filter(d => (d.contractType || 'autre') === f.key).length;
+                      if (f.key !== 'all' && count === 0) return null;
+                      const active = driverContractFilter === f.key;
+                      return (
+                        <button
+                          key={f.key}
+                          type="button"
+                          onClick={() => setDriverContractFilter(f.key)}
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-xs border transition-colors',
+                            active
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-accent border-border text-muted-foreground'
+                          )}
+                        >
+                          {f.label} <span className="opacity-70">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto rounded-lg border p-2">
+                  {(() => {
+                    const q = driverSearch.toLowerCase().trim();
+                    const filtered = allDrivers.filter(d => {
+                      if (driverContractFilter !== 'all' && (d.contractType || 'autre') !== driverContractFilter) return false;
+                      if (!q) return true;
+                      const fullName = (d.firstName && d.lastName ? `${d.firstName} ${d.lastName}` : d.name || '').toLowerCase();
+                      return fullName.includes(q) || (d.name || '').toLowerCase().includes(q);
+                    });
+                    if (filtered.length === 0) {
+                      return (
+                        <p className="text-xs text-muted-foreground text-center py-3">
+                          Aucun conducteur trouvé
                         </p>
-                      </div>
-                    </label>
-                  );
-                })}
+                      );
+                    }
+                    return filtered.map(d => {
+                      const costs = computeDriverDailyCost(d);
+                      const driverName = d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Sans nom';
+                      return (
+                        <label key={d.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
+                          <Checkbox
+                            checked={selectedDriverIds.includes(d.id)}
+                            onCheckedChange={() => toggleDriver(d.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{driverName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {costs.contractLabel} · {formatCurrency(costs.dailyCost + costs.dailyBonuses + costs.dailyAllowances)}/jour
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             ) : (
               <div className="mt-2 space-y-2">
