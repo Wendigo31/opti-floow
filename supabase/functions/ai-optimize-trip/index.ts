@@ -47,6 +47,16 @@ interface TripRequest {
     vehicleWeight?: number;
   };
   mode?: 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization' | 'line_montage';
+  inputMode?: 'form' | 'text';
+  freeTextRequest?: string;
+  outboundClient?: string;
+  returnLeg?: {
+    origin: string;
+    destination: string;
+    clientName?: string;
+    loadingTime?: string;
+    deliveryTime?: string;
+  };
   stops?: string[];
   currentCosts?: {
     fuel: number;
