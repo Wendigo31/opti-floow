@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 export type NotificationEventType =
   | 'driver_created'
   | 'driver_absence'
+  | 'driver_absence_unreplaced'
   | 'tour_created'
   | 'planning_updated'
   | 'generic';
