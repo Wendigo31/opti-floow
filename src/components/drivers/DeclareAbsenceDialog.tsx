@@ -97,7 +97,10 @@ export function DeclareAbsenceDialog({ open, onOpenChange, allDrivers, initialDr
   }, [allDrivers]);
 
   const handleSave = async () => {
-    if (!formData.driver_id || !formData.start_date) return;
+    if (!formData.driver_id || !formData.start_date) {
+      toast.error('Sélectionnez un conducteur et une date de début');
+      return;
+    }
     setSaving(true);
     try {
       const ok = await createAbsence({
@@ -107,18 +110,71 @@ export function DeclareAbsenceDialog({ open, onOpenChange, allDrivers, initialDr
         end_date: formData.end_date || null,
         notes: formData.notes || null,
       });
-      if (ok) {
-        const driverName = driverMap.get(formData.driver_id) || 'Conducteur';
-        const typeLabel = (ABSENCE_TYPES[formData.absence_type] || ABSENCE_TYPES.autre).label;
-        await broadcast({
-          event_type: 'driver_absence',
-          title: `Absence : ${driverName}`,
-          message: `${typeLabel} du ${format(parseISO(formData.start_date), 'dd/MM/yyyy', { locale: fr })}${formData.end_date ? ` au ${format(parseISO(formData.end_date), 'dd/MM/yyyy', { locale: fr })}` : ''}.`,
-          link_url: '/drivers',
-          entity_id: formData.driver_id,
-        });
-        onOpenChange(false);
+      if (!ok) return;
+
+      const driverName = driverMap.get(formData.driver_id) || 'Conducteur';
+      const typeLabel = (ABSENCE_TYPES[formData.absence_type] || ABSENCE_TYPES.autre).label;
+      const periodLabel = `du ${format(parseISO(formData.start_date), 'dd/MM/yyyy', { locale: fr })}${formData.end_date ? ` au ${format(parseISO(formData.end_date), 'dd/MM/yyyy', { locale: fr })}` : ''}`;
+
+      await broadcast({
+        event_type: 'driver_absence',
+        title: `Absence : ${driverName}`,
+        message: `${typeLabel} ${periodLabel}.`,
+        link_url: '/drivers',
+        entity_id: formData.driver_id,
+      });
+
+      // Check planning entries during the absence period to alert about unreplaced tractions
+      if (licenseId) {
+        try {
+          const endDate = formData.end_date || formData.start_date;
+          const { data: entries, error } = await supabase
+            .from('planning_entries')
+            .select('id, planning_date, tour_name, mission_order, line_reference, origin_address, destination_address, driver_id, relay_driver_id')
+            .eq('license_id', licenseId)
+            .gte('planning_date', formData.start_date)
+            .lte('planning_date', endDate)
+            .or(`driver_id.eq.${formData.driver_id},relay_driver_id.eq.${formData.driver_id}`);
+
+          if (error) throw error;
+
+          const affected = (entries || []).filter((e: any) => {
+            // Not replaced = the absent driver is still assigned and no different relay covers them
+            const isMain = e.driver_id === formData.driver_id;
+            const isRelay = e.relay_driver_id === formData.driver_id;
+            if (isMain) {
+              // If main and relay is set to someone else, it's covered
+              return !e.relay_driver_id || e.relay_driver_id === formData.driver_id;
+            }
+            return isRelay;
+          });
+
+          if (affected.length > 0) {
+            const lines = affected.slice(0, 8).map((e: any) => {
+              const label = e.tour_name || e.line_reference || e.mission_order || `${e.origin_address || '?'} → ${e.destination_address || '?'}`;
+              return `• ${format(parseISO(e.planning_date), 'dd/MM', { locale: fr })} : ${label}`;
+            }).join('\n');
+            const more = affected.length > 8 ? `\n…et ${affected.length - 8} autre(s)` : '';
+
+            await broadcast({
+              event_type: 'driver_absence_unreplaced',
+              title: `⚠️ ${driverName} non remplacé(e) sur ${affected.length} traction(s)`,
+              message: `${typeLabel} ${periodLabel}\n${lines}${more}`,
+              link_url: '/planning',
+              entity_id: formData.driver_id,
+            });
+
+            toast.warning(`${affected.length} traction(s) non remplacée(s) pendant l'absence`, {
+              description: 'Une notification a été envoyée à l\'équipe.',
+              duration: 6000,
+            });
+          }
+        } catch (err) {
+          console.error('[DeclareAbsence] planning check error:', err);
+        }
       }
+
+      onOpenChange(false);
     } finally {
       setSaving(false);
     }
