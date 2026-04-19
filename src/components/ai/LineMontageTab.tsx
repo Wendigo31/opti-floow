@@ -192,6 +192,17 @@ export function LineMontageTab() {
   const [enableVehicleHeight, setEnableVehicleHeight] = useState(false);
   const [enableVehicleWeight, setEnableVehicleWeight] = useState(false);
 
+  // Input mode + cross round-trip
+  const [inputMode, setInputMode] = useState<'form' | 'text'>('form');
+  const [freeText, setFreeText] = useState('');
+  const [crossRoundTrip, setCrossRoundTrip] = useState(false);
+  const [returnOrigin, setReturnOrigin] = useState('');
+  const [returnDestination, setReturnDestination] = useState('');
+  const [returnClientName, setReturnClientName] = useState('');
+  const [returnLoadingTime, setReturnLoadingTime] = useState('');
+  const [returnDeliveryTime, setReturnDeliveryTime] = useState('');
+  const [outboundClientName, setOutboundClientName] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
