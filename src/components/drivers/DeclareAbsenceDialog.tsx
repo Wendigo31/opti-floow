@@ -51,6 +51,7 @@ interface DeclareAbsenceDialogProps {
 export function DeclareAbsenceDialog({ open, onOpenChange, allDrivers, initialDriverId }: DeclareAbsenceDialogProps) {
   const { createAbsence } = useDriverAbsences();
   const { broadcast } = useNotifications();
+  const { licenseId } = useLicenseContext();
 
   const [formData, setFormData] = useState({
     driver_id: initialDriverId || '',
