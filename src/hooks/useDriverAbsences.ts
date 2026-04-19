@@ -78,7 +78,11 @@ export function useDriverAbsences() {
     end_date?: string | null;
     notes?: string | null;
   }) => {
-    if (!licenseId || !authUserId) return false;
+    if (!licenseId || !authUserId) {
+      toast.error('Session non initialisée. Reconnectez-vous.');
+      console.error('[DriverAbsences] missing licenseId or authUserId', { licenseId, authUserId });
+      return false;
+    }
     try {
       const { error } = await supabase
         .from('driver_absences')
