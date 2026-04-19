@@ -82,6 +82,7 @@ export default function Drivers() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [isDeclareAbsenceOpen, setIsDeclareAbsenceOpen] = useState(false);
   // Combined driver count for limits
   const totalDriverCount = cloudCdiDrivers.length + cloudCddDrivers.length + cloudInterimDrivers.length + cloudAutreDrivers.length + cloudJokerDrivers.length;
   const canAddDriver = checkLimit('maxDrivers', totalDriverCount);
