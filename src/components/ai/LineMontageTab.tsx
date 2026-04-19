@@ -208,6 +208,8 @@ export function LineMontageTab() {
   const [result, setResult] = useState<MontageResponse | null>(null);
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
   const [quickDriverOpen, setQuickDriverOpen] = useState(false);
+  const [driverSearch, setDriverSearch] = useState('');
+  const [driverContractFilter, setDriverContractFilter] = useState<'all' | 'cdi' | 'cdd' | 'interim' | 'joker' | 'autre'>('all');
 
   // Compute traction hours per day from loadingTime → deliveryTime (default to 8h)
   const tractionHoursPerDay = (() => {
