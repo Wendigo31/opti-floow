@@ -20,8 +20,8 @@ interface DriverInfo {
 }
 
 interface TripRequest {
-  origin: string;
-  destination: string;
+  origin?: string;
+  destination?: string;
   vehicleType: string;
   fuelConsumption: number;
   fuelPrice: number;
