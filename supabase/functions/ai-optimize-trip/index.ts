@@ -402,12 +402,32 @@ Identifie les POINTS DE RELAIS PRÉCIS si applicable.`;
 
     } else if (tripRequest.mode === 'line_montage') {
       const mo = tripRequest.montageOptions;
-      userPrompt = `MISSION: CRÉATION D'UN MONTAGE DE LIGNE ÉCONOMIQUE ET COMPÉTITIF
+      const isTextMode = tripRequest.inputMode === 'text' && tripRequest.freeTextRequest;
 
-LIGNE:
+      const lineHeader = isTextMode
+        ? `DEMANDE EN TEXTE LIBRE (analyse-la pour extraire origine, destination, clients, fréquence, contraintes):
+"""
+${tripRequest.freeTextRequest}
+"""`
+        : `LIGNE ALLER:
 - Origine: ${tripRequest.origin}
 - Destination: ${tripRequest.destination}
+${tripRequest.outboundClient ? `- Client aller: ${tripRequest.outboundClient}` : ''}
 ${tripRequest.stops?.length ? `- Arrêts: ${tripRequest.stops.join(' → ')}` : ''}
+${tripRequest.returnLeg ? `
+
+LIGNE RETOUR (CROISÉE — client différent au retour):
+- Origine retour: ${tripRequest.returnLeg.origin}
+- Destination retour: ${tripRequest.returnLeg.destination}
+${tripRequest.returnLeg.clientName ? `- Client retour: ${tripRequest.returnLeg.clientName}` : ''}
+${tripRequest.returnLeg.loadingTime ? `- Heure chargement retour: ${tripRequest.returnLeg.loadingTime}` : ''}
+${tripRequest.returnLeg.deliveryTime ? `- Heure livraison retour: ${tripRequest.returnLeg.deliveryTime}` : ''}
+
+OBJECTIF SPÉCIAL ALLER-RETOUR CROISÉ : Le véhicule charge chez un premier client à l'aller, puis recharge chez un second client au retour pour rentabiliser le trajet (éviter le retour à vide). Calcule les coûts et revenus séparément pour chaque tronçon, puis le total combiné.` : ''}`;
+
+      userPrompt = `MISSION: CRÉATION D'UN MONTAGE DE LIGNE ÉCONOMIQUE ET COMPÉTITIF
+
+${lineHeader}
 
 ${vehicleDetail}
 
