@@ -29,6 +29,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudTrailers } from '@/hooks/useCloudTrailers';
@@ -190,6 +192,17 @@ export function LineMontageTab() {
   const [enableVehicleHeight, setEnableVehicleHeight] = useState(false);
   const [enableVehicleWeight, setEnableVehicleWeight] = useState(false);
 
+  // Input mode + cross round-trip
+  const [inputMode, setInputMode] = useState<'form' | 'text'>('form');
+  const [freeText, setFreeText] = useState('');
+  const [crossRoundTrip, setCrossRoundTrip] = useState(false);
+  const [returnOrigin, setReturnOrigin] = useState('');
+  const [returnDestination, setReturnDestination] = useState('');
+  const [returnClientName, setReturnClientName] = useState('');
+  const [returnLoadingTime, setReturnLoadingTime] = useState('');
+  const [returnDeliveryTime, setReturnDeliveryTime] = useState('');
+  const [outboundClientName, setOutboundClientName] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MontageResponse | null>(null);
   const [expandedScenario, setExpandedScenario] = useState<number | null>(null);
@@ -249,13 +262,29 @@ export function LineMontageTab() {
   }, 0);
 
   const handleGenerate = async () => {
-    if (!origin || !destination) {
-      toast({ title: 'Champs requis', description: "Renseignez l'origine et la destination", variant: 'destructive' });
-      return;
-    }
-    if (!selectedVehicle) {
-      toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
-      return;
+    // Free-text mode: send raw text + minimal context
+    if (inputMode === 'text') {
+      if (!freeText.trim()) {
+        toast({ title: 'Texte requis', description: 'Décrivez votre besoin de ligne en texte libre', variant: 'destructive' });
+        return;
+      }
+      if (!selectedVehicle) {
+        toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
+        return;
+      }
+    } else {
+      if (!origin || !destination) {
+        toast({ title: 'Champs requis', description: "Renseignez l'origine et la destination", variant: 'destructive' });
+        return;
+      }
+      if (!selectedVehicle) {
+        toast({ title: 'Véhicule requis', description: 'Sélectionnez un véhicule', variant: 'destructive' });
+        return;
+      }
+      if (crossRoundTrip && (!returnOrigin || !returnDestination)) {
+        toast({ title: 'Retour requis', description: "Renseignez l'origine et la destination du retour", variant: 'destructive' });
+        return;
+      }
     }
 
     // Build real driver cost data
@@ -301,10 +330,20 @@ export function LineMontageTab() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          origin,
-          destination,
-          stops: stops.map(s => s.address).filter(Boolean),
+          origin: inputMode === 'text' ? undefined : origin,
+          destination: inputMode === 'text' ? undefined : destination,
+          stops: inputMode === 'text' ? [] : stops.map(s => s.address).filter(Boolean),
           mode: 'line_montage',
+          inputMode,
+          freeTextRequest: inputMode === 'text' ? freeText : undefined,
+          outboundClient: outboundClientName || undefined,
+          returnLeg: crossRoundTrip && inputMode === 'form' ? {
+            origin: returnOrigin,
+            destination: returnDestination,
+            clientName: returnClientName || undefined,
+            loadingTime: returnLoadingTime || undefined,
+            deliveryTime: returnDeliveryTime || undefined,
+          } : undefined,
           vehicleType: selectedVehicle.type,
           fuelConsumption: selectedVehicle.fuelConsumption,
           fuelPrice: vehicle.fuelPriceHT,
@@ -395,45 +434,130 @@ export function LineMontageTab() {
             <h2 className="font-semibold text-foreground">Configuration du montage</h2>
           </div>
 
-          {/* Origin / Destination */}
-          <div className="space-y-3">
-            <AddressInput
-              value={origin}
-              onChange={setOrigin}
-              onSelect={(addr, pos) => { setOrigin(addr); setOriginPosition(pos); }}
-              placeholder="Adresse de départ"
-              label="Origine"
-              icon="start"
-            />
-            <AddressInput
-              value={destination}
-              onChange={setDestination}
-              onSelect={(addr, pos) => { setDestination(addr); setDestinationPosition(pos); }}
-              placeholder="Adresse d'arrivée"
-              label="Destination"
-              icon="end"
-            />
-          </div>
+          {/* Input mode tabs */}
+          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as 'form' | 'text')}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="form">📝 Formulaire</TabsTrigger>
+              <TabsTrigger value="text">💬 Texte libre</TabsTrigger>
+            </TabsList>
 
-          {/* Stops */}
-          {stops.map((stop, idx) => (
-            <div key={stop.id} className="flex items-center gap-2">
-              <div className="flex-1">
-                <AddressInput
-                  value={stop.address}
-                  onChange={(val) => updateStop(stop.id, val, stop.position)}
-                  onSelect={(addr, pos) => updateStop(stop.id, addr, pos)}
-                  placeholder={`Arrêt ${idx + 1}`}
-                />
+            <TabsContent value="form" className="space-y-3 mt-3">
+              {/* Cross round-trip toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <Label className="flex items-center gap-2 cursor-pointer">
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Aller-retour croisé (2 clients)
+                </Label>
+                <Switch checked={crossRoundTrip} onCheckedChange={setCrossRoundTrip} />
               </div>
-              <Button variant="ghost" size="icon" onClick={() => removeStop(stop.id)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" className="gap-1" onClick={addStop}>
-            <Plus className="w-3 h-3" /> Ajouter un arrêt
-          </Button>
+
+              {/* Outbound section */}
+              <div className={cn('space-y-3', crossRoundTrip && 'p-3 rounded-lg border border-border/60')}>
+                {crossRoundTrip && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase">
+                    <Badge variant="default">Aller</Badge>
+                    <Input
+                      placeholder="Nom client aller (optionnel)"
+                      value={outboundClientName}
+                      onChange={e => setOutboundClientName(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                )}
+                <AddressInput
+                  value={origin}
+                  onChange={setOrigin}
+                  onSelect={(addr, pos) => { setOrigin(addr); setOriginPosition(pos); }}
+                  placeholder="Adresse de départ"
+                  label="Origine"
+                  icon="start"
+                />
+                <AddressInput
+                  value={destination}
+                  onChange={setDestination}
+                  onSelect={(addr, pos) => { setDestination(addr); setDestinationPosition(pos); }}
+                  placeholder="Adresse d'arrivée"
+                  label="Destination"
+                  icon="end"
+                />
+
+                {/* Stops (outbound only) */}
+                {stops.map((stop, idx) => (
+                  <div key={stop.id} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <AddressInput
+                        value={stop.address}
+                        onChange={(val) => updateStop(stop.id, val, stop.position)}
+                        onSelect={(addr, pos) => updateStop(stop.id, addr, pos)}
+                        placeholder={`Arrêt ${idx + 1}`}
+                      />
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeStop(stop.id)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" className="gap-1" onClick={addStop}>
+                  <Plus className="w-3 h-3" /> Ajouter un arrêt
+                </Button>
+              </div>
+
+              {/* Return section */}
+              {crossRoundTrip && (
+                <div className="space-y-3 p-3 rounded-lg border border-border/60 bg-muted/10">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase">
+                    <Badge variant="secondary">Retour</Badge>
+                    <Input
+                      placeholder="Nom client retour (optionnel)"
+                      value={returnClientName}
+                      onChange={e => setReturnClientName(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <AddressInput
+                    value={returnOrigin}
+                    onChange={setReturnOrigin}
+                    onSelect={(addr) => setReturnOrigin(addr)}
+                    placeholder="Adresse de départ retour"
+                    label="Origine retour"
+                    icon="start"
+                  />
+                  <AddressInput
+                    value={returnDestination}
+                    onChange={setReturnDestination}
+                    onSelect={(addr) => setReturnDestination(addr)}
+                    placeholder="Adresse d'arrivée retour"
+                    label="Destination retour"
+                    icon="end"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Chargement retour</Label>
+                      <Input type="time" value={returnLoadingTime} onChange={e => setReturnLoadingTime(e.target.value)} className="h-9" />
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Livraison retour</Label>
+                      <Input type="time" value={returnDeliveryTime} onChange={e => setReturnDeliveryTime(e.target.value)} className="h-9" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="text" className="space-y-3 mt-3">
+              <Label className="text-sm">Décrivez votre besoin de ligne</Label>
+              <Textarea
+                value={freeText}
+                onChange={e => setFreeText(e.target.value)}
+                placeholder="Ex : Je veux mettre en place une ligne entre Lyon (client Carrefour) et Paris (client Auchan) en aller-retour quotidien, avec relais à Mâcon, départ 6h, retour avec chargement à 14h. 2 conducteurs CDI, pas de découché."
+                rows={8}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 L'IA détectera automatiquement adresses, clients, fréquence, contraintes et générera le montage optimal.
+              </p>
+            </TabsContent>
+          </Tabs>
 
           {/* Vehicle */}
           <div>
