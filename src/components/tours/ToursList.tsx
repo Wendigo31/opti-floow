@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useSavedTours } from '@/hooks/useSavedTours';
-import { exportTourDetailedPDF } from '@/utils/tourPdfExport';
+import { exportTourDetailedPDF, exportMissionOrderPDF } from '@/utils/tourPdfExport';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { SavedTour } from '@/types/savedTour';
@@ -208,13 +208,7 @@ export function ToursList({ onExportPDF, onLoadTour, clientFilter }: ToursListPr
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              const w = window.open('', '_blank');
-                              if (w) {
-                                w.document.write(`<pre style="font-family:system-ui;padding:24px;white-space:pre-wrap">ORDRE DE MISSION — ${tour.name}\n\n${(tour as any).mission_order}</pre>`);
-                                w.print();
-                              }
-                            }}
+                            onClick={() => exportMissionOrderPDF(tour)}
                           >
                             <FileText className="w-4 h-4 mr-1" />
                             ODM PDF

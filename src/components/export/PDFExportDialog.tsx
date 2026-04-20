@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileDown, Map, BarChart3, PieChart, TrendingUp, MessageSquare } from 'lucide-react';
+import { FileDown, Map, BarChart3, PieChart, TrendingUp, MessageSquare, Loader2 } from 'lucide-react';
 import { MapPreview } from '@/components/map/MapPreview';
 
 interface PDFExportDialogProps {
@@ -36,28 +36,69 @@ export function PDFExportDialog({
   const [includeForecastTable, setIncludeForecastTable] = useState(true);
   const [includeProfitChart, setIncludeProfitChart] = useState(true);
   const [includeMap, setIncludeMap] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  const handleExport = async () => {
-    let mapImageData: string | undefined;
+  const fetchStaticMap = async (): Promise<string | undefined> => {
+    if (!includeMap || routeCoordinates.length === 0) return undefined;
+    try {
+      const keyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+      const { apiKey } = await keyRes.json();
+      if (!apiKey) return undefined;
 
-    // Capture map if included and route exists
-    if (includeMap && routeCoordinates.length > 0) {
-      // We'll use the MapPreview component's canvas
-      const mapCanvas = mapRef.current?.querySelector('canvas');
-      if (mapCanvas) {
-        mapImageData = mapCanvas.toDataURL('image/png');
+      // Échantillonner max 80 points pour rester sous la limite URL (8192 chars)
+      const step = Math.max(1, Math.floor(routeCoordinates.length / 80));
+      const sampled = routeCoordinates.filter((_, i) => i % step === 0);
+      if (sampled[sampled.length - 1] !== routeCoordinates[routeCoordinates.length - 1]) {
+        sampled.push(routeCoordinates[routeCoordinates.length - 1]);
       }
-    }
+      const path = sampled.map(([lat, lon]) => `${lat.toFixed(5)},${lon.toFixed(5)}`).join('|');
 
-    onExport({
-      note,
-      includeCostChart,
-      includeForecastTable,
-      includeProfitChart,
-      includeMap,
-      mapImageData,
-    });
+      const markerParams = markers
+        .map((m) => {
+          const color = m.type === 'start' ? 'green' : m.type === 'end' ? 'red' : 'blue';
+          const label = m.type === 'start' ? 'A' : m.type === 'end' ? 'B' : '';
+          return `markers=color:${color}${label ? `|label:${label}` : ''}|${m.position[0].toFixed(5)},${m.position[1].toFixed(5)}`;
+        })
+        .join('&');
+
+      const url = `https://maps.googleapis.com/maps/api/staticmap?size=640x320&scale=2&maptype=roadmap&path=color:0x2563ebcc|weight:4|${encodeURIComponent(path)}&${markerParams}&key=${apiKey}`;
+
+      const imgRes = await fetch(url);
+      if (!imgRes.ok) return undefined;
+      const blob = await imgRes.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error('Static map fetch failed:', e);
+      return undefined;
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const mapImageData = await fetchStaticMap();
+      onExport({
+        note,
+        includeCostChart,
+        includeForecastTable,
+        includeProfitChart,
+        includeMap,
+        mapImageData,
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const hasRoute = routeCoordinates.length > 0;
@@ -162,12 +203,12 @@ export function PDFExportDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={exporting}>
             Annuler
           </Button>
-          <Button onClick={handleExport} className="gap-2">
-            <FileDown className="w-4 h-4" />
-            Exporter en PDF
+          <Button onClick={handleExport} className="gap-2" disabled={exporting}>
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            {exporting ? 'Génération…' : 'Exporter en PDF'}
           </Button>
         </DialogFooter>
       </DialogContent>

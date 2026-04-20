@@ -1,11 +1,20 @@
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import type { CostBreakdown, TripCalculation, VehicleParams } from '@/types';
 import type { ExportOptions } from '@/components/export/PDFExportDialog';
-
-// Import logo as base64 for PDF
-const OPTIFLOW_WATERMARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.08">
-  <text x="50" y="55" text-anchor="middle" font-size="12" font-family="Arial, sans-serif" fill="currentColor">OptiFlow</text>
-</svg>`;
+import {
+  PDF_COLORS,
+  PDF_LAYOUT,
+  drawHeader,
+  drawFooter,
+  sectionTitle,
+  ensureSpace,
+  infoBox,
+  formatCurrency,
+  formatCurrencyDetailed,
+  formatPercent,
+  formatNumber,
+} from './pdfHelpers';
 
 interface ForecastMonth {
   name: string;
@@ -19,8 +28,6 @@ interface ForecastMonth {
   trips: number;
   revenue?: number;
   profit?: number;
-  cumulativeRevenue?: number;
-  cumulativeProfit?: number;
 }
 
 interface PDFExportData {
@@ -38,376 +45,229 @@ interface PDFExportData {
   destinationAddress?: string;
 }
 
-const formatCurrency = (value: number): string => 
-  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
-
-function addWatermark(doc: jsPDF) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  
-  // Add subtle watermark
-  doc.setFontSize(60);
-  doc.setTextColor(200, 200, 200);
-  doc.setFont('helvetica', 'bold');
-  
-  // Save current state
-  const currentPage = doc.getCurrentPageInfo().pageNumber;
-  
-  // Center watermark
-  doc.text('OptiFlow', pageWidth / 2, pageHeight / 2, {
-    align: 'center',
-    angle: 45,
-  });
-  
-  // Reset text color
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-}
-
 export function exportForecastPDF(data: PDFExportData) {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 20;
-  
-  // Add watermark to first page
-  addWatermark(doc);
-  
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(40, 40, 40);
-  doc.text(data.companyName, 14, y);
-  y += 12;
-  
-  doc.setFontSize(16);
-  doc.setTextColor(80, 80, 80);
-  doc.text('Prévisionnel de Coûts Transport - Poids Lourds', 14, y);
-  y += 10;
-  
-  doc.setFontSize(10);
-  doc.setTextColor(120, 120, 120);
-  doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, y);
-  y += 8;
-  
-  // Separator line
-  doc.setDrawColor(200, 200, 200);
-  doc.line(14, y, pageWidth - 14, y);
-  y += 12;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const contentWidth = pageWidth - PDF_LAYOUT.marginX * 2;
 
-  // Custom Note (if provided)
-  if (data.exportOptions?.note && data.exportOptions.note.trim()) {
-    doc.setFillColor(245, 245, 250);
-    const noteLines = doc.splitTextToSize(data.exportOptions.note, pageWidth - 40);
-    const noteHeight = noteLines.length * 5 + 12;
-    doc.roundedRect(14, y - 4, pageWidth - 28, noteHeight, 3, 3, 'F');
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(59, 130, 246);
-    doc.text('📝 Note:', 18, y + 2);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text(noteLines, 18, y + 10);
-    y += noteHeight + 8;
+  let y = drawHeader(pdf, {
+    title: 'Cotation Transport',
+    subtitle: `Prévisionnel sur ${data.forecastMonths} mois`,
+    companyName: data.companyName,
+    reference: `REF-${Date.now().toString().slice(-6)}`,
+  });
+
+  // Note personnalisée
+  if (data.exportOptions?.note?.trim()) {
+    y = ensureSpace(pdf, y, 30);
+    pdf.setFillColor(239, 246, 255);
+    const noteLines = pdf.splitTextToSize(data.exportOptions.note, contentWidth - 8);
+    const h = noteLines.length * 4.5 + 8;
+    pdf.roundedRect(PDF_LAYOUT.marginX, y, contentWidth, h, 2, 2, 'F');
+    pdf.setDrawColor(...PDF_COLORS.primary);
+    pdf.setLineWidth(0.5);
+    pdf.line(PDF_LAYOUT.marginX, y, PDF_LAYOUT.marginX, y + h);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(...PDF_COLORS.dark);
+    pdf.text(noteLines, PDF_LAYOUT.marginX + 4, y + 6);
+    y += h + 6;
   }
 
-  // Route Info (if addresses provided)
+  // Itinéraire
   if (data.originAddress && data.destinationAddress) {
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Itinéraire', 14, y);
-    y += 8;
-    
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Départ:', 14, y);
-    doc.setFont('helvetica', 'normal');
-    const originLines = doc.splitTextToSize(data.originAddress, pageWidth - 60);
-    doc.text(originLines, 40, y);
-    y += originLines.length * 5 + 2;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Arrivée:', 14, y);
-    doc.setFont('helvetica', 'normal');
-    const destLines = doc.splitTextToSize(data.destinationAddress, pageWidth - 60);
-    doc.text(destLines, 40, y);
-    y += destLines.length * 5 + 8;
+    y = ensureSpace(pdf, y, 35);
+    y = sectionTitle(pdf, 'Itinéraire', y);
+    autoTable(pdf, {
+      startY: y,
+      theme: 'plain',
+      styles: { fontSize: 9, cellPadding: 2, textColor: PDF_COLORS.dark },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 22, textColor: PDF_COLORS.muted },
+        1: { cellWidth: contentWidth - 22 },
+      },
+      body: [
+        ['Départ', data.originAddress],
+        ['Arrivée', data.destinationAddress],
+      ],
+      margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
+    });
+    y = (pdf as any).lastAutoTable.finalY + 6;
   }
-  
-  // Trip parameters section
-  doc.setFontSize(12);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Paramètres du Trajet', 14, y);
-  y += 8;
-  
-  doc.setFontSize(9);
-  doc.setTextColor(80, 80, 80);
-  
-  const tripInfo = [
-    ['Distance:', `${data.trip.distance.toLocaleString('fr-FR')} km`],
-    ['Péages:', formatCurrency(data.trip.tollCost)],
-    ['Mode tarification:', data.trip.pricingMode === 'km' ? `${data.trip.pricePerKm} €/km` : `Forfait ${formatCurrency(data.trip.fixedPrice)}`],
-    ['Marge cible:', `${data.trip.targetMargin}%`],
-    ['Conducteur(s):', data.selectedDriverNames.join(', ') || 'Non défini'],
-  ];
-  
-  tripInfo.forEach(([label, value]) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, 14, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(value, 60, y);
-    y += 6;
-  });
-  
-  y += 8;
 
-  // Cost breakdown section (if includeCostChart is true or not specified)
+  // KPI cards
+  y = ensureSpace(pdf, y, 35);
+  const kpiW = (contentWidth - 8) / 3;
+  infoBox(pdf, 'Distance', `${formatNumber(data.trip.distance)} km`, PDF_LAYOUT.marginX, y, kpiW, 'neutral');
+  infoBox(pdf, 'Coût total / trajet', formatCurrency(data.costs.totalCost), PDF_LAYOUT.marginX + kpiW + 4, y, kpiW, 'primary');
+  const margin = data.costs.profitMargin || 0;
+  const variant = margin >= 15 ? 'success' : margin >= 8 ? 'warning' : 'danger';
+  infoBox(pdf, 'Marge', formatPercent(margin), PDF_LAYOUT.marginX + (kpiW + 4) * 2, y, kpiW, variant);
+  y += 28;
+
+  // Paramètres
+  y = ensureSpace(pdf, y, 50);
+  y = sectionTitle(pdf, 'Paramètres du trajet', y);
+  autoTable(pdf, {
+    startY: y,
+    theme: 'striped',
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    headStyles: { fillColor: PDF_COLORS.dark, textColor: 255, fontStyle: 'bold' },
+    head: [['Paramètre', 'Valeur']],
+    body: [
+      ['Distance', `${formatNumber(data.trip.distance)} km`],
+      ['Péages', formatCurrencyDetailed(data.trip.tollCost)],
+      ['Mode de tarification', data.trip.pricingMode === 'km' ? `${data.trip.pricePerKm} €/km` : `Forfait ${formatCurrencyDetailed(data.trip.fixedPrice)}`],
+      ['Marge cible', `${data.trip.targetMargin} %`],
+      ['Conducteur(s)', data.selectedDriverNames.join(', ') || 'Non défini'],
+    ],
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+    margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
+  });
+  y = (pdf as any).lastAutoTable.finalY + 6;
+
+  // Décomposition coûts
   if (data.exportOptions?.includeCostChart !== false) {
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Décomposition des Coûts par Trajet', 14, y);
-    y += 8;
-    
-    const costData = [
-      ['Gazole:', formatCurrency(data.costs.fuel)],
-      ['AdBlue:', formatCurrency(data.costs.adBlue)],
-      ['Péages:', formatCurrency(data.costs.tolls)],
-      ['Conducteur(s):', formatCurrency(data.costs.driverCost)],
-      ['Structure:', formatCurrency(data.costs.structureCost)],
+    y = ensureSpace(pdf, y, 60);
+    y = sectionTitle(pdf, 'Décomposition des coûts par trajet', y);
+    const total = data.costs.totalCost || 1;
+    const rows = [
+      ['Gazole', data.costs.fuel],
+      ['AdBlue', data.costs.adBlue],
+      ['Péages', data.costs.tolls],
+      ['Conducteur(s)', data.costs.driverCost],
+      ['Structure', data.costs.structureCost],
     ];
-    
-    doc.setFontSize(9);
-    costData.forEach(([label, value]) => {
-      doc.setFont('helvetica', 'normal');
-      doc.text(label, 14, y);
-      doc.text(value, 60, y);
-      y += 6;
+    autoTable(pdf, {
+      startY: y,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      headStyles: { fillColor: PDF_COLORS.primary, textColor: 255, fontStyle: 'bold' },
+      head: [['Poste', 'Montant', 'Part']],
+      body: rows.map(([label, val]) => [
+        label as string,
+        formatCurrencyDetailed(val as number),
+        `${(((val as number) / total) * 100).toFixed(1)} %`,
+      ]),
+      foot: [['TOTAL', formatCurrencyDetailed(data.costs.totalCost), '100,0 %']],
+      footStyles: { fillColor: PDF_COLORS.dark, textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        1: { halign: 'right', cellWidth: 45 },
+        2: { halign: 'right', cellWidth: 30 },
+      },
+      margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
     });
-    
-    // Total
-    y += 2;
-    doc.setFillColor(59, 130, 246);
-    doc.rect(14, y - 4, 80, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', 16, y);
-    doc.text(formatCurrency(data.costs.totalCost), 60, y);
-    y += 14;
+    y = (pdf as any).lastAutoTable.finalY + 6;
   }
 
-  // Profit section (if includeProfitChart is true or not specified)
+  // Rentabilité
   if (data.exportOptions?.includeProfitChart !== false) {
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(12);
-    doc.text('Rentabilité', 14, y);
-    y += 8;
-    
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    
-    const profitData = [
-      ['Chiffre d\'affaires:', formatCurrency(data.costs.revenue)],
-      ['Coût de revient:', formatCurrency(data.costs.totalCost)],
-      ['Bénéfice:', formatCurrency(data.costs.profit)],
-      ['Marge:', `${data.costs.profitMargin.toFixed(1)}%`],
-    ];
-    
-    profitData.forEach(([label, value]) => {
-      doc.setFont('helvetica', 'bold');
-      doc.text(label, 14, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(value, 60, y);
-      y += 6;
+    y = ensureSpace(pdf, y, 50);
+    y = sectionTitle(pdf, 'Rentabilité', y);
+    autoTable(pdf, {
+      startY: y,
+      theme: 'striped',
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      headStyles: { fillColor: PDF_COLORS.success, textColor: 255 },
+      head: [['Indicateur', 'Valeur']],
+      body: [
+        ["Chiffre d'affaires", formatCurrencyDetailed(data.costs.revenue)],
+        ['Coût de revient', formatCurrencyDetailed(data.costs.totalCost)],
+        ['Bénéfice', formatCurrencyDetailed(data.costs.profit)],
+        ['Marge', formatPercent(data.costs.profitMargin)],
+        ['Prix suggéré', formatCurrencyDetailed(data.costs.suggestedPrice)],
+        ['Prix/km suggéré', `${data.costs.suggestedPricePerKm.toFixed(3)} €/km`],
+        ['Coût/km', `${data.costs.costPerKm.toFixed(3)} €/km`],
+      ],
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 }, 1: { halign: 'right' } },
+      margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
     });
-    y += 6;
+    y = (pdf as any).lastAutoTable.finalY + 6;
   }
-  
-  // Suggested pricing
-  doc.setTextColor(40, 40, 40);
-  doc.setFontSize(12);
-  doc.text('Tarification Suggérée', 14, y);
-  y += 8;
-  
-  doc.setFontSize(9);
-  doc.setTextColor(80, 80, 80);
-  
-  const pricingData = [
-    [`Prix suggéré (marge ${data.trip.targetMargin}%):`, formatCurrency(data.costs.suggestedPrice)],
-    ['Prix/km suggéré:', `${data.costs.suggestedPricePerKm.toFixed(3)} €/km`],
-    ['Coût/km:', `${data.costs.costPerKm.toFixed(3)} €/km`],
-  ];
-  
-  pricingData.forEach(([label, value]) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, 14, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(value, 80, y);
-    y += 6;
-  });
 
-  // Map image (if provided and includeMap is true)
+  // Carte
   if (data.exportOptions?.includeMap && data.exportOptions?.mapImageData) {
-    doc.addPage();
-    addWatermark(doc);
-    y = 20;
-    
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Carte de l\'itinéraire', 14, y);
-    y += 10;
-    
+    pdf.addPage();
+    y = drawHeader(pdf, {
+      title: 'Cotation Transport',
+      subtitle: 'Carte de l\'itinéraire',
+      companyName: data.companyName,
+    });
+    y = sectionTitle(pdf, 'Carte de l\'itinéraire', y);
     try {
-      const imgWidth = pageWidth - 28;
-      const imgHeight = 100;
-      doc.addImage(data.exportOptions.mapImageData, 'PNG', 14, y, imgWidth, imgHeight);
-      y += imgHeight + 10;
+      const imgWidth = contentWidth;
+      const imgHeight = 130;
+      pdf.addImage(data.exportOptions.mapImageData, 'PNG', PDF_LAYOUT.marginX, y, imgWidth, imgHeight);
     } catch (e) {
-      console.error('Error adding map image to PDF:', e);
+      pdf.setFontSize(9);
+      pdf.setTextColor(...PDF_COLORS.danger);
+      pdf.text('Carte indisponible', PDF_LAYOUT.marginX, y + 10);
     }
   }
 
-  // Forecast table (if includeForecastTable is true or not specified)
+  // Prévisionnel
   if (data.exportOptions?.includeForecastTable !== false) {
-    doc.addPage();
-    addWatermark(doc);
-    y = 20;
-    
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`Prévisionnel sur ${data.forecastMonths} mois`, 14, y);
-    y += 12;
-    
-    // Summary boxes
-    doc.setFontSize(10);
-    doc.setFillColor(240, 240, 240);
-    
-    const boxWidth = 55;
-    const boxHeight = 18;
-    const boxGap = 5;
-    
-    // Box 1 - Monthly cost
-    doc.roundedRect(14, y, boxWidth, boxHeight, 2, 2, 'F');
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(8);
-    doc.text('Coût Mensuel', 16, y + 6);
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(data.monthlyTotalCost), 16, y + 13);
-    
-    // Box 2 - Total cost
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.roundedRect(14 + boxWidth + boxGap, y, boxWidth, boxHeight, 2, 2, 'F');
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Total ${data.forecastMonths} mois`, 16 + boxWidth + boxGap, y + 6);
-    doc.setTextColor(59, 130, 246);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(data.monthlyTotalCost * data.forecastMonths), 16 + boxWidth + boxGap, y + 13);
-    
-    // Box 3 - Trips
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.roundedRect(14 + (boxWidth + boxGap) * 2, y, boxWidth, boxHeight, 2, 2, 'F');
-    doc.setTextColor(100, 100, 100);
-    doc.text('Trajets estimés', 16 + (boxWidth + boxGap) * 2, y + 6);
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${Math.round(data.tripsPerMonth * data.forecastMonths)}`, 16 + (boxWidth + boxGap) * 2, y + 13);
-    
-    y += boxHeight + 12;
-    
-    // Table header
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setFillColor(59, 130, 246);
-    doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    
-    const headers = ['Mois', 'Trajets', 'Gazole', 'AdBlue', 'Péages', 'Structure', 'Conducteur', 'Total', 'Cumulé'];
-    const colWidths = [22, 16, 20, 18, 18, 22, 24, 22, 22];
-    let x = 14;
-    headers.forEach((header, i) => {
-      doc.text(header, x + 1, y);
-      x += colWidths[i];
+    pdf.addPage();
+    y = drawHeader(pdf, {
+      title: 'Cotation Transport',
+      subtitle: `Prévisionnel sur ${data.forecastMonths} mois`,
+      companyName: data.companyName,
     });
-    y += 6;
-    
-    // Table rows
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    
-    data.forecast.forEach((month, index) => {
-      if (index % 2 === 0) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(14, y - 4, pageWidth - 28, 6, 'F');
-      }
-      
-      x = 14;
-      const row = [
-        month.name,
-        month.trips.toString(),
-        formatCurrency(month.fuel),
-        formatCurrency(month.adBlue),
-        formatCurrency(month.tolls),
-        formatCurrency(month.structure),
-        formatCurrency(month.driver),
-        formatCurrency(month.total),
-        formatCurrency(month.cumulative),
-      ];
-      
-      row.forEach((cell, i) => {
-        doc.text(cell.substring(0, 12), x + 1, y);
-        x += colWidths[i];
-      });
-      y += 6;
-    });
-    
-    // Total row
-    y += 2;
-    doc.setFillColor(220, 230, 250);
-    doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    
-    x = 14;
-    const totalRow = [
-      'TOTAL',
-      Math.round(data.tripsPerMonth * data.forecastMonths).toString(),
-      formatCurrency(data.forecast.reduce((sum, m) => sum + m.fuel, 0)),
-      formatCurrency(data.forecast.reduce((sum, m) => sum + m.adBlue, 0)),
-      formatCurrency(data.forecast.reduce((sum, m) => sum + m.tolls, 0)),
-      formatCurrency(data.forecast.reduce((sum, m) => sum + m.structure, 0)),
-      formatCurrency(data.forecast.reduce((sum, m) => sum + m.driver, 0)),
-      formatCurrency(data.monthlyTotalCost * data.forecastMonths),
-      '-',
-    ];
-    
-    totalRow.forEach((cell, i) => {
-      doc.text(cell.substring(0, 12), x + 1, y);
-      x += colWidths[i];
+
+    const totalForecast = data.monthlyTotalCost * data.forecastMonths;
+    const totalTrips = Math.round(data.tripsPerMonth * data.forecastMonths);
+    const kpi3 = (contentWidth - 8) / 3;
+    infoBox(pdf, 'Coût mensuel', formatCurrency(data.monthlyTotalCost), PDF_LAYOUT.marginX, y, kpi3);
+    infoBox(pdf, `Total ${data.forecastMonths} mois`, formatCurrency(totalForecast), PDF_LAYOUT.marginX + kpi3 + 4, y, kpi3, 'primary');
+    infoBox(pdf, 'Trajets estimés', formatNumber(totalTrips), PDF_LAYOUT.marginX + (kpi3 + 4) * 2, y, kpi3);
+    y += 28;
+
+    y = sectionTitle(pdf, 'Détail mensuel', y);
+
+    autoTable(pdf, {
+      startY: y,
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: PDF_COLORS.primary, textColor: 255, fontStyle: 'bold', halign: 'center' },
+      footStyles: { fillColor: PDF_COLORS.dark, textColor: 255, fontStyle: 'bold' },
+      head: [['Mois', 'Trajets', 'Gazole', 'AdBlue', 'Péages', 'Structure', 'Conducteur', 'Total', 'Cumulé']],
+      body: data.forecast.map((m) => [
+        m.name,
+        formatNumber(m.trips),
+        formatCurrency(m.fuel),
+        formatCurrency(m.adBlue),
+        formatCurrency(m.tolls),
+        formatCurrency(m.structure),
+        formatCurrency(m.driver),
+        formatCurrency(m.total),
+        formatCurrency(m.cumulative),
+      ]),
+      foot: [[
+        'TOTAL',
+        formatNumber(totalTrips),
+        formatCurrency(data.forecast.reduce((s, m) => s + m.fuel, 0)),
+        formatCurrency(data.forecast.reduce((s, m) => s + m.adBlue, 0)),
+        formatCurrency(data.forecast.reduce((s, m) => s + m.tolls, 0)),
+        formatCurrency(data.forecast.reduce((s, m) => s + m.structure, 0)),
+        formatCurrency(data.forecast.reduce((s, m) => s + m.driver, 0)),
+        formatCurrency(totalForecast),
+        '—',
+      ]],
+      columnStyles: {
+        0: { cellWidth: 22, fontStyle: 'bold' },
+        1: { halign: 'right', cellWidth: 14 },
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right', fontStyle: 'bold' },
+        8: { halign: 'right' },
+      },
+      margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
     });
   }
-  
-  // Footer with watermark reference
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `Page ${i} / ${pageCount} - OptiFlow | Optimisation Poids Lourds`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
-    );
-  }
-  
-  // Save
-  doc.save(`previsionnel_${data.forecastMonths}mois_${new Date().toISOString().split('T')[0]}.pdf`);
+
+  drawFooter(pdf);
+  pdf.save(`cotation_${data.forecastMonths}mois_${new Date().toISOString().split('T')[0]}.pdf`);
 }
