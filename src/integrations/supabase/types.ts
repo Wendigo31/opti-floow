@@ -318,6 +318,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_addresses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_contacts: {
@@ -366,6 +373,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1314,6 +1328,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "planning_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "planning_entries_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
@@ -1406,6 +1427,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1577,6 +1605,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_tours_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1753,6 +1788,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2153,7 +2195,118 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clients_safe: {
+        Row: {
+          address: string | null
+          city: string | null
+          company: string | null
+          country: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          license_id: string | null
+          name: string | null
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          siret: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: never
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: never
+          id?: string | null
+          license_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: never
+          postal_code?: never
+          siret?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: never
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: never
+          id?: string | null
+          license_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: never
+          postal_code?: never
+          siret?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      license_addons_safe: {
+        Row: {
+          activated_at: string | null
+          addon_id: string | null
+          addon_name: string | null
+          created_at: string | null
+          deactivated_at: string | null
+          id: string | null
+          is_active: boolean | null
+          license_id: string | null
+          monthly_price: number | null
+          updated_at: string | null
+          yearly_price: number | null
+        }
+        Insert: {
+          activated_at?: string | null
+          addon_id?: string | null
+          addon_name?: string | null
+          created_at?: string | null
+          deactivated_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          license_id?: string | null
+          monthly_price?: never
+          updated_at?: string | null
+          yearly_price?: never
+        }
+        Update: {
+          activated_at?: string | null
+          addon_id?: string | null
+          addon_name?: string | null
+          created_at?: string | null
+          deactivated_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          license_id?: string | null
+          monthly_price?: never
+          updated_at?: string | null
+          yearly_price?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_addons_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_add_company_user: {
@@ -2175,6 +2328,10 @@ export type Database = {
       }
       admin_update_company_user_role: {
         Args: { p_role: string; p_user_id: string }
+        Returns: boolean
+      }
+      can_view_client_sensitive_data: {
+        Args: { p_license_id: string }
         Returns: boolean
       }
       can_view_company_members: {
