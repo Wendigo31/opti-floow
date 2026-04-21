@@ -236,26 +236,44 @@ export function useTomTom() {
       let tollCost = 0;
       
       if (!options.avoidHighways) {
-        try {
-          const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
+        // Hybrid HERE + TomTom toll calculation for centime-level precision
+        const tollPromises = await Promise.allSettled([
+          supabase.functions.invoke('here-route', {
             body: {
-              waypoints: waypoints,
-              distanceKm: distanceKm, // Pass distance for direct estimation
+              waypoints,
+              vehicleWeight: options.vehicleWeight || SEMI_TRAILER_SPECS.weight,
+              vehicleHeight: options.vehicleHeight || SEMI_TRAILER_SPECS.height,
+              vehicleLength: options.vehicleLength || SEMI_TRAILER_SPECS.length,
+              vehicleWidth: options.vehicleWidth || SEMI_TRAILER_SPECS.width,
+              vehicleAxleWeight: options.vehicleAxleWeight || SEMI_TRAILER_SPECS.axleWeight,
+              avoidHighways: options.avoidHighways,
+            },
+          }),
+          supabase.functions.invoke('tomtom-tolls', {
+            body: {
+              waypoints,
+              distanceKm,
               vehicleWeight: options.vehicleWeight || SEMI_TRAILER_SPECS.weight,
               vehicleAxleWeight: options.vehicleAxleWeight || SEMI_TRAILER_SPECS.axleWeight,
               avoidHighways: options.avoidHighways,
-            }
-          });
-          
-          if (tollData?.tollCost) {
-            tollCost = tollData.tollCost;
-            console.log('TomTom toll cost:', tollCost, 'source:', tollData.source);
-          } else {
-            // Fallback to estimation
-            tollCost = calculateTollCost(distanceKm, true);
-          }
-        } catch (tollError) {
-          console.warn('TomTom toll calculation failed, using estimation:', tollError);
+            },
+          }),
+        ]);
+
+        const hereToll = tollPromises[0].status === 'fulfilled'
+          ? tollPromises[0].value.data?.tollCost ?? null : null;
+        const tomtomToll = tollPromises[1].status === 'fulfilled'
+          ? tollPromises[1].value.data?.tollCost ?? null : null;
+
+        if (hereToll != null && tomtomToll != null && hereToll > 0 && tomtomToll > 0) {
+          // Weighted average: HERE 60% (native PL routing) + TomTom 40% (toll DB)
+          tollCost = Math.round((hereToll * 0.6 + tomtomToll * 0.4) * 100) / 100;
+          console.log('Hybrid toll: HERE=', hereToll, 'TomTom=', tomtomToll, '→', tollCost);
+        } else if (hereToll != null && hereToll > 0) {
+          tollCost = hereToll;
+        } else if (tomtomToll != null && tomtomToll > 0) {
+          tollCost = tomtomToll;
+        } else {
           tollCost = calculateTollCost(distanceKm, true);
         }
       }

@@ -35,25 +35,28 @@ export function useAddressAutocomplete() {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        // Use Google Places Autocomplete via edge function
-        // supabase.functions.invoke automatically includes the auth token
-        const { data, error } = await supabase.functions.invoke('google-places-search', {
+        // HERE Autosuggest – PL-grade precision
+        const { data, error } = await supabase.functions.invoke('here-search', {
           body: { query }
         });
 
         if (error) {
-          console.error('Google Places search error:', error);
+          console.error('HERE search error:', error);
           throw new Error('Search failed');
         }
-        
-        const results: AddressSuggestion[] = data.predictions?.map((prediction: any) => {
-          return {
-            id: prediction.place_id,
-            placeId: prediction.place_id,
-            address: prediction.description,
-            city: prediction.structured_formatting?.secondary_text,
-          };
-        }) || [];
+
+        const results: AddressSuggestion[] = (data.items || [])
+          .filter((item: any) => item.id && item.title)
+          .map((item: any) => ({
+            id: item.id,
+            placeId: item.id,
+            address: item.address?.label || item.title,
+            streetName: item.address?.street,
+            city: item.address?.city,
+            postalCode: item.address?.postalCode,
+            country: item.address?.countryName,
+            position: item.position ? { lat: item.position.lat, lon: item.position.lng } : undefined,
+          }));
 
         setSuggestions(results);
       } catch (error) {
@@ -79,46 +82,33 @@ export function useAddressAutocomplete() {
     };
   } | null> => {
     try {
-      // supabase.functions.invoke automatically includes the auth token
-      const { data, error } = await supabase.functions.invoke('google-place-details', {
-        body: { placeId }
+      // HERE Lookup by place id
+      const { data, error } = await supabase.functions.invoke('here-geocode', {
+        body: { id: placeId }
       });
 
-      if (error || !data.result) {
-        console.error('Google Place Details error:', error);
+      if (error || !data) {
+        console.error('HERE Lookup error:', error);
         return null;
       }
 
-      const result = data.result;
-      const location = result.geometry?.location;
-      
-      // Extract address components
-      const components = result.address_components || [];
-      const addressComponents: any = {};
-      
-      for (const component of components) {
-        if (component.types.includes('street_number')) {
-          addressComponents.streetNumber = component.long_name;
-        }
-        if (component.types.includes('route')) {
-          addressComponents.streetName = component.long_name;
-        }
-        if (component.types.includes('locality')) {
-          addressComponents.city = component.long_name;
-        }
-        if (component.types.includes('postal_code')) {
-          addressComponents.postalCode = component.long_name;
-        }
-        if (component.types.includes('country')) {
-          addressComponents.country = component.long_name;
-        }
-      }
+      // here-geocode returns either a single item (lookup) or { items: [...] } (geocode)
+      const result = data.items?.[0] || data;
+      const position = result.position;
+      if (!position) return null;
 
+      const addr = result.address || {};
       return {
-        lat: location?.lat,
-        lng: location?.lng,
-        formattedAddress: result.formatted_address,
-        addressComponents,
+        lat: position.lat,
+        lng: position.lng,
+        formattedAddress: addr.label || result.title || '',
+        addressComponents: {
+          streetNumber: addr.houseNumber,
+          streetName: addr.street,
+          city: addr.city,
+          postalCode: addr.postalCode,
+          country: addr.countryName,
+        },
       };
     } catch (error) {
       console.error('Get place details error:', error);
