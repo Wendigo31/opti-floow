@@ -106,39 +106,37 @@ export function useTomTom() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Geocode an address using Google Places API
+  // Geocode an address using HERE
   const geocodeAddress = async (address: string): Promise<GeocodingResult | null> => {
     try {
-      // First search for the address
-      const { data: searchData, error: searchError } = await supabase.functions.invoke('google-places-search', {
+      const { data: searchData, error: searchError } = await supabase.functions.invoke('here-search', {
         body: { query: address }
       });
 
-      if (searchError || !searchData.predictions?.length) {
-        console.error('Geocoding search error:', searchError);
+      if (searchError || !searchData?.items?.length) {
+        console.error('HERE geocode search error:', searchError);
         return null;
       }
 
-      // Get details for the first result
-      const placeId = searchData.predictions[0].place_id;
-      const { data: detailsData, error: detailsError } = await supabase.functions.invoke('google-place-details', {
-        body: { placeId }
-      });
+      const first = searchData.items[0];
+      let position = first.position;
+      let label = first.address?.label || first.title;
 
-      if (detailsError || !detailsData.result) {
-        console.error('Geocoding details error:', detailsError);
-        return null;
+      // If the autosuggest item lacks a position, look it up by id
+      if (!position && first.id) {
+        const { data: detailsData } = await supabase.functions.invoke('here-geocode', {
+          body: { id: first.id }
+        });
+        const result = detailsData?.items?.[0] || detailsData;
+        position = result?.position;
+        label = result?.address?.label || result?.title || label;
       }
 
-      const result = detailsData.result;
+      if (!position) return null;
+
       return {
-        position: {
-          lat: result.geometry.location.lat,
-          lon: result.geometry.location.lng,
-        },
-        address: {
-          freeformAddress: result.formatted_address,
-        },
+        position: { lat: position.lat, lon: position.lng },
+        address: { freeformAddress: label || address },
       };
     } catch (err) {
       console.error('Geocoding error:', err);
@@ -170,7 +168,7 @@ export function useTomTom() {
     return Math.round(tollableDistance * FRENCH_TOLL_RATES.AVERAGE * 100) / 100;
   };
 
-  // Calculate route between waypoints using Google Directions API
+  // Calculate route between waypoints using HERE Routing
   const calculateRoute = async (
     waypoints: { lat: number; lon: number }[],
     options: {
@@ -192,64 +190,29 @@ export function useTomTom() {
     setError(null);
 
     try {
-      const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
-      const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
-      
-      // Build intermediate waypoints if any
-      const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
-
-      const { data, error: apiError } = await supabase.functions.invoke('google-directions', {
+      const { data, error: apiError } = await supabase.functions.invoke('here-route', {
         body: {
-          origin,
-          destination,
-          waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined,
+          waypoints,
+          vehicleWeight: options.vehicleWeight || SEMI_TRAILER_SPECS.weight,
+          vehicleHeight: options.vehicleHeight || SEMI_TRAILER_SPECS.height,
+          vehicleLength: options.vehicleLength || SEMI_TRAILER_SPECS.length,
+          vehicleWidth: options.vehicleWidth || SEMI_TRAILER_SPECS.width,
+          vehicleAxleWeight: options.vehicleAxleWeight || SEMI_TRAILER_SPECS.axleWeight,
           avoidHighways: options.avoidHighways,
-        }
+        },
       });
 
-      if (apiError) {
-        throw new Error('Erreur de calcul d\'itinéraire');
-      }
+      if (apiError) throw new Error("Erreur de calcul d'itinéraire");
+      if (typeof data?.distanceKm !== 'number') throw new Error('Aucun itinéraire trouvé pour ce trajet');
 
-      if (!data.routes || data.routes.length === 0) {
-        throw new Error('Aucun itinéraire trouvé pour ce trajet');
-      }
+      const distanceKm = data.distanceKm;
+      const totalDurationSeconds = (data.durationHours ?? 0) * 3600;
+      const coordinates: [number, number][] = Array.isArray(data.coordinates) ? data.coordinates : [];
 
-      const route = data.routes[0];
-      const leg = route.legs[0]; // For now, use first leg
-
-      // Calculate total distance and duration from all legs
-      let totalDistanceMeters = 0;
-      let totalDurationSeconds = 0;
-      
-      for (const l of route.legs) {
-        totalDistanceMeters += l.distance.value;
-        totalDurationSeconds += l.duration.value;
-      }
-
-      const distanceKm = totalDistanceMeters / 1000;
-
-      // Decode the polyline to get coordinates
-      const coordinates = decodePolyline(route.overview_polyline.points);
-
-      // Calculate toll cost using TomTom API for accurate truck toll estimation
-      let tollCost = 0;
-      
-      if (!options.avoidHighways) {
-        // Hybrid HERE + TomTom toll calculation for centime-level precision
-        const tollPromises = await Promise.allSettled([
-          supabase.functions.invoke('here-route', {
-            body: {
-              waypoints,
-              vehicleWeight: options.vehicleWeight || SEMI_TRAILER_SPECS.weight,
-              vehicleHeight: options.vehicleHeight || SEMI_TRAILER_SPECS.height,
-              vehicleLength: options.vehicleLength || SEMI_TRAILER_SPECS.length,
-              vehicleWidth: options.vehicleWidth || SEMI_TRAILER_SPECS.width,
-              vehicleAxleWeight: options.vehicleAxleWeight || SEMI_TRAILER_SPECS.axleWeight,
-              avoidHighways: options.avoidHighways,
-            },
-          }),
-          supabase.functions.invoke('tomtom-tolls', {
+      let tollCost = typeof data.tollCost === 'number' ? data.tollCost : 0;
+      if (!options.avoidHighways && tollCost === 0) {
+        try {
+          const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
             body: {
               waypoints,
               distanceKm,
@@ -257,23 +220,10 @@ export function useTomTom() {
               vehicleAxleWeight: options.vehicleAxleWeight || SEMI_TRAILER_SPECS.axleWeight,
               avoidHighways: options.avoidHighways,
             },
-          }),
-        ]);
-
-        const hereToll = tollPromises[0].status === 'fulfilled'
-          ? tollPromises[0].value.data?.tollCost ?? null : null;
-        const tomtomToll = tollPromises[1].status === 'fulfilled'
-          ? tollPromises[1].value.data?.tollCost ?? null : null;
-
-        if (hereToll != null && tomtomToll != null && hereToll > 0 && tomtomToll > 0) {
-          // Weighted average: HERE 60% (native PL routing) + TomTom 40% (toll DB)
-          tollCost = Math.round((hereToll * 0.6 + tomtomToll * 0.4) * 100) / 100;
-          console.log('Hybrid toll: HERE=', hereToll, 'TomTom=', tomtomToll, '→', tollCost);
-        } else if (hereToll != null && hereToll > 0) {
-          tollCost = hereToll;
-        } else if (tomtomToll != null && tomtomToll > 0) {
-          tollCost = tomtomToll;
-        } else {
+          });
+          if (tollData?.tollCost) tollCost = tollData.tollCost;
+          else tollCost = calculateTollCost(distanceKm, true);
+        } catch {
           tollCost = calculateTollCost(distanceKm, true);
         }
       }
