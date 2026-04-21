@@ -65,11 +65,11 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    if (routeCoordinates.length > 5000) {
-      return new Response(
-        JSON.stringify({ error: 'Too many coordinates (max 5000)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Large routes: downsample defensively instead of rejecting. Downstream
+    // code (TomTom waypoints + OSM bbox) only needs a coarse polyline.
+    let workingCoords: [number, number][] = routeCoordinates;
+    if (workingCoords.length > 5000) {
+      workingCoords = sampleRoutePoints(workingCoords, 2000);
     }
     // Validate numeric vehicle params
     for (const [name, val] of Object.entries({ vehicleHeight, vehicleWeight, vehicleWidth, vehicleLength })) {
@@ -83,7 +83,7 @@ serve(async (req) => {
 
     // Build waypoints string for TomTom (sample points along the route)
     // Reduce to ~20 points max to avoid API limits
-    const samplePoints = sampleRoutePoints(routeCoordinates, 20);
+    const samplePoints = sampleRoutePoints(workingCoords, 20);
     const waypoints = samplePoints.map(([lat, lng]: [number, number]) => `${lat},${lng}`).join(':');
 
     // Call TomTom Routing API with truck parameters to get sections with restrictions
@@ -173,7 +173,7 @@ serve(async (req) => {
 
     // Also query OpenStreetMap Overpass API for additional restriction data
     // This provides more granular data on actual restrictions
-    const osmRestrictions = await fetchOSMRestrictions(routeCoordinates, TOMTOM_API_KEY);
+    const osmRestrictions = await fetchOSMRestrictions(workingCoords, TOMTOM_API_KEY);
     restrictions.push(...osmRestrictions);
 
     // Deduplicate restrictions that are very close to each other
