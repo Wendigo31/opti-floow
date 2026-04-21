@@ -1250,6 +1250,9 @@ export default function Itinerary() {
                     stops={stops}
                     route={displayedRoute}
                     onSaveAsLine={() => handleOpenSaveItinerary(displayedRoute)}
+                    transportMode={transportMode}
+                    vehicleName={selectedVehicle?.name || null}
+                    clientName={clients.find(c => c.id === selectedClientId)?.name || null}
                   />
                 )}
               </div>
@@ -1259,7 +1262,7 @@ export default function Itinerary() {
       </div>
 
       {/* Right Panel - Map */}
-      <div className="hidden lg:flex flex-1 relative bg-muted/20">
+      <div data-itinerary-map className="hidden lg:flex flex-1 relative bg-muted/20">
         <MapPreview 
           className="h-full w-full"
           center={[46.603354, 1.888334]}
