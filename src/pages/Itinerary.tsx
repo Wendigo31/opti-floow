@@ -316,7 +316,14 @@ export default function Itinerary() {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    if (originAddress && destinationAddress) {
+    // Auto-save to history once both origin AND destination have been selected
+    // (i.e. have geo-coordinates), not while typing.
+    if (
+      originAddress &&
+      destinationAddress &&
+      originPosition?.lat &&
+      destinationPosition?.lat
+    ) {
       const saveSearch = async () => {
         const searchId = await addSearch({
           originAddress,
@@ -335,7 +342,17 @@ export default function Itinerary() {
       };
       saveSearch();
     }
-  }, [originAddress, destinationAddress, originPosition, destinationPosition, stops, selectedVehicleId, selectedClientId, addSearch]);
+  }, [
+    originAddress,
+    destinationAddress,
+    originPosition?.lat,
+    originPosition?.lon,
+    destinationPosition?.lat,
+    destinationPosition?.lon,
+    selectedVehicleId,
+    selectedClientId,
+    addSearch,
+  ]);
   
   const handleLoadSearchHistory = useCallback((entry: SearchHistoryEntry) => {
     setOriginAddress(entry.originAddress);
