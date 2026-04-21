@@ -333,6 +333,15 @@ export function MapPreview({
       polylineRef.current = routeGroup;
       map.addObject(routeGroup);
 
+      if (markersGroupRef.current) {
+        map.removeObject(markersGroupRef.current);
+        map.addObject(markersGroupRef.current);
+      }
+      if (restrictionsGroupRef.current) {
+        map.removeObject(restrictionsGroupRef.current);
+        map.addObject(restrictionsGroupRef.current);
+      }
+
       // Fit viewport to route
       try {
         const bbox = routeGroup.getBoundingBox();
@@ -340,7 +349,7 @@ export function MapPreview({
           // Use setLookAtData synchronously (no animation) so the route is
           // immediately visible. Animation can interfere when other effects
           // run a fitBounds shortly after.
-          map.getViewModel().setLookAtData({ bounds: bbox });
+          map.getViewModel().setLookAtData({ bounds: bbox, zoom: Math.min(map.getZoom(), 14) });
         }
       } catch (e) {
         console.warn('HERE fit bounds error:', e);
