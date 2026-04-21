@@ -30,17 +30,17 @@ serve(async (req) => {
       });
     }
 
-    // HERE Autosuggest - precise PL-friendly geocoding
+    // HERE Discover - includes addresses, cities, businesses (POI/places) and companies
     const params = new URLSearchParams({
       q: query,
       apiKey: HERE_API_KEY,
       lang: 'fr-FR',
-      limit: '8',
+      limit: '10',
       in: 'countryCode:FRA,BEL,CHE,LUX,DEU,ESP,ITA',
       at: at || '46.603354,1.888334', // France center default
     });
 
-    const response = await fetch(`https://autosuggest.search.hereapi.com/v1/autosuggest?${params}`);
+    const response = await fetch(`https://discover.search.hereapi.com/v1/discover?${params}`);
     if (!response.ok) {
       const txt = await response.text();
       console.error('HERE Autosuggest error:', response.status, txt);
