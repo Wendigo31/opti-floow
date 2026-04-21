@@ -198,9 +198,17 @@ export function MapPreview({
         lg: 'fre',
       });
 
+      // Prefer the "truck" vector style when available — it emphasises road
+      // numbers (A1, N7, D920…), motorway/national/departmental classes and
+      // street names, which is exactly what the user asked for.
+      const baseLayer =
+        defaultLayers.vector?.normal?.truck ||
+        defaultLayers.vector?.normal?.logistics ||
+        defaultLayers.vector.normal.map;
+
       const map = new H.Map(
         containerRef.current,
-        defaultLayers.vector.normal.map,
+        baseLayer,
         {
           center: { lat: center[0], lng: center[1] },
           zoom,
@@ -289,7 +297,9 @@ export function MapPreview({
       routeCoordinates.forEach(([lat, lng]) => lineString.pushPoint({ lat, lng }));
 
       polylineRef.current = new H.map.Polyline(lineString, {
-        style: { strokeColor: '#0ea5e9', lineWidth: 5 },
+        // Semi-transparent stroke so motorway / national / street labels
+        // rendered by the HERE base map remain readable under the route.
+        style: { strokeColor: 'rgba(14,165,233,0.75)', lineWidth: 6, lineCap: 'round', lineJoin: 'round' },
       });
       map.addObject(polylineRef.current);
 
