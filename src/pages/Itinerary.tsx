@@ -27,7 +27,8 @@ import {
   Folder,
   ChevronRight,
   Clock,
-  Zap
+  Zap,
+  Car
 } from 'lucide-react';
 import {
   DndContext,
@@ -279,6 +280,7 @@ export default function Itinerary() {
   const [addressSelectorStopId, setAddressSelectorStopId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'route' | 'options'>('route');
   const [selectedTrailerId, setSelectedTrailerId] = useState<string | null>(null);
+  const [transportMode, setTransportMode] = useState<'truck' | 'car'>('truck');
   
   const selectedVehicle = useMemo(() => 
     allVehicles.find(v => v.id === selectedVehicleId) || null,
@@ -571,6 +573,7 @@ export default function Itinerary() {
       supabase.functions.invoke('here-route', {
         body: {
           waypoints,
+          transportMode,
           vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
           vehicleHeight: SEMI_TRAILER_SPECS.height,
           vehicleLength: SEMI_TRAILER_SPECS.length,
@@ -992,6 +995,34 @@ export default function Itinerary() {
                   <span className="font-semibold text-primary">{formatCostPerKm(vehicleCostBreakdown.totalCostPerKm)}/km</span>
                 </div>
               )}
+            </div>
+
+            {/* Transport mode selector */}
+            <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl border border-border/40">
+              <button
+                type="button"
+                onClick={() => { setTransportMode('truck'); clearResults(); }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
+                  transportMode === 'truck'
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Truck className="w-4 h-4" /> Camion
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransportMode('car'); clearResults(); }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
+                  transportMode === 'car'
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Car className="w-4 h-4" /> Voiture
+              </button>
             </div>
 
             {/* Calculate Button */}

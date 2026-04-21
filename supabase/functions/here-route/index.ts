@@ -89,6 +89,7 @@ serve(async (req) => {
 
     const {
       waypoints,
+      transportMode = 'truck',
       vehicleWeight = 44000,
       vehicleHeight = 4.0,
       vehicleLength = 16.5,
@@ -112,21 +113,24 @@ serve(async (req) => {
     if (avoidTolls) avoidFeatures.push('tollRoad');
     if (avoidHighways) avoidFeatures.push('controlledAccessHighway');
 
+    const mode = transportMode === 'car' ? 'car' : 'truck';
     const params = new URLSearchParams({
-      transportMode: 'truck',
+      transportMode: mode,
       origin,
       destination,
       return: 'polyline,summary,tolls,actions',
       apiKey: HERE_API_KEY,
-      'truck[grossWeight]': String(vehicleWeight),
-      'truck[height]': String(Math.round(vehicleHeight * 100)),
-      'truck[length]': String(Math.round(vehicleLength * 100)),
-      'truck[width]': String(Math.round(vehicleWidth * 100)),
-      'truck[weightPerAxle]': String(vehicleAxleWeight),
-      'truck[axleCount]': '5',
       currency: 'EUR',
       lang: 'fr-FR',
     });
+    if (mode === 'truck') {
+      params.append('truck[grossWeight]', String(vehicleWeight));
+      params.append('truck[height]', String(Math.round(vehicleHeight * 100)));
+      params.append('truck[length]', String(Math.round(vehicleLength * 100)));
+      params.append('truck[width]', String(Math.round(vehicleWidth * 100)));
+      params.append('truck[weightPerAxle]', String(vehicleAxleWeight));
+      params.append('truck[axleCount]', '5');
+    }
     if (avoidFeatures.length > 0) {
       params.append('avoid[features]', avoidFeatures.join(','));
     }
