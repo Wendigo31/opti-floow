@@ -198,13 +198,28 @@ export function MapPreview({
         lg: 'fre',
       });
 
-      // Prefer the "truck" vector style when available — it emphasises road
-      // numbers (A1, N7, D920…), motorway/national/departmental classes and
-      // street names, which is exactly what the user asked for.
-      const baseLayer =
-        defaultLayers.vector?.normal?.truck ||
-        defaultLayers.vector?.normal?.logistics ||
-        defaultLayers.vector.normal.map;
+      // Use the standard vector map which renders motorway numbers (A1, N7,
+      // D920…) and street names by default. The "truck"/"logistics" styles do
+      // not exist on the public HERE JS SDK and silently produce a blank
+      // layer — which is why labels were missing.
+      const baseLayer = defaultLayers.vector.normal.map;
+
+      // Force-enable POI / road-number / street-name labels by tweaking the
+      // style if the SDK exposes it. This is a best-effort enhancement.
+      try {
+        const provider = baseLayer.getProvider();
+        const style = provider?.getStyle?.();
+        if (style && typeof style.setEnabledFeatures === 'function') {
+          style.setEnabledFeatures([
+            'roads', 'road_shields', 'road_labels',
+            'streets', 'street_labels',
+            'places', 'place_labels',
+            'admin_labels',
+          ]);
+        }
+      } catch {
+        /* style API not available — default labels are sufficient */
+      }
 
       const map = new H.Map(
         containerRef.current,
@@ -296,16 +311,24 @@ export function MapPreview({
       const lineString = new H.geo.LineString();
       routeCoordinates.forEach(([lat, lng]) => lineString.pushPoint({ lat, lng }));
 
-      polylineRef.current = new H.map.Polyline(lineString, {
-        // Semi-transparent stroke so motorway / national / street labels
-        // rendered by the HERE base map remain readable under the route.
-        style: { strokeColor: 'rgba(14,165,233,0.75)', lineWidth: 6, lineCap: 'round', lineJoin: 'round' },
+      // HERE's H.map.SpatialStyle requires a CSS color string. Use a HEX
+      // value (rgba is rejected by some SDK builds, which silently drops the
+      // polyline). A solid sky-blue stroke with a white halo keeps road
+      // numbers and street names readable underneath.
+      const haloLine = new H.map.Polyline(lineString, {
+        style: { strokeColor: '#ffffff', lineWidth: 9, lineCap: 'round', lineJoin: 'round' },
       });
-      map.addObject(polylineRef.current);
+      const mainLine = new H.map.Polyline(lineString, {
+        style: { strokeColor: '#0ea5e9', lineWidth: 6, lineCap: 'round', lineJoin: 'round' },
+      });
+      const routeGroup = new H.map.Group();
+      routeGroup.addObjects([haloLine, mainLine]);
+      polylineRef.current = routeGroup;
+      map.addObject(routeGroup);
 
       // Fit viewport to route
       try {
-        const bbox = polylineRef.current.getBoundingBox();
+        const bbox = routeGroup.getBoundingBox();
         if (bbox) {
           // Use setLookAtData synchronously (no animation) so the route is
           // immediately visible. Animation can interfere when other effects
