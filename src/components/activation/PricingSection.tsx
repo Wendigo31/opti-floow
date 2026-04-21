@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { Check, X, Rocket, Star, Crown, Zap, Truck, Users, Calculator, Route, Brain, FileSpreadsheet, BarChart3, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 const PLANS = [
@@ -106,8 +104,6 @@ interface PricingSectionProps {
 }
 
 export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
-  const [isYearly, setIsYearly] = useState(false);
-
   return (
     <section className="w-full max-w-6xl">
       <div className="text-center mb-8">
