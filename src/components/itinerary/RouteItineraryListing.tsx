@@ -1,6 +1,9 @@
-import { MapPin, ArrowDown, Clock, Route as RouteIcon, Save, Sparkles, Building2 } from 'lucide-react';
+import { MapPin, ArrowDown, Clock, Route as RouteIcon, Save, Sparkles, Building2, FileDown, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { exportItineraryPDF } from '@/utils/itineraryPdfExport';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface Position {
   lat: number;
@@ -28,6 +31,9 @@ interface RouteItineraryListingProps {
   stops: Waypoint[];
   route: RouteResult;
   onSaveAsLine: () => void;
+  transportMode?: 'truck' | 'car';
+  vehicleName?: string | null;
+  clientName?: string | null;
 }
 
 function haversineKm(a: Position, b: Position): number {
@@ -46,7 +52,12 @@ export function RouteItineraryListing({
   stops,
   route,
   onSaveAsLine,
+  transportMode = 'truck',
+  vehicleName = null,
+  clientName = null,
 }: RouteItineraryListingProps) {
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
   // Build the ordered list of points with positions (for distance estimation)
   const points: { label: string; address: string; position: Position | null; type: 'start' | 'stop' | 'end' }[] = [
     { label: 'Départ', address: originAddress || '—', position: null, type: 'start' },
@@ -57,9 +68,11 @@ export function RouteItineraryListing({
   // Estimate per-segment distance share via haversine ratios
   const totalKm = route.distance;
   const totalH = route.duration;
-  const segments: { km: number; durationH: number }[] = [];
+  const totalToll = route.tollCost || 0;
+  const totalFuel = route.fuelCost || 0;
+  const segments: { km: number; durationH: number; tollCost: number; fuelCost: number }[] = [];
   for (let i = 0; i < points.length - 1; i++) {
-    segments.push({ km: 0, durationH: 0 });
+    segments.push({ km: 0, durationH: 0, tollCost: 0, fuelCost: 0 });
   }
   // We need positions: rebuild points with positions including origin/dest from route start/end coords
   const coords = route.coordinates;
@@ -81,9 +94,38 @@ export function RouteItineraryListing({
       segments[i] = {
         km: Math.round(totalKm * ratio),
         durationH: Math.round(totalH * ratio * 100) / 100,
+        tollCost: Math.round(totalToll * ratio * 100) / 100,
+        fuelCost: Math.round(totalFuel * ratio * 100) / 100,
       };
     });
   }
+
+  const formatEur = (v: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0);
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const mapElement = document.querySelector<HTMLElement>('[data-itinerary-map]');
+      await exportItineraryPDF({
+        originAddress,
+        destinationAddress,
+        stops,
+        route,
+        segments,
+        transportMode,
+        vehicleName,
+        clientName,
+        mapElement,
+      });
+      toast({ title: 'PDF généré', description: 'Le détail de l\'itinéraire a été exporté.' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Erreur', description: 'Impossible de générer le PDF.', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const formatDuration = (h: number) => {
     const hh = Math.floor(h);
@@ -108,9 +150,19 @@ export function RouteItineraryListing({
           <RouteIcon className="w-4 h-4 text-primary" />
           Détail de l'itinéraire
         </h3>
-        <span className="text-xs text-muted-foreground">
-          {points.length} points
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{points.length} points</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={handleExportPDF}
+            disabled={exporting}
+          >
+            <FileDown className="w-3.5 h-3.5 mr-1" />
+            {exporting ? 'Export…' : 'PDF'}
+          </Button>
+        </div>
       </div>
 
       {/* Stops list */}
@@ -136,12 +188,19 @@ export function RouteItineraryListing({
                   </div>
                 </div>
                 {!isLast && seg && (seg.km > 0 || seg.durationH > 0) && (
-                  <div className="flex items-center gap-2 ml-7 -mt-2 mb-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 ml-7 -mt-2 mb-2 text-xs text-muted-foreground">
                     <ArrowDown className="w-3 h-3" />
                     <span className="font-medium">{seg.km} km</span>
                     <span>•</span>
                     <Clock className="w-3 h-3" />
                     <span>{formatDuration(seg.durationH)}</span>
+                    {seg.tollCost > 0 && (
+                      <>
+                        <span>•</span>
+                        <Coins className="w-3 h-3 text-warning" />
+                        <span className="font-medium text-warning">{formatEur(seg.tollCost)}</span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
