@@ -279,6 +279,7 @@ export default function Itinerary() {
   const [addressSelectorStopId, setAddressSelectorStopId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'route' | 'options'>('route');
   const [selectedTrailerId, setSelectedTrailerId] = useState<string | null>(null);
+  const [transportMode, setTransportMode] = useState<'truck' | 'car'>('truck');
   
   const selectedVehicle = useMemo(() => 
     allVehicles.find(v => v.id === selectedVehicleId) || null,
@@ -571,6 +572,7 @@ export default function Itinerary() {
       supabase.functions.invoke('here-route', {
         body: {
           waypoints,
+          transportMode,
           vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
           vehicleHeight: SEMI_TRAILER_SPECS.height,
           vehicleLength: SEMI_TRAILER_SPECS.length,
