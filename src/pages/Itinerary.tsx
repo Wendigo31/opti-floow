@@ -184,7 +184,7 @@ function SortableStop({ stop, index, onUpdate, onRemove, onSwap, isLast, onOpenA
         <div className="flex-1">
           <AddressInput
             value={stop.address}
-            onChange={(value) => onUpdate(stop.id, value, null)}
+            onChange={(value) => onUpdate(stop.id, value, stop.position)}
             onSelect={(address, position) => onUpdate(stop.id, address, position)}
             label=""
             placeholder={`Arrêt ${index + 1}`}
@@ -815,7 +815,14 @@ export default function Itinerary() {
     });
     if (destinationPosition) m.push({ position: [destinationPosition.lat, destinationPosition.lon], label: destinationAddress || 'Arrivée', type: 'end' });
     return m;
-  }, [originPosition, destinationPosition, originAddress, destinationAddress, stops]);
+  // Only depend on positions (lat/lon) so typing an address character does
+  // NOT rebuild markers and tear down the HERE map layer on every keystroke.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    originPosition?.lat, originPosition?.lon,
+    destinationPosition?.lat, destinationPosition?.lon,
+    stops.map(s => `${s.id}:${s.position?.lat ?? ''},${s.position?.lon ?? ''}`).join('|'),
+  ]);
 
   const routeCoordinates = useMemo(
     () => displayedRoute?.coordinates || [],
