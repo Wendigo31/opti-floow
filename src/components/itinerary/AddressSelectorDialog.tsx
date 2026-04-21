@@ -199,17 +199,17 @@ export function AddressSelectorDialog({ open, onOpenChange, onSelect }: AddressS
       : customAddress;
     
     try {
-      // Direct API call to get place suggestions
-      const { data: searchData, error: searchError } = await supabase.functions.invoke('google-places-search', {
+      // HERE search → take first item, then fetch place details
+      const { data: searchData, error: searchError } = await supabase.functions.invoke('here-search', {
         body: { query: searchQuery }
       });
 
-      if (searchError || !searchData?.predictions?.length) {
+      if (searchError || !searchData?.items?.length) {
         toast({ title: "Impossible de géolocaliser l'adresse", variant: "destructive" });
         return;
       }
 
-      const firstPlaceId = searchData.predictions[0].place_id;
+      const firstPlaceId = searchData.items[0].id;
       const details = await getPlaceDetails(firstPlaceId);
       
       if (!details) {
