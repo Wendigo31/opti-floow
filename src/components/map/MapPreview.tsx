@@ -198,9 +198,17 @@ export function MapPreview({
         lg: 'fre',
       });
 
+      // Prefer the "truck" vector style when available — it emphasises road
+      // numbers (A1, N7, D920…), motorway/national/departmental classes and
+      // street names, which is exactly what the user asked for.
+      const baseLayer =
+        defaultLayers.vector?.normal?.truck ||
+        defaultLayers.vector?.normal?.logistics ||
+        defaultLayers.vector.normal.map;
+
       const map = new H.Map(
         containerRef.current,
-        defaultLayers.vector.normal.map,
+        baseLayer,
         {
           center: { lat: center[0], lng: center[1] },
           zoom,
