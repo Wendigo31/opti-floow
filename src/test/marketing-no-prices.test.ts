@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "fs";
-import { join, resolve } from "path";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - node built-ins (vitest runs in node)
+import { readFileSync, readdirSync, statSync } from "node:fs";
+// @ts-ignore
+import { join, resolve } from "node:path";
+// @ts-ignore
+declare const process: { cwd(): string };
 
 /**
  * AUDIT TEST — Marketing pages must not display monetary amounts.
