@@ -1250,6 +1250,9 @@ export default function Itinerary() {
                     stops={stops}
                     route={displayedRoute}
                     onSaveAsLine={() => handleOpenSaveItinerary(displayedRoute)}
+                    transportMode={transportMode}
+                    vehicleName={selectedVehicle?.name || null}
+                    clientName={clients.find(c => c.id === selectedClientId)?.name || null}
                   />
                 )}
               </div>
