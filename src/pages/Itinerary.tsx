@@ -825,7 +825,7 @@ export default function Itinerary() {
             </div>
             <div>
               <h1 className="text-lg lg:text-xl font-bold text-foreground">Itinéraire</h1>
-              <p className="text-xs text-muted-foreground">Calcul de trajets poids lourd</p>
+              <p className="text-xs text-muted-foreground">Entrez vos adresses de départ et d'arrivée pour visualiser l'itinéraire</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1251,18 +1251,7 @@ export default function Itinerary() {
           </div>
         )}
         
-        {/* Map placeholder when no route */}
-        {!displayedRoute && !originPosition && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center p-8 max-w-sm">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-8 h-8 text-primary/50" />
-              </div>
-              <h3 className="font-semibold text-lg text-foreground/70 mb-2">Carte du trajet</h3>
-              <p className="text-sm text-muted-foreground">Entrez vos adresses de départ et d'arrivée pour visualiser l'itinéraire</p>
-            </div>
-          </div>
-        )}
+        {/* Map placeholder removed — instructions are now in the page header */}
       </div>
       
       {/* Mobile Map Preview */}
