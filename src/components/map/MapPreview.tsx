@@ -297,7 +297,9 @@ export function MapPreview({
       routeCoordinates.forEach(([lat, lng]) => lineString.pushPoint({ lat, lng }));
 
       polylineRef.current = new H.map.Polyline(lineString, {
-        style: { strokeColor: '#0ea5e9', lineWidth: 5 },
+        // Semi-transparent stroke so motorway / national / street labels
+        // rendered by the HERE base map remain readable under the route.
+        style: { strokeColor: 'rgba(14,165,233,0.75)', lineWidth: 6, lineCap: 'round', lineJoin: 'round' },
       });
       map.addObject(polylineRef.current);
 
