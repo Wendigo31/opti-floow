@@ -84,6 +84,7 @@ import type { SavedTour } from '@/types/savedTour';
 import { useSearchHistory, type SearchHistoryEntry } from '@/hooks/useSearchHistory';
 import { SearchHistoryDialog } from '@/components/itinerary/SearchHistoryDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RouteItineraryListing } from '@/components/itinerary/RouteItineraryListing';
 
 // Decode Google polyline encoding
 function decodePolyline(encoded: string): [number, number][] {
