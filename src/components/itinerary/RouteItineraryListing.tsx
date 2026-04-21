@@ -30,7 +30,7 @@ interface RouteItineraryListingProps {
   destinationAddress: string;
   stops: Waypoint[];
   route: RouteResult;
-  onSaveAsLine: () => void;
+  onSaveAsLine: (route: RouteResult) => void;
   transportMode?: 'truck' | 'car';
   vehicleName?: string | null;
   clientName?: string | null;
@@ -246,7 +246,7 @@ export function RouteItineraryListing({
             {route.type === 'highway' ? 'Via autoroute' : 'Via nationale'}
           </span>
         </div>
-        <Button onClick={onSaveAsLine} className="w-full h-10" variant="gradient">
+        <Button onClick={() => onSaveAsLine(route)} className="w-full h-10" variant="gradient">
           <Save className="w-4 h-4 mr-2" />
           Mettre en place cette ligne
         </Button>

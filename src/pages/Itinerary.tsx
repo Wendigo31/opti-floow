@@ -826,7 +826,7 @@ export default function Itinerary() {
 
   const routeCoordinates = useMemo(
     () => displayedRoute?.coordinates || [],
-    [displayedRoute]
+    [displayedRoute?.coordinates]
   );
 
   const restrictionMarkers = useMemo(
@@ -1251,12 +1251,12 @@ export default function Itinerary() {
 
                 {/* Detailed listing + line proposal for the currently selected route */}
                 {displayedRoute && (
-                  <RouteItineraryListing
+                    <RouteItineraryListing
                     originAddress={originAddress}
                     destinationAddress={destinationAddress}
                     stops={stops}
                     route={displayedRoute}
-                    onSaveAsLine={() => handleOpenSaveItinerary(displayedRoute)}
+                      onSaveAsLine={handleOpenSaveItinerary}
                     transportMode={transportMode}
                     vehicleName={selectedVehicle?.name || null}
                     clientName={clients.find(c => c.id === selectedClientId)?.name || null}
