@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { Check, X, Rocket, Star, Crown, Zap, Truck, Users, Calculator, Route, Brain, FileSpreadsheet, BarChart3, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 const PLANS = [
@@ -106,8 +104,6 @@ interface PricingSectionProps {
 }
 
 export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
-  const [isYearly, setIsYearly] = useState(false);
-
   return (
     <section className="w-full max-w-6xl">
       <div className="text-center mb-8">
@@ -115,27 +111,13 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
         <p className="text-muted-foreground max-w-lg mx-auto">
           Choisissez le forfait adapté à votre flotte. Évoluez à tout moment.
         </p>
-
-        {/* Toggle mensuel / annuel */}
-        <div className="flex items-center justify-center gap-3 mt-6">
-          <span className={cn("text-sm font-medium", !isYearly ? "text-foreground" : "text-muted-foreground")}>Mensuel</span>
-          <Switch checked={isYearly} onCheckedChange={setIsYearly} />
-          <span className={cn("text-sm font-medium", isYearly ? "text-foreground" : "text-muted-foreground")}>
-            Annuel
-          </span>
-          {isYearly && (
-            <Badge variant="secondary" className="text-xs">Économisez jusqu'à 27%</Badge>
-          )}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {PLANS.map((plan) => {
           const Icon = plan.icon;
-          const price = isYearly ? plan.yearlyMonthly : plan.monthlyPrice;
           const isBest = plan.bestValue;
           const isPopular = plan.popular;
-          const isCustom = plan.isCustomPricing;
 
           return (
             <div
@@ -174,34 +156,11 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
               {/* Price */}
               <div className="text-center mb-4">
                 <div className="flex items-baseline justify-center gap-1">
-                  {isCustom && (
-                    <span className="text-sm font-medium text-muted-foreground mr-1">À partir de</span>
-                  )}
-                  <span className="text-3xl font-extrabold text-foreground">
-                    {price.toFixed(2).replace('.', ',')}€
-                  </span>
-                  <span className="text-sm text-muted-foreground">/mois</span>
+                  <span className="text-2xl font-extrabold text-foreground">Sur devis</span>
                 </div>
-                {isYearly && !isCustom && (
-                  <div className="flex items-center justify-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground line-through">
-                      {plan.monthlyPrice.toFixed(2).replace('.', ',')}€/mois
-                    </span>
-                    <Badge variant="outline" className="text-xs text-secondary border-secondary/40">
-                      {plan.yearlyDiscount}
-                    </Badge>
-                  </div>
-                )}
-                {isYearly && !isCustom && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    soit {plan.yearlyPrice.toFixed(0)}€ facturé annuellement
-                  </p>
-                )}
-                {isCustom && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Tarification personnalisée sur devis
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tarif communiqué sur demande
+                </p>
               </div>
 
               {/* Description */}
@@ -215,7 +174,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
                 className="w-full mb-5"
                 onClick={onChoosePlan}
               >
-                {isCustom ? 'Nous contacter' : `Choisir ${plan.name}`}
+                Nous contacter
               </Button>
 
               {/* Limits */}
