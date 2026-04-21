@@ -1254,15 +1254,8 @@ export default function Itinerary() {
           center={[46.603354, 1.888334]}
           zoom={6}
           markers={markers}
-          routeCoordinates={displayedRoute?.coordinates || []}
-          restrictions={truckRestrictions.map(r => ({
-            lat: r.lat,
-            lng: r.lng,
-            type: r.type,
-            value: r.value,
-            unit: r.unit,
-            description: r.description
-          }))}
+          routeCoordinates={routeCoordinates}
+          restrictions={restrictionMarkers}
           showRestrictionsLegend={true}
         />
         
