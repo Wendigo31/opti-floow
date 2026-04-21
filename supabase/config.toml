@@ -6,6 +6,15 @@ verify_jwt = false
 [functions.here-maps-key]
 verify_jwt = false
 
+[functions.here-search]
+verify_jwt = false
+
+[functions.here-geocode]
+verify_jwt = false
+
+[functions.here-route]
+verify_jwt = false
+
 [functions.google-directions]
 verify_jwt = false
 
