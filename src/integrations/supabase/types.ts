@@ -2225,7 +2225,7 @@ export type Database = {
           name?: string | null
           notes?: string | null
           phone?: never
-          postal_code?: never
+          postal_code?: string | null
           siret?: never
           updated_at?: string | null
           user_id?: string | null
@@ -2242,7 +2242,7 @@ export type Database = {
           name?: string | null
           notes?: string | null
           phone?: never
-          postal_code?: never
+          postal_code?: string | null
           siret?: never
           updated_at?: string | null
           user_id?: string | null
