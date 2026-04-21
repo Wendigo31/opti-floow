@@ -27,7 +27,8 @@ import {
   Folder,
   ChevronRight,
   Clock,
-  Zap
+  Zap,
+  Car
 } from 'lucide-react';
 import {
   DndContext,
