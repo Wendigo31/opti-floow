@@ -209,10 +209,6 @@ export default function Activation() {
         </div>
       </div>
 
-      {/* Detailed Pricing Section */}
-      <PricingSection onChoosePlan={() => setShowOnboarding(true)} />
-
-
       <p className="text-xs text-center text-muted-foreground">
         © {new Date().getFullYear()} OptiFlow - Tous droits réservés
       </p>
