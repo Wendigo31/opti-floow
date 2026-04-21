@@ -84,6 +84,7 @@ import type { SavedTour } from '@/types/savedTour';
 import { useSearchHistory, type SearchHistoryEntry } from '@/hooks/useSearchHistory';
 import { SearchHistoryDialog } from '@/components/itinerary/SearchHistoryDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RouteItineraryListing } from '@/components/itinerary/RouteItineraryListing';
 
 // Decode Google polyline encoding
 function decodePolyline(encoded: string): [number, number][] {
@@ -802,13 +803,36 @@ export default function Itinerary() {
   };
 
   const displayedRoute = selectedRoute === 'national' ? nationalRoute : (highwayRoute || nationalRoute);
-  
-  const markers: { position: [number, number]; label: string; type: 'start' | 'end' | 'stop' }[] = [];
-  if (originPosition) markers.push({ position: [originPosition.lat, originPosition.lon], label: originAddress || 'Départ', type: 'start' });
-  stops.forEach((stop, index) => {
-    if (stop.position) markers.push({ position: [stop.position.lat, stop.position.lon], label: stop.address || `Arrêt ${index + 1}`, type: 'stop' });
-  });
-  if (destinationPosition) markers.push({ position: [destinationPosition.lat, destinationPosition.lon], label: destinationAddress || 'Arrivée', type: 'end' });
+
+  // Stabilize markers and route coordinates so the HERE map polyline doesn't
+  // get torn down on every parent re-render (which caused the route to flicker
+  // and appear to "disappear" a few seconds after calculation).
+  const markers = useMemo(() => {
+    const m: { position: [number, number]; label: string; type: 'start' | 'end' | 'stop' }[] = [];
+    if (originPosition) m.push({ position: [originPosition.lat, originPosition.lon], label: originAddress || 'Départ', type: 'start' });
+    stops.forEach((stop, index) => {
+      if (stop.position) m.push({ position: [stop.position.lat, stop.position.lon], label: stop.address || `Arrêt ${index + 1}`, type: 'stop' });
+    });
+    if (destinationPosition) m.push({ position: [destinationPosition.lat, destinationPosition.lon], label: destinationAddress || 'Arrivée', type: 'end' });
+    return m;
+  }, [originPosition, destinationPosition, originAddress, destinationAddress, stops]);
+
+  const routeCoordinates = useMemo(
+    () => displayedRoute?.coordinates || [],
+    [displayedRoute]
+  );
+
+  const restrictionMarkers = useMemo(
+    () => truckRestrictions.map(r => ({
+      lat: r.lat,
+      lng: r.lng,
+      type: r.type,
+      value: r.value,
+      unit: r.unit,
+      description: r.description,
+    })),
+    [truckRestrictions]
+  );
 
   const hasResults = highwayRoute || nationalRoute;
 
@@ -1217,6 +1241,17 @@ export default function Itinerary() {
                     )}
                   </div>
                 )}
+
+                {/* Detailed listing + line proposal for the currently selected route */}
+                {displayedRoute && (
+                  <RouteItineraryListing
+                    originAddress={originAddress}
+                    destinationAddress={destinationAddress}
+                    stops={stops}
+                    route={displayedRoute}
+                    onSaveAsLine={() => handleOpenSaveItinerary(displayedRoute)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -1230,15 +1265,8 @@ export default function Itinerary() {
           center={[46.603354, 1.888334]}
           zoom={6}
           markers={markers}
-          routeCoordinates={displayedRoute?.coordinates || []}
-          restrictions={truckRestrictions.map(r => ({
-            lat: r.lat,
-            lng: r.lng,
-            type: r.type,
-            value: r.value,
-            unit: r.unit,
-            description: r.description
-          }))}
+          routeCoordinates={routeCoordinates}
+          restrictions={restrictionMarkers}
           showRestrictionsLegend={true}
         />
         
