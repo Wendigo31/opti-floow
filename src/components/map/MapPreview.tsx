@@ -209,8 +209,15 @@ export function MapPreview({
       );
       mapRef.current = map;
 
-      // Enable interaction & UI
-      behaviorRef.current = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+      // Enable interaction & UI — explicitly enable all behaviors
+      const mapEvents = new H.mapevents.MapEvents(map);
+      const behavior = new H.mapevents.Behavior(mapEvents);
+      // Ensure pan, zoom (wheel + pinch), and double-tap zoom are all on
+      const B = H.mapevents.Behavior;
+      behavior.enable(
+        B.DRAGGING | B.WHEELZOOM | B.PINCHZOOM | B.DBLTAPZOOM
+      );
+      behaviorRef.current = behavior;
       uiRef.current = H.ui.UI.createDefault(map, defaultLayers, 'fr-FR');
 
       // Init groups
@@ -228,6 +235,12 @@ export function MapPreview({
         }
       });
       resizeObserverRef.current.observe(containerRef.current);
+
+      // Force an initial resize after layout settles (fixes interaction bugs
+      // when container starts at 0px or grows after mount)
+      requestAnimationFrame(() => {
+        try { map.getViewPort().resize(); } catch { /* noop */ }
+      });
 
       setIsLoading(false);
       setMapReady(true);
