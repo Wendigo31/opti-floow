@@ -565,14 +565,19 @@ export default function Itinerary() {
     if (destinationPosition) waypoints.push({ lat: destinationPosition.lat, lon: destinationPosition.lon });
     if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires');
 
-    const origin = `${waypoints[0].lat},${waypoints[0].lon}`;
-    const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lon}`;
-    const intermediateWaypoints = waypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lon}`);
     const timeoutMs = avoidHighways ? 90000 : 60000;
 
     const { data, error } = await withTimeout(
-      supabase.functions.invoke('google-directions', {
-        body: { origin, destination, waypoints: intermediateWaypoints.length > 0 ? intermediateWaypoints : undefined, avoidHighways },
+      supabase.functions.invoke('here-route', {
+        body: {
+          waypoints,
+          vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
+          vehicleHeight: SEMI_TRAILER_SPECS.height,
+          vehicleLength: SEMI_TRAILER_SPECS.length,
+          vehicleWidth: SEMI_TRAILER_SPECS.width,
+          vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500,
+          avoidHighways,
+        },
       }),
       timeoutMs,
       "Délai d'attente dépassé"
@@ -580,23 +585,14 @@ export default function Itinerary() {
 
     if (error) throw new Error(getInvokeErrorMessage(error));
     if (data?.error) throw new Error(String(data.error));
-    if (!data?.routes?.length) throw new Error('Aucun itinéraire trouvé');
+    if (typeof data?.distanceKm !== 'number') throw new Error('Aucun itinéraire trouvé');
 
-    const route = data.routes[0];
-    let totalDistanceMeters = 0;
-    let totalDurationSeconds = 0;
-    for (const leg of route.legs) {
-      totalDistanceMeters += leg.distance.value;
-      totalDurationSeconds += leg.duration.value;
-    }
-    const distanceKm = totalDistanceMeters / 1000;
-    const coordinates: [number, number][] = [];
-    if (route.overview_polyline?.points) {
-      coordinates.push(...decodePolyline(route.overview_polyline.points));
-    }
+    const distanceKm = data.distanceKm;
+    const durationHours = data.durationHours ?? 0;
+    const coordinates: [number, number][] = Array.isArray(data.coordinates) ? data.coordinates : [];
+    let tollCost = typeof data.tollCost === 'number' ? data.tollCost : 0;
 
-    let tollCost = 0;
-    if (!avoidHighways) {
+    if (!avoidHighways && tollCost === 0) {
       try {
         const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
           body: { waypoints, distanceKm, vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500, vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500, avoidHighways },
@@ -610,14 +606,14 @@ export default function Itinerary() {
         const tollableDistance = distanceKm * 0.85;
         tollCost = tollableDistance * FRENCH_TOLL_RATES.AVERAGE;
       }
-    } else {
+    } else if (avoidHighways) {
       tollCost = distanceKm * FRENCH_TOLL_RATES.NATIONAL;
     }
 
     const fuelCost = calculateFuelCost(distanceKm);
     return {
       distance: Math.round(distanceKm),
-      duration: Math.round(totalDurationSeconds / 3600 * 10) / 10,
+      duration: Math.round(durationHours * 10) / 10,
       tollCost: Math.round(tollCost * 100) / 100,
       fuelCost: Math.round(fuelCost * 100) / 100,
       coordinates,
