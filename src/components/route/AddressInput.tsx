@@ -143,20 +143,36 @@ export function AddressInput({
       {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion.id}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault(); // Prevent blur before click
-                handleSelect(suggestion);
-              }}
-              className="w-full px-4 py-3 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-3 border-b border-border/50 last:border-0"
-            >
-              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground truncate">{suggestion.address}</span>
-            </button>
-          ))}
+          {suggestions.map((suggestion) => {
+            const cityLine = [suggestion.postalCode, suggestion.city]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <button
+                key={suggestion.id}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(suggestion);
+                }}
+                className="w-full px-4 py-3 text-left text-sm hover:bg-muted/50 transition-colors flex items-start gap-3 border-b border-border/50 last:border-0"
+              >
+                <MapPin className={cn(
+                  "w-4 h-4 flex-shrink-0 mt-0.5",
+                  suggestion.isPlace ? "text-primary" : "text-muted-foreground"
+                )} />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-foreground font-medium truncate">
+                    {suggestion.title || suggestion.address}
+                  </span>
+                  <span className="text-muted-foreground text-xs truncate">
+                    {suggestion.address}
+                    {cityLine && !suggestion.address?.includes(cityLine) ? ` · ${cityLine}` : ''}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

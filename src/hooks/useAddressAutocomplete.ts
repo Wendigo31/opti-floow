@@ -5,6 +5,8 @@ interface AddressSuggestion {
   id: string;
   address: string;
   placeId: string;
+  title?: string;
+  isPlace?: boolean;
   streetNumber?: string;
   streetName?: string;
   city?: string;
@@ -51,6 +53,8 @@ export function useAddressAutocomplete() {
             id: item.id,
             placeId: item.id,
             address: item.address?.label || item.title,
+            title: item.title,
+            isPlace: item.resultType === 'place' || !!item.categories?.length,
             streetName: item.address?.street,
             city: item.address?.city,
             postalCode: item.address?.postalCode,

@@ -42,7 +42,7 @@ export function PDFExportDialog({
   const fetchStaticMap = async (): Promise<string | undefined> => {
     if (!includeMap || routeCoordinates.length === 0) return undefined;
     try {
-      const keyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`, {
+      const keyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/here-maps-key`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,23 +52,22 @@ export function PDFExportDialog({
       const { apiKey } = await keyRes.json();
       if (!apiKey) return undefined;
 
-      // Échantillonner max 80 points pour rester sous la limite URL (8192 chars)
-      const step = Math.max(1, Math.floor(routeCoordinates.length / 80));
+      // HERE Map Image API: route polyline as r0=lat,lon,lat,lon,... (max ~50 points to stay under URL limit)
+      const step = Math.max(1, Math.floor(routeCoordinates.length / 50));
       const sampled = routeCoordinates.filter((_, i) => i % step === 0);
       if (sampled[sampled.length - 1] !== routeCoordinates[routeCoordinates.length - 1]) {
         sampled.push(routeCoordinates[routeCoordinates.length - 1]);
       }
-      const path = sampled.map(([lat, lon]) => `${lat.toFixed(5)},${lon.toFixed(5)}`).join('|');
+      const route = sampled.map(([lat, lon]) => `${lat.toFixed(5)},${lon.toFixed(5)}`).join(',');
 
-      const markerParams = markers
+      const poiParams = markers
         .map((m) => {
-          const color = m.type === 'start' ? 'green' : m.type === 'end' ? 'red' : 'blue';
-          const label = m.type === 'start' ? 'A' : m.type === 'end' ? 'B' : '';
-          return `markers=color:${color}${label ? `|label:${label}` : ''}|${m.position[0].toFixed(5)},${m.position[1].toFixed(5)}`;
+          const color = m.type === 'start' ? '00aa00' : m.type === 'end' ? 'cc0000' : '2563eb';
+          return `poi=${m.position[0].toFixed(5)},${m.position[1].toFixed(5)};fc=${color};lc=ffffff`;
         })
         .join('&');
 
-      const url = `https://maps.googleapis.com/maps/api/staticmap?size=640x320&scale=2&maptype=roadmap&path=color:0x2563ebcc|weight:4|${encodeURIComponent(path)}&${markerParams}&key=${apiKey}`;
+      const url = `https://image.maps.hereapi.com/mia/1.6/route?r0=${route}&lc0=2563eb&lw0=4&w=640&h=320&ppi=250&t=0&${poiParams}&apiKey=${apiKey}`;
 
       const imgRes = await fetch(url);
       if (!imgRes.ok) return undefined;
