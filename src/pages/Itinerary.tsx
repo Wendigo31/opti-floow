@@ -1241,6 +1241,17 @@ export default function Itinerary() {
                     )}
                   </div>
                 )}
+
+                {/* Detailed listing + line proposal for the currently selected route */}
+                {displayedRoute && (
+                  <RouteItineraryListing
+                    originAddress={originAddress}
+                    destinationAddress={destinationAddress}
+                    stops={stops}
+                    route={displayedRoute}
+                    onSaveAsLine={() => handleOpenSaveItinerary(displayedRoute)}
+                  />
+                )}
               </div>
             )}
           </div>
