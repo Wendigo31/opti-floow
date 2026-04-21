@@ -46,14 +46,37 @@ serve(async (req) => {
     const autosuggestUrl = `https://autosuggest.search.hereapi.com/v1/autosuggest?${new URLSearchParams(baseParams)}`;
     const discoverUrl = `https://discover.search.hereapi.com/v1/discover?${new URLSearchParams(baseParams)}`;
 
-    // Run both in parallel: Autosuggest is best for partial company names, Discover for full lookups.
-    const [autoRes, discRes] = await Promise.all([
+    // Detect freight/logistics carrier names → use Browse with category "transport-service"
+    // to surface depot/agency locations across the country.
+    const carriers = ['geodis','france express','dhl','gls','chronopost','mta','db schenker','schenker','dsv','dpd','laposte','la poste','pfc','pic','heppner','ceva','gefco','xpo','kuehne','tnt','ups','fedex','stef','dachser'];
+    const lowerQ = query.toLowerCase();
+    const matchedCarrier = carriers.find(c => lowerQ.includes(c));
+
+    const browseUrls: string[] = [];
+    if (matchedCarrier) {
+      // HERE Browse: filter by transport categories + name to find ALL depots/agencies of a carrier
+      const browseParams = new URLSearchParams({
+        apiKey: HERE_API_KEY,
+        lang: 'fr-FR',
+        limit: '20',
+        in: 'countryCode:FRA,ESP,NLD,GBR,DEU,CHE',
+        at: at || '46.603354,1.888334',
+        // Categories: 700-7600 (Business Services), 800-8600 (Transport)
+        categories: '700-7600-0322,700-7600-0323,700-7600-0324,800-8600,400-4100',
+        name: query,
+      });
+      browseUrls.push(`https://browse.search.hereapi.com/v1/browse?${browseParams}`);
+    }
+
+    const [autoRes, discRes, browseRes] = await Promise.all([
       fetch(autosuggestUrl).catch(() => null),
       fetch(discoverUrl).catch(() => null),
+      browseUrls[0] ? fetch(browseUrls[0]).catch(() => null) : Promise.resolve(null),
     ]);
 
     const autoData = autoRes && autoRes.ok ? await autoRes.json() : { items: [] };
     const discData = discRes && discRes.ok ? await discRes.json() : { items: [] };
+    const browseData = browseRes && browseRes.ok ? await browseRes.json() : { items: [] };
 
     if ((!autoRes || !autoRes.ok) && (!discRes || !discRes.ok)) {
       const txt = autoRes ? await autoRes.text() : 'no response';
@@ -66,7 +89,8 @@ serve(async (req) => {
     // Merge & dedupe by id, prioritizing places (businesses) first
     const seen = new Set<string>();
     const merged: any[] = [];
-    const all = [...(autoData.items || []), ...(discData.items || [])];
+    // Browse results first (carrier depots), then places, then addresses
+    const all = [...(browseData.items || []), ...(autoData.items || []), ...(discData.items || [])];
     // Sort: places/POI first, then addresses
     all.sort((a, b) => {
       const aPlace = a.resultType === 'place' || !!a.categories?.length ? 0 : 1;
