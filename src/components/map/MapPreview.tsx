@@ -178,9 +178,16 @@ export function MapPreview({
   const restrictionsGroupRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const latestCenterRef = useRef(center);
+  const latestZoomRef = useRef(zoom);
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    latestCenterRef.current = center;
+    latestZoomRef.current = zoom;
+  }, [center, zoom]);
 
   // Initialize HERE Map
   const initMap = useCallback(async () => {
@@ -225,8 +232,8 @@ export function MapPreview({
         containerRef.current,
         baseLayer,
         {
-          center: { lat: center[0], lng: center[1] },
-          zoom,
+          center: { lat: latestCenterRef.current[0], lng: latestCenterRef.current[1] },
+          zoom: latestZoomRef.current,
           pixelRatio: window.devicePixelRatio || 1,
         }
       );
@@ -272,7 +279,7 @@ export function MapPreview({
       setError('Impossible de charger la carte');
       setIsLoading(false);
     }
-  }, [center, zoom]);
+  }, []);
 
   useEffect(() => {
     initMap();
