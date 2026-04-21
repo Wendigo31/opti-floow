@@ -37,7 +37,7 @@ serve(async (req) => {
       apiKey: HERE_API_KEY,
       lang: 'fr-FR',
       limit: '15',
-      in: 'countryCode:FRA,BEL,CHE,LUX,DEU,ESP,ITA,GBR,NLD,PRT',
+      in: 'countryCode:FRA,ESP,NLD,GBR,DEU,CHE',
       at: at || '46.603354,1.888334',
       // Bias toward places/POI but still return addresses
       show: 'details',
