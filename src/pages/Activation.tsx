@@ -11,7 +11,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LegalTabs from '@/components/settings/LegalTabs';
-import PricingSection from '@/components/activation/PricingSection';
 
 
 export default function Activation() {
@@ -209,10 +208,6 @@ export default function Activation() {
           </div>
         </div>
       </div>
-
-      {/* Detailed Pricing Section */}
-      <PricingSection onChoosePlan={() => setShowOnboarding(true)} />
-
 
       <p className="text-xs text-center text-muted-foreground">
         © {new Date().getFullYear()} OptiFlow - Tous droits réservés
