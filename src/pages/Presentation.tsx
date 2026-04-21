@@ -376,7 +376,7 @@ const SLIDES = [
           <div className="bg-[hsl(180,15%,97%)] border border-[hsl(180,15%,90%)] rounded-3xl px-14 py-8 max-w-[1100px] text-center">
             <p className="text-[24px] text-[hsl(210,20%,30%)] italic leading-relaxed">
               « Depuis qu'on utilise OptiFlow, on a découvert qu'on vendait 3 lignes à perte. 
-              On a ajusté nos prix et récupéré 18 000 € de marge en 4 mois. »
+              On a ajusté nos prix et récupéré une marge significative en quelques mois. »
             </p>
             <p className="text-[hsl(175,85%,35%)] mt-4 font-semibold text-[20px]">— Directeur, Transport régional · 44 véhicules</p>
           </div>
