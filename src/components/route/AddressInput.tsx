@@ -142,7 +142,7 @@ export function AddressInput({
 
       {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-[9999] w-full mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
           {suggestions.map((suggestion) => {
             const cityLine = [suggestion.postalCode, suggestion.city]
               .filter(Boolean)
