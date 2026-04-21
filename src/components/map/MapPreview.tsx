@@ -306,7 +306,12 @@ export function MapPreview({
       // Fit viewport to route
       try {
         const bbox = polylineRef.current.getBoundingBox();
-        if (bbox) map.getViewModel().setLookAtData({ bounds: bbox }, true);
+        if (bbox) {
+          // Use setLookAtData synchronously (no animation) so the route is
+          // immediately visible. Animation can interfere when other effects
+          // run a fitBounds shortly after.
+          map.getViewModel().setLookAtData({ bounds: bbox });
+        }
       } catch (e) {
         console.warn('HERE fit bounds error:', e);
       }
@@ -343,7 +348,9 @@ export function MapPreview({
       group.addObject(marker);
     });
 
-    // Fit bounds if markers but no route
+    // Only fit to markers when there is NO route drawn — the route polyline
+    // effect handles framing when a route is present (so markers don't hijack
+    // the viewport and hide the polyline).
     if (markers.length > 0 && routeCoordinates.length === 0) {
       try {
         if (markers.length === 1) {
@@ -351,13 +358,13 @@ export function MapPreview({
           map.setZoom(12);
         } else {
           const bbox = group.getBoundingBox();
-          if (bbox) map.getViewModel().setLookAtData({ bounds: bbox }, true);
+          if (bbox) map.getViewModel().setLookAtData({ bounds: bbox });
         }
       } catch (e) {
         console.warn('HERE markers fit error:', e);
       }
     }
-  }, [markers, routeCoordinates.length, mapReady]);
+  }, [markers, routeCoordinates, mapReady]);
 
   // Update restriction markers
   useEffect(() => {
