@@ -1253,7 +1253,7 @@ export default function Itinerary() {
         
         {/* Map placeholder when no route */}
         {!displayedRoute && !originPosition && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center p-8 max-w-sm">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-primary/50" />
