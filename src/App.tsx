@@ -89,6 +89,15 @@ function LoadingScreen() {
   );
 }
 
+// Fallback shown while a lazy route chunk is loading
+function RouteSuspenseFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    </div>
+  );
+}
+
 // Main app content - only rendered when licensed
 function LicensedAppContent() {
   return (
@@ -98,6 +107,7 @@ function LicensedAppContent() {
           <CloudSessionProvider>
             <RealtimeNotificationsWrapper>
               <MainLayout>
+                <Suspense fallback={<RouteSuspenseFallback />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/calculator" element={<CalculatorWithHistory />} />
@@ -123,6 +133,7 @@ function LicensedAppContent() {
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </MainLayout>
             </RealtimeNotificationsWrapper>
           </CloudSessionProvider>
