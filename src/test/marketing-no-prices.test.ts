@@ -24,6 +24,17 @@ const MARKETING_FILES = [
   "src/config/pricingPlans.ts",
 ];
 
+// Shared component directories that are reachable from public/marketing
+// routes. We scan them recursively to block any accidental reintroduction
+// of monetary content via shared UI.
+const SHARED_COMPONENT_DIRS = [
+  "src/components/activation",
+  "src/components/onboarding",
+  "src/components/layout",
+  "src/components/shared",
+  "src/components/ui",
+];
+
 // Patterns considered as forbidden monetary content.
 // We strip strings/JSX text and look for: "49€", "49 €", "49,99€", "€/mois",
 // "$ 12", "12 EUR", "12.99 USD", "/mois" preceded by a number, etc.
@@ -76,20 +87,34 @@ function scanFile(path: string): string[] {
 }
 
 function listMarketingComponentFiles(): string[] {
-  // Recursively include every file under src/components/activation in case
-  // new marketing components are added later.
-  const dir = resolve(process.cwd(), "src/components/activation");
+  // Recursively include every file under each shared component directory
+  // in case new marketing-reachable components are added later.
   const out: string[] = [];
-  try {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isFile() && /\.(tsx?|jsx?)$/.test(entry)) {
-        out.push(`src/components/activation/${entry}`);
+  const walk = (relDir: string) => {
+    const abs = resolve(process.cwd(), relDir);
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(abs);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = join(abs, entry);
+      const rel = `${relDir}/${entry}`;
+      let stat;
+      try {
+        stat = statSync(full);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        walk(rel);
+      } else if (stat.isFile() && /\.(tsx?|jsx?)$/.test(entry)) {
+        out.push(rel);
       }
     }
-  } catch {
-    // directory may not exist
-  }
+  };
+  for (const dir of SHARED_COMPONENT_DIRS) walk(dir);
   return out;
 }
 
