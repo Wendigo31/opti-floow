@@ -46,6 +46,7 @@ import Team from "./pages/Team";
 import Install from "./pages/Install";
 import Planning from "./pages/Planning";
 import Presentation from "./pages/Presentation";
+import PricingExport from "./pages/PricingExport";
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -122,6 +123,7 @@ function LicensedAppContent() {
                   <Route path="/my-restrictions" element={<MyRestrictions />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/install" element={<Install />} />
+                  <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </MainLayout>
