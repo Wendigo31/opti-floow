@@ -21,6 +21,7 @@ const MARKETING_FILES = [
   "src/pages/Presentation.tsx",
   "src/pages/Activation.tsx",
   "src/components/activation/PricingSection.tsx",
+  "src/config/pricingPlans.ts",
 ];
 
 // Patterns considered as forbidden monetary content.
