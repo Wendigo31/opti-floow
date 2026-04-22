@@ -105,6 +105,7 @@ function LicensedAppContent() {
           <CloudSessionProvider>
             <RealtimeNotificationsWrapper>
               <MainLayout>
+                <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/calculator" element={<CalculatorWithHistory />} />
@@ -130,6 +131,7 @@ function LicensedAppContent() {
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </MainLayout>
             </RealtimeNotificationsWrapper>
           </CloudSessionProvider>
@@ -142,9 +144,11 @@ function LicensedAppContent() {
 // Admin route content
 function AdminContent() {
   return (
-    <Routes>
-      <Route path="/admin" element={<Admin />} />
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -160,11 +164,15 @@ function AppRoutes() {
       {isAdminRoute ? (
         <AdminContent />
       ) : isPresentationRoute ? (
-        <Presentation />
+        <Suspense fallback={<RouteFallback />}>
+          <Presentation />
+        </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
       ) : !isLicensed ? (
-        <Activation />
+        <Suspense fallback={<RouteFallback />}>
+          <Activation />
+        </Suspense>
       ) : (
         <LicensedAppContent />
       )}
