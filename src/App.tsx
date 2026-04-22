@@ -146,9 +146,11 @@ function LicensedAppContent() {
 // Admin route content
 function AdminContent() {
   return (
-    <Routes>
-      <Route path="/admin" element={<Admin />} />
-    </Routes>
+    <Suspense fallback={<RouteSuspenseFallback />}>
+      <Routes>
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -164,11 +166,15 @@ function AppRoutes() {
       {isAdminRoute ? (
         <AdminContent />
       ) : isPresentationRoute ? (
-        <Presentation />
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <Presentation />
+        </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
       ) : !isLicensed ? (
-        <Activation />
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <Activation />
+        </Suspense>
       ) : (
         <LicensedAppContent />
       )}
