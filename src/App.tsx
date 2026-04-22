@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,34 +19,38 @@ import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { useDataPrefetch } from "./hooks/useDataPrefetch";
 import { Loader2 } from "lucide-react";
-import Index from "./pages/Index";
-// Calculator imported via CalculatorWithHistory
-import CalculatorWithHistory from "./pages/CalculatorWithHistory";
-import Itinerary from "./pages/Itinerary";
-import Drivers from "./pages/Drivers";
-import Vehicles from "./pages/Vehicles";
-import Charges from "./pages/Charges";
-import Clients from "./pages/Clients";
-// TripHistory replaced by CalculatorWithHistory
-import Dashboard from "./pages/Dashboard";
-import Forecast from "./pages/Forecast";
-import Activation from "./pages/Activation";
-import NotFound from "./pages/NotFound";
+// Code-splitting: each route is loaded on demand to shrink the main bundle.
+const Index = lazy(() => import("./pages/Index"));
+const CalculatorWithHistory = lazy(() => import("./pages/CalculatorWithHistory"));
+const Itinerary = lazy(() => import("./pages/Itinerary"));
+const Drivers = lazy(() => import("./pages/Drivers"));
+const Vehicles = lazy(() => import("./pages/Vehicles"));
+const Charges = lazy(() => import("./pages/Charges"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Forecast = lazy(() => import("./pages/Forecast"));
+const Activation = lazy(() => import("./pages/Activation"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AIAnalysis = lazy(() => import("./pages/AIAnalysis"));
+const LineMontage = lazy(() => import("./pages/LineMontage"));
+const VehicleReports = lazy(() => import("./pages/VehicleReports"));
+const Tours = lazy(() => import("./pages/Tours"));
+const Settings = lazy(() => import("./pages/Settings"));
+const MyRestrictions = lazy(() => import("./pages/MyRestrictions"));
+const Team = lazy(() => import("./pages/Team"));
+const Install = lazy(() => import("./pages/Install"));
+const Planning = lazy(() => import("./pages/Planning"));
+const Presentation = lazy(() => import("./pages/Presentation"));
+const PricingExport = lazy(() => import("./pages/PricingExport"));
 
-// Pricing removed - custom pricing handled externally
-
-import Admin from "./pages/Admin";
-import AIAnalysis from "./pages/AIAnalysis";
-import LineMontage from "./pages/LineMontage";
-import VehicleReports from "./pages/VehicleReports";
-import Tours from "./pages/Tours";
-import Settings from "./pages/Settings";
-import MyRestrictions from "./pages/MyRestrictions";
-import Team from "./pages/Team";
-import Install from "./pages/Install";
-import Planning from "./pages/Planning";
-import Presentation from "./pages/Presentation";
-import PricingExport from "./pages/PricingExport";
+function RouteFallback() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    </div>
+  );
+}
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -101,6 +105,7 @@ function LicensedAppContent() {
           <CloudSessionProvider>
             <RealtimeNotificationsWrapper>
               <MainLayout>
+                <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/calculator" element={<CalculatorWithHistory />} />
@@ -126,6 +131,7 @@ function LicensedAppContent() {
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </MainLayout>
             </RealtimeNotificationsWrapper>
           </CloudSessionProvider>
@@ -138,9 +144,11 @@ function LicensedAppContent() {
 // Admin route content
 function AdminContent() {
   return (
-    <Routes>
-      <Route path="/admin" element={<Admin />} />
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -156,11 +164,15 @@ function AppRoutes() {
       {isAdminRoute ? (
         <AdminContent />
       ) : isPresentationRoute ? (
-        <Presentation />
+        <Suspense fallback={<RouteFallback />}>
+          <Presentation />
+        </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
       ) : !isLicensed ? (
-        <Activation />
+        <Suspense fallback={<RouteFallback />}>
+          <Activation />
+        </Suspense>
       ) : (
         <LicensedAppContent />
       )}
