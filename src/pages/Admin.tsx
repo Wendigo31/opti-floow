@@ -1117,6 +1117,17 @@ export default function Admin() {
             </div>
           )}
 
+          {adminActiveTab === 'pricing' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold">Tarification interne</h2>
+                <p className="text-sm text-muted-foreground">
+                  Configuration confidentielle des forfaits, planchers, remises et add-ons.
+                </p>
+              </div>
+              <PricingConfigManager />
+            </div>
+          )}
 
         </div>
       </main>
