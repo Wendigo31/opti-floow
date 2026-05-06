@@ -1037,12 +1037,14 @@ export type Database = {
           company_name: string | null
           company_status: string | null
           created_at: string
+          current_period_end: string | null
           email: string
           employee_count: number | null
           first_name: string | null
           id: string
           is_active: boolean
           last_name: string | null
+          last_stripe_sync_at: string | null
           last_used_at: string | null
           license_code: string
           max_clients: number | null
@@ -1060,6 +1062,9 @@ export type Database = {
           show_license_info: boolean | null
           show_user_info: boolean | null
           siren: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
         }
         Insert: {
           activated_at?: string | null
@@ -1072,12 +1077,14 @@ export type Database = {
           company_name?: string | null
           company_status?: string | null
           created_at?: string
+          current_period_end?: string | null
           email: string
           employee_count?: number | null
           first_name?: string | null
           id?: string
           is_active?: boolean
           last_name?: string | null
+          last_stripe_sync_at?: string | null
           last_used_at?: string | null
           license_code: string
           max_clients?: number | null
@@ -1095,6 +1102,9 @@ export type Database = {
           show_license_info?: boolean | null
           show_user_info?: boolean | null
           siren?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
         }
         Update: {
           activated_at?: string | null
@@ -1107,12 +1117,14 @@ export type Database = {
           company_name?: string | null
           company_status?: string | null
           created_at?: string
+          current_period_end?: string | null
           email?: string
           employee_count?: number | null
           first_name?: string | null
           id?: string
           is_active?: boolean
           last_name?: string | null
+          last_stripe_sync_at?: string | null
           last_used_at?: string | null
           license_code?: string
           max_clients?: number | null
@@ -1130,6 +1142,9 @@ export type Database = {
           show_license_info?: boolean | null
           show_user_info?: boolean | null
           siren?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
         }
         Relationships: []
       }
