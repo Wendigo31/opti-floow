@@ -50,6 +50,7 @@ import { UserFeatureOverrides } from '@/components/admin/UserFeatureOverrides';
 import { AccessRequestsManager } from '@/components/admin/AccessRequestsManager';
 import { CompanyDetailPanel } from '@/components/admin/CompanyDetailPanel';
 import { CompanyMergeManager } from '@/components/admin/CompanyMergeManager';
+import { PricingConfigManager } from '@/components/admin/PricingConfigManager';
 import type { LicenseFeatures } from '@/types/features';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -165,7 +166,7 @@ const ADMIN_NAV = [
   { id: 'licenses', label: 'Licences', icon: Users, description: 'Gérer toutes les licences' },
   { id: 'companies', label: 'Sociétés', icon: Building2, description: 'Utilisateurs & données' },
   { id: 'features', label: 'Fonctionnalités', icon: Settings2, description: 'Configurer les accès' },
-  
+  { id: 'pricing', label: 'Tarification', icon: FileText, description: 'Forfaits, remises, add-ons' },
 ] as const;
 
 type AdminTab = typeof ADMIN_NAV[number]['id'];
@@ -1116,6 +1117,17 @@ export default function Admin() {
             </div>
           )}
 
+          {adminActiveTab === 'pricing' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold">Tarification interne</h2>
+                <p className="text-sm text-muted-foreground">
+                  Configuration confidentielle des forfaits, planchers, remises et add-ons.
+                </p>
+              </div>
+              <PricingConfigManager />
+            </div>
+          )}
 
         </div>
       </main>

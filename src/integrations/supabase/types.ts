@@ -1357,6 +1357,36 @@ export type Database = {
           },
         ]
       }
+      pricing_config: {
+        Row: {
+          config_data: Json
+          config_key: string
+          created_at: string
+          description: string | null
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_data?: Json
+          config_key: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_data?: Json
+          config_key?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           client_id: string | null
@@ -2402,6 +2432,7 @@ export type Database = {
         }[]
       }
       get_user_license_id: { Args: { p_user_id: string }; Returns: string }
+      is_any_direction: { Args: { p_user_id: string }; Returns: boolean }
       is_company_admin: {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
