@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, CheckCircle2, AlertCircle, Save } from 'lucide-react';
-import { logger } from '@/utils/productionLogger';
+import { Loader2, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 type PlanRow = { name: string; monthly: number; yearly: number; floor: number; annualDiscountPct: number };
 type DiscountRow = { label: string; maxPct: number };
@@ -39,7 +38,7 @@ export function PricingConfigManager() {
     (async () => {
       const { data, error } = await supabase.from('pricing_config').select('*');
       if (error) {
-        logger.error('[PricingConfigManager] load', error);
+        console.error('[PricingConfigManager] load', error);
         toast.error('Impossible de charger la configuration tarifaire');
         setLoading(false);
         return;
@@ -64,7 +63,7 @@ export function PricingConfigManager() {
       );
     setSavingKey(null);
     if (error) {
-      logger.error('[PricingConfigManager] save', error);
+      console.error('[PricingConfigManager] save', error);
       toast.error(`Erreur de sauvegarde (${key})`);
       return;
     }
