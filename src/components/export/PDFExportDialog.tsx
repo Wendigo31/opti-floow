@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileDown, Map, BarChart3, PieChart, TrendingUp, MessageSquare, Loader2 } from 'lucide-react';
 import { MapPreview } from '@/components/map/MapPreview';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PDFExportDialogProps {
   open: boolean;
@@ -42,14 +43,9 @@ export function PDFExportDialog({
   const fetchStaticMap = async (): Promise<string | undefined> => {
     if (!includeMap || routeCoordinates.length === 0) return undefined;
     try {
-      const keyRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/here-maps-key`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-      });
-      const { apiKey } = await keyRes.json();
+      const { data: keyData, error: keyError } = await supabase.functions.invoke('here-maps-key');
+      if (keyError) return undefined;
+      const apiKey = keyData?.apiKey;
       if (!apiKey) return undefined;
 
       // HERE Map Image API: route polyline as r0=lat,lon,lat,lon,... (max ~50 points to stay under URL limit)
