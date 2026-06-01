@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Loader2, AlertTriangle, Scale, CircleSlash, Mountain, ArrowLeftRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // HERE Maps types (loose - the SDK injects window.H at runtime)
 declare global {
