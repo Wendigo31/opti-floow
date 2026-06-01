@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileDown, Map, BarChart3, PieChart, TrendingUp, MessageSquare, Loader2 } from 'lucide-react';
 import { MapPreview } from '@/components/map/MapPreview';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PDFExportDialogProps {
   open: boolean;
