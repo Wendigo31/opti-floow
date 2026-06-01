@@ -74,19 +74,9 @@ const loadHereMapsAPI = (): Promise<void> => {
 
     // Fetch API key from edge function (cached)
     if (!cachedApiKey) {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/here-maps-key`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
-      if (!res.ok) throw new Error(`HERE key fetch failed: ${res.status}`);
-      const data = await res.json();
-      if (!data.apiKey) throw new Error('No HERE API key returned');
+      const { data, error } = await supabase.functions.invoke('here-maps-key');
+      if (error) throw new Error(`HERE key fetch failed: ${error.message}`);
+      if (!data?.apiKey) throw new Error('No HERE API key returned');
       cachedApiKey = data.apiKey;
     }
 
