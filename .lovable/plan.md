@@ -1,95 +1,48 @@
-# Découpage en 3 applications connectées (OptiGroup)
+# Créer OptiPlan (Exploitation) connecté au backend partagé en temps réel
 
-## Principe
-Les 3 apps partagent **le même backend Supabase** (le projet actuel) → **synchro temps réel** garantie : même base, mêmes tables, isolation par `license_id`, mêmes RLS, même auth (`validate-license`). Identité visuelle OptiGroup commune.
+## Rappel de cadre
+Un projet Lovable = une seule app. **OptiPlan sera un NOUVEAU projet Lovable**, créé en collant le prompt final ci-dessous. Il ne crée PAS de nouveau backend : il se connecte au Supabase existant (`zlesqkxvydmljcctnrez`) pour partager la base et la synchro temps réel avec OptiFlow.
 
-> Les 2 nouvelles apps **NE créent PAS un nouveau Cloud**. Elles se **connectent au Supabase existant** pour rester sur la base commune.
-
-## Rôle de chaque app (selon ta consigne)
-
-```text
-APP 1 — OptiFlow = LA DIRECTION (reste l'app actuelle)
-  Rentabilité · Prix / Tarifs / Devis · Charges · Prévisionnel
-  Analyse financière (Dashboard) · Clients toxiques
-  GESTION DES COMPTES : Équipe, rôles, permissions, Admin, Abonnements/Addons
-  → C'est ICI, et uniquement ici, que vivent les prix, les marges et la gestion des utilisateurs.
-
-APP 2 — OptiPlan = EXPLOITATION (nouveau prompt)
-  Planning · Affectations conducteurs · Absences · Ordres de mission (ODM)
-  Création de ligne IA (RSE) · Optimisation IA des tournées
-  → AUCUN prix/marge affiché. AUCUNE gestion de comptes (lecture seule du rôle/licence).
-
-APP 3 — OptiFleet = RÉFÉRENTIEL & ITINÉRAIRES (nouveau prompt)
-  Véhicules · Remorques · Fiches techniques · Itinéraire/routing
-  Conducteurs (référentiel : contrats, taux) · Clients (référentiel : fiches, contacts) · Imports Excel
-  → AUCUN prix de vente/marge. AUCUNE gestion de comptes.
-```
-
-Règles communes aux 2 apps opérationnelles :
-- Pas de module Prix/Tarifs/Devis, pas de Prévisionnel, pas d'écran de gestion des comptes/abonnements.
-- Les marges et salaires restent masqués (rôles Exploitation/Membre). Les comptes utilisateurs sont créés et gérés exclusivement dans OptiFlow.
-- Le référentiel (véhicules, conducteurs, clients) est **édité dans OptiFleet** et **lu en temps réel** par OptiFlow/OptiPlan.
-
-## Détails techniques (communs)
-- Stack : React 18 + Vite + TypeScript + Tailwind + shadcn/ui.
-- Connexion Supabase partagé : `VITE_SUPABASE_URL=https://zlesqkxvydmljcctnrez.supabase.co` + clé anon publishable du projet.
-- Tables partagées : `licenses`, `company_users`, `user_vehicles`, `user_trailers`, `user_drivers`, `user_charges`, `clients`, `saved_tours`, `trips`, `quotes`, `planning`, `driver_absences`, `company_settings`, `search_history`, `user_feature_overrides`.
-- Temps réel : `REPLICA IDENTITY FULL` déjà actif ; abonnements `postgres_changes` filtrés `license_id=eq.<id>` (pattern `useRealtimeSync`/`inFlightRef`).
-- Auth & rôles : Edge Function `validate-license` (`license_id` + rôle Direction/Exploitation/Membre). Les apps opérationnelles **consomment** la licence, ne créent pas de comptes.
+Ce plan livre 2 choses : **(A)** le prompt final prêt à coller + infos de connexion, et **(B)** une migration côté backend partagé pour compléter le temps réel.
 
 ---
 
-## PROMPT LOVABLE #1 — OptiPlan (Exploitation & Planning)
+## Partie A — Prompt final OptiPlan (fichier livrable)
 
-> Crée « OptiPlan », l'app d'exploitation et de planning de la suite OptiGroup (transport poids lourds). Stack : React 18 + Vite + TypeScript + Tailwind + shadcn/ui.
->
-> BACKEND PARTAGÉ (CRITIQUE) : ne crée PAS un nouveau backend. Connecte l'app au projet Supabase existant via l'intégration Supabase : `VITE_SUPABASE_URL=https://zlesqkxvydmljcctnrez.supabase.co` + clé anon publishable du projet. Toutes les données restent dans cette base commune pour la synchro temps réel avec les autres apps.
->
-> AUTH & RÔLES (lecture seule des comptes) : connexion email/mot de passe + Google. Licence validée via l'Edge Function `validate-license` qui renvoie `license_id` et le rôle. OptiPlan ne gère PAS la création/édition des comptes utilisateurs ni les abonnements (cela reste dans OptiFlow) : il se contente de lire le rôle et la licence. Isolation stricte par `license_id`. N'affiche JAMAIS de prix, tarifs, marges ou salaires.
->
-> FONCTIONNALITÉS (pages) :
-> 1. Planning : grille hebdomadaire (fenêtre 7 jours), recherche d'abord, virtualisation gros volumes, alertes missions non affectées, badges couleur par type de contrat, import Excel en arrière-plan.
-> 2. Affectations conducteurs : sélecteur recherchable, détection fuzzy, liaison aux tournées maîtres.
-> 3. Absences conducteurs : table `driver_absences`, notifications temps réel à l'équipe.
-> 4. Ordres de mission (ODM) : extraction auto des adresses depuis texte brut, réécriture IA des consignes (Lovable AI, sans clé externe).
-> 5. Création de ligne IA : montage hebdomadaire conforme RSE (temps de conduite/repos UE), optimisation relais.
->
-> DONNÉES (temps réel) : `planning`, `driver_absences`, `saved_tours` (lecture), `user_drivers` (lecture), `clients` (lecture). Ne duplique pas le référentiel.
-> TEMPS RÉEL : abonnements `postgres_changes` filtrés `license_id=eq.<id>` (REPLICA IDENTITY FULL déjà en place) + toasts à la modification d'actifs partagés.
-> IA : Lovable AI Gateway (Gemini), sans clé externe.
-> DESIGN : identité OptiGroup, UI épurée, mode clair/sombre, sidebar par groupes ; pas de lien de navigation croisée vers les autres apps ; pas d'écran de facturation/gestion de comptes.
+Je crée `prompt-optiplan.md` (téléchargeable) avec, par rapport à la version actuelle de `.lovable/plan.md`, ces corrections/précisions :
 
----
+- **Nom de table corrigé** : `planning_entries` (et NON `planning`).
+- **Clés de connexion exactes** intégrées :
+  - `VITE_SUPABASE_URL = https://zlesqkxvydmljcctnrez.supabase.co`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY = <clé anon du projet>` (fournie en clair dans le fichier).
+- **Tables utilisées par OptiPlan** précisées :
+  - Écriture : `planning_entries`, `driver_absences`.
+  - Lecture seule (référentiel) : `saved_tours`, `user_drivers`, `clients`, `client_addresses`, `client_contacts`, `company_users`, `exploitation_metric_settings`, `user_feature_overrides`, `notifications`.
+- **Pattern temps réel** : abonnements `postgres_changes` filtrés `license_id=eq.<id>`, hook type `useRealtimeSync` avec `inFlightRef` anti-collision, toasts sur modification d'actifs partagés.
+- **Auth & rôles** : email/mot de passe + Google ; licence/rôle via l'Edge Function `validate-license` ; OptiPlan ne crée/édite AUCUN compte ni abonnement ; respect strict de l'isolation `license_id`.
+- **Confidentialité** : jamais de prix/tarifs/marges/salaires affichés ; visibilité des métriques pilotée par `exploitation_metric_settings` + `user_feature_overrides` (lus en temps réel).
+- **Pages** : Planning (grille 7 jours, recherche d'abord, virtualisation, alertes non-affectés, badges contrat), Affectations conducteurs, Absences, ODM (extraction adresses + réécriture IA via Lovable AI), Création de ligne IA (RSE).
+- **Design** : identité OptiGroup (Teal / Orange / Dark Navy), clair/sombre, sidebar par groupes, pas de navigation croisée vers les autres apps.
 
-## PROMPT LOVABLE #2 — OptiFleet (Référentiel & Itinéraires)
+Je fournis aussi un court bloc « Étapes de connexion » : créer le projet → coller le prompt → connecter l'intégration Supabase au projet existant → renseigner les 2 variables d'env.
 
-> Crée « OptiFleet », l'app de gestion de flotte, du référentiel et des itinéraires de la suite OptiGroup (transport poids lourds). Stack : React 18 + Vite + TypeScript + Tailwind + shadcn/ui.
->
-> BACKEND PARTAGÉ (CRITIQUE) : ne crée PAS un nouveau backend. Connecte l'app au projet Supabase existant : `VITE_SUPABASE_URL=https://zlesqkxvydmljcctnrez.supabase.co` + clé anon publishable. Données dans la base commune pour synchro temps réel.
->
-> AUTH & RÔLES (lecture seule des comptes) : email/mot de passe + Google, licence via `validate-license` (`license_id` + rôle). OptiFleet ne gère PAS les comptes utilisateurs ni les abonnements (réservés à OptiFlow). N'affiche PAS de prix de vente/tarifs/marges. Les coûts techniques (€/km, amortissement) ne sont visibles qu'au rôle Direction.
->
-> FONCTIONNALITÉS (pages) :
-> 1. Véhicules : référentiel (150+ modèles), sous-onglets, 3 modes d'amortissement, specs en JSONB, coût au km (gated Direction).
-> 2. Remorques : specs constructeur, type de caisse.
-> 3. Rapports véhicules : amortissement de flotte (gated Direction).
-> 4. Itinéraire : routing Google Maps (UI), péages Class 4 TomTom, restrictions poids lourds (Overpass), sélecteur d'adresses Google Places, historique cloud (`search_history`).
-> 5. Conducteurs (référentiel) : contrats (CDI/CDD/Intérim/Joker/Autre), taux/salaire (gated Direction), automatisation Jour/Nuit, import Excel.
-> 6. Clients (référentiel) : fiches, contacts multi-interlocuteurs, import Excel, détection de doublons + fusion.
-> 7. Imports : assistant Excel par lots de 50 (délais/timeout), bannière de doublons.
->
-> DONNÉES (écriture principale ici, lecture temps réel ailleurs) : `user_vehicles`, `user_trailers`, `user_drivers`, `clients`, `search_history`. Modèle partagé entreprise via `license_id`.
-> TEMPS RÉEL : abonnements `postgres_changes` filtrés `license_id=eq.<id>` (REPLICA IDENTITY FULL) + toasts + protection anti-collision (inFlightRef).
-> SÉCURITÉ : RLS sur `auth.uid()`, RPC `SECURITY DEFINER` pour opérations sensibles ; ne jamais exposer salaires/marges hors Direction.
-> DESIGN : identité OptiGroup, UI épurée, mode clair/sombre, `SearchableSelect` partout, grilles virtualisées ; pas de navigation croisée ; pas d'écran de facturation/gestion de comptes.
+## Partie B — Compléter le temps réel (migration sur le backend partagé)
+
+Déjà OK (FULL + publiées) : `planning_entries`, `driver_absences`, `saved_tours`, `user_drivers`, `clients`, `notifications`.
+
+Migration pour ajouter au temps réel ce qui manque (sans toucher aux données) :
+
+- `REPLICA IDENTITY FULL` sur : `company_users`, `client_contacts`, `exploitation_metric_settings`, `user_feature_overrides` (déjà FULL : `client_addresses`).
+- Ajout à la publication `supabase_realtime` : `company_users`, `client_addresses`, `client_contacts`, `exploitation_metric_settings`, `user_feature_overrides`.
+
+Objectif : qu'un changement de rôle/permission ou de fiche client effectué dans OptiFlow se reflète **en direct** dans OptiPlan. Aucune modification de RLS, de schéma de données ou de logique métier.
 
 ---
 
-## Mise en œuvre côté OptiFlow (après validation)
-1. Retirer d'OptiFlow les pages déplacées (Planning, Création de ligne, Véhicules, Remorques, Conducteurs CRUD, Clients CRUD, Itinéraire, imports) tout en gardant la **lecture** des référentiels via les hooks cloud existants.
-2. Conserver dans OptiFlow : Calculateur, Tournées/Devis, Charges, Prévisionnel, Dashboard financier, Clients toxiques, Équipe, Admin, Paramètres/Abonnements.
-3. Nettoyer la sidebar OptiFlow (Direction uniquement).
-4. Vérifier `REPLICA IDENTITY FULL` + présence dans `supabase_realtime` pour les tables concernées.
-5. QA synchro : éditer un véhicule dans OptiFleet → vérifier la mise à jour temps réel dans OptiFlow et OptiPlan.
+## Hors périmètre (volontairement)
+- Aucune modification de l'app OptiFlow actuelle (le nettoyage des pages déplacées se fera plus tard, une fois OptiPlan validé).
+- Pas de création du projet OptiPlan à ma place (impossible techniquement) — je livre le prompt prêt à coller.
 
-> Dis-moi si tu veux déplacer l'Itinéraire vers OptiPlan plutôt qu'OptiFleet, ou réaffecter un module précis, et j'ajuste les prompts.
+## Détails techniques
+- La clé anon est une clé **publishable** : sa présence dans le fichier prompt et dans le code du futur projet est sans risque.
+- La migration n'affecte que la réplication/publication ; elle est idempotente (gardes `IF`/`DO` pour éviter les erreurs si une table est déjà publiée).
