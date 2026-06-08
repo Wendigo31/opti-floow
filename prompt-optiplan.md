@@ -31,11 +31,27 @@ Connecte l'app au projet **Supabase existant** d'OptiFlow via l'intégration Sup
 N'altère AUCUN schéma, RLS, fonction, trigger ou table : OptiPlan **consomme** la base existante, il ne la restructure pas. Isolation stricte par `license_id` sur chaque requête et chaque abonnement temps réel.
 
 ### 2) Comptes & connexion (les MÊMES identifiants que l'app direction)
-- **Aucune création de compte dans OptiPlan.** Pas de page d'inscription, pas de création d'utilisateur, pas de gestion d'équipe, pas d'abonnement, pas de facturation. Tout cela reste **exclusivement** dans OptiFlow (direction).
-- Page de connexion **uniquement** : **email/mot de passe + Google**, branchée sur le **même** projet d'auth. Les comptes créés dans OptiFlow (table `company_users`, gérée par la direction) se connectent ici **avec les mêmes identifiants**.
-- Après connexion, récupère licence + rôle via l'Edge Function existante **`validate-license`** (renvoie `license_id` + rôle : `direction` / `exploitation` / `membre`) — exactement comme OptiFlow.
+- **Aucune création de compte dans OptiPlan.** Pas de page d'inscription, pas de bouton « Créer un compte », pas de création d'utilisateur, pas de gestion d'équipe, pas d'abonnement, pas de facturation, pas de réinitialisation/auto-provisioning de compte. Tout cela reste **exclusivement** dans OptiFlow (direction).
+- **Connexion possible UNIQUEMENT avec un identifiant créé par la direction dans OptiFlow.** Crée une page de connexion (route `/login`) avec **email/mot de passe + Google**, branchée sur le **même** projet d'auth Supabase partagé.
+- **Garde-fou obligatoire** : après l'authentification Supabase réussie, vérifie qu'il existe bien une ligne **active** dans `company_users` (`user_id = auth.uid()`, `is_active = true`) pour ce compte. Si **aucune** ligne n'existe (compte non créé par la direction), **déconnecte immédiatement** (`supabase.auth.signOut()`) et affiche : « Votre compte doit être créé par la direction dans OptiFlow. » → aucun accès aux menus.
+- Après connexion validée, récupère licence + rôle via l'Edge Function existante **`validate-license`** (renvoie `license_id` + rôle : `direction` / `exploitation` / `membre`) — exactement comme OptiFlow.
 - Reprends à l'identique le `LicenseContext` / `useLicense` d'OptiFlow pour résoudre `license_id`, `authUserId` et `userRole`.
+- **Gating de l'UI** : tant que l'utilisateur n'est pas authentifié ET validé dans `company_users`, **n'affiche AUCUN menu, AUCUNE sidebar, AUCUNE page** — seulement l'écran de connexion. Les menus n'apparaissent **qu'après** authentification confirmée.
 - Confidentialité (non négociable) : n'affiche **JAMAIS** de prix, tarifs, devis, marges, CA ou salaires. Respecte les flags `exploitation_metric_settings` et `user_feature_overrides` (lus en temps réel). Rôles `exploitation` et `membre` : aucune donnée financière.
+
+### 2 bis) Système de rôles OptiPlan (direction vs exploitation)
+Reprends le système de rôles d'OptiFlow (`src/config/rolePermissions.ts`, `useRolePermissions`, `useUserFeatureOverrides`) pour **limiter les écrans et les actions** visibles/modifiables selon le compte partagé. 3 rôles existent : `direction`, `exploitation`, `membre` (résolus depuis `company_users` + `validate-license`).
+
+- **direction** : accès complet à toutes les pages d'OptiPlan, et peut **créer / modifier / supprimer** les entrées de planning et les absences. (Reste néanmoins une app exploitation : pas de gestion de comptes/facturation ici.)
+- **exploitation** : accès aux écrans opérationnels (Planning, Conducteurs/Absences, ODM, Création de ligne IA). Peut **créer / modifier** planning et absences, mais **pas supprimer** une tournée maîtresse. **Aucune** donnée financière (prix, marges, CA, salaires) — masquée systématiquement.
+- **membre** : lecture des plannings et des affectations, actions limitées (ex. déclarer une absence). Aucune donnée financière. Pas d'accès à la création de ligne IA si désactivé par la direction.
+
+Règles d'implémentation :
+- **Routes protégées** : enveloppe chaque route dans un garde qui vérifie `userRole` + les overrides (`user_feature_overrides`). Si le rôle n'a pas accès, redirige (ou affiche un écran « Accès restreint »), ne **rends jamais** la page.
+- **Sidebar dynamique** : n'affiche que les entrées de menu autorisées pour le rôle courant (mêmes helpers que `useRolePermissions` / `canAccessPage`).
+- **Actions conditionnées** : masque/désactive les boutons créer/éditer/supprimer selon le rôle (ex. `canModifyTours`, suppression réservée à `direction`).
+- **Surcharges granulaires** : respecte `user_feature_overrides` (lus en temps réel) pour activer/désactiver une fonctionnalité précise par utilisateur, exactement comme OptiFlow.
+- Les permissions sont **lues** depuis le backend partagé : OptiPlan ne modifie jamais les rôles ni les overrides (édités côté direction dans OptiFlow).
 
 ### 3) Pages à reprendre à l'identique depuis OptiFlow
 Copie les écrans suivants **tels quels** (mêmes pages, composants et hooks). Garde les mêmes noms de fichiers pour faciliter le copier-coller :
