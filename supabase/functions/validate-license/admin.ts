@@ -158,17 +158,13 @@ async function handleCreateLicense(body: any, supabase: any, authHeader: string 
     if (existingUser) return errorResponse("Cet email est déjà dans cette société", 400);
 
     const displayName = [firstName, lastName].filter(Boolean).join(' ') || null;
-    // Use the admin RPC so the role-escalation trigger is bypassed
-    // (it sets app.admin_context), required to assign the 'direction' role.
-    const { data: newCompanyUserId, error: cuError } = await supabase.rpc("admin_add_company_user", {
-      p_license_id: assignToCompanyId,
-      p_email: email.trim().toLowerCase(),
-      p_role: mapToValidRole(userRole),
-      p_display_name: displayName,
-    });
+    const { data: newCompanyUser, error: cuError } = await supabase.from("company_users").insert({
+      license_id: assignToCompanyId, email: email.trim().toLowerCase(), role: mapToValidRole(userRole),
+      display_name: displayName, is_active: true, invited_at: new Date().toISOString(),
+    }).select().single();
     if (cuError) return errorResponse("Erreur lors de l'ajout de l'utilisateur: " + cuError.message, 500);
     await logAdminAction(supabase, auth.email || 'admin', 'add_user_to_company', assignToCompanyId, { email, userRole }, clientIp);
-    return jsonResponse({ success: true, companyUser: { id: newCompanyUserId }, assignedToCompany: true });
+    return jsonResponse({ success: true, companyUser: newCompanyUser, assignedToCompany: true });
   }
 
   // Generate unique license code

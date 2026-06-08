@@ -1,48 +1,56 @@
-# Créer OptiPlan (Exploitation) connecté au backend partagé en temps réel
+## Objectif
 
-## Rappel de cadre
-Un projet Lovable = une seule app. **OptiPlan sera un NOUVEAU projet Lovable**, créé en collant le prompt final ci-dessous. Il ne crée PAS de nouveau backend : il se connecte au Supabase existant (`zlesqkxvydmljcctnrez`) pour partager la base et la synchro temps réel avec OptiFlow.
+Produire un **document interne confidentiel** (`.docx`) contenant la grille tarifaire complète des 3 forfaits OptiFlow, avec seuils de négociation, remises autorisées, add-ons et règles commerciales. Ce document **n'est pas exposé dans l'app** — il sert uniquement à l'équipe commerciale/direction.
 
-Ce plan livre 2 choses : **(A)** le prompt final prêt à coller + infos de connexion, et **(B)** une migration côté backend partagé pour compléter le temps réel.
+## Livrable
 
----
+Un fichier : `/mnt/documents/OptiFlow-Grille-Tarifaire-Interne-CONFIDENTIEL.docx`
 
-## Partie A — Prompt final OptiPlan (fichier livrable)
+## Structure du document
 
-Je crée `prompt-optiplan.md` (téléchargeable) avec, par rapport à la version actuelle de `.lovable/plan.md`, ces corrections/précisions :
-
-- **Nom de table corrigé** : `planning_entries` (et NON `planning`).
-- **Clés de connexion exactes** intégrées :
-  - `VITE_SUPABASE_URL = https://zlesqkxvydmljcctnrez.supabase.co`
-  - `VITE_SUPABASE_PUBLISHABLE_KEY = <clé anon du projet>` (fournie en clair dans le fichier).
-- **Tables utilisées par OptiPlan** précisées :
-  - Écriture : `planning_entries`, `driver_absences`.
-  - Lecture seule (référentiel) : `saved_tours`, `user_drivers`, `clients`, `client_addresses`, `client_contacts`, `company_users`, `exploitation_metric_settings`, `user_feature_overrides`, `notifications`.
-- **Pattern temps réel** : abonnements `postgres_changes` filtrés `license_id=eq.<id>`, hook type `useRealtimeSync` avec `inFlightRef` anti-collision, toasts sur modification d'actifs partagés.
-- **Auth & rôles** : email/mot de passe + Google ; licence/rôle via l'Edge Function `validate-license` ; OptiPlan ne crée/édite AUCUN compte ni abonnement ; respect strict de l'isolation `license_id`.
-- **Confidentialité** : jamais de prix/tarifs/marges/salaires affichés ; visibilité des métriques pilotée par `exploitation_metric_settings` + `user_feature_overrides` (lus en temps réel).
-- **Pages** : Planning (grille 7 jours, recherche d'abord, virtualisation, alertes non-affectés, badges contrat), Affectations conducteurs, Absences, ODM (extraction adresses + réécriture IA via Lovable AI), Création de ligne IA (RSE).
-- **Design** : identité OptiGroup (Teal / Orange / Dark Navy), clair/sombre, sidebar par groupes, pas de navigation croisée vers les autres apps.
-
-Je fournis aussi un court bloc « Étapes de connexion » : créer le projet → coller le prompt → connecter l'intégration Supabase au projet existant → renseigner les 2 variables d'env.
-
-## Partie B — Compléter le temps réel (migration sur le backend partagé)
-
-Déjà OK (FULL + publiées) : `planning_entries`, `driver_absences`, `saved_tours`, `user_drivers`, `clients`, `notifications`.
-
-Migration pour ajouter au temps réel ce qui manque (sans toucher aux données) :
-
-- `REPLICA IDENTITY FULL` sur : `company_users`, `client_contacts`, `exploitation_metric_settings`, `user_feature_overrides` (déjà FULL : `client_addresses`).
-- Ajout à la publication `supabase_realtime` : `company_users`, `client_addresses`, `client_contacts`, `exploitation_metric_settings`, `user_feature_overrides`.
-
-Objectif : qu'un changement de rôle/permission ou de fiche client effectué dans OptiFlow se reflète **en direct** dans OptiPlan. Aucune modification de RLS, de schéma de données ou de logique métier.
-
----
-
-## Hors périmètre (volontairement)
-- Aucune modification de l'app OptiFlow actuelle (le nettoyage des pages déplacées se fera plus tard, une fois OptiPlan validé).
-- Pas de création du projet OptiPlan à ma place (impossible techniquement) — je livre le prompt prêt à coller.
+1. **Page de garde** — Mention "CONFIDENTIEL — Usage interne uniquement", date, version
+2. **Synthèse exécutive** — Positionnement des 3 forfaits, cible, ARPU visé
+3. **Grille tarifaire détaillée** (tableau)
+   - Forfait | Prix mensuel public | Prix engagement annuel (-25%) | Prix plancher négociable | Coût infra estimé | Marge brute cible
+   - Start : 79 € / 59 € / 49 € plancher
+   - Pro : 199 € / 149 € / 129 € plancher
+   - Enterprise : 499 € / 374 € / 299 € plancher (au-delà sur devis)
+4. **Add-ons facturables** (tableau)
+   - +10 ressources (drivers/véhicules) : 19 €/mois
+   - IA étendue (analyses illimitées) : 39 €/mois
+   - Module multi-agences : 49 €/mois
+   - Utilisateur supplémentaire (Pro) : 15 €/mois
+   - Support prioritaire dédié : 79 €/mois
+5. **Règles de remise autorisées par profil commercial**
+   - Commercial junior : jusqu'à -10 %
+   - Senior : jusqu'à -20 %
+   - Direction : jusqu'à -40 % (cas stratégiques)
+   - Plancher absolu : ne jamais descendre sous le coût infra x2
+6. **Règles d'engagement**
+   - Mensuel : prix plein
+   - Annuel : -25 % (paiement upfront ou mensualisé)
+   - Pluriannuel (24 mois) : -35 %
+7. **Seuils de bascule entre forfaits** (quand proposer l'upsell)
+   - Start → Pro : >5 véhicules OU besoin planning OU besoin IA
+   - Pro → Enterprise : >15 véhicules OU >3 utilisateurs OU besoin multi-agences
+8. **Argumentaire commercial par forfait** — Bénéfices clés, objections fréquentes, réponses types
+9. **Coûts d'acquisition et seuil de rentabilité**
+   - CAC estimé : 150-300 €
+   - Payback period cible : 3 mois (Pro), 6 mois (Enterprise)
+   - Seuil de rentabilité global : ~15-20 clients Pro
+10. **Politique de churn et rétention** — Conditions de résiliation, remises de rétention autorisées
 
 ## Détails techniques
-- La clé anon est une clé **publishable** : sa présence dans le fichier prompt et dans le code du futur projet est sans risque.
-- La migration n'affecte que la réplication/publication ; elle est idempotente (gardes `IF`/`DO` pour éviter les erreurs si une table est déjà publiée).
+
+- Génération via `docx-js` (script Node copié dans `/tmp/`)
+- Format A4 portrait, marges 1 inch
+- Tableaux avec `WidthType.DXA`, bordures grises, en-têtes shading bleu clair
+- Police Arial 11pt, titres bleu nuit OptiFlow
+- Footer : "CONFIDENTIEL — Ne pas diffuser hors équipe direction/commerciale"
+- Validation post-génération + conversion 1 page en image pour QA visuel
+
+## Hors-scope
+
+- Aucune modification du code de l'app
+- Aucune modification des composants publics (`PricingSection`, `pricingPlans.ts`)
+- Pas de nouvelle page interne dans l'app (le doc reste un fichier téléchargeable)
