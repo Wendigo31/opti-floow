@@ -235,13 +235,29 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
           const isLicenseOwnerEmail = license.email === normalizedEmail;
           const role = (!existingDirection && isLicenseOwnerEmail) ? 'direction' : 'exploitation';
 
-          const { error: insertError } = await supabase.from("company_users").insert({
-            license_id: license.id, user_id: authUserId, email: normalizedEmail, role,
-            display_name: isLicenseOwnerEmail ? ([license.first_name, license.last_name].filter(Boolean).join(' ') || null) : null,
-            accepted_at: now, is_active: true,
-          });
-          if (insertError) console.error("[validate-license] Failed to add user:", insertError);
-          else console.log(`[validate-license] User added to company_users as ${role}`);
+          const displayName = isLicenseOwnerEmail
+            ? ([license.first_name, license.last_name].filter(Boolean).join(' ') || null)
+            : null;
+
+          // Use the admin RPC so the role-escalation trigger is bypassed
+          // (it sets app.admin_context), required to assign the 'direction' role.
+          const { data: newCompanyUserId, error: insertError } = await supabase
+            .rpc("admin_add_company_user", {
+              p_license_id: license.id,
+              p_email: normalizedEmail,
+              p_role: role,
+              p_display_name: displayName,
+            });
+
+          if (insertError) {
+            console.error("[validate-license] Failed to add user:", insertError);
+          } else {
+            // Link the freshly created row to the authenticated user.
+            await supabase.rpc("link_user_to_company", {
+              p_company_user_id: newCompanyUserId, p_user_id: authUserId,
+            });
+            console.log(`[validate-license] User added to company_users as ${role}`);
+          }
         }
       } else {
         console.log("[validate-license] User already in company_users with role:", existingMemberById.role);
