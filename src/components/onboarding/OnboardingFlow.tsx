@@ -10,82 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
   Loader2, Search, Building2, User, CheckCircle2, Copy, ArrowRight, ArrowLeft,
-  Rocket, Star, Crown, AlertCircle, LogIn, X, Check
+  AlertCircle, LogIn, X
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-
-const PLANS = [
-  {
-    id: 'start',
-    name: 'Start',
-    monthlyPrice: 49.99,
-    yearlyPrice: 549,
-    yearlyDiscount: '-8%',
-    monthlyPriceId: 'price_1T8pcw0uHa1YT0odfh13WBL6',
-    yearlyPriceId: 'price_1T8pcx0uHa1YT0odnP2Dz7hZ',
-    icon: Rocket,
-    features: [
-      { label: '5 calculs par jour', included: true },
-      { label: 'Itinéraire PL', included: true },
-      { label: '5 tournées', included: true },
-      { label: 'Planning', included: false },
-      { label: 'Analyse IA', included: false },
-      { label: '5 véhicules', included: true },
-      { label: '5 conducteurs', included: true },
-      { label: '10 clients', included: true },
-      { label: 'Équipe & confidentialité', included: false },
-    ],
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    monthlyPrice: 132.99,
-    yearlyPrice: 1399,
-    yearlyDiscount: '-12%',
-    monthlyPriceId: 'price_1T8pcy0uHa1YT0odcYAOnyiu',
-    yearlyPriceId: 'price_1T8pcz0uHa1YT0odsdZbUiJx',
-    icon: Star,
-    popular: true,
-    features: [
-      { label: '25 calculs par jour', included: true },
-      { label: 'Itinéraire PL complet', included: true },
-      { label: '20 tournées', included: true },
-      { label: 'Planning conducteurs', included: true },
-      { label: '5 analyses IA / jour', included: true },
-      { label: '15 véhicules', included: true },
-      { label: '15 conducteurs', included: true },
-      { label: '30 clients', included: true },
-      { label: 'Équipe & confidentialité', included: false },
-    ],
-    color: 'from-blue-500 to-indigo-600',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyPrice: 249,
-    yearlyPrice: 2199,
-    yearlyDiscount: '-27%',
-    monthlyPriceId: 'price_1T8pd00uHa1YT0odMBjYg3ZB',
-    yearlyPriceId: 'price_1T8pd10uHa1YT0odLx2Dgeyp',
-    icon: Crown,
-    bestValue: true,
-    features: [
-      { label: 'Calculs illimités', included: true },
-      { label: 'Itinéraire complet', included: true },
-      { label: 'Tournées illimitées', included: true },
-      { label: 'Planning complet', included: true },
-      { label: 'Analyses IA illimitées', included: true },
-      { label: 'Véhicules illimités', included: true },
-      { label: 'Conducteurs illimités', included: true },
-      { label: 'Clients illimités', included: true },
-      { label: 'Équipe & confidentialité', included: true },
-    ],
-    color: 'from-amber-500 to-orange-600',
-  },
-];
-
-
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -93,15 +19,13 @@ interface OnboardingFlowProps {
   onComplete?: (companyIdentifier: string, email: string) => void;
 }
 
-type Step = 'plan' | 'siren' | 'user' | 'confirm';
+type Step = 'siren' | 'user' | 'confirm';
 
 export default function OnboardingFlow({ open, onOpenChange, onComplete }: OnboardingFlowProps) {
-  const [step, setStep] = useState<Step>('plan');
-  const [selectedPlan, setSelectedPlan] = useState<typeof PLANS[0] | null>(null);
+  const [step, setStep] = useState<Step>('siren');
   const [stripeSessionId, setStripeSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [yearly, setYearly] = useState(false);
 
   // SIREN step
   const { lookup, loading: sirenLoading, error: sirenError, company, reset: resetSiren } = useSireneLookup();
@@ -122,12 +46,9 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
     const onboarding = params.get('onboarding');
-    const plan = params.get('plan');
 
     if (onboarding === 'success' && sessionId) {
       setStripeSessionId(sessionId);
-      const foundPlan = PLANS.find(p => p.id === plan);
-      if (foundPlan) setSelectedPlan(foundPlan);
       setStep('siren');
       // Clean URL
       const url = new URL(window.location.href);
@@ -144,34 +65,6 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
   useEffect(() => {
     checkStripeReturn();
   }, [checkStripeReturn]);
-
-  const handleSelectPlan = async (plan: typeof PLANS[0]) => {
-    setSelectedPlan(plan);
-    setError(null);
-    setLoading(true);
-
-    try {
-      // We need an email for Stripe checkout - ask for it first or use a temp approach
-      // For simplicity, go to Stripe directly with the plan
-      const { data, error: invokeError } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          priceId: yearly ? plan.yearlyPriceId : plan.monthlyPriceId,
-          email: email || `onboarding-${Date.now()}@temp.optiflow.fr`,
-          planType: plan.id,
-        },
-      });
-
-      if (invokeError) throw new Error(invokeError.message);
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('URL de paiement non reçue');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la création de la session de paiement');
-      setLoading(false);
-    }
-  };
 
   const handleSirenSearch = async () => {
     if (!sirenInput.trim()) return;
@@ -211,7 +104,6 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: email.trim().toLowerCase(),
-          planType: selectedPlan?.id || 'start',
           address: company?.address || null,
           city: company?.city || null,
           postalCode: company?.postalCode || null,
@@ -248,8 +140,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
   };
 
   const resetFlow = () => {
-    setStep('plan');
-    setSelectedPlan(null);
+    setStep('siren');
     setStripeSessionId(null);
     setLoading(false);
     setError(null);
@@ -263,7 +154,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
     setCopied(false);
   };
 
-  const stepIndex = ['plan', 'siren', 'user', 'confirm'].indexOf(step);
+  const stepIndex = ['siren', 'user', 'confirm'].indexOf(step);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetFlow(); onOpenChange(v); }}>
@@ -271,7 +162,6 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
         <DialogHeader>
           <DialogTitle className="text-xl">Créer votre compte OptiFlow</DialogTitle>
           <DialogDescription>
-            {step === 'plan' && 'Choisissez votre forfait pour commencer'}
             {step === 'siren' && 'Identifiez votre société (optionnel)'}
             {step === 'user' && 'Créez votre accès utilisateur'}
             {step === 'confirm' && 'Votre compte est prêt !'}
@@ -280,7 +170,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
 
         {/* Stepper */}
         <div className="flex items-center gap-2 mb-6">
-          {['Forfait', 'Société', 'Utilisateur', 'Confirmation'].map((label, i) => (
+          {['Société', 'Utilisateur', 'Confirmation'].map((label, i) => (
             <div key={label} className="flex items-center gap-2 flex-1">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
                 i <= stepIndex
@@ -292,7 +182,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
               <span className={`text-xs hidden sm:block ${i <= stepIndex ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {label}
               </span>
-              {i < 3 && <div className={`flex-1 h-0.5 ${i < stepIndex ? 'bg-primary' : 'bg-muted'}`} />}
+              {i < 2 && <div className={`flex-1 h-0.5 ${i < stepIndex ? 'bg-primary' : 'bg-muted'}`} />}
             </div>
           ))}
         </div>
@@ -304,90 +194,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
           </div>
         )}
 
-        {/* Step 1: Plan Selection */}
-        {step === 'plan' && (
-          <div className="space-y-4">
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-3">
-              <span className={`text-sm ${!yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Mensuel</span>
-              <Switch checked={yearly} onCheckedChange={setYearly} />
-              <span className={`text-sm ${yearly ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Annuel</span>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              {PLANS.map((plan) => {
-                const Icon = plan.icon;
-                const displayPrice = yearly ? plan.yearlyPrice : plan.monthlyPrice;
-                const period = yearly ? '/an' : '/mois';
-                return (
-                  <Card
-                    key={plan.id}
-                    className={`relative cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
-                      selectedPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => handleSelectPlan(plan)}
-                  >
-                    {plan.popular && (
-                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
-                        Populaire
-                      </Badge>
-                    )}
-                    {'bestValue' in plan && plan.bestValue && (
-                      <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0">
-                        🏆 Meilleur rapport qualité/prix
-                      </Badge>
-                    )}
-                    <CardHeader className="text-center pb-2">
-                      <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br ${plan.color} text-white`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      <CardDescription>
-                        <span className="text-2xl font-bold text-foreground">
-                          {Number.isInteger(displayPrice) ? displayPrice : displayPrice.toFixed(2)}€
-                        </span>
-                        <span className="text-muted-foreground"> TTC{period}</span>
-                        {yearly && 'yearlyDiscount' in plan && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {(plan as any).yearlyDiscount}
-                          </Badge>
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <ul className="space-y-1 text-xs">
-                        {plan.features.map((f) => (
-                          <li key={f.label} className={`flex items-center gap-1 ${f.included ? 'text-muted-foreground' : 'text-muted-foreground/50 line-through'}`}>
-                            {f.included ? (
-                              <Check className="w-3 h-3 text-primary flex-shrink-0" />
-                            ) : (
-                              <X className="w-3 h-3 text-destructive/50 flex-shrink-0" />
-                            )}
-                            {f.label}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        variant="gradient"
-                        className="w-full mt-4"
-                        size="sm"
-                        disabled={loading}
-                      >
-                        {loading && selectedPlan?.id === plan.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>Choisir</>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: SIREN */}
+        {/* Step 1: SIREN */}
         {step === 'siren' && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -444,7 +251,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
           </div>
         )}
 
-        {/* Step 3: User Info */}
+        {/* Step 2: User Info */}
         {step === 'user' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -512,7 +319,7 @@ export default function OnboardingFlow({ open, onOpenChange, onComplete }: Onboa
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
+        {/* Step 3: Confirmation */}
         {step === 'confirm' && (
           <div className="text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
