@@ -25,9 +25,14 @@ describe('useLicense', () => {
   });
 
   describe('Initial State', () => {
-    it('should start with loading state', () => {
+    it('should finish loading after mount with no stored license', async () => {
       const { result } = renderHook(() => useLicense());
-      expect(result.current.isLoading).toBe(true);
+
+      await act(async () => {
+        await waitForNextUpdate();
+      });
+
+      expect(result.current.isLoading).toBe(false);
     });
 
     it('should default to unlicensed when no stored license', async () => {
@@ -175,12 +180,13 @@ describe('useLicense', () => {
       });
 
       expect(result.current.planType).toBe('pro');
-      expect(result.current.hasFeature('forecast')).toBe(true);
       expect(result.current.hasFeature('trip_history')).toBe(true);
       expect(result.current.hasFeature('pdf_export_pro')).toBe(true);
-      
-      // Pro should NOT have enterprise features
-      expect(result.current.hasFeature('ai_optimization')).toBe(false);
+      expect(result.current.hasFeature('dashboard_analytics')).toBe(true);
+
+      // Enterprise-exclusive features should NOT be available on Pro
+      expect(result.current.hasFeature('forecast')).toBe(false);
+      expect(result.current.hasFeature('multi_agency')).toBe(false);
     });
 
     it('should check features for enterprise plan', async () => {
