@@ -2,19 +2,30 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useDriverCRUD } from '@/hooks/drivers/useDriverCRUD';
 import { renderHook, act } from '@testing-library/react';
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn((table) => ({
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      insert: vi.fn().mockResolvedValue({ error: null, data: [{ id: 'uuid' }] }),
-      update: vi.fn().mockResolvedValue({ error: null }),
-      delete: vi.fn().mockResolvedValue({ error: null }),
-      eq: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-    })),
-    rpc: vi.fn().mockResolvedValue({ error: null }),
-  },
-}));
+vi.mock('@/integrations/supabase/client', () => {
+  const resolved = (data: unknown = null) => Promise.resolve({ data, error: null });
+  return {
+    supabase: {
+      from: vi.fn(() => ({
+        // createDriver: from().upsert([...], { onConflict })
+        upsert: vi.fn(() => resolved()),
+        // createBatch: from().insert(rows).select('id')
+        insert: vi.fn(() => ({
+          select: vi.fn(() => resolved([{ id: 'uuid' }])),
+        })),
+        // updateDriver: from().update({...}).eq(...).eq(...)
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({ eq: vi.fn(() => resolved()) })),
+        })),
+        // deleteDriver: from().delete().eq(...).eq(...)
+        delete: vi.fn(() => ({
+          eq: vi.fn(() => ({ eq: vi.fn(() => resolved()) })),
+        })),
+      })),
+      rpc: vi.fn(() => resolved()),
+    },
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: {

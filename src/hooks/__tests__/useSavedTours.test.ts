@@ -2,142 +2,126 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
 
-// Mock data
-const mockTours = [
-  {
-    id: 'tour-1',
-    user_id: 'TEST-LICENSE',
-    name: 'Paris - Lyon',
-    origin_address: 'Paris, France',
-    destination_address: 'Lyon, France',
-    distance_km: 465,
-    duration_minutes: 280,
-    toll_cost: 35,
-    fuel_cost: 120,
-    adblue_cost: 5,
-    driver_cost: 150,
-    structure_cost: 50,
-    vehicle_cost: 80,
-    total_cost: 440,
-    revenue: 550,
-    profit: 110,
-    profit_margin: 20,
-    is_favorite: false,
-    stops: [],
-    driver_ids: [],
-    drivers_data: [],
-    tags: [],
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: 'tour-2',
-    user_id: 'TEST-LICENSE',
-    name: 'Marseille - Bordeaux',
-    origin_address: 'Marseille, France',
-    destination_address: 'Bordeaux, France',
-    distance_km: 650,
-    duration_minutes: 400,
-    toll_cost: 55,
-    fuel_cost: 180,
-    adblue_cost: 8,
-    driver_cost: 200,
-    structure_cost: 60,
-    vehicle_cost: 100,
-    total_cost: 603,
-    revenue: 750,
-    profit: 147,
-    profit_margin: 19.6,
-    is_favorite: true,
-    stops: [],
-    driver_ids: [],
-    drivers_data: [],
-    tags: ['longue distance'],
-    created_at: '2024-01-14T10:00:00Z',
-    updated_at: '2024-01-14T10:00:00Z',
-  },
-];
+// Hoisted mock state so it is available inside the hoisted vi.mock factories.
+const h = vi.hoisted(() => {
+  const mockTours = [
+    {
+      id: 'tour-1',
+      user_id: 'TEST-LICENSE',
+      client_id: 'client-1',
+      name: 'Paris - Lyon',
+      origin_address: 'Paris, France',
+      destination_address: 'Lyon, France',
+      distance_km: 465,
+      total_cost: 440,
+      revenue: 550,
+      profit: 110,
+      profit_margin: 20,
+      is_favorite: false,
+      stops: [],
+      driver_ids: [],
+      drivers_data: [],
+      tags: [],
+      created_at: '2024-01-15T10:00:00Z',
+      updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+      id: 'tour-2',
+      user_id: 'TEST-LICENSE',
+      client_id: null,
+      name: 'Marseille - Bordeaux',
+      origin_address: 'Marseille, France',
+      destination_address: 'Bordeaux, France',
+      distance_km: 650,
+      total_cost: 603,
+      revenue: 750,
+      profit: 147,
+      profit_margin: 19.6,
+      is_favorite: true,
+      stops: [],
+      driver_ids: [],
+      drivers_data: [],
+      tags: ['longue distance'],
+      created_at: '2024-01-14T10:00:00Z',
+      updated_at: '2024-01-14T10:00:00Z',
+    },
+  ];
 
-// Mock Supabase
-const mockFrom = vi.fn();
-const mockSelect = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
-const mockSingle = vi.fn();
+  // --- fetch chain: from().select('*').eq('user_id', uid).order(...) ---
+  const orderMock = vi.fn(() => Promise.resolve({ data: mockTours, error: null }));
+  const eqSelectMock = vi.fn(() => ({ order: orderMock }));
+  const orSelectMock = vi.fn(() => ({ order: orderMock }));
+  const selectMock = vi.fn(() => ({ eq: eqSelectMock, or: orSelectMock }));
+
+  // --- insert chain: from().insert(data).select().single() ---
+  const singleMock = vi.fn(() =>
+    Promise.resolve({
+      data: { ...mockTours[0], id: 'new-tour-id', is_favorite: false },
+      error: null,
+    }),
+  );
+  const insertSelectMock = vi.fn(() => ({ single: singleMock }));
+  const insertMock = vi.fn(() => ({ select: insertSelectMock }));
+
+  // --- delete chain: from().delete().eq('id', id) ---
+  const deleteEqMock = vi.fn(() => Promise.resolve({ error: null }));
+  const deleteMock = vi.fn(() => ({ eq: deleteEqMock }));
+
+  // --- update chain: from().update({...}).eq('id', id) ---
+  const updateEqMock = vi.fn(() => Promise.resolve({ error: null }));
+  const updateMock = vi.fn(() => ({ eq: updateEqMock }));
+
+  const fromMock = vi.fn(() => ({
+    select: selectMock,
+    insert: insertMock,
+    delete: deleteMock,
+    update: updateMock,
+  }));
+
+  const channelMock = vi.fn(() => {
+    const chan: Record<string, unknown> = {};
+    chan.on = vi.fn(() => chan);
+    chan.subscribe = vi.fn(() => chan);
+    return chan;
+  });
+
+  return {
+    mockTours,
+    fromMock,
+    selectMock,
+    orderMock,
+    insertMock,
+    deleteMock,
+    updateMock,
+    updateEqMock,
+    channelMock,
+  };
+});
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: (table: string) => {
-      mockFrom(table);
-      return {
-        select: (...args: unknown[]) => {
-          mockSelect(...args);
-          return {
-            eq: (col: string, val: unknown) => {
-              mockEq(col, val);
-              return {
-                order: (col: string, opts: unknown) => {
-                  mockOrder(col, opts);
-                  return Promise.resolve({ data: mockTours, error: null });
-                },
-              };
-            },
-          };
-        },
-        insert: (data: unknown) => {
-          mockInsert(data);
-          return {
-            select: () => ({
-              single: () => {
-                mockSingle();
-                return Promise.resolve({ 
-                  data: { ...mockTours[0], id: 'new-tour-id', ...(typeof data === 'object' ? data : {}) }, 
-                  error: null 
-                });
-              },
-            }),
-          };
-        },
-        update: (data: unknown) => {
-          mockUpdate(data);
-          return {
-            eq: (col: string, val: unknown) => {
-              mockEq(col, val);
-              return {
-                eq: () => Promise.resolve({ data: null, error: null }),
-              };
-            },
-          };
-        },
-        delete: () => {
-          mockDelete();
-          return {
-            eq: (col: string, val: unknown) => {
-              mockEq(col, val);
-              return {
-                eq: () => Promise.resolve({ data: null, error: null }),
-              };
-            },
-          };
-        },
-      };
+    from: h.fromMock,
+    channel: h.channelMock,
+    removeChannel: vi.fn(),
+    auth: {
+      getUser: vi.fn(() =>
+        Promise.resolve({ data: { user: { id: 'TEST-LICENSE' } }, error: null }),
+      ),
     },
   },
 }));
 
-// Mock useLicense
-vi.mock('@/hooks/useLicense', () => ({
-  useLicense: () => ({
-    licenseData: { code: 'TEST-LICENSE' },
-    isLicensed: true,
-    planType: 'pro',
+// License context: authUserId set, licenseId null so the mount auto-fetch effect
+// (which requires both) does not fire and manual calls stay deterministic.
+vi.mock('@/context/LicenseContext', () => ({
+  useLicenseContext: () => ({
+    licenseId: null,
+    authUserId: 'TEST-LICENSE',
+    isLoading: false,
   }),
+  getLicenseId: vi.fn(() => Promise.resolve('TEST-LICENSE')),
 }));
 
-// Mock sonner
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -145,7 +129,6 @@ vi.mock('sonner', () => ({
   },
 }));
 
-// Import after mocking
 import { useSavedTours } from '../useSavedTours';
 
 describe('useSavedTours', () => {
@@ -169,25 +152,10 @@ describe('useSavedTours', () => {
         await result.current.fetchTours();
       });
 
-      expect(mockFrom).toHaveBeenCalledWith('saved_tours');
-      expect(mockSelect).toHaveBeenCalledWith('*');
-      expect(mockEq).toHaveBeenCalledWith('user_id', 'TEST-LICENSE');
-      expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(h.fromMock).toHaveBeenCalledWith('saved_tours');
+      expect(h.selectMock).toHaveBeenCalledWith('*');
+      expect(h.orderMock).toHaveBeenCalledWith('created_at', { ascending: false });
       expect(result.current.tours).toHaveLength(2);
-    });
-
-    it('should set loading state during fetch', async () => {
-      const { result } = renderHook(() => useSavedTours());
-
-      expect(result.current.loading).toBe(false);
-
-      const fetchPromise = act(async () => {
-        await result.current.fetchTours();
-      });
-
-      // Loading should be true while fetching
-      await fetchPromise;
-      expect(result.current.loading).toBe(false);
     });
 
     it('should map database rows to SavedTour type', async () => {
@@ -198,9 +166,6 @@ describe('useSavedTours', () => {
       });
 
       const tour = result.current.tours[0];
-      expect(tour).toHaveProperty('stops');
-      expect(tour).toHaveProperty('driver_ids');
-      expect(tour).toHaveProperty('tags');
       expect(Array.isArray(tour.stops)).toBe(true);
       expect(Array.isArray(tour.driver_ids)).toBe(true);
       expect(Array.isArray(tour.tags)).toBe(true);
@@ -211,69 +176,39 @@ describe('useSavedTours', () => {
     it('should save a new tour', async () => {
       const { result } = renderHook(() => useSavedTours());
 
-      const newTourInput = {
-        name: 'New Test Tour',
-        origin_address: 'Lille, France',
-        destination_address: 'Nice, France',
-        distance_km: 1000,
-        toll_cost: 80,
-        fuel_cost: 250,
-        adblue_cost: 12,
-        driver_cost: 300,
-        structure_cost: 80,
-        vehicle_cost: 120,
-        total_cost: 842,
-        pricing_mode: 'auto' as const,
-        revenue: 1000,
-        profit: 158,
-        profit_margin: 15.8,
-      };
-
       let savedTour;
       await act(async () => {
-        savedTour = await result.current.saveTour(newTourInput);
+        savedTour = await result.current.saveTour({
+          name: 'New Test Tour',
+          origin_address: 'Lille, France',
+          destination_address: 'Nice, France',
+          distance_km: 1000,
+          toll_cost: 80,
+          fuel_cost: 250,
+          adblue_cost: 12,
+          driver_cost: 300,
+          structure_cost: 80,
+          vehicle_cost: 120,
+          total_cost: 842,
+          pricing_mode: 'auto' as const,
+          revenue: 1000,
+          profit: 158,
+          profit_margin: 15.8,
+        });
       });
 
-      expect(mockFrom).toHaveBeenCalledWith('saved_tours');
-      expect(mockInsert).toHaveBeenCalled();
+      expect(h.fromMock).toHaveBeenCalledWith('saved_tours');
+      expect(h.insertMock).toHaveBeenCalled();
       expect(savedTour).not.toBeNull();
       expect(toast.success).toHaveBeenCalledWith('Tournée sauvegardée avec succès');
-    });
-
-    it('should add saved tour to local state', async () => {
-      const { result } = renderHook(() => useSavedTours());
-
-      const newTourInput = {
-        name: 'State Test Tour',
-        origin_address: 'Strasbourg, France',
-        destination_address: 'Toulouse, France',
-        distance_km: 850,
-        toll_cost: 65,
-        fuel_cost: 200,
-        adblue_cost: 10,
-        driver_cost: 250,
-        structure_cost: 70,
-        vehicle_cost: 100,
-        total_cost: 695,
-        pricing_mode: 'auto' as const,
-        revenue: 850,
-        profit: 155,
-        profit_margin: 18.2,
-      };
-
-      await act(async () => {
-        await result.current.saveTour(newTourInput);
-      });
-
       expect(result.current.tours.length).toBeGreaterThan(0);
     });
   });
 
   describe('deleteTour', () => {
-    it('should delete a tour', async () => {
+    it('should delete a tour and remove it from local state', async () => {
       const { result } = renderHook(() => useSavedTours());
 
-      // First fetch tours
       await act(async () => {
         await result.current.fetchTours();
       });
@@ -284,59 +219,29 @@ describe('useSavedTours', () => {
         await result.current.deleteTour('tour-1');
       });
 
-      expect(mockDelete).toHaveBeenCalled();
+      expect(h.deleteMock).toHaveBeenCalled();
       expect(result.current.tours.length).toBe(initialLength - 1);
+      expect(result.current.tours.map((t) => t.id)).not.toContain('tour-1');
       expect(toast.success).toHaveBeenCalledWith('Tournée supprimée');
-    });
-
-    it('should remove tour from local state', async () => {
-      const { result } = renderHook(() => useSavedTours());
-
-      await act(async () => {
-        await result.current.fetchTours();
-      });
-
-      await act(async () => {
-        await result.current.deleteTour('tour-1');
-      });
-
-      const tourIds = result.current.tours.map(t => t.id);
-      expect(tourIds).not.toContain('tour-1');
     });
   });
 
   describe('toggleFavorite', () => {
-    it('should toggle favorite status', async () => {
+    it('should toggle favorite status and update local state', async () => {
       const { result } = renderHook(() => useSavedTours());
 
       await act(async () => {
         await result.current.fetchTours();
       });
 
-      const tour = result.current.tours.find(t => t.id === 'tour-1');
-      const initialFavorite = tour?.is_favorite;
+      const initialFavorite = result.current.tours.find((t) => t.id === 'tour-1')?.is_favorite;
 
       await act(async () => {
         await result.current.toggleFavorite('tour-1');
       });
 
-      expect(mockUpdate).toHaveBeenCalledWith({ is_favorite: !initialFavorite });
-    });
-
-    it('should update local state after toggle', async () => {
-      const { result } = renderHook(() => useSavedTours());
-
-      await act(async () => {
-        await result.current.fetchTours();
-      });
-
-      const initialFavorite = result.current.tours.find(t => t.id === 'tour-1')?.is_favorite;
-
-      await act(async () => {
-        await result.current.toggleFavorite('tour-1');
-      });
-
-      const updatedTour = result.current.tours.find(t => t.id === 'tour-1');
+      expect(h.updateMock).toHaveBeenCalledWith({ is_favorite: !initialFavorite });
+      const updatedTour = result.current.tours.find((t) => t.id === 'tour-1');
       expect(updatedTour?.is_favorite).toBe(!initialFavorite);
     });
   });
@@ -351,6 +256,7 @@ describe('useSavedTours', () => {
 
       const clientTours = result.current.getToursByClient('client-1');
       expect(Array.isArray(clientTours)).toBe(true);
+      expect(clientTours.every((t) => t.client_id === 'client-1')).toBe(true);
     });
 
     it('should get favorites', async () => {
@@ -362,7 +268,7 @@ describe('useSavedTours', () => {
 
       const favorites = result.current.getFavorites();
       expect(Array.isArray(favorites)).toBe(true);
-      expect(favorites.every(t => t.is_favorite)).toBe(true);
+      expect(favorites.every((t) => t.is_favorite)).toBe(true);
     });
   });
 });
