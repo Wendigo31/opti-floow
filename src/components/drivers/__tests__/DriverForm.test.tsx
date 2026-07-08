@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { DriverForm } from '@/components/drivers/DriverForm';
 
 describe('DriverForm', () => {
@@ -32,11 +32,10 @@ describe('DriverForm', () => {
       />
     );
 
-    const input = getByPlaceholderText(/nom du conducteur/i) as HTMLInputElement;
-    input.value = 'John Doe';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    const input = getByPlaceholderText(/nom du conducteur/i);
+    fireEvent.change(input, { target: { value: 'John Doe' } });
 
-    getByText(/Créer/i).click();
+    fireEvent.click(getByText(/Créer/i));
 
     expect(mockOnSave).toHaveBeenCalled();
   });

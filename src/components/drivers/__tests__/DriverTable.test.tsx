@@ -39,7 +39,9 @@ describe('DriverTable', () => {
       />
     );
 
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    // Radix UI checkboxes render as <button role="checkbox"> rather than
+    // native <input type="checkbox"> elements.
+    const checkboxes = container.querySelectorAll('[role="checkbox"]');
     expect(checkboxes.length).toBeGreaterThan(0);
   });
 

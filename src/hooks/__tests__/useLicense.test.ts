@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-// Mock the supabase client before importing the hook
-const mockInvoke = vi.fn();
+// Mock the supabase client before importing the hook.
+// Use vi.hoisted so the spy exists when the hoisted vi.mock factory runs.
+const { mockInvoke } = vi.hoisted(() => ({ mockInvoke: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     functions: {
