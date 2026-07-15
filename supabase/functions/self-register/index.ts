@@ -167,44 +167,48 @@ serve(async (req) => {
 
     console.log("[self-register] Starting registration for:", email);
 
-    // Validate required fields
-    if (!stripe_session_id || !email || !firstName || !lastName) {
+    // Validate required fields (stripe_session_id is optional: checkout step
+    // has been removed from onboarding; keep support for it when present so
+    // returning-from-Stripe flows still work end-to-end).
+    if (!email || !firstName || !lastName) {
       return new Response(
         JSON.stringify({ success: false, error: "Champs requis manquants" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 1. Verify Stripe session
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Configuration Stripe manquante" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // 1. Verify Stripe session (only when provided — checkout is optional now).
+    let session: any = null;
+    if (stripe_session_id) {
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!stripeKey) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Configuration Stripe manquante" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+      try {
+        session = await stripe.checkout.sessions.retrieve(stripe_session_id);
+      } catch (e) {
+        console.error("[self-register] Invalid Stripe session:", e.message);
+        return new Response(
+          JSON.stringify({ success: false, error: "Session de paiement invalide" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (session.payment_status !== "paid") {
+        return new Response(
+          JSON.stringify({ success: false, error: "Paiement non complété" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.log("[self-register] Stripe session verified, payment_status:", session.payment_status);
+    } else {
+      console.log("[self-register] No stripe_session_id — proceeding without payment verification");
     }
-
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-
-    let session;
-    try {
-      session = await stripe.checkout.sessions.retrieve(stripe_session_id);
-    } catch (e) {
-      console.error("[self-register] Invalid Stripe session:", e.message);
-      return new Response(
-        JSON.stringify({ success: false, error: "Session de paiement invalide" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (session.payment_status !== "paid") {
-      return new Response(
-        JSON.stringify({ success: false, error: "Paiement non complété" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("[self-register] Stripe session verified, payment_status:", session.payment_status);
 
     // 2. Setup Supabase with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -213,24 +217,26 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 3. Check anti-replay: ensure this session hasn't already been used
-    const { data: existingLicense } = await supabase
-      .from("licenses")
-      .select("id, company_identifier")
-      .eq("notes", `stripe_session:${stripe_session_id}`)
-      .maybeSingle();
+    // 3. Anti-replay for Stripe flow: reuse license linked to this session.
+    if (stripe_session_id) {
+      const { data: existingLicense } = await supabase
+        .from("licenses")
+        .select("id, company_identifier")
+        .eq("notes", `stripe_session:${stripe_session_id}`)
+        .maybeSingle();
 
-    if (existingLicense) {
-      console.log("[self-register] Session already used, returning existing");
-      return new Response(
-        JSON.stringify({
-          success: true,
-          company_identifier: existingLicense.company_identifier,
-          license_id: existingLicense.id,
-          already_exists: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (existingLicense) {
+        console.log("[self-register] Session already used, returning existing");
+        return new Response(
+          JSON.stringify({
+            success: true,
+            company_identifier: existingLicense.company_identifier,
+            license_id: existingLicense.id,
+            already_exists: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 4. Rate limiting
@@ -288,7 +294,7 @@ serve(async (req) => {
     }
 
     // 5. Determine plan from metadata or parameter
-    const effectivePlan = session.metadata?.plan_type || planType || "start";
+    const effectivePlan = session?.metadata?.plan_type || planType || "start";
 
     // 6. Generate company identifier
     const effectiveCompanyName = companyName || `${firstName} ${lastName}`;
@@ -355,7 +361,7 @@ serve(async (req) => {
         company_status: companyStatus || null,
         is_active: true,
         activated_at: new Date().toISOString(),
-        notes: `stripe_session:${stripe_session_id}`,
+        notes: stripe_session_id ? `stripe_session:${stripe_session_id}` : null,
       })
       .select()
       .single();
