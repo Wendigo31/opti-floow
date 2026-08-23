@@ -175,7 +175,7 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [authUserId, licenseId]);
+  }, [authUserId, licenseId, contextLoading]);
 
   const updateTrailer = useCallback(async (trailer: Trailer): Promise<boolean> => {
     try {
@@ -217,7 +217,7 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [licenseId]);
+  }, [licenseId, contextLoading]);
 
   const deleteTrailer = useCallback(async (id: string): Promise<boolean> => {
     try {
@@ -248,7 +248,7 @@ export function useCloudTrailers() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [licenseId]);
+  }, [licenseId, contextLoading]);
 
   return {
     trailers,

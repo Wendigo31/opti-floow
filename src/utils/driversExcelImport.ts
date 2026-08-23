@@ -78,9 +78,9 @@ export interface ParsedDriverRow {
    }
    
    // Match with dots or dashes
-   const altMatch = value.match(/(\d{2}[.\-]\d{2}[.\-]\d{2}[.\-]\d{2}[.\-]\d{2})/);
+   const altMatch = value.match(/(\d{2}[.-]\d{2}[.-]\d{2}[.-]\d{2}[.-]\d{2})/);
    if (altMatch) {
-     return altMatch[1].replace(/[.\-]/g, ' ');
+     return altMatch[1].replace(/[.-]/g, ' ');
    }
    
    return '';

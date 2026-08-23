@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-// @ts-ignore
+// @ts-expect-error - node built-ins (vitest runs in node)
 import { readFileSync, readdirSync, statSync } from "node:fs";
-// @ts-ignore
+// @ts-expect-error - node built-ins (vitest runs in node)
 import { join, resolve } from "node:path";
-// @ts-ignore
+// @ts-expect-error - node built-ins (vitest runs in node)
 declare const process: { cwd(): string };
 
 /**

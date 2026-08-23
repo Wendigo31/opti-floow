@@ -198,6 +198,6 @@ export async function exportItineraryPDF(data: ItineraryPdfData): Promise<void> 
   }
 
   const fileName = `itineraire_${(data.originAddress.split(',')[0] || 'depart').trim()}_${(data.destinationAddress.split(',')[0] || 'arrivee').trim()}_${new Date().toISOString().slice(0, 10)}.pdf`
-    .replace(/[^a-z0-9_\-\.]/gi, '_');
+    .replace(/[^a-z0-9_.-]/gi, '_');
   pdf.save(fileName);
 }

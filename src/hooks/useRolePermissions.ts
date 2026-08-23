@@ -204,7 +204,7 @@ export function useRolePermissions(): RolePermissions {
       canExportFinancialReports: canSeeFinancials,
       canExportOperationalReports: true,
     };
-  }, [userRole, isLoading, metricSettings]);
+  }, [userRole, isLoading, contextLoading, metricSettings]);
   
   return permissions;
 }

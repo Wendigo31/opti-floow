@@ -26,7 +26,7 @@ export async function handleCheck(body: any, supabase: any, req: Request): Promi
     return jsonResponse({ valid: false });
   }
 
-  let license = licenseByCode;
+  const license = licenseByCode;
 
   // Check if this is the license owner OR a member of the company
   if (licenseByCode.email !== normalizedEmail) {

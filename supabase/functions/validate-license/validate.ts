@@ -53,7 +53,7 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
   }
 
   // Check if this is the license owner OR a member of the company
-  let license = licenseByCode;
+  const license = licenseByCode;
   let isMemberLogin = false;
 
   if (licenseByCode.email !== normalizedEmail) {

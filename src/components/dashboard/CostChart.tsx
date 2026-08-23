@@ -126,7 +126,7 @@ export function CostChart({ costs, chartType, onChartTypeChange }: CostChartProp
           </BarChart>
         );
       
-      case 'radial':
+      case 'radial': {
         const radialData = data.map((item, index) => ({
           ...item,
           fill: item.color,
@@ -139,7 +139,8 @@ export function CostChart({ costs, chartType, onChartTypeChange }: CostChartProp
             <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>} />
           </RadialBarChart>
         );
-      
+      }
+
       default:
         return null;
     }

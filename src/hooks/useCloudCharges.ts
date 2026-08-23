@@ -173,7 +173,7 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la création');
       return false;
     }
-  }, [authUserId, licenseId]);
+  }, [authUserId, licenseId, contextLoading]);
 
   const updateCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
     try {
@@ -212,7 +212,7 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la mise à jour');
       return false;
     }
-  }, [licenseId]);
+  }, [licenseId, contextLoading]);
 
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
     try {
@@ -243,7 +243,7 @@ export function useCloudCharges() {
       toast.error('Erreur lors de la suppression');
       return false;
     }
-  }, [licenseId]);
+  }, [licenseId, contextLoading]);
 
   return {
     charges,

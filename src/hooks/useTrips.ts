@@ -165,7 +165,7 @@ export function useTrips() {
       toast.error('Erreur lors de l\'enregistrement');
       return null;
     }
-  }, [authUserId, licenseId]);
+  }, [authUserId, licenseId, contextLoading]);
 
   const updateTrip = useCallback(async (id: string, updates: Partial<LocalTrip>): Promise<boolean> => {
     try {

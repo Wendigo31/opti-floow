@@ -91,12 +91,12 @@ export function calculateDepreciation(vehicle: Vehicle): DepreciationResult | nu
       totalDepreciated = Math.min(annualDepreciation * vehicleAge, depreciableAmount);
       break;
       
-    case 'degressive':
+    case 'degressive': {
       // Degressive depreciation: higher in first years (coefficient 2.25 for 5+ years)
       const coefficient = depreciationYears >= 5 ? 2.25 : depreciationYears >= 3 ? 1.75 : 1.25;
       const linearRate = 100 / depreciationYears;
       const degressiveRate = linearRate * coefficient;
-      
+
       let remainingValue = purchasePrice;
       for (let year = 0; year < vehicleAge && year < depreciationYears; year++) {
         const degressiveAmount = remainingValue * (degressiveRate / 100);
@@ -106,20 +106,22 @@ export function calculateDepreciation(vehicle: Vehicle): DepreciationResult | nu
         remainingValue -= yearlyDepreciation;
         if (remainingValue < residualValue) remainingValue = residualValue;
       }
-      
+
       // Calculate current year's depreciation
       const currentDegressiveAmount = (purchasePrice - totalDepreciated) * (degressiveRate / 100);
       const currentLinearAmount = depreciableAmount / depreciationYears;
       annualDepreciation = Math.max(currentDegressiveAmount, currentLinearAmount);
       break;
-      
-    case 'km':
+    }
+
+    case 'km': {
       // Kilometer-based depreciation
       const depreciationPerKm = depreciableAmount / expectedLifetimeKm;
       totalDepreciated = Math.min(depreciationPerKm * vehicle.currentKm, depreciableAmount);
       // Assume 120,000 km/year for annual calculation
       annualDepreciation = depreciationPerKm * DEFAULT_ESTIMATED_ANNUAL_KM;
       break;
+    }
   }
   
   const currentBookValue = purchasePrice - totalDepreciated;
@@ -297,11 +299,11 @@ export function calculateTrailerDepreciation(trailer: Trailer): DepreciationResu
       totalDepreciated = Math.min(annualDepreciation * trailerAge, depreciableAmount);
       break;
       
-    case 'degressive':
+    case 'degressive': {
       const coefficient = depreciationYears >= 5 ? 2.25 : depreciationYears >= 3 ? 1.75 : 1.25;
       const linearRate = 100 / depreciationYears;
       const degressiveRate = linearRate * coefficient;
-      
+
       let remainingValue = purchasePrice;
       for (let year = 0; year < trailerAge && year < depreciationYears; year++) {
         const degressiveAmount = remainingValue * (degressiveRate / 100);
@@ -311,17 +313,19 @@ export function calculateTrailerDepreciation(trailer: Trailer): DepreciationResu
         remainingValue -= yearlyDepreciation;
         if (remainingValue < residualValue) remainingValue = residualValue;
       }
-      
+
       const currentDegressiveAmount = (purchasePrice - totalDepreciated) * (degressiveRate / 100);
       const currentLinearAmount = depreciableAmount / depreciationYears;
       annualDepreciation = Math.max(currentDegressiveAmount, currentLinearAmount);
       break;
-      
-    case 'km':
+    }
+
+    case 'km': {
       const depreciationPerKm = depreciableAmount / expectedLifetimeKm;
       totalDepreciated = Math.min(depreciationPerKm * trailer.currentKm, depreciableAmount);
       annualDepreciation = depreciationPerKm * DEFAULT_ESTIMATED_ANNUAL_KM;
       break;
+    }
   }
   
   const currentBookValue = purchasePrice - totalDepreciated;

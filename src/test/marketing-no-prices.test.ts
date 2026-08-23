@@ -1,10 +1,9 @@
 import { describe, it, expect } from "vitest";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - node built-ins (vitest runs in node)
+// @ts-expect-error - node built-ins (vitest runs in node)
 import { readFileSync, readdirSync, statSync } from "node:fs";
-// @ts-ignore
+// @ts-expect-error - node built-ins (vitest runs in node)
 import { join, resolve } from "node:path";
-// @ts-ignore
+// @ts-expect-error - node built-ins (vitest runs in node)
 declare const process: { cwd(): string };
 
 /**
@@ -39,12 +38,12 @@ const SHARED_COMPONENT_DIRS = [
 // We strip strings/JSX text and look for: "49€", "49 €", "49,99€", "€/mois",
 // "$ 12", "12 EUR", "12.99 USD", "/mois" preceded by a number, etc.
 const FORBIDDEN_PATTERNS: { name: string; regex: RegExp }[] = [
-  { name: "amount followed by € symbol", regex: /\d+[\.,]?\d*\s*€/ },
+  { name: "amount followed by € symbol", regex: /\d+[.,]?\d*\s*€/ },
   { name: "€ symbol followed by amount", regex: /€\s*\d/ },
-  { name: "amount followed by EUR/USD", regex: /\d+[\.,]?\d*\s*(EUR|USD)\b/i },
+  { name: "amount followed by EUR/USD", regex: /\d+[.,]?\d*\s*(EUR|USD)\b/i },
   { name: "$ followed by amount", regex: /\$\s*\d/ },
-  { name: "amount followed by /mois or /an", regex: /\d+[\.,]?\d*\s*\/\s*(mois|an|month|year)\b/i },
-  { name: "HT/TTC price suffix with number", regex: /\d+[\.,]?\d*\s*(€|EUR)\s*(HT|TTC)\b/i },
+  { name: "amount followed by /mois or /an", regex: /\d+[.,]?\d*\s*\/\s*(mois|an|month|year)\b/i },
+  { name: "HT/TTC price suffix with number", regex: /\d+[.,]?\d*\s*(€|EUR)\s*(HT|TTC)\b/i },
 ];
 
 // Content we explicitly allow even if it looks numeric (e.g. years, version

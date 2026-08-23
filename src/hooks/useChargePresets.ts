@@ -116,7 +116,7 @@ export function useChargePresets() {
       toast.error('Erreur lors de la création du preset');
       return false;
     }
-  }, [authUserId, licenseId, fetchPresets]);
+  }, [authUserId, licenseId, contextLoading, fetchPresets]);
 
   const updatePreset = useCallback(async (id: string, updates: Partial<Pick<ChargePreset, 'name' | 'description' | 'charges'>>): Promise<boolean> => {
     try {

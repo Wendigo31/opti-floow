@@ -492,7 +492,7 @@ export function usePlanning() {
        toast.error('Erreur lors de la création de la tournée');
        return false;
      }
-    }, [authUserId, licenseId]);
+    }, [authUserId, licenseId, contextLoading]);
 
     /**
      * Auto-create saved tours from planning entries that don't have one yet.
@@ -762,7 +762,7 @@ export function usePlanning() {
           suspendRealtimeRef.current = false;
         }
       },
-      [authUserId, licenseId, contextLoading]
+      [authUserId, licenseId]
     );
 
     const deleteTourInWeek = useCallback(async (tourName: string, weekStartDate: Date): Promise<boolean> => {
@@ -800,7 +800,7 @@ export function usePlanning() {
         toast.error('Erreur lors de la suppression de la traction');
         return false;
       }
-    }, [licenseId]);
+    }, [licenseId, contextLoading]);
  
    // Duplicate entries to following weeks
    const duplicateToNextWeeks = useCallback(async (entryIds: string[], numWeeks: number): Promise<boolean> => {
@@ -865,7 +865,7 @@ export function usePlanning() {
        toast.error('Erreur lors de la duplication');
        return false;
      }
-   }, [authUserId, entries, licenseId]);
+   }, [authUserId, entries, licenseId, contextLoading]);
  
    return {
      entries,

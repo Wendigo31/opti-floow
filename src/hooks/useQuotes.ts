@@ -145,7 +145,7 @@ export function useQuotes() {
       toast.error('Erreur lors de la création');
       return null;
     }
-  }, [authUserId, licenseId]);
+  }, [authUserId, licenseId, contextLoading]);
 
   const updateQuote = useCallback(async (id: string, updates: Partial<LocalQuote>): Promise<boolean> => {
     try {
