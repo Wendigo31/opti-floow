@@ -107,6 +107,7 @@ const ADMIN_TOKEN_STORAGE_KEY = 'optiflow_admin_token_v2';
 interface License {
   id: string;
   license_code: string;
+  company_identifier?: string;
   max_drivers: number | null;
   max_clients: number | null;
   max_daily_charges: number | null;
@@ -923,7 +924,7 @@ export default function Admin() {
                           <TableCell>
                             <div>
                               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">
-                                {(license as any).company_identifier || license.license_code}
+                                {license.company_identifier || license.license_code}
                               </code>
                               <p className="text-xs text-muted-foreground mt-1">{license.email}</p>
                             </div>

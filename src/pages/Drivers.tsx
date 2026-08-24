@@ -404,7 +404,7 @@ export default function Drivers() {
         sundayBonus: driver.sundayBonus,
         nightBonus: driver.nightBonus,
         seniorityBonus: driver.seniorityBonus,
-        unloadingBonus: (driver as any).unloadingBonus || 0,
+        unloadingBonus: driver.unloadingBonus || 0,
         isInterim: driverType === 'interim',
         interimAgency: driver.interimAgency || '',
         interimHourlyRate: 15,

@@ -75,8 +75,8 @@ export function calculateTourCosts(params: {
 
     if (isInterim) {
       // Interim: hourly rate × coefficient × hours per day
-      const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
-      const coefficient = (driver as any).interimCoefficient || 1.85;
+      const interimRate = driver.interimHourlyRate || driver.hourlyRate || 0;
+      const coefficient = driver.interimCoefficient || 1.85;
       const hoursPerDay = driver.hoursPerDay || 7;
       driverCost += interimRate * coefficient * hoursPerDay;
       // Interim drivers typically don't have bonuses/allowances from the company

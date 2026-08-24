@@ -10,12 +10,12 @@ interface DriverFormProps {
   driver?: Partial<Driver>;
   driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker';
   isLoading?: boolean;
-  onSave: (driver: Partial<Driver> & any, type: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => void;
+  onSave: (driver: Partial<Driver>, type: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => void;
   onCancel: () => void;
 }
 
 export function DriverForm({ driver, driverType, isLoading, onSave, onCancel }: DriverFormProps) {
-  const [formData, setFormData] = useState<Partial<Driver> & any>(driver || {});
+  const [formData, setFormData] = useState<Partial<Driver>>(driver || {});
   const [absencesOpen, setAbsencesOpen] = useState(false);
 
   const handleSave = () => {
@@ -74,7 +74,7 @@ export function DriverForm({ driver, driverType, isLoading, onSave, onCancel }: 
             <Label>Agence</Label>
             <Input
               placeholder="Nom de l'agence intérim"
-              value={(formData as any).interimAgency || ''}
+              value={formData.interimAgency || ''}
               onChange={(e) => setFormData({ ...formData, interimAgency: e.target.value })}
             />
           </div>
@@ -84,7 +84,7 @@ export function DriverForm({ driver, driverType, isLoading, onSave, onCancel }: 
               <Input
                 type="number"
                 step="0.01"
-                value={(formData as any).interimHourlyRate || ''}
+                value={formData.interimHourlyRate || ''}
                 onChange={(e) => setFormData({ ...formData, interimHourlyRate: parseFloat(e.target.value) })}
               />
             </div>
@@ -93,7 +93,7 @@ export function DriverForm({ driver, driverType, isLoading, onSave, onCancel }: 
               <Input
                 type="number"
                 step="0.01"
-                value={(formData as any).interimCoefficient || 1.85}
+                value={formData.interimCoefficient || 1.85}
                 onChange={(e) => setFormData({ ...formData, interimCoefficient: parseFloat(e.target.value) })}
               />
             </div>

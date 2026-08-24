@@ -146,12 +146,6 @@ export function getEffectiveFeatures(planType: string, customFeatures: Record<st
   return merged;
 }
 
-// Get admin emails from environment variable
-export const getAdminEmails = (): string[] => {
-  const envEmails = Deno.env.get('ADMIN_EMAILS') || '';
-  return envEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-};
-
 // Verify admin JWT token
 export const verifyAdminToken = async (token: string): Promise<{ valid: boolean; payload?: any }> => {
   try {
@@ -197,7 +191,11 @@ export const verifyAdminToken = async (token: string): Promise<{ valid: boolean;
   }
 };
 
-// Verify admin authorization - either by token or legacy email check
+// Verify admin authorization via a signed, verified admin JWT.
+// SECURITY: do NOT add a fallback that trusts a caller-supplied email/identifier
+// without verifying a secret against it — this endpoint is a public HTTP function,
+// reachable directly (not only through the app UI), so any unverified identity
+// check is a full admin-bypass for anyone who can guess or discover that identifier.
 export const verifyAdminAuth = async (body: any, authHeader?: string | null): Promise<{ authorized: boolean; email?: string }> => {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
@@ -211,11 +209,6 @@ export const verifyAdminAuth = async (body: any, authHeader?: string | null): Pr
     if (result.valid && result.payload) {
       return { authorized: true, email: result.payload.email };
     }
-  }
-  const adminEmails = getAdminEmails();
-  if (body.adminEmail && adminEmails.includes(body.adminEmail.toLowerCase())) {
-    console.log('[validate-license] Warning: Using legacy email auth - should migrate to JWT');
-    return { authorized: true, email: body.adminEmail };
   }
   return { authorized: false };
 };

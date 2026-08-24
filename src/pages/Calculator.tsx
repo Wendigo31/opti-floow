@@ -1117,8 +1117,8 @@ export default function Calculator() {
                       if (isAutre) {
                         // No cost
                       } else if (isInterim) {
-                        const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
-                        const coefficient = (driver as any).interimCoefficient || 1.85;
+                        const interimRate = driver.interimHourlyRate || driver.hourlyRate || 0;
+                        const coefficient = driver.interimCoefficient || 1.85;
                         const hoursPerDay = driver.hoursPerDay || 7;
                         totalDaily = interimRate * coefficient * hoursPerDay + (driver.mealAllowance || 0);
                         monthlyEmployerCost = totalDaily * driver.workingDaysPerMonth;

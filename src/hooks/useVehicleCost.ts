@@ -68,11 +68,11 @@ const DEFAULT_ESTIMATED_ANNUAL_KM = 120000; // 120,000 km/year for a semi-traile
 // Calculate vehicle depreciation
 export function calculateDepreciation(vehicle: Vehicle): DepreciationResult | null {
   const purchasePrice = vehicle.purchasePrice || 0;
-  const depreciationYears = vehicle.depreciationYears || 5;
+  const depreciationYears = vehicle.depreciationYears ?? 5;
   const residualValue = vehicle.residualValue || 0;
   const depreciationMethod = vehicle.depreciationMethod || 'linear';
   const expectedLifetimeKm = vehicle.expectedLifetimeKm || 600000;
-  
+
   // No depreciation if no purchase price or if leasing only
   if (purchasePrice <= 0 || depreciationYears <= 0) {
     return null;
@@ -278,7 +278,7 @@ export function useVehicleCost(
 // Calculate trailer depreciation
 export function calculateTrailerDepreciation(trailer: Trailer): DepreciationResult | null {
   const purchasePrice = trailer.purchasePrice || 0;
-  const depreciationYears = trailer.depreciationYears || 7;
+  const depreciationYears = trailer.depreciationYears ?? 7;
   const residualValue = trailer.residualValue || 0;
   const depreciationMethod = trailer.depreciationMethod || 'linear';
   const expectedLifetimeKm = trailer.expectedLifetimeKm || 800000;

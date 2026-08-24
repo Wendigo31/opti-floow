@@ -119,8 +119,8 @@ function computeDriverDailyCost(driver: Driver): {
   }
 
   if (isInterim) {
-    const interimRate = (driver as any).interimHourlyRate || driver.hourlyRate || 0;
-    const coefficient = (driver as any).interimCoefficient || 1.85;
+    const interimRate = driver.interimHourlyRate || driver.hourlyRate || 0;
+    const coefficient = driver.interimCoefficient || 1.85;
     const hoursPerDay = driver.hoursPerDay || 7;
     return {
       dailyCost: interimRate * coefficient * hoursPerDay,

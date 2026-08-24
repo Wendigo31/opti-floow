@@ -55,6 +55,7 @@ import { fr } from 'date-fns/locale';
 interface License {
   id: string;
   license_code: string;
+  company_identifier?: string;
   email: string;
   company_name?: string;
   plan_type: string;
@@ -376,14 +377,14 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">ID:</span>
                         <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs font-bold">
-                          {(selectedLicense as any).company_identifier || selectedLicense.license_code}
+                          {selectedLicense.company_identifier || selectedLicense.license_code}
                         </code>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
+                        <Button
+                          size="icon"
+                          variant="ghost"
                           className="h-6 w-6"
                           onClick={() => {
-                            setEditIdentifier((selectedLicense as any).company_identifier || '');
+                            setEditIdentifier(selectedLicense.company_identifier || '');
                             setIsEditingIdentifier(true);
                           }}
                         >

@@ -97,13 +97,54 @@ Ces points sont réels mais je ne les ai pas modifiés seul — soit parce que t
 
 ---
 
+## 6. Suite de l'audit — mise en œuvre des axes d'amélioration (24 août 2026)
+
+Après l'audit initial, j'ai mis en œuvre les 4 axes d'amélioration concrets que je vous avais proposés. Le détail :
+
+### Faille de sécurité critique corrigée — bypass total de l'authentification admin
+
+En creusant le flux d'authentification admin (`Admin.tsx` → edge function `admin-auth` → edge function `validate-license`), j'ai trouvé une **faille grave dans `supabase/functions/validate-license/shared.ts`** (fonction `verifyAdminAuth`) : en plus du chemin normal (vérification cryptographique d'un JWT signé), il existait un chemin de secours "legacy" qui accordait l'accès admin complet à **n'importe quelle requête contenant simplement `{ adminEmail: "<un email admin connu>" }` dans le corps — sans aucun mot de passe, token ou signature à fournir**.
+
+Comme les edge functions Supabase sont des endpoints HTTP publics (appelables directement, pas uniquement depuis l'interface de l'app), n'importe qui connaissant ou devinant un email listé dans la variable d'environnement `ADMIN_EMAILS` (adresse de contact, auteur de commit Git, etc.) pouvait obtenir un accès admin complet : lister toutes les licences et données personnelles des clients, supprimer des licences, fusionner des sociétés, modifier les limites/fonctionnalités de n'importe quel compte. Aucun code du frontend n'utilisait ce chemin (il envoie toujours un vrai token JWT) — c'était une porte dérobée morte mais toujours grande ouverte côté serveur.
+
+**Corrigé** : ce chemin de secours a été supprimé entièrement. Seule l'authentification par JWT signé (vérifié par signature HMAC + expiration + rôle) est acceptée désormais. J'ai vérifié qu'aucune autre edge function (`manage-updates`, `sync-features-schema`) ne reproduit ce motif — elles vérifient toutes correctement la signature du token.
+
+*Recommandation non appliquée (changement d'architecture, à valider par vous) :* le secret admin (`ADMIN_SECRET_CODE`) sert à la fois de mot de passe ET de clé de signature JWT. Séparer les deux (nouvelle variable d'environnement dédiée à la signature) serait plus propre, mais je n'ai pas voulu introduire une dépendance à un nouveau secret Supabase que vous n'auriez pas encore configuré — dites-moi si vous voulez que je le fasse. De même, la comparaison du code secret (`submitted === expected`) n'est pas à temps constant (vulnérable en théorie à une attaque par mesure de timing) ; le risque réel est très faible ici car le rate-limiting (10 tentatives/heure puis blocage 30 min) empêche déjà toute collecte de mesures répétées.
+
+### Tests sur le moteur de calcul financier
+
+Deux nouvelles suites de tests ont été ajoutées pour couvrir le cœur financier de l'app, jusqu'ici non testé directement :
+
+- `src/hooks/__tests__/useCalculations.test.ts` (26 tests) : coûts carburant/AdBlue/péages (dont conversion TTC→HT), coût conducteur pour chaque type de contrat (CDI/CDD, intérim, "autre"), proratisation des primes, coûts de structure par périodicité, chiffre d'affaires pour les 5 modes de tarification, marge et coût/km — y compris les cas de division par zéro.
+- `src/hooks/__tests__/useVehicleCost.test.ts` (19 tests) : amortissement (linéaire, dégressif, kilométrique), coûts véhicule (carburant, AdBlue, entretien, pneus, coûts fixes), et l'équivalent pour les remorques.
+
+En écrivant ces tests, j'ai trouvé un **vrai bug** : `src/types/vehicle.ts` documente explicitement `depreciationYears: 0` comme signifiant "pas d'amortissement" (véhicule en location pure), et `calculateDepreciation`/`calculateTrailerDepreciation` contiennent bien un garde-fou pour ce cas. Mais ce garde-fou était mort : `vehicle.depreciationYears || 5` transformait silencieusement un `0` explicite en `5`, avant même que le garde-fou ne s'exécute — un véhicule marqué "sans amortissement" se voyait donc amorti sur 5 ans par défaut. Corrigé (`||` → `??` dans `useVehicleCost.ts`, pour les véhicules et les remorques). Je n'ai pas touché aux formulaires (`Vehicles.tsx`, `TrailerDialog.tsx`) : ils imposent `min="1"` sur le champ durée, donc un utilisateur ne peut de toute façon pas saisir 0 depuis l'interface — c'est un choix produit à trancher séparément si vous voulez exposer cette option.
+
+### Fausse alerte corrigée sur le découpage du bundle
+
+Dans ma proposition précédente, j'avais recommandé un `import()` différé pour xlsx/jsPDF/Recharts, en pensant qu'ils étaient chargés systématiquement. En vérifiant réellement (build de prod, inspection de `dist/index.html`, traçage des chunks), il s'avère que ce n'était pas le cas : le découpage par route existe déjà via `lazy()` dans `App.tsx`, et les noms de fichiers de ces chunks qui apparaissent dans le chunk principal ne sont que des métadonnées de préchargement Vite (`__vitePreload`), pas des imports immédiats. Il n'y avait rien à corriger — je préfère vous le dire plutôt que de faire un changement inutile pour donner l'impression d'avoir "fait quelque chose".
+
+### Réduction ciblée des `any`
+
+Passage prudent, pas une purge massive (357 usages, dont beaucoup sont des `any` légitimes pour des API externes non typées — payloads realtime Supabase, plugin `jspdf-autotable`, API Tauri dynamiques). J'ai corrigé les cas où le cast masquait un champ **déjà déclaré** sur le type réel (donc un `as any` totalement inutile, pur bruit) :
+
+- `(driver as any).interimHourlyRate` / `.interimCoefficient` — supprimés dans 5 fichiers (`useCalculations.ts`, `tourCostCalculation.ts`, `LineMontageTab.tsx`, `Dashboard.tsx`, `Calculator.tsx`) : `Driver` déclare déjà ces champs en optionnel.
+- `(license as any).company_identifier` — le champ existait en base et était utilisé partout côté edge functions, mais manquait sur l'interface `License` locale de `Admin.tsx` et `CompanyDetailPanel.tsx`. Ajouté aux deux interfaces, casts supprimés.
+- `(driver as any).unloadingBonus` (`Drivers.tsx`) — même motif, champ déjà déclaré.
+- `DriverForm.tsx` : le type `Partial<Driver> & any` équivaut en réalité à `any` tout court (piège TypeScript classique : une intersection avec `any` absorbe tout). Remplacé par `Partial<Driver>`, ce qui a rendu inutiles 3 casts `as any` supplémentaires sur les champs intérim.
+
+*Note annexe :* en cherchant les usages de `DriverForm.tsx`, j'ai remarqué que ce composant n'est **branché nulle part** dans l'app (aucun écran ne l'affiche, seul son propre test l'utilise) — comme les autres éléments orphelins déjà signalés en section 4, c'est à vous de dire s'il faut le finir de brancher ou le supprimer.
+
+---
+
 ## 5. Validation effectuée
 
-| Vérification | Avant | Après |
-|---|---|---|
-| `npm install` | échoue (conflits peer deps) | réussit (755 paquets) |
-| `tsc --noEmit` | 0 erreur | 0 erreur |
-| ESLint — erreurs | 407 | 359 (quasi-totalité = `any`, choix assumé) |
-| ESLint — `react-hooks/exhaustive-deps` | 40 | 24 (16 corrigés, tous vérifiés un par un) |
-| Tests Vitest | non exécutable (install cassée) | 109/109 verts |
-| `npm run build` | non exécutable (install cassée) | réussit |
+| Vérification | Avant l'audit | Après l'audit initial | Après cette suite |
+|---|---|---|---|
+| `npm install` | échoue (conflits peer deps) | réussit (755 paquets) | réussit (755 paquets) |
+| `tsc --noEmit` | 0 erreur | 0 erreur | 0 erreur |
+| ESLint — erreurs | 407 | 359 (quasi-totalité = `any`, choix assumé) | 340 (19 `any` morts supprimés) |
+| ESLint — `react-hooks/exhaustive-deps` | 40 | 24 (16 corrigés, tous vérifiés un par un) | 24 (inchangé, voir section 4) |
+| Tests Vitest | non exécutable (install cassée) | 109/109 verts | 150/150 verts (+41 nouveaux tests calcul) |
+| `npm run build` | non exécutable (install cassée) | réussit | réussit |
+| Faille admin bypass | — | non détectée | détectée et corrigée |
