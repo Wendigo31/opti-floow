@@ -1,56 +1,49 @@
-## Objectif
+# Roadmap d'amélioration OptiFlow — Court & Moyen terme
 
-Produire un **document interne confidentiel** (`.docx`) contenant la grille tarifaire complète des 3 forfaits OptiFlow, avec seuils de négociation, remises autorisées, add-ons et règles commerciales. Ce document **n'est pas exposé dans l'app** — il sert uniquement à l'équipe commerciale/direction.
+Roadmap priorisée sur 4 axes, basée sur l'audit complet (build, scan sécurité, tests, lint) et la mémoire projet. Ordre : ce qui protège les données clients et stabilise la CI d'abord, puis la performance perçue, puis le confort de développement, puis les intégrations business.
 
-## Livrable
+---
 
-Un fichier : `/mnt/documents/OptiFlow-Grille-Tarifaire-Interne-CONFIDENTIEL.docx`
+## Phase 1 — Sécurité & données sensibles (court terme, bloquant commercialisation)
 
-## Structure du document
+1. **Protection des salaires et marges** (option A validée : Direction uniquement)
+   - Verrouiller `SELECT` sur `user_drivers`, `trips`, `quotes`, `saved_tours` au rôle Direction + propriétaire.
+   - Créer des vues/RPC sécurisés qui retournent les données masquées (salaires/marges à `null`) pour Exploitation et Membre.
+   - Effet connu et accepté : perte du temps réel Realtime sur ces tables pour les non-Direction.
+   - Corriger en même temps les 2 constats « error » du scan de sécurité.
+2. **Tests d'intégration RLS** côté client : verrouiller les droits de lecture salaires/marges pour éviter toute régression future.
+3. **Réactiver le webhook Stripe** (désactivé récemment) : vérification de signature avec `STRIPE_WEBHOOK_SECRET`, sync `checkout.session.completed` / `invoice.paid` → statut de licence. Sans lui, les accès ne suivent plus les paiements.
 
-1. **Page de garde** — Mention "CONFIDENTIEL — Usage interne uniquement", date, version
-2. **Synthèse exécutive** — Positionnement des 3 forfaits, cible, ARPU visé
-3. **Grille tarifaire détaillée** (tableau)
-   - Forfait | Prix mensuel public | Prix engagement annuel (-25%) | Prix plancher négociable | Coût infra estimé | Marge brute cible
-   - Start : 79 € / 59 € / 49 € plancher
-   - Pro : 199 € / 149 € / 129 € plancher
-   - Enterprise : 499 € / 374 € / 299 € plancher (au-delà sur devis)
-4. **Add-ons facturables** (tableau)
-   - +10 ressources (drivers/véhicules) : 19 €/mois
-   - IA étendue (analyses illimitées) : 39 €/mois
-   - Module multi-agences : 49 €/mois
-   - Utilisateur supplémentaire (Pro) : 15 €/mois
-   - Support prioritaire dédié : 79 €/mois
-5. **Règles de remise autorisées par profil commercial**
-   - Commercial junior : jusqu'à -10 %
-   - Senior : jusqu'à -20 %
-   - Direction : jusqu'à -40 % (cas stratégiques)
-   - Plancher absolu : ne jamais descendre sous le coût infra x2
-6. **Règles d'engagement**
-   - Mensuel : prix plein
-   - Annuel : -25 % (paiement upfront ou mensualisé)
-   - Pluriannuel (24 mois) : -35 %
-7. **Seuils de bascule entre forfaits** (quand proposer l'upsell)
-   - Start → Pro : >5 véhicules OU besoin planning OU besoin IA
-   - Pro → Enterprise : >15 véhicules OU >3 utilisateurs OU besoin multi-agences
-8. **Argumentaire commercial par forfait** — Bénéfices clés, objections fréquentes, réponses types
-9. **Coûts d'acquisition et seuil de rentabilité**
-   - CAC estimé : 150-300 €
-   - Payback period cible : 3 mois (Pro), 6 mois (Enterprise)
-   - Seuil de rentabilité global : ~15-20 clients Pro
-10. **Politique de churn et rétention** — Conditions de résiliation, remises de rétention autorisées
+## Phase 2 — Qualité & fiabilité (court terme)
+
+4. **Consolider les 17 tests** récemment réparés : ajouter les tests RLS (phase 1) au pipeline, documenter la commande CI.
+5. **Réduire la dette de typage** : cibler les ~340 `any` restants par lot de fichiers critiques (hooks cloud, moteur de calcul), sans purge massive.
+6. **Factoriser le code dupliqué** : calcul d'amortissement dupliqué véhicules/remorques dans `useVehicleCost.ts`.
+7. **Trancher les orphelins** signalés à l'audit : `DriverForm.tsx` (brancher ou supprimer), `PricingSection.tsx`, la fonctionnalité PWA updates non branchée (`UpdateNotification`, `usePWAUpdates`, `UpdatesManager`).
+
+## Phase 3 — Performance (moyen terme)
+
+8. **Affiner le découpage du bundle** : `manualChunks` pour xlsx (424 kB), jspdf (388 kB), Recharts (399 kB) — améliorer le cache navigateur entre déploiements.
+9. **Optimiser le chargement initial** : prefetch intelligent des routes probables après login, audit des images (`optiflow-logo.png`).
+10. **Mesurer** : ajouter un suivi simple des temps de chargement (Web Vitals) pour objectiver les gains.
+
+## Phase 4 — UX & intégrations (moyen terme)
+
+11. **Onboarding** : fluidifier le parcours post-création de compte (premier véhicule, premier conducteur, premier calcul guidé).
+12. **Mobile/responsive** : revue du planning et des formulaires sur petit écran (usage tablette en exploitation).
+13. **Emails transactionnels** : branchement Lovable Email pour activation, invitations d'équipe, alertes de marge.
+14. **Notifications** : centre de notifications temps réel (déjà en base) à rendre plus visible dans l'UI.
+
+---
 
 ## Détails techniques
 
-- Génération via `docx-js` (script Node copié dans `/tmp/`)
-- Format A4 portrait, marges 1 inch
-- Tableaux avec `WidthType.DXA`, bordures grises, en-têtes shading bleu clair
-- Police Arial 11pt, titres bleu nuit OptiFlow
-- Footer : "CONFIDENTIEL — Ne pas diffuser hors équipe direction/commerciale"
-- Validation post-génération + conversion 1 page en image pour QA visuel
+- **RLS** : vues `security_invoker` ou RPC `SECURITY DEFINER` existants (`get_drivers_with_salary_check`) comme modèle ; aucune migration destructive de données.
+- **Stripe** : edge function `stripe-webhook` à recréer (supprimée), entrée à rajouter dans `supabase/config.toml` avec `verify_jwt = false`.
+- **Tests** : mocks Supabase chaînables déjà en place ; ajouter `supabase.rpc` aux mocks pour les tests RLS.
+- **Bundle** : build Vite — `build.rollupOptions.output.manualChunks` par librairie lourde.
 
-## Hors-scope
+## Hors périmètre (à décider séparément)
 
-- Aucune modification du code de l'app
-- Aucune modification des composants publics (`PricingSection`, `pricingPlans.ts`)
-- Pas de nouvelle page interne dans l'app (le doc reste un fichier téléchargeable)
+- Refonte visuelle majeure ou migration framework.
+- Nouvelles fonctionnalités métier (au-delà des finitions d'onboarding).
