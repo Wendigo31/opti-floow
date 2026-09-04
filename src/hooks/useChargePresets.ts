@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import type { FixedCharge } from '@/types';
 import { toast } from 'sonner';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -120,7 +121,7 @@ export function useChargePresets() {
 
   const updatePreset = useCallback(async (id: string, updates: Partial<Pick<ChargePreset, 'name' | 'description' | 'charges'>>): Promise<boolean> => {
     try {
-      const updateData: Record<string, unknown> = {
+      const updateData: TablesUpdate<'charge_presets'> = {
         updated_at: new Date().toISOString(),
       };
 
