@@ -288,6 +288,9 @@ export function useQuotes() {
     };
   }, [licenseId]); // Only depend on licenseId to prevent subscription churn
 
+  // Fallback sync for non-Direction roles (RLS hides direct postgres_changes payloads)
+  useCompanySyncRefetch(licenseId, 'quotes', fetchQuotes, { skipUserId: authUserId });
+
   // Initial fetch
   useEffect(() => {
     if (authUserId) {

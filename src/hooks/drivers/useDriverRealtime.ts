@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanySyncRefetch } from '@/hooks/useCompanySyncRefetch';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Driver } from '@/types';
 
@@ -82,4 +83,10 @@ export function useDriverRealtime(
       }
     };
   }, [licenseId]);
+
+  // Fallback sync for non-Direction roles (RLS hides direct postgres_changes payloads):
+  // refetch through the masked RPC path when a teammate changes a driver.
+  useCompanySyncRefetch(licenseId, 'user_drivers', () => {
+    void handlersRef.current.onFetch?.();
+  });
 }
