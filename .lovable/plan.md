@@ -1,8 +1,17 @@
 # Roadmap d'amélioration OptiFlow — Court & Moyen terme
 
-Roadmap priorisée sur 4 axes, basée sur l'audit complet (build, scan sécurité, tests, lint) et la mémoire projet. Ordre : ce qui protège les données clients et stabilise la CI d'abord, puis la performance perçue, puis le confort de développement, puis les intégrations business.
+Roadmap priorisée sur 4 axes, basée sur l'audit complet (build, scan sécurité, tests, lint) et la mémoire projet. Ordre : débloquer le build, puis protéger les données clients et stabiliser la CI, puis la performance perçue, le confort de développement, et enfin les intégrations business.
 
 ---
+
+## Phase 0 — Débloquer le build (immédiat)
+
+Le projet ne compile pas actuellement — 9 erreurs TypeScript :
+- 7 appels `update()` Supabase qui passent un objet non typé (`Record<string, any>` / `Record<string, unknown>`) là où le client attend maintenant un type strict : `useChargePresets`, `usePlanning`, `useQuotes`, `useSavedTours`, `useSearchHistory`, `useTrips`, et `pages/Drivers.tsx`. Correction : typer chaque payload avec le type de la table concernée plutôt qu'un enregistrement générique.
+- 2 directives `@ts-expect-error` devenues inutiles dans `marketing-no-prices.test.ts` et `no-pricing-import-in-public-routes.test.ts` — à retirer.
+
+Rien d'autre ne peut être validé tant que le build échoue.
+
 
 ## Phase 1 — Sécurité & données sensibles (court terme, bloquant commercialisation)
 
