@@ -71,6 +71,10 @@ const h = vi.hoisted(() => {
   const updateEqMock = vi.fn(() => Promise.resolve({ error: null }));
   const updateMock = vi.fn(() => ({ eq: updateEqMock }));
 
+  // --- fetch chain (masked RPC): rpc().select('*').order(...) ---
+  const rpcSelectMock = vi.fn(() => ({ order: orderMock }));
+  const rpcMock = vi.fn(() => ({ select: rpcSelectMock }));
+
   const fromMock = vi.fn(() => ({
     select: selectMock,
     insert: insertMock,
@@ -88,6 +92,8 @@ const h = vi.hoisted(() => {
   return {
     mockTours,
     fromMock,
+    rpcMock,
+    rpcSelectMock,
     selectMock,
     orderMock,
     insertMock,
@@ -101,6 +107,7 @@ const h = vi.hoisted(() => {
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: h.fromMock,
+    rpc: h.rpcMock,
     channel: h.channelMock,
     removeChannel: vi.fn(),
     auth: {
@@ -152,8 +159,8 @@ describe('useSavedTours', () => {
         await result.current.fetchTours();
       });
 
-      expect(h.fromMock).toHaveBeenCalledWith('saved_tours');
-      expect(h.selectMock).toHaveBeenCalledWith('*');
+      expect(h.rpcMock).toHaveBeenCalledWith('get_saved_tours_masked');
+      expect(h.rpcSelectMock).toHaveBeenCalledWith('*');
       expect(h.orderMock).toHaveBeenCalledWith('created_at', { ascending: false });
       expect(result.current.tours).toHaveLength(2);
     });

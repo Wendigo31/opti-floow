@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { toast } from 'sonner';
 import type { LocalQuote } from '@/types/local';
@@ -31,7 +32,7 @@ export function useQuotes() {
     try {
       // Fetch quotes (RLS handles company-level access)
       const { data, error } = await supabase
-        .from('quotes')
+        .rpc('get_quotes_masked')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -149,7 +150,7 @@ export function useQuotes() {
 
   const updateQuote = useCallback(async (id: string, updates: Partial<LocalQuote>): Promise<boolean> => {
     try {
-      const dbUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+      const dbUpdates: TablesUpdate<'quotes'> = { ...(updates as TablesUpdate<'quotes'>), updated_at: new Date().toISOString() };
       if (updates.stops) dbUpdates.stops = updates.stops as Json;
 
       const { error } = await supabase

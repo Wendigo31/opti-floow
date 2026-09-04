@@ -202,8 +202,8 @@ export function useDataSync() {
 
       // Get current synced driver IDs for this company
       const query = licenseId 
-        ? supabase.from('user_drivers').select('local_id, user_id').eq('license_id', licenseId)
-        : supabase.from('user_drivers').select('local_id, user_id').eq('user_id', userId);
+        ? supabase.rpc('get_drivers_masked').select('local_id, user_id')
+        : supabase.rpc('get_drivers_masked').select('local_id, user_id').eq('user_id', userId);
       
       const { data: syncedDrivers } = await query;
 
@@ -366,9 +366,8 @@ export function useDataSync() {
 
       // Fetch all company drivers
       const { data: drivers } = await supabase
-        .from('user_drivers')
-        .select('*')
-        .eq('license_id', licenseId);
+        .rpc('get_drivers_masked')
+        .select('*');
 
       // Fetch all company charges
       const { data: charges } = await supabase

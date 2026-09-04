@@ -1,5 +1,6 @@
  import { useState, useCallback, useEffect, useRef } from 'react';
  import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
  import { toast } from 'sonner';
  import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
@@ -365,7 +366,7 @@ export function usePlanning() {
  
    const updateEntry = useCallback(async (id: string, updates: Partial<PlanningEntryInput>): Promise<boolean> => {
      try {
-        const updatePayload: Record<string, any> = {
+        const updatePayload: TablesUpdate<'planning_entries'> = {
           ...updates,
           updated_at: new Date().toISOString(),
         };
@@ -539,9 +540,8 @@ export function usePlanning() {
 
         // Check if a saved_tour already exists with this name for this license
         const { data: existing } = await supabase
-          .from('saved_tours')
+          .rpc('get_saved_tours_masked')
           .select('id')
-          .eq('license_id', lid)
           .eq('name', tourName)
           .eq('category', 'planning')
           .limit(1);

@@ -105,9 +105,8 @@ export function useCompanyData() {
 
       // Fetch synced drivers
       const { data: drivers } = await supabase
-        .from('user_drivers')
-        .select('local_id, user_id, license_id, synced_at')
-        .eq('license_id', companyUser.license_id);
+        .rpc('get_drivers_masked')
+        .select('local_id, user_id, license_id, synced_at');
 
       const driversMap = new Map<string, SyncedDataInfo>();
       drivers?.forEach(d => {
@@ -165,9 +164,8 @@ export function useCompanyData() {
 
       // Fetch saved tours with license_id
       const { data: tours } = await supabase
-        .from('saved_tours')
-        .select('id, user_id, license_id, created_at')
-        .eq('license_id', companyUser.license_id);
+        .rpc('get_saved_tours_masked')
+        .select('id, user_id, license_id, created_at');
 
       const toursMap = new Map<string, SyncedDataInfo>();
       tours?.forEach(t => {

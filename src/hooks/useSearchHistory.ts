@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
 
 interface Position {
@@ -226,7 +227,7 @@ export function useSearchHistory() {
     try {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
-      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      const updateData: TablesUpdate<'search_history'> = { updated_at: new Date().toISOString() };
       if (updates.calculated !== undefined) updateData.calculated = updates.calculated;
       if (updates.vehicleId !== undefined) updateData.vehicle_id = updates.vehicleId;
       if (updates.clientId !== undefined) updateData.client_id = updates.clientId;

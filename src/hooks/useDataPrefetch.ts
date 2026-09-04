@@ -44,9 +44,8 @@
        .eq('license_id', licenseId)
        .order('created_at', { ascending: false }),
      supabase
-       .from('user_drivers')
+       .rpc('get_drivers_masked')
        .select('driver_data, driver_type')
-       .eq('license_id', licenseId)
        .order('created_at', { ascending: false }),
      supabase
        .from('user_charges')
