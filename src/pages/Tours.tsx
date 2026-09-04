@@ -603,7 +603,8 @@ export default function Tours() {
               {isCompanyMember && <TableHead>Créé par</TableHead>}
               <TableHead>Client</TableHead>
               <TableHead>Distance</TableHead>
-              {canViewPricing && <TableHead>Coût</TableHead>}
+              {canViewPricing && <TableHead>Coût enregistré</TableHead>}
+              {canViewPricing && <TableHead>Coût réel</TableHead>}
               {canViewPricing && <TableHead>Recette</TableHead>}
               {canViewPricing && <TableHead>Marge</TableHead>}
               <TableHead>Date</TableHead>
@@ -613,13 +614,13 @@ export default function Tours() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={canViewPricing ? 10 : 7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={canViewPricing ? 11 : 7} className="text-center py-8 text-muted-foreground">
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : filteredTours.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canViewPricing ? 10 : 7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={canViewPricing ? 11 : 7} className="text-center py-8 text-muted-foreground">
                   Aucune tournée trouvée
                 </TableCell>
               </TableRow>
@@ -674,6 +675,39 @@ export default function Tours() {
                   </TableCell>
                   <TableCell>{tour.distance_km.toFixed(0)} km</TableCell>
                   {canViewPricing && <TableCell>{formatCurrency(tour.total_cost)}</TableCell>}
+                  {canViewPricing && (() => {
+                    const rc = realCosts.get(tour.id);
+                    if (!rc) return <TableCell>—</TableCell>;
+                    const delta = rc.totalCost - tour.total_cost;
+                    const deltaPct = tour.total_cost > 0 ? (delta / tour.total_cost) * 100 : 0;
+                    const deltaClass = Math.abs(deltaPct) < 2
+                      ? 'text-muted-foreground'
+                      : delta > 0 ? 'text-destructive' : 'text-green-500';
+                    return (
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-help">
+                                <div className="font-medium">{formatCurrency(rc.totalCost)}</div>
+                                <div className={`text-xs ${deltaClass}`}>
+                                  {delta >= 0 ? '+' : ''}{formatCurrency(delta)} ({deltaPct >= 0 ? '+' : ''}{deltaPct.toFixed(1)}%)
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs space-y-1">
+                              <p className="font-semibold">Coût réel recalculé (données actuelles)</p>
+                              <p>Carburant : {formatCurrency(rc.fuelCost)} · AdBlue : {formatCurrency(rc.adBlueCost)}</p>
+                              <p>Péages : {formatCurrency(rc.tollCost)}</p>
+                              <p>Conducteur : {formatCurrency(rc.driverCost)} + primes {formatCurrency(rc.driverBonuses)} + indemnités {formatCurrency(rc.driverAllowances)}</p>
+                              <p>Véhicule : {formatCurrency(rc.vehicleCost)} · Remorque : {formatCurrency(rc.trailerCost)}</p>
+                              <p>Structure : {formatCurrency(rc.structureCost)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    );
+                  })()}
                   {canViewPricing && <TableCell>{formatCurrency(tour.revenue || 0)}</TableCell>}
                   {canViewPricing && (
                     <TableCell>
