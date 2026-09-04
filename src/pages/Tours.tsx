@@ -70,6 +70,9 @@ import { toast } from 'sonner';
 import type { SavedTour } from '@/types/savedTour';
 import jsPDF from 'jspdf';
 import { FeatureGate } from '@/components/license/FeatureGate';
+import { useApp } from '@/context/AppContext';
+import { calculateTourCosts, type TourCostResult } from '@/utils/tourCostCalculation';
+import { useMemo } from 'react';
 
 export default function Tours() {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour, updateTour } = useSavedTours();
@@ -81,6 +84,30 @@ export default function Tours() {
   const { trailers } = useCloudTrailers();
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
+  const { vehicle: appVehicleParams, settings, charges } = useApp();
+
+  // ── Coût réel par tournée : recalculé automatiquement depuis la flotte, le trajet et les conducteurs actuels ──
+  const realCosts = useMemo(() => {
+    const map = new Map<string, TourCostResult>();
+    for (const tour of tours) {
+      const vIds = tour.vehicle_ids?.length ? tour.vehicle_ids : (tour.vehicle_id ? [tour.vehicle_id] : []);
+      const selectedVehicles = vehicles.filter(v => vIds.includes(v.id));
+      const selectedDrivers = allDrivers.filter(d => (tour.driver_ids || []).includes(d.id));
+      const selectedTrailer = trailers.find(t => t.id === tour.trailer_id) || null;
+      map.set(tour.id, calculateTourCosts({
+        distance: tour.distance_km,
+        tollCost: tour.toll_cost,
+        selectedDrivers,
+        selectedVehicles,
+        selectedTrailer,
+        charges,
+        settings,
+        appVehicleParams,
+      }));
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tours, vehicles, trailers, cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers, charges, settings, appVehicleParams]);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
