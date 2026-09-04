@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+// @ts-expect-error - node built-ins (vitest runs in node)
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+// @ts-expect-error - node built-ins (vitest runs in node)
+import { join } from 'node:path';
+declare const process: { cwd(): string };
 
 /**
  * Garde-fou CI : les tables contenant des salaires ou des marges ne doivent
