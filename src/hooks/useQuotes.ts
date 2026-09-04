@@ -32,7 +32,7 @@ export function useQuotes() {
     try {
       // Fetch quotes (RLS handles company-level access)
       const { data, error } = await supabase
-        .from('quotes')
+        .rpc('get_quotes_masked')
         .select('*')
         .order('created_at', { ascending: false });
 

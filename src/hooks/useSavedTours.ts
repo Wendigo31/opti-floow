@@ -46,19 +46,12 @@ export function useSavedTours() {
       console.log('[useSavedTours] Fetching tours for user:', authUserId, 'licenseId:', licenseId);
 
       // Scope query to company when possible (keeps fast + avoids loading noise)
-      let query = supabase
-        .from('saved_tours')
-        .select('*');
-
-      if (licenseId) {
-        // Company tours + personal tours
-        query = query.or(`license_id.eq.${licenseId},user_id.eq.${authUserId}`);
-      } else {
-        // Personal only
-        query = query.eq('user_id', authUserId);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+      // Lecture via chemin sécurisé : masque les marges pour les non-Direction.
+      // Le périmètre (société + tournées personnelles) est appliqué côté base.
+      const { data, error } = await supabase
+        .rpc('get_saved_tours_masked')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 

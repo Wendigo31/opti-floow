@@ -32,7 +32,7 @@ export function useTrips() {
     try {
       // Fetch trips (RLS handles company-level access)
       const { data, error } = await supabase
-        .from('trips')
+        .rpc('get_trips_masked')
         .select('*')
         .order('trip_date', { ascending: false });
 

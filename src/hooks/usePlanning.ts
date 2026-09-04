@@ -540,9 +540,8 @@ export function usePlanning() {
 
         // Check if a saved_tour already exists with this name for this license
         const { data: existing } = await supabase
-          .from('saved_tours')
+          .rpc('get_saved_tours_masked')
           .select('id')
-          .eq('license_id', lid)
           .eq('name', tourName)
           .eq('category', 'planning')
           .limit(1);

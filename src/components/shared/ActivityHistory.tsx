@@ -115,9 +115,8 @@ export function ActivityHistory() {
 
       // Fetch recent tours
       const { data: tours } = await supabase
-        .from('saved_tours')
+        .rpc('get_saved_tours_masked')
         .select('id, name, user_id, created_at, updated_at')
-        .eq('license_id', licenseId)
         .order('updated_at', { ascending: false })
         .limit(20);
 
@@ -138,9 +137,8 @@ export function ActivityHistory() {
 
       // Fetch recent drivers
       const { data: drivers } = await supabase
-        .from('user_drivers')
+        .rpc('get_drivers_masked')
         .select('id, local_id, name, user_id, created_at, updated_at')
-        .eq('license_id', licenseId)
         .order('updated_at', { ascending: false })
         .limit(20);
 
