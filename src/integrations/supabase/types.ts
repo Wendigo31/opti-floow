@@ -2406,6 +2406,24 @@ export type Database = {
           role: string
         }[]
       }
+      get_drivers_masked: {
+        Args: never
+        Returns: {
+          base_salary: number
+          can_view_salary: boolean
+          created_at: string
+          driver_data: Json
+          driver_type: string
+          hourly_rate: number
+          id: string
+          license_id: string
+          local_id: string
+          name: string
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_drivers_with_salary_check: {
         Args: never
         Returns: {
@@ -2424,6 +2442,31 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_quotes_masked: {
+        Args: never
+        Returns: {
+          can_view_financials: boolean
+          client_id: string
+          created_at: string
+          destination_address: string
+          distance_km: number
+          id: string
+          license_id: string
+          margin_percent: number
+          notes: string
+          origin_address: string
+          price_ht: number
+          price_ttc: number
+          quote_number: string
+          status: string
+          stops: Json
+          total_cost: number
+          tva_rate: number
+          updated_at: string
+          user_id: string
+          valid_until: string
+        }[]
+      }
       get_safe_invitations: {
         Args: { p_license_id: string }
         Returns: {
@@ -2437,6 +2480,51 @@ export type Database = {
           role: string
         }[]
       }
+      get_saved_tours_masked: {
+        Args: never
+        Returns: {
+          adblue_cost: number
+          can_view_financials: boolean
+          category: string
+          client_id: string
+          created_at: string
+          destination_address: string
+          distance_km: number
+          driver_cost: number
+          driver_ids: string[]
+          drivers_data: Json
+          duration_minutes: number
+          fixed_price: number
+          fuel_cost: number
+          id: string
+          is_favorite: boolean
+          license_id: string
+          mission_order: string
+          name: string
+          notes: string
+          origin_address: string
+          price_per_km: number
+          pricing_mode: string
+          profit: number
+          profit_margin: number
+          revenue: number
+          stops: Json
+          structure_cost: number
+          tags: string[]
+          target_margin: number
+          toll_cost: number
+          total_cost: number
+          trailer_data: Json
+          trailer_id: string
+          updated_at: string
+          user_id: string
+          vehicle_cost: number
+          vehicle_data: Json
+          vehicle_id: string
+          vehicle_ids: string[]
+          vehicles_data: Json
+        }[]
+      }
       get_table_columns: {
         Args: { table_name: string }
         Returns: {
@@ -2444,6 +2532,41 @@ export type Database = {
           column_name: string
           data_type: string
           is_nullable: string
+        }[]
+      }
+      get_trips_masked: {
+        Args: never
+        Returns: {
+          adblue_cost: number
+          can_view_financials: boolean
+          client_id: string
+          created_at: string
+          destination_address: string
+          destination_lat: number
+          destination_lng: number
+          distance_km: number
+          driver_cost: number
+          driver_ids: string[]
+          duration_minutes: number
+          fuel_cost: number
+          id: string
+          license_id: string
+          notes: string
+          origin_address: string
+          origin_lat: number
+          origin_lng: number
+          profit: number
+          profit_margin: number
+          revenue: number
+          status: string
+          stops: Json
+          structure_cost: number
+          toll_cost: number
+          total_cost: number
+          trip_date: string
+          updated_at: string
+          user_id: string
+          vehicle_data: Json
         }[]
       }
       get_user_license_id: { Args: { p_user_id: string }; Returns: string }
@@ -2474,6 +2597,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      strip_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
       update_user_activity: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
