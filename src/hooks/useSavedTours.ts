@@ -6,6 +6,7 @@ import type { SavedTour, SaveTourInput, TourStop } from '@/types/savedTour';
 import type { Json } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
+import { useCompanySyncRefetch } from '@/hooks/useCompanySyncRefetch';
 
 // Helper to convert database row to SavedTour
 function mapDbToSavedTour(row: any): SavedTour {
@@ -160,6 +161,9 @@ export function useSavedTours() {
       }
     };
   }, [licenseId, authUserId]); // Minimal dependencies to prevent subscription churn
+
+  // Fallback sync for non-Direction roles (RLS hides direct postgres_changes payloads)
+  useCompanySyncRefetch(licenseId, 'saved_tours', fetchTours, { skipUserId: authUserId });
 
   const saveTour = useCallback(async (input: SaveTourInput): Promise<SavedTour | null> => {
     // Use context values, fallback to direct auth if needed

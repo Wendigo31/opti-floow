@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
+import { useCompanySyncRefetch } from '@/hooks/useCompanySyncRefetch';
 import { toast } from 'sonner';
 import type { LocalQuote } from '@/types/local';
 import type { Json } from '@/integrations/supabase/types';
@@ -287,6 +288,9 @@ export function useQuotes() {
       }
     };
   }, [licenseId]); // Only depend on licenseId to prevent subscription churn
+
+  // Fallback sync for non-Direction roles (RLS hides direct postgres_changes payloads)
+  useCompanySyncRefetch(licenseId, 'quotes', fetchQuotes, { skipUserId: authUserId });
 
   // Initial fetch
   useEffect(() => {
