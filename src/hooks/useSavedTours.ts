@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import type { SavedTour, SaveTourInput, TourStop } from '@/types/savedTour';
 import type { Json } from '@/integrations/supabase/types';
@@ -244,7 +245,7 @@ export function useSavedTours() {
   const updateTour = useCallback(async (id: string, updates: Partial<SaveTourInput>): Promise<boolean> => {
     try {
       // Convert to DB-compatible format
-      const dbUpdates: Record<string, any> = { ...updates };
+      const dbUpdates: TablesUpdate<'saved_tours'> = { ...(updates as TablesUpdate<'saved_tours'>) };
       if (updates.stops) {
         dbUpdates.stops = updates.stops as unknown as Json;
       }

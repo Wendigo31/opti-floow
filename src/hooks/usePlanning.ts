@@ -1,5 +1,6 @@
  import { useState, useCallback, useEffect, useRef } from 'react';
  import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
  import { toast } from 'sonner';
  import type { PlanningEntry, PlanningEntryInput, TourInput } from '@/types/planning';
@@ -365,7 +366,7 @@ export function usePlanning() {
  
    const updateEntry = useCallback(async (id: string, updates: Partial<PlanningEntryInput>): Promise<boolean> => {
      try {
-        const updatePayload: Record<string, any> = {
+        const updatePayload: TablesUpdate<'planning_entries'> = {
           ...updates,
           updated_at: new Date().toISOString(),
         };

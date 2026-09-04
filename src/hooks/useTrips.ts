@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { TablesUpdate } from '@/integrations/supabase/types';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { toast } from 'sonner';
 import type { LocalTrip } from '@/types/local';
@@ -169,7 +170,7 @@ export function useTrips() {
 
   const updateTrip = useCallback(async (id: string, updates: Partial<LocalTrip>): Promise<boolean> => {
     try {
-      const dbUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+      const dbUpdates: TablesUpdate<'trips'> = { ...(updates as TablesUpdate<'trips'>), updated_at: new Date().toISOString() };
       if (updates.stops) dbUpdates.stops = updates.stops as Json;
       if (updates.vehicle_data) dbUpdates.vehicle_data = updates.vehicle_data as Json;
 
