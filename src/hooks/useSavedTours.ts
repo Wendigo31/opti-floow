@@ -245,7 +245,7 @@ export function useSavedTours() {
   const updateTour = useCallback(async (id: string, updates: Partial<SaveTourInput>): Promise<boolean> => {
     try {
       // Convert to DB-compatible format
-      const dbUpdates: TablesUpdate<'saved_tours'> = { ...(updates as TablesUpdate<'saved_tours'>) };
+      const dbUpdates: TablesUpdate<'saved_tours'> = { ...(updates as unknown as TablesUpdate<'saved_tours'>) };
       if (updates.stops) {
         dbUpdates.stops = updates.stops as unknown as Json;
       }
