@@ -228,26 +228,31 @@ export default function Drivers() {
     const driverIds = Array.from(checkedDriverIds);
     
     try {
-      // Update each driver with the assignment
+      const typedDrivers: { driver: Driver; type: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' }[] = [
+        ...cloudCdiDrivers.map(d => ({ driver: d as Driver, type: 'cdi' as const })),
+        ...cloudCddDrivers.map(d => ({ driver: d as Driver, type: 'cdd' as const })),
+        ...cloudInterimDrivers.map(d => ({ driver: d as Driver, type: 'interim' as const })),
+        ...cloudAutreDrivers.map(d => ({ driver: d as Driver, type: 'autre' as const })),
+        ...cloudJokerDrivers.map(d => ({ driver: d as Driver, type: 'joker' as const })),
+      ];
+
+      // Assignment is stored inside the driver payload (no dedicated columns)
       for (const driverId of driverIds) {
-        const updateData: Record<string, any> = {
-          synced_at: new Date().toISOString(),
-        };
-        
+        const entry = typedDrivers.find(d => d.driver.id === driverId);
+        if (!entry) continue;
+
+        const updated: ExtendedDriver = { ...(entry.driver as ExtendedDriver) };
         if (assignment.type === 'client') {
-          updateData.assigned_client_id = assignment.clientId;
+          updated.assignedClientId = assignment.clientId;
         } else if (assignment.type === 'city') {
-          updateData.assigned_city = assignment.city;
+          updated.assignedCity = assignment.city;
         } else if (assignment.type === 'tour') {
-          updateData.assigned_tour_ids = assignment.tourIds;
+          updated.assignedTourIds = assignment.tourIds;
         }
-        
-        await supabase
-          .from('user_drivers')
-          .update(updateData)
-          .eq('license_id', licenseId)
-          .eq('local_id', driverId);
+
+        await updateCloudDriver(updated as Driver, entry.type);
       }
+
       
       toast.success(`${driverIds.length} conducteur${driverIds.length > 1 ? 's' : ''} assigné${driverIds.length > 1 ? 's' : ''}`);
       clearSelection();
