@@ -114,7 +114,14 @@ export function useDriverCRUD() {
         }
       }
 
-      const payload: Record<string, unknown> = {
+      const payload: {
+        name: string;
+        driver_type: string;
+        driver_data: Record<string, unknown>;
+        synced_at: string;
+        base_salary?: number;
+        hourly_rate?: number;
+      } = {
         name: driver.name,
         driver_type: driverType,
         driver_data: driverData,
