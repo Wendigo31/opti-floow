@@ -3,6 +3,8 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { SavedTour } from '@/types/savedTour';
+import type { TourCostResult } from '@/utils/tourCostCalculation';
+
 import {
   PDF_COLORS,
   PDF_LAYOUT,
