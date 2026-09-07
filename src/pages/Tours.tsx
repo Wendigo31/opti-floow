@@ -370,8 +370,39 @@ export default function Tours() {
 
       y += 15;
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Coût total: ${formatCurrency(tour.total_cost)}`, 20, y);
+      pdf.text(`Coût enregistré: ${formatCurrency(tour.total_cost)}`, 20, y);
+
+      // Coût réel recalculé avec les données actuelles
+      const rc = realCosts.get(tour.id);
+      if (rc) {
+        const delta = rc.totalCost - tour.total_cost;
+        const deltaPct = tour.total_cost > 0 ? (delta / tour.total_cost) * 100 : 0;
+        y += 8;
+        pdf.text(`Coût réel (données actuelles): ${formatCurrency(rc.totalCost)}`, 20, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Écart: ${delta >= 0 ? '+' : ''}${formatCurrency(delta)} (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)`,
+          110,
+          y
+        );
+        y += 7;
+        pdf.setFontSize(9);
+        pdf.text(
+          `Carburant ${formatCurrency(rc.fuelCost)} | AdBlue ${formatCurrency(rc.adBlueCost)} | Péages ${formatCurrency(rc.tollCost)} | Conducteur ${formatCurrency(rc.driverCost + rc.driverBonuses + rc.driverAllowances)}`,
+          20,
+          y
+        );
+        y += 5;
+        pdf.text(
+          `Véhicule ${formatCurrency(rc.vehicleCost)} | Remorque ${formatCurrency(rc.trailerCost)} | Structure ${formatCurrency(rc.structureCost)}`,
+          20,
+          y
+        );
+        pdf.setFontSize(10);
+      }
       y += 20;
+
+
 
       // Financial summary
       pdf.setFillColor(34, 197, 94);
