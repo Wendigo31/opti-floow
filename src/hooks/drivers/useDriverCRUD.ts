@@ -117,14 +117,14 @@ export function useDriverCRUD() {
       const payload: {
         name: string;
         driver_type: string;
-        driver_data: Record<string, unknown>;
+        driver_data: Record<string, never>;
         synced_at: string;
         base_salary?: number;
         hourly_rate?: number;
       } = {
         name: driver.name,
         driver_type: driverType,
-        driver_data: driverData as never,
+        driver_data: driverData as Record<string, never>,
         synced_at: new Date().toISOString(),
       };
       if (driver.baseSalary !== undefined && driver.baseSalary !== null) {
