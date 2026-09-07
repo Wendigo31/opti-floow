@@ -32,6 +32,14 @@ import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetection
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
 import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
 // Extended driver type with new fields
+// Champs de paie : jamais renvoyés par un membre qui n'y a pas accès
+const PAY_FIELDS = [
+  'baseSalary', 'hourlyRate', 'patronalCharges',
+  'mealAllowance', 'overnightAllowance',
+  'sundayBonus', 'nightBonus', 'seniorityBonus', 'unloadingBonus',
+  'interimHourlyRate', 'interimCoefficient',
+] as const;
+
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
   interimAgency?: string;
@@ -66,6 +74,7 @@ export default function Drivers() {
   const { selectedDriverIds } = useApp();
   
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
+  const { canViewFinancialData } = useRolePermissions();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
   const { licenseId } = useLicenseContext();
   const { uncreatedDrivers, removeUncreatedDriver, clearAll: clearUncreated } = useUncreatedDrivers();
