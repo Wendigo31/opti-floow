@@ -22,7 +22,10 @@ interface TourPDFOptions {
   includeVehicleDetails?: boolean;
   includeDriverDetails?: boolean;
   companyName?: string;
+  /** Coût recalculé avec la flotte / les conducteurs / les charges actuels */
+  realCost?: TourCostResult;
 }
+
 
 export function exportTourDetailedPDF(tour: SavedTour, options: TourPDFOptions = {}) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
