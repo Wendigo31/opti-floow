@@ -125,9 +125,10 @@ export default function Tours() {
       map.set(tour.id, result);
     }
     // Nettoyage des tournées supprimées
-    for (const id of Array.from(cache.keys())) {
+    for (const id of Array.from(cache.keys()) as string[]) {
       if (!map.has(id)) cache.delete(id);
     }
+
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tours, vehicles, trailers, cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers, charges, settings, appVehicleParams]);
