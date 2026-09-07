@@ -645,6 +645,8 @@ export default function Drivers() {
                   placeholder="Nom de l'agence"
                 />
               </div>
+              {canViewFinancialData && (
+              <>
               <div className="space-y-2">
                 <Label htmlFor="interimHourlyRate">Taux horaire intérim (€/h)</Label>
                 <Input
@@ -666,6 +668,8 @@ export default function Drivers() {
                   placeholder="1.85"
                 />
               </div>
+              </>
+              )}
             </div>
           </div>
         )}
