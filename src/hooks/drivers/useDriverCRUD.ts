@@ -124,7 +124,7 @@ export function useDriverCRUD() {
       } = {
         name: driver.name,
         driver_type: driverType,
-        driver_data: driverData,
+        driver_data: driverData as never,
         synced_at: new Date().toISOString(),
       };
       if (driver.baseSalary !== undefined && driver.baseSalary !== null) {
