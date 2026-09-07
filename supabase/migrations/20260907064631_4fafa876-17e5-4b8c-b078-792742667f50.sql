@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.preserve_driver_salary_on_update() FROM PUBLIC, anon, authenticated;

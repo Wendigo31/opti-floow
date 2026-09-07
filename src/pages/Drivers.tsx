@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
 import { useCompanyData } from '@/hooks/useCompanyData';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -31,6 +32,14 @@ import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetection
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
 import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
 // Extended driver type with new fields
+// Champs de paie : jamais renvoyés par un membre qui n'y a pas accès
+const PAY_FIELDS = [
+  'baseSalary', 'hourlyRate', 'patronalCharges',
+  'mealAllowance', 'overnightAllowance',
+  'sundayBonus', 'nightBonus', 'seniorityBonus', 'unloadingBonus',
+  'interimHourlyRate', 'interimCoefficient',
+] as const;
+
 interface ExtendedDriver extends Driver {
   isInterim?: boolean;
   interimAgency?: string;
@@ -65,6 +74,7 @@ export default function Drivers() {
   const { selectedDriverIds } = useApp();
   
   const { limits, checkLimit, isUnlimited, planType } = usePlanLimits();
+  const { canViewFinancialData } = useRolePermissions();
   const { getDriverInfo, isOwnData, isCompanyMember } = useCompanyData();
   const { licenseId } = useLicenseContext();
   const { uncreatedDrivers, removeUncreatedDriver, clearAll: clearUncreated } = useUncreatedDrivers();
@@ -340,7 +350,15 @@ export default function Drivers() {
       const allDrivers = [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers];
       const existingDriver = allDrivers.find(d => d.id === editingId);
       
-      const updatedDriver = { ...existingDriver, ...formData, id: editingId } as ExtendedDriver;
+      const mergedForm = { ...formData };
+      if (!canViewFinancialData) {
+        // Ce membre travaille sur une fiche sans données de paie : on ne renvoie
+        // aucune valeur de rémunération pour ne pas écraser celles enregistrées.
+        for (const key of PAY_FIELDS) {
+          delete (mergedForm as Record<string, unknown>)[key];
+        }
+      }
+      const updatedDriver = { ...existingDriver, ...mergedForm, id: editingId } as ExtendedDriver;
       await updateCloudDriver(updatedDriver as Driver, formContractType);
       setEditingId(null);
     }
@@ -627,6 +645,8 @@ export default function Drivers() {
                   placeholder="Nom de l'agence"
                 />
               </div>
+              {canViewFinancialData && (
+              <>
               <div className="space-y-2">
                 <Label htmlFor="interimHourlyRate">Taux horaire intérim (€/h)</Label>
                 <Input
@@ -648,12 +668,14 @@ export default function Drivers() {
                   placeholder="1.85"
                 />
               </div>
+              </>
+              )}
             </div>
           </div>
         )}
 
         {/* Rémunération - Seulement pour CDI/CDD */}
-        {!isInterim && !isAutre && (
+        {!isInterim && !isAutre && canViewFinancialData && (
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Rémunération</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -692,7 +714,7 @@ export default function Drivers() {
         )}
 
         {/* Charges & Primes - Seulement pour CDI/CDD */}
-        {!isInterim && !isAutre && (
+        {!isInterim && !isAutre && canViewFinancialData && (
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Primes</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -741,6 +763,7 @@ export default function Drivers() {
         )}
 
         {/* Indemnités */}
+        {canViewFinancialData && (
         <div className="border-t border-border pt-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Indemnités</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -766,6 +789,16 @@ export default function Drivers() {
             </div>
           </div>
         </div>
+        )}
+
+        {!canViewFinancialData && (
+          <div className="border-t border-border pt-4">
+            <p className="text-sm text-muted-foreground">
+              Les éléments de rémunération sont réservés à la Direction. Ils sont conservés
+              automatiquement lorsque vous enregistrez cette fiche.
+            </p>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="outline" onClick={handleCancel}>

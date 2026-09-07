@@ -2588,6 +2588,7 @@ export type Database = {
         Args: { p_company_user_id: string; p_user_id: string }
         Returns: boolean
       }
+      pick_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
       process_access_request: {
         Args: {
           p_comment?: string
