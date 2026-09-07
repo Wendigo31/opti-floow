@@ -97,16 +97,39 @@ export function useDriverCRUD() {
     try {
       const currentLicenseId = await getLicenseId();
 
+      // Les membres sans accès aux salaires travaillent sur une copie masquée :
+      // on n'envoie jamais de valeurs de paie vides, sinon elles écraseraient
+      // les données réelles (le trigger `preserve_driver_salary` protège aussi côté base).
+      const SALARY_KEYS = [
+        'baseSalary', 'hourlyRate', 'patronalCharges',
+        'mealAllowance', 'overnightAllowance',
+        'sundayBonus', 'nightBonus', 'seniorityBonus', 'unloadingBonus',
+        'interimHourlyRate', 'interimCoefficient',
+      ] as const;
+
+      const driverData = JSON.parse(JSON.stringify(driver)) as Record<string, unknown>;
+      for (const key of SALARY_KEYS) {
+        if (driverData[key] === undefined || driverData[key] === null) {
+          delete driverData[key];
+        }
+      }
+
+      const payload: Record<string, unknown> = {
+        name: driver.name,
+        driver_type: driverType,
+        driver_data: driverData,
+        synced_at: new Date().toISOString(),
+      };
+      if (driver.baseSalary !== undefined && driver.baseSalary !== null) {
+        payload.base_salary = driver.baseSalary;
+      }
+      if (driver.hourlyRate !== undefined && driver.hourlyRate !== null) {
+        payload.hourly_rate = driver.hourlyRate;
+      }
+
       const { error } = await supabase
         .from('user_drivers')
-        .update({
-          name: driver.name,
-          driver_type: driverType,
-          base_salary: driver.baseSalary,
-          hourly_rate: driver.hourlyRate,
-          driver_data: JSON.parse(JSON.stringify(driver)),
-          synced_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq('license_id', currentLicenseId)
         .eq('local_id', driver.id);
 
@@ -120,6 +143,7 @@ export function useDriverCRUD() {
       return false;
     }
   }, []);
+
 
   const deleteDriver = useCallback(async (
     id: string,
