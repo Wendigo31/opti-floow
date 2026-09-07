@@ -3,6 +3,8 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { SavedTour } from '@/types/savedTour';
+import type { TourCostResult } from '@/utils/tourCostCalculation';
+
 import {
   PDF_COLORS,
   PDF_LAYOUT,
@@ -22,7 +24,10 @@ interface TourPDFOptions {
   includeVehicleDetails?: boolean;
   includeDriverDetails?: boolean;
   companyName?: string;
+  /** Coût recalculé avec la flotte / les conducteurs / les charges actuels */
+  realCost?: TourCostResult;
 }
+
 
 export function exportTourDetailedPDF(tour: SavedTour, options: TourPDFOptions = {}) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -114,6 +119,53 @@ export function exportTourDetailedPDF(tour: SavedTour, options: TourPDFOptions =
     margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
   });
   y = (pdf as any).lastAutoTable.finalY + 6;
+
+  // Coût réel recalculé (données actuelles)
+  const rc = options.realCost;
+  if (rc) {
+    y = ensureSpace(pdf, y, 80);
+    y = sectionTitle(pdf, 'Coût réel recalculé (données actuelles)', y);
+    const rows: [string, number, number][] = [
+      ['Carburant (Gazole)', tour.fuel_cost, rc.fuelCost],
+      ['AdBlue', tour.adblue_cost, rc.adBlueCost],
+      ['Péages', tour.toll_cost, rc.tollCost],
+      ['Conducteur(s)', tour.driver_cost, rc.driverCost + rc.driverBonuses + rc.driverAllowances],
+      ['Structure', tour.structure_cost, rc.structureCost],
+      ['Véhicule', tour.vehicle_cost, rc.vehicleCost],
+      ['Remorque', 0, rc.trailerCost],
+    ];
+    const deltaTotal = rc.totalCost - tour.total_cost;
+    const deltaPct = tour.total_cost > 0 ? (deltaTotal / tour.total_cost) * 100 : 0;
+    autoTable(pdf, {
+      startY: y,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      headStyles: { fillColor: PDF_COLORS.primary, textColor: 255, fontStyle: 'bold' },
+      head: [['Poste', 'Coût enregistré', 'Coût réel', 'Écart']],
+      body: rows.map(([label, saved, real]) => [
+        label,
+        formatCurrencyDetailed(saved),
+        formatCurrencyDetailed(real),
+        `${real - saved >= 0 ? '+' : ''}${formatCurrencyDetailed(real - saved)}`,
+      ]),
+      foot: [[
+        'COÛT TOTAL',
+        formatCurrencyDetailed(tour.total_cost),
+        formatCurrencyDetailed(rc.totalCost),
+        `${deltaTotal >= 0 ? '+' : ''}${formatCurrencyDetailed(deltaTotal)} (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)} %)`,
+      ]],
+      footStyles: { fillColor: PDF_COLORS.dark, textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        1: { halign: 'right', cellWidth: 35 },
+        2: { halign: 'right', cellWidth: 35 },
+        3: { halign: 'right', cellWidth: 45 },
+      },
+      margin: { left: PDF_LAYOUT.marginX, right: PDF_LAYOUT.marginX },
+    });
+    y = (pdf as any).lastAutoTable.finalY + 6;
+  }
+
+
 
   // Indicateurs clés
   y = ensureSpace(pdf, y, 50);
