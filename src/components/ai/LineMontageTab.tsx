@@ -43,7 +43,7 @@ import { AddressInput } from '@/components/route/AddressInput';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { QuickDriverDialog } from '@/components/ai/QuickDriverDialog';
 import type { Driver } from '@/types';
-import { computeDriverDailyCost, type MontageResponse } from '@/domain/lineMontage/lineMontageModel';
+import { computeDriverDailyCost, type MontageResponse, type MontageScenario } from '@/domain/lineMontage/lineMontageModel';
 
 interface Position {
   lat: number;
