@@ -1,58 +1,20 @@
 import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  MapPin, 
-  Navigation, 
-  Loader2, 
-  Route, 
-  Fuel, 
-  ArrowUpDown,
-  Milestone,
-  TreePine,
-  CheckCircle2,
-  AlertCircle,
-  Plus,
-  X,
-  GripVertical,
-  Save,
-  History,
-  User,
-  Truck,
-  Users,
-  Edit3,
-  Euro,
-  TrendingUp,
-  Calculator,
-  Building2,
-  Heart,
+import {
+  Navigation,
   Folder,
-  ChevronRight,
-  Clock,
-  Zap,
-  Car
+  Save,
 } from 'lucide-react';
 import {
-  DndContext,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  type DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { AddressInput } from '@/components/route/AddressInput';
-import { MapPreview } from '@/components/map/MapPreview';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
@@ -63,18 +25,15 @@ import { useCalculations } from '@/hooks/useCalculations';
 import { FRENCH_TOLL_RATES, SEMI_TRAILER_SPECS } from '@/hooks/useTomTom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useItineraryState } from '@/hooks/useItineraryState';
 import { useToast } from '@/hooks/use-toast';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
-import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
 import type { LocalTrip, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import type { Vehicle } from '@/types/vehicle';
-import { calculateVehicleCosts, formatCostPerKm } from '@/hooks/useVehicleCost';
+import { calculateVehicleCosts } from '@/hooks/useVehicleCost';
 import { AddressSelectorDialog } from '@/components/itinerary/AddressSelectorDialog';
 import { useFavoriteAddresses } from '@/hooks/useFavoriteAddresses';
 import { SaveItineraryDialog } from '@/components/itinerary/SaveItineraryDialog';
@@ -83,134 +42,10 @@ import { useTruckRestrictions } from '@/hooks/useTruckRestrictions';
 import type { SavedTour } from '@/types/savedTour';
 import { useSearchHistory, type SearchHistoryEntry } from '@/hooks/useSearchHistory';
 import { SearchHistoryDialog } from '@/components/itinerary/SearchHistoryDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RouteItineraryListing } from '@/components/itinerary/RouteItineraryListing';
-
-// Decode Google polyline encoding
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = [];
-  let index = 0;
-  let lat = 0;
-  let lng = 0;
-
-  while (index < encoded.length) {
-    let shift = 0;
-    let result = 0;
-    let byte;
-
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
-    lng += dlng;
-
-    points.push([lat / 1e5, lng / 1e5]);
-  }
-
-  return points;
-}
-
-interface RouteResult {
-  distance: number;
-  duration: number;
-  tollCost: number;
-  fuelCost: number;
-  coordinates: [number, number][];
-  type: 'highway' | 'national';
-}
-
-interface Position {
-  lat: number;
-  lon: number;
-}
-
-interface Waypoint {
-  id: string;
-  address: string;
-  position: Position | null;
-}
-
-interface SortableStopProps {
-  stop: Waypoint;
-  index: number;
-  onUpdate: (id: string, address: string, position: Position | null) => void;
-  onRemove: (id: string) => void;
-  onSwap: () => void;
-  isLast: boolean;
-  onOpenAddressSelector: (stopId: string) => void;
-}
-
-function SortableStop({ stop, index, onUpdate, onRemove, onSwap, isLast, onOpenAddressSelector }: SortableStopProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: stop.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="group">
-      <div className="flex items-center gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground touch-none"
-        >
-          <GripVertical className="w-4 h-4" />
-        </button>
-        <div className="flex-1">
-          <AddressInput
-            value={stop.address}
-            onChange={(value) => onUpdate(stop.id, value, stop.position)}
-            onSelect={(address, position) => onUpdate(stop.id, address, position)}
-            label=""
-            placeholder={`Arrêt ${index + 1}`}
-            icon="start"
-          />
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground/50 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => onOpenAddressSelector(stop.id)}
-        >
-          <Building2 className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => onRemove(stop.id)}
-        >
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
+import { ItineraryRouteForm } from '@/components/itinerary/ItineraryRouteForm';
+import { ItineraryRouteResults } from '@/components/itinerary/ItineraryRouteResults';
+import { ItineraryMapPanel } from '@/components/itinerary/ItineraryMapPanel';
+import type { Position, RouteResult, Waypoint } from '@/types/itinerary';
 
 export default function Itinerary() {
   const { vehicle, trip, setTrip, setVehicle, selectedDriverIds, setSelectedDriverIds, settings } = useApp();
@@ -891,480 +726,81 @@ export default function Itinerary() {
 
         <ScrollArea className="flex-1">
           <div className="p-4 lg:p-5 space-y-5">
-            {/* Origin & Destination */}
-            <div className="space-y-3 bg-card/60 rounded-2xl p-4 border border-border/30 shadow-sm">
-              {/* Origin */}
-              <div className="flex items-start gap-3 animate-fade-in">
-                <div className="mt-3 relative">
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-primary to-primary/70 shadow-md ring-4 ring-primary/20" />
-                  <div className="absolute top-5 left-1/2 -translate-x-1/2 w-0.5 h-8 bg-gradient-to-b from-primary/50 to-transparent" />
-                </div>
-                <div className="flex-1">
-                  <AddressInput
-                    value={originAddress}
-                    onChange={setOriginAddress}
-                    onSelect={(address, position) => { setOriginAddress(address); setOriginPosition(position); }}
-                    label=""
-                    placeholder="Adresse de départ"
-                    icon="start"
-                  />
-                </div>
-                <div className="flex gap-1 pt-1.5">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-primary/10 transition-colors" onClick={() => openAddressSelector('origin')}>
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-destructive/10 transition-colors" onClick={() => toggleFavoriteAddress(originAddress, originPosition)} disabled={!originAddress || !originPosition}>
-                    <Heart className={cn("w-4 h-4 transition-all", originPosition && isFavorite(originPosition.lat, originPosition.lon) ? "fill-destructive text-destructive scale-110" : "text-muted-foreground")} />
-                  </Button>
-                </div>
-              </div>
+            <ItineraryRouteForm
+              originAddress={originAddress}
+              setOriginAddress={setOriginAddress}
+              originPosition={originPosition}
+              setOriginPosition={setOriginPosition}
+              destinationAddress={destinationAddress}
+              setDestinationAddress={setDestinationAddress}
+              destinationPosition={destinationPosition}
+              setDestinationPosition={setDestinationPosition}
+              openAddressSelector={openAddressSelector}
+              toggleFavoriteAddress={toggleFavoriteAddress}
+              isFavorite={isFavorite}
+              swapOriginWithNext={swapOriginWithNext}
+              stops={stops}
+              sensors={sensors}
+              handleDragEnd={handleDragEnd}
+              updateStop={updateStop}
+              removeStop={removeStop}
+              swapStops={swapStops}
+              swapLastWithDestination={swapLastWithDestination}
+              addStop={addStop}
+              allVehicles={allVehicles}
+              selectedVehicleId={selectedVehicleId}
+              handleVehicleSelect={handleVehicleSelect}
+              clients={clients}
+              selectedClientId={selectedClientId}
+              setSelectedClientId={setSelectedClientId}
+              drivers={drivers}
+              selectedDriverIds={selectedDriverIds}
+              setSelectedDriverIds={setSelectedDriverIds}
+              selectedTrailerId={selectedTrailerId}
+              setSelectedTrailerId={setSelectedTrailerId}
+              trailers={trailers}
+              selectedVehicle={selectedVehicle}
+              vehicleCostBreakdown={vehicleCostBreakdown}
+              transportMode={transportMode}
+              setTransportMode={setTransportMode}
+              clearResults={clearResults}
+              handleCalculateRoutes={handleCalculateRoutes}
+              loading={loading}
+              error={error}
+            />
 
-              {/* Swap button */}
-              <div className="flex items-center gap-3 ml-7">
-                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-                <Button variant="outline" size="icon" className="h-7 w-7 rounded-full border-dashed hover:border-primary hover:bg-primary/5 transition-all" onClick={swapOriginWithNext}>
-                  <ArrowUpDown className="w-3 h-3" />
-                </Button>
-                <div className="h-px flex-1 bg-gradient-to-l from-border to-transparent" />
-              </div>
-
-              {/* Stops */}
-              {stops.length > 0 && (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={stops.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-2 ml-7">
-                      {stops.map((stop, index) => (
-                        <SortableStop
-                          key={stop.id}
-                          stop={stop}
-                          index={index}
-                          onUpdate={updateStop}
-                          onRemove={removeStop}
-                          onSwap={() => index < stops.length - 1 ? swapStops(index) : swapLastWithDestination()}
-                          isLast={index === stops.length - 1}
-                          onOpenAddressSelector={(stopId) => openAddressSelector('stop', stopId)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              )}
-
-              {/* Add stop */}
-              <Button variant="ghost" size="sm" onClick={addStop} className="ml-7 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all rounded-full">
-                <Plus className="w-4 h-4 mr-1.5" /> Ajouter un arrêt
-              </Button>
-
-              {/* Destination */}
-              <div className="flex items-start gap-3 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                <div className="mt-3 relative">
-                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-0.5 h-8 bg-gradient-to-t from-destructive/50 to-transparent" />
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-destructive to-destructive/70 shadow-md ring-4 ring-destructive/20" />
-                </div>
-                <div className="flex-1">
-                  <AddressInput
-                    value={destinationAddress}
-                    onChange={setDestinationAddress}
-                    onSelect={(address, position) => { setDestinationAddress(address); setDestinationPosition(position); }}
-                    label=""
-                    placeholder="Adresse d'arrivée"
-                    icon="end"
-                  />
-                </div>
-                <div className="flex gap-1 pt-1.5">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-primary/10 transition-colors" onClick={() => openAddressSelector('destination')}>
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-destructive/10 transition-colors" onClick={() => toggleFavoriteAddress(destinationAddress, destinationPosition)} disabled={!destinationAddress || !destinationPosition}>
-                    <Heart className={cn("w-4 h-4 transition-all", destinationPosition && isFavorite(destinationPosition.lat, destinationPosition.lon) ? "fill-destructive text-destructive scale-110" : "text-muted-foreground")} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Options */}
-            <div className="p-4 rounded-2xl bg-card/60 border border-border/30 shadow-sm space-y-4 animate-fade-in" style={{ animationDelay: '0.15s' }}>
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
-                <Truck className="w-4 h-4 text-primary" />
-                <span>Options du trajet</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <SearchableSelect
-                  value={selectedVehicleId || ''}
-                  onValueChange={(v) => handleVehicleSelect(v || 'none')}
-                  options={allVehicles.map(v => ({ value: v.id, label: v.name, sublabel: v.licensePlate || undefined }))}
-                  placeholder="Véhicule"
-                  emptyLabel="Par défaut"
-                  searchPlaceholder="Rechercher un véhicule..."
-                  icon={<Truck className="w-4 h-4 text-primary/70" />}
-                  triggerClassName="h-11"
-                />
-
-                <SearchableSelect
-                  value={selectedClientId || ''}
-                  onValueChange={(v) => setSelectedClientId(v || null)}
-                  options={clients.map(c => ({ value: c.id, label: c.name }))}
-                  placeholder="Client"
-                  emptyLabel="Aucun"
-                  searchPlaceholder="Rechercher un client..."
-                  icon={<User className="w-4 h-4 text-secondary/70" />}
-                  triggerClassName="h-11"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <DriverSearchSelect
-                  drivers={drivers}
-                  value={selectedDriverIds[0] || ''}
-                  onChange={(id) => {
-                    setSelectedDriverIds(id ? [id] : []);
-                  }}
-                  placeholder="Conducteur"
-                />
-
-                <SearchableSelect
-                  value={selectedTrailerId || ''}
-                  onValueChange={(v) => setSelectedTrailerId(v || null)}
-                  options={trailers.filter(t => t.isActive).map(t => ({ value: t.id, label: t.name, sublabel: t.licensePlate || undefined }))}
-                  placeholder="Remorque"
-                  emptyLabel="Aucune"
-                  searchPlaceholder="Rechercher une remorque..."
-                  icon={<Truck className="w-4 h-4 text-warning/70" />}
-                  triggerClassName="h-11"
-                />
-              </div>
-
-              {selectedVehicle && vehicleCostBreakdown && (
-                <div className="flex items-center justify-between text-sm p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    {selectedVehicle.name}
-                  </span>
-                  <span className="font-semibold text-primary">{formatCostPerKm(vehicleCostBreakdown.totalCostPerKm)}/km</span>
-                </div>
-              )}
-            </div>
-
-            {/* Transport mode selector */}
-            <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl border border-border/40">
-              <button
-                type="button"
-                onClick={() => { setTransportMode('truck'); clearResults(); }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
-                  transportMode === 'truck'
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Truck className="w-4 h-4" /> Camion
-              </button>
-              <button
-                type="button"
-                onClick={() => { setTransportMode('car'); clearResults(); }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
-                  transportMode === 'car'
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Car className="w-4 h-4" /> Voiture
-              </button>
-            </div>
-
-            {/* Calculate Button */}
-            <Button 
-              onClick={handleCalculateRoutes} 
-              disabled={loading || !originPosition || !destinationPosition}
-              className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in"
-              style={{ animationDelay: '0.2s' }}
-              size="lg"
-              variant="gradient"
-            >
-              {loading ? (
-                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Calcul en cours...</>
-              ) : (
-                <><Navigation className="w-5 h-5 mr-2" /> Calculer l'itinéraire</>
-              )}
-            </Button>
-
-            {error && (
-              <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive animate-scale-in">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            {/* Results */}
-            {hasResults && (
-              <div className="space-y-4 pt-3">
-                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <Route className="w-4 h-4 text-primary" />
-                  Résultats de l'itinéraire
-                </h3>
-
-                {/* Highway */}
-                {highwayRoute && (
-                  <div 
-                    className={cn(
-                      "p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 animate-scale-in group",
-                      selectedRoute === 'highway' 
-                        ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10" 
-                        : "border-border/50 hover:border-primary/40 hover:shadow-md bg-card/80 hover:bg-card"
-                    )}
-                    onClick={() => handleApplyRoute(highwayRoute)}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-                          selectedRoute === 'highway' 
-                            ? "bg-gradient-to-br from-primary to-primary/70 shadow-md" 
-                            : "bg-primary/15 group-hover:bg-primary/25"
-                        )}>
-                          <Zap className={cn("w-5 h-5 transition-colors", selectedRoute === 'highway' ? "text-primary-foreground" : "text-primary")} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-base">Autoroute</h4>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Plus rapide
-                          </p>
-                        </div>
-                      </div>
-                      {selectedRoute === 'highway' && (
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">
-                          <CheckCircle2 className="w-4 h-4" />
-                          Sélectionné
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-4 gap-3 text-center">
-                      <div className="p-2 rounded-xl bg-muted/30">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Distance</p>
-                        <p className="font-bold text-lg">{highwayRoute.distance} <span className="text-xs font-normal">km</span></p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-muted/30">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Durée</p>
-                        <p className="font-bold text-lg">{formatDuration(highwayRoute.duration)}</p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-warning/10">
-                        <p className="text-[10px] uppercase tracking-wide text-warning mb-1">Péages</p>
-                        <p className="font-bold text-lg text-warning">{formatCurrency(highwayRoute.tollCost)}</p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-primary/10">
-                        <p className="text-[10px] uppercase tracking-wide text-primary mb-1">Gazole</p>
-                        <p className="font-bold text-lg text-primary">{formatCurrency(highwayRoute.fuelCost)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-                      <span className="text-sm font-medium text-muted-foreground">Total énergie</span>
-                      <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{formatCurrency(highwayRoute.tollCost + highwayRoute.fuelCost)}</span>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm" className="flex-1 h-10" variant="gradient" onClick={(e) => { e.stopPropagation(); handleOpenSaveItinerary(highwayRoute); }}>
-                        <Save className="w-4 h-4 mr-1.5" /> Sauvegarder
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-10 w-10" onClick={(e) => { e.stopPropagation(); handleSaveToHistory(highwayRoute); }}>
-                        <History className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* National */}
-                {nationalRoute && (
-                  <div 
-                    className={cn(
-                      "p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 animate-scale-in group",
-                      selectedRoute === 'national' 
-                        ? "border-success bg-gradient-to-br from-success/10 to-success/5 shadow-lg shadow-success/10" 
-                        : "border-border/50 hover:border-success/40 hover:shadow-md bg-card/80 hover:bg-card"
-                    )}
-                    style={{ animationDelay: '0.1s' }}
-                    onClick={() => handleApplyRoute(nationalRoute)}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-                          selectedRoute === 'national' 
-                            ? "bg-gradient-to-br from-success to-success/70 shadow-md" 
-                            : "bg-success/15 group-hover:bg-success/25"
-                        )}>
-                          <TreePine className={cn("w-5 h-5 transition-colors", selectedRoute === 'national' ? "text-success-foreground" : "text-success")} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-base">Nationale</h4>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Euro className="w-3 h-3" /> Plus économique
-                          </p>
-                        </div>
-                      </div>
-                      {selectedRoute === 'national' && (
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium">
-                          <CheckCircle2 className="w-4 h-4" />
-                          Sélectionné
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-4 gap-3 text-center">
-                      <div className="p-2 rounded-xl bg-muted/30">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Distance</p>
-                        <p className="font-bold text-lg">{nationalRoute.distance} <span className="text-xs font-normal">km</span></p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-muted/30">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Durée</p>
-                        <p className="font-bold text-lg">{formatDuration(nationalRoute.duration)}</p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-success/10">
-                        <p className="text-[10px] uppercase tracking-wide text-success mb-1">Péages</p>
-                        <p className="font-bold text-lg text-success">{formatCurrency(nationalRoute.tollCost)}</p>
-                      </div>
-                      <div className="p-2 rounded-xl bg-primary/10">
-                        <p className="text-[10px] uppercase tracking-wide text-primary mb-1">Gazole</p>
-                        <p className="font-bold text-lg text-primary">{formatCurrency(nationalRoute.fuelCost)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-                      <span className="text-sm font-medium text-muted-foreground">Total énergie</span>
-                      <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{formatCurrency(nationalRoute.tollCost + nationalRoute.fuelCost)}</span>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm" className="flex-1 h-10 bg-success hover:bg-success/90" onClick={(e) => { e.stopPropagation(); handleOpenSaveItinerary(nationalRoute); }}>
-                        <Save className="w-4 h-4 mr-1.5" /> Sauvegarder
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-10 w-10" onClick={(e) => { e.stopPropagation(); handleSaveToHistory(nationalRoute); }}>
-                        <History className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Comparison */}
-                {highwayRoute && nationalRoute && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 text-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium">Comparaison</span>
-                    </div>
-                    {highwayRoute.tollCost + highwayRoute.fuelCost < nationalRoute.tollCost + nationalRoute.fuelCost ? (
-                      <p className="text-sm">
-                        <span className="text-primary font-semibold">Autoroute</span> économise{' '}
-                        <span className="text-success font-bold">{formatCurrency((nationalRoute.tollCost + nationalRoute.fuelCost) - (highwayRoute.tollCost + highwayRoute.fuelCost))}</span>
-                        {' '}et{' '}
-                        <span className="font-semibold">{formatDuration(nationalRoute.duration - highwayRoute.duration)}</span>
-                      </p>
-                    ) : (
-                      <p className="text-sm">
-                        <span className="text-success font-semibold">Nationale</span> économise{' '}
-                        <span className="text-success font-bold">{formatCurrency((highwayRoute.tollCost + highwayRoute.fuelCost) - (nationalRoute.tollCost + nationalRoute.fuelCost))}</span>
-                        {' '}mais{' '}
-                        <span className="text-warning font-semibold">+{formatDuration(nationalRoute.duration - highwayRoute.duration)}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Detailed listing + line proposal for the currently selected route */}
-                {displayedRoute && (
-                    <RouteItineraryListing
-                    originAddress={originAddress}
-                    destinationAddress={destinationAddress}
-                    stops={stops}
-                    route={displayedRoute}
-                      onSaveAsLine={handleOpenSaveItinerary}
-                    transportMode={transportMode}
-                    vehicleName={selectedVehicle?.name || null}
-                    clientName={clients.find(c => c.id === selectedClientId)?.name || null}
-                  />
-                )}
-              </div>
-            )}
+            <ItineraryRouteResults
+              hasResults={!!hasResults}
+              highwayRoute={highwayRoute}
+              nationalRoute={nationalRoute}
+              selectedRoute={selectedRoute}
+              displayedRoute={displayedRoute}
+              handleApplyRoute={handleApplyRoute}
+              handleOpenSaveItinerary={handleOpenSaveItinerary}
+              handleSaveToHistory={handleSaveToHistory}
+              formatCurrency={formatCurrency}
+              formatDuration={formatDuration}
+              originAddress={originAddress}
+              destinationAddress={destinationAddress}
+              stops={stops}
+              transportMode={transportMode}
+              vehicleName={selectedVehicle?.name || null}
+              clientName={clients.find(c => c.id === selectedClientId)?.name || null}
+            />
           </div>
         </ScrollArea>
       </div>
 
-      {/* Right Panel - Map */}
-      <div data-itinerary-map className="hidden lg:flex flex-1 relative bg-muted/20">
-        <MapPreview 
-          className="h-full w-full"
-          center={[46.603354, 1.888334]}
-          zoom={6}
-          markers={markers}
-          routeCoordinates={routeCoordinates}
-          restrictions={restrictionMarkers}
-          showRestrictionsLegend={true}
-        />
-        
-        {/* Route summary overlay */}
-        {selectedRoute && displayedRoute && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl px-5 py-3 shadow-xl animate-scale-in">
-            <div className="flex items-center gap-4 text-sm">
-              <div className={cn(
-                "w-8 h-8 rounded-xl flex items-center justify-center",
-                selectedRoute === 'highway' ? "bg-primary/20" : "bg-success/20"
-              )}>
-                {selectedRoute === 'highway' ? (
-                  <Zap className="w-4 h-4 text-primary" />
-                ) : (
-                  <TreePine className="w-4 h-4 text-success" />
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold">
-                  {selectedRoute === 'highway' ? 'Autoroute' : 'Nationale'}
-                </span>
-                <div className="w-px h-4 bg-border" />
-                <span className="font-medium">{displayedRoute.distance} km</span>
-                <div className="w-px h-4 bg-border" />
-                <span className="text-muted-foreground">{formatDuration(displayedRoute.duration)}</span>
-                {truckRestrictions.length > 0 && (
-                  <>
-                    <div className="w-px h-4 bg-border" />
-                    <span className="text-warning font-medium flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {truckRestrictions.length} restrictions
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Map placeholder removed — instructions are now in the page header */}
-      </div>
-      
-      {/* Mobile Map Preview */}
-      {displayedRoute && (
-        <div className="lg:hidden fixed bottom-20 left-4 right-4 z-40">
-          <div className="bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl p-4 shadow-xl animate-slide-up">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center",
-                  selectedRoute === 'highway' ? "bg-primary/20" : "bg-success/20"
-                )}>
-                  {selectedRoute === 'highway' ? (
-                    <Zap className="w-5 h-5 text-primary" />
-                  ) : (
-                    <TreePine className="w-5 h-5 text-success" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-semibold">{selectedRoute === 'highway' ? 'Autoroute' : 'Nationale'}</p>
-                  <p className="text-xs text-muted-foreground">{displayedRoute.distance} km • {formatDuration(displayedRoute.duration)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold">{formatCurrency(displayedRoute.tollCost + displayedRoute.fuelCost)}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ItineraryMapPanel
+        markers={markers}
+        routeCoordinates={routeCoordinates}
+        restrictionMarkers={restrictionMarkers}
+        truckRestrictionsCount={truckRestrictions.length}
+        selectedRoute={selectedRoute}
+        displayedRoute={displayedRoute}
+        formatDuration={formatDuration}
+        formatCurrency={formatCurrency}
+      />
 
       {/* Dialogs */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
