@@ -28,6 +28,8 @@ import {
   FileSpreadsheet,
   Boxes,
   MapPinned,
+  ShieldCheck,
+  Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react';
 import type { FeatureKey } from '@/hooks/useLicense';
@@ -59,55 +61,46 @@ export interface NavCategoryConfig {
   pages: NavPageConfig[];
 }
 
+const P = {
+  planning: { to: '/planning', icon: CalendarDays, label: 'Planning' },
+  tours: { to: '/tours', icon: Route, label: 'Tournées', requiredFeature: 'page_tours', userFeatureKey: 'page_tours' },
+  lineMontage: { to: '/line-montage', icon: Layers, label: 'Création de ligne' },
+  clients: { to: '/clients', icon: UserCircle, label: 'Clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
+  vehicles: { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
+  itinerary: { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
+  aiAnalysis: { to: '/ai-analysis', icon: Sparkles, label: 'Analyse par IA', requiredFeature: 'page_ai_analysis' },
+  charges: { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', directionOnly: true },
+  drivers: { to: '/drivers', icon: Users, label: 'Conducteurs', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
+  team: { to: '/team', icon: UsersRound, label: 'Équipe' },
+  restrictions: { to: '/my-restrictions', icon: ShieldCheck, label: 'Mes accès' },
+  calculator: { to: '/calculator', icon: Calculator, label: 'Calculateur', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
+  dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard' },
+  forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', directionOnly: true },
+  vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
+  settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
+} satisfies Record<string, NavPageConfig>;
+
+/** Une même page peut figurer dans plusieurs espaces quand elle sert à plusieurs métiers. */
 export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
-    id: 'exploitation',
-    label: 'Exploitation',
-    icon: Boxes,
-    pages: [
-      { to: '/planning', icon: CalendarDays, label: 'Planning' },
-      { to: '/tours', icon: Route, label: 'Tournées', requiredFeature: 'page_tours', userFeatureKey: 'page_tours' },
-      { to: '/line-montage', icon: Layers, label: 'Création de ligne' },
-      { to: '/clients', icon: UserCircle, label: 'Clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
-      { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
-    ],
+    id: 'exploitation', label: 'Exploitation', icon: Boxes,
+    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.clients, P.vehicles, P.drivers, P.vehicleReports, P.settings],
   },
   {
-    id: 'geoloc',
-    label: 'Géoloc',
-    icon: MapPinned,
-    pages: [
-      { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
-      { to: '/ai-analysis', icon: Sparkles, label: 'Analyse par IA', requiredFeature: 'page_ai_analysis' },
-    ],
+    id: 'geoloc', label: 'Géoloc', icon: MapPinned,
+    pages: [P.itinerary, P.aiAnalysis, P.tours, P.planning, P.settings],
   },
   {
-    id: 'comptabilite',
-    label: 'Comptabilité',
-    icon: Building2,
-    pages: [
-      { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', directionOnly: true },
-    ],
+    id: 'comptabilite', label: 'Comptabilité', icon: Building2,
+    pages: [P.charges, P.dashboard, P.forecast, P.calculator, P.clients, P.settings],
   },
   {
-    id: 'rh',
-    label: 'RH',
-    icon: Users,
-    pages: [
-      { to: '/drivers', icon: Users, label: 'Conducteurs', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
-      { to: '/team', icon: UsersRound, label: 'Équipe' },
-    ],
+    id: 'rh', label: 'RH', icon: Users,
+    pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
   },
   {
-    id: 'rentabilite',
-    label: 'Gestion de rentabilité',
-    icon: TrendingUp,
-    pages: [
-      { to: '/calculator', icon: Calculator, label: 'Calculateur', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
-      { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard' },
-      { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', directionOnly: true },
-      { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
-    ],
+    id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
+    pages: [P.calculator, P.dashboard, P.forecast, P.vehicleReports, P.tours, P.charges, P.aiAnalysis, P.settings],
   },
 ];
 
