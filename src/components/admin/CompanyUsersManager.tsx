@@ -470,8 +470,6 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const selectedLicense = licenses.find(l => l.id === selectedLicenseId);
 
   const getEffectiveMaxUsers = (license: License): number | null => {
-    // Enterprise is unlimited, even if an old record still has max_users = 1
-    if ((license.plan_type || '').toLowerCase() === 'enterprise') return null;
     if (license.max_users == null) return null;
     if (license.max_users === 999) return null;
     return license.max_users;
