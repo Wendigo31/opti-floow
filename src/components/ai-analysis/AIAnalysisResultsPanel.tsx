@@ -19,6 +19,7 @@ import {
   Shield,
   Navigation,
   Save,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,7 @@ interface AIAnalysisResultsPanelProps {
   destination: string;
   getStopsForAPI: () => string[];
   handleSaveAsNewTour: () => void | Promise<void>;
+  onCreateQuote?: () => void;
   formatCurrency: (value: number) => string;
   expandedSection: string | null;
   toggleSection: (section: string) => void;
@@ -55,6 +57,7 @@ export function AIAnalysisResultsPanel({
   destination,
   getStopsForAPI,
   handleSaveAsNewTour,
+  onCreateQuote,
   formatCurrency,
   expandedSection,
   toggleSection,
@@ -134,6 +137,12 @@ export function AIAnalysisResultsPanel({
                   </>
                 )}
               </Button>
+              {onCreateQuote && (
+                <Button onClick={onCreateQuote} variant="outline" className="gap-2">
+                  <FileText className="w-4 h-4" />
+                  Générer un devis
+                </Button>
+              )}
             </div>
           </div>
 
