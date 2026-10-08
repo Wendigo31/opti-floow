@@ -1226,19 +1226,6 @@ export default function Admin() {
                 </div>
                 {!formData.assignToCompanyId && (
                   <>
-                    <div className="space-y-2">
-                      <Label>Forfait</Label>
-                      <Select value={formData.planType} onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="start">Start</SelectItem>
-                          <SelectItem value="pro">Pro</SelectItem>
-                          <SelectItem value="enterprise">Enterprise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label>Prénom</Label>
