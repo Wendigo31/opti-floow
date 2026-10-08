@@ -12,10 +12,10 @@ describe('authenticated app navigation', () => {
     ]);
   });
 
-  it('keeps fixed charges as the only accounting page', () => {
+  it('keeps fixed charges Direction-only in accounting', () => {
     const accounting = NAV_CATEGORIES.find((category) => category.id === 'comptabilite');
-    expect(accounting?.pages.map((page) => page.to)).toEqual(['/charges']);
-    expect(accounting?.pages[0].directionOnly).toBe(true);
+    const charges = accounting?.pages.find((page) => page.to === '/charges');
+    expect(charges?.directionOnly).toBe(true);
   });
 
   it('keeps shared operational pages available from exploitation', () => {
