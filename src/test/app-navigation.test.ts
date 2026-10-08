@@ -9,6 +9,7 @@ describe('authenticated app navigation', () => {
       'Comptabilité',
       'RH',
       'Gestion de parc',
+      "Appels d'offres",
       'Gestion de rentabilité',
     ]);
   });
@@ -24,6 +25,13 @@ describe('authenticated app navigation', () => {
     expect(operations?.pages.map((page) => page.to)).toEqual(expect.arrayContaining([
       '/planning', '/tours', '/clients', '/vehicles',
     ]));
+  });
+
+  it('every navigation page renders content in its workspace', async () => {
+    const src = (await import('@/pages/CategoryWorkspace.tsx?raw')).default as string;
+    for (const page of NAV_CATEGORIES.flatMap((c) => c.pages)) {
+      expect(src, page.to).toContain(`'${page.to}':`);
+    }
   });
 
   it('does not expose internal or removed routes', () => {

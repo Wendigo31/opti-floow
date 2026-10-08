@@ -31,6 +31,8 @@ import {
   History,
   Download,
   Warehouse,
+  FileText,
+  Gavel,
   ShieldCheck,
   Settings as SettingsIcon,
   type LucideIcon,
@@ -44,6 +46,7 @@ export type NavCategoryId =
   | 'comptabilite'
   | 'rh'
   | 'parc'
+  | 'appels-offres'
   | 'rentabilite';
 
 export interface NavPageConfig {
@@ -83,6 +86,7 @@ const P = {
   vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
   history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
   install: { to: '/install', icon: Download, label: "Installer l'application" },
+  tenders: { to: '/tenders', icon: FileText, label: 'Devis par client' },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 } satisfies Record<string, NavPageConfig>;
 
@@ -107,6 +111,10 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'parc', label: 'Gestion de parc', icon: Warehouse,
     pages: [P.vehicles, P.vehicleReports, P.drivers, P.settings, P.install],
+  },
+  {
+    id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
+    pages: [P.tenders, P.clients, P.tours, P.calculator, P.itinerary],
   },
   {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
