@@ -807,7 +807,7 @@ export default function Admin() {
           {adminActiveTab === 'licenses' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="pt-4">
                     <div className="text-2xl font-bold">{stats.total}</div>
@@ -819,6 +819,7 @@ export default function Admin() {
                     <div className="text-2xl font-bold text-green-600">{stats.active}</div>
                     <p className="text-xs text-muted-foreground">Actives</p>
                   </CardContent>
+                </Card>
                 <Card>
                   <CardContent className="pt-4">
                     <div className="text-2xl font-bold text-muted-foreground">{stats.inactive}</div>
