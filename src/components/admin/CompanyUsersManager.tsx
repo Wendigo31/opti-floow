@@ -143,7 +143,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         code: validateData.licenseData?.code || license.license_code,
         email: validateData.licenseData?.email || user.email,
         activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
-        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        planType: 'optiflow',
         companyName: validateData.licenseData?.companyName ?? license.company_name,
         companyUserId: validateData.companyUserId ?? user.id,
         userRole: validateData.userRole ?? user.role,

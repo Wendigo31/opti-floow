@@ -623,9 +623,7 @@ export default function Admin() {
   const stats = {
     total: licenses.length,
     active: licenses.filter(l => l.is_active).length,
-    start: licenses.filter(l => l.plan_type === 'start').length,
-    pro: licenses.filter(l => l.plan_type === 'pro').length,
-    enterprise: licenses.filter(l => l.plan_type === 'enterprise').length,
+    inactive: licenses.filter(l => !l.is_active).length,
   };
 
   const getPlanIcon = (plan: string | null) => {
@@ -821,32 +819,10 @@ export default function Admin() {
                     <div className="text-2xl font-bold text-green-600">{stats.active}</div>
                     <p className="text-xs text-muted-foreground">Actives</p>
                   </CardContent>
-                </Card>
-                <Card className="border-emerald-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-emerald-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.start}</div>
-                      <p className="text-xs text-muted-foreground">Start</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Star className="w-5 h-5 text-blue-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.pro}</div>
-                      <p className="text-xs text-muted-foreground">Pro</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-amber-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Crown className="w-5 h-5 text-amber-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.enterprise}</div>
-                      <p className="text-xs text-muted-foreground">Enterprise</p>
-                    </div>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-muted-foreground">{stats.inactive}</div>
+                    <p className="text-xs text-muted-foreground">Désactivées</p>
                   </CardContent>
                 </Card>
               </div>
@@ -870,17 +846,6 @@ export default function Admin() {
                     <SelectItem value="all">Tous</SelectItem>
                     <SelectItem value="active">Actifs</SelectItem>
                     <SelectItem value="inactive">Inactifs</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={filterPlan} onValueChange={(v) => setFilterPlan(v as any)}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="start">Start</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="icon" onClick={fetchLicenses} disabled={loading}>
