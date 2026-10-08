@@ -31,28 +31,7 @@ import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
 import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
-// Extended driver type with new fields
-// Champs de paie : jamais renvoyés par un membre qui n'y a pas accès
-const PAY_FIELDS = [
-  'baseSalary', 'hourlyRate', 'patronalCharges',
-  'mealAllowance', 'overnightAllowance',
-  'sundayBonus', 'nightBonus', 'seniorityBonus', 'unloadingBonus',
-  'interimHourlyRate', 'interimCoefficient',
-] as const;
-
-interface ExtendedDriver extends Driver {
-  isInterim?: boolean;
-  interimAgency?: string;
-  interimHourlyRate?: number;
-  interimCoefficient?: number;
-  scheduleType?: 'day' | 'night' | 'mixed';
-  nightStartHour?: number;
-  nightEndHour?: number;
-  nightBonusPercent?: number;
-  assignedClientId?: string;
-  assignedCity?: string;
-  assignedTourIds?: string[];
-}
+import { DRIVER_PAY_FIELDS, calculateEmployerCost, type ExtendedDriver } from '@/domain/drivers/driverModel';
 
 export default function Drivers() {
   // Use cloud drivers for shared data sync
@@ -354,7 +333,7 @@ export default function Drivers() {
       if (!canViewFinancialData) {
         // Ce membre travaille sur une fiche sans données de paie : on ne renvoie
         // aucune valeur de rémunération pour ne pas écraser celles enregistrées.
-        for (const key of PAY_FIELDS) {
+        for (const key of DRIVER_PAY_FIELDS) {
           delete (mergedForm as Record<string, unknown>)[key];
         }
       }
@@ -373,31 +352,6 @@ export default function Drivers() {
 
   const handleDelete = async (id: string, driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => {
     await deleteCloudDriver(id, driverType);
-  };
-
-  const calculateInterimCost = (driver: ExtendedDriver): number => {
-    const hourlyRate = driver.interimHourlyRate || 15;
-    const coefficient = driver.interimCoefficient || 1.85;
-    const hoursPerDay = driver.hoursPerDay || 10;
-    const workingDays = driver.workingDaysPerMonth || 21;
-    return hourlyRate * coefficient * hoursPerDay * workingDays;
-  };
-
-  const calculateEmployerCost = (driver: ExtendedDriver): number => {
-    if (driver.isInterim) {
-      return calculateInterimCost(driver);
-    }
-    
-    const baseCost = (driver.baseSalary + (driver.sundayBonus || 0) + (driver.nightBonus || 0) + (driver.seniorityBonus || 0)) 
-      * (1 + driver.patronalCharges / 100);
-    
-    // Add night bonus if applicable
-    if (driver.scheduleType === 'night' || driver.scheduleType === 'mixed') {
-      const nightBonusAmount = driver.baseSalary * ((driver.nightBonusPercent || 25) / 100);
-      return baseCost + nightBonusAmount;
-    }
-    
-    return baseCost;
   };
 
   const [importProgress, setImportProgress] = useState<DriverImportProgressState>({
