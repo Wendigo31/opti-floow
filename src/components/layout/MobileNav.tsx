@@ -84,10 +84,10 @@ export function MobileNav() {
     // If planType is not yet loaded, don't hide items — show them by default
     if (!planType) return true;
     if (requiredPlan === 'pro') {
-      return planType === 'pro' || planType === 'enterprise';
+      return true;
     }
     if (requiredPlan === 'enterprise') {
-      return planType === 'enterprise';
+      return true;
     }
     return true;
   };

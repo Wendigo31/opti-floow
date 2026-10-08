@@ -54,85 +54,85 @@ const FEATURE_CATEGORIES = [
     name: 'Calculs & Itinéraires',
     icon: Calculator,
     features: [
-      { key: 'basic_calculator', label: 'Calculateur de coûts', description: 'Calcul des coûts de transport', plans: ['start', 'pro', 'enterprise'] },
-      { key: 'itinerary_planning', label: 'Planification itinéraire', description: 'Création d\'itinéraires avec arrêts', plans: ['pro', 'enterprise'] },
-      { key: 'saved_tours', label: 'Tournées sauvegardées', description: 'Enregistrement des tournées', plans: ['pro', 'enterprise'] },
-      { key: 'auto_pricing_basic', label: 'Tarification automatique', description: 'Calcul automatique des prix', plans: ['pro', 'enterprise'] },
-      { key: 'auto_pricing', label: 'Tarification avancée', description: 'Marges dynamiques et prix clients', plans: ['pro', 'enterprise'] },
+      { key: 'basic_calculator', label: 'Calculateur de coûts', description: 'Calcul des coûts de transport', plans: ['optiflow'] },
+      { key: 'itinerary_planning', label: 'Planification itinéraire', description: 'Création d\'itinéraires avec arrêts', plans: ['optiflow'] },
+      { key: 'saved_tours', label: 'Tournées sauvegardées', description: 'Enregistrement des tournées', plans: ['optiflow'] },
+      { key: 'auto_pricing_basic', label: 'Tarification automatique', description: 'Calcul automatique des prix', plans: ['optiflow'] },
+      { key: 'auto_pricing', label: 'Tarification avancée', description: 'Marges dynamiques et prix clients', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Dashboard & Analytics',
     icon: BarChart3,
     features: [
-      { key: 'dashboard_basic', label: 'Dashboard basique', description: 'Vue d\'ensemble des activités', plans: ['start', 'pro', 'enterprise'] },
-      { key: 'dashboard_analytics', label: 'Analytics avancés', description: 'Graphiques et statistiques détaillés', plans: ['pro', 'enterprise'] },
-      { key: 'dynamic_charts', label: 'Graphiques dynamiques', description: 'Visualisations interactives', plans: ['pro', 'enterprise'] },
-      { key: 'forecast', label: 'Prévisionnel', description: 'Projections et tendances', plans: ['pro', 'enterprise'] },
-      { key: 'trip_history', label: 'Historique trajets', description: 'Suivi des trajets passés', plans: ['pro', 'enterprise'] },
-      { key: 'monthly_tracking', label: 'Suivi mensuel', description: 'Rapports mensuels', plans: ['pro', 'enterprise'] },
+      { key: 'dashboard_basic', label: 'Dashboard basique', description: 'Vue d\'ensemble des activités', plans: ['optiflow'] },
+      { key: 'dashboard_analytics', label: 'Analytics avancés', description: 'Graphiques et statistiques détaillés', plans: ['optiflow'] },
+      { key: 'dynamic_charts', label: 'Graphiques dynamiques', description: 'Visualisations interactives', plans: ['optiflow'] },
+      { key: 'forecast', label: 'Prévisionnel', description: 'Projections et tendances', plans: ['optiflow'] },
+      { key: 'trip_history', label: 'Historique trajets', description: 'Suivi des trajets passés', plans: ['optiflow'] },
+      { key: 'monthly_tracking', label: 'Suivi mensuel', description: 'Rapports mensuels', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Analyse des coûts',
     icon: TrendingUp,
     features: [
-      { key: 'cost_analysis_basic', label: 'Analyse coûts basique', description: 'Répartition des coûts', plans: ['start', 'pro', 'enterprise'] },
-      { key: 'cost_analysis', label: 'Analyse coûts avancée', description: 'Analyse détaillée et comparaisons', plans: ['pro', 'enterprise'] },
-      { key: 'margin_alerts', label: 'Alertes marges', description: 'Notifications sur marges faibles', plans: ['pro', 'enterprise'] },
+      { key: 'cost_analysis_basic', label: 'Analyse coûts basique', description: 'Répartition des coûts', plans: ['optiflow'] },
+      { key: 'cost_analysis', label: 'Analyse coûts avancée', description: 'Analyse détaillée et comparaisons', plans: ['optiflow'] },
+      { key: 'margin_alerts', label: 'Alertes marges', description: 'Notifications sur marges faibles', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Clients & Devis',
     icon: Users2,
     features: [
-      { key: 'client_analysis_basic', label: 'Gestion clients', description: 'Liste et fiches clients', plans: ['pro', 'enterprise'] },
-      { key: 'client_analysis', label: 'Analyse clients avancée', description: 'Rentabilité par client', plans: ['enterprise'] },
-      { key: 'smart_quotes', label: 'Devis intelligents', description: 'Génération automatique de devis', plans: ['enterprise'] },
+      { key: 'client_analysis_basic', label: 'Gestion clients', description: 'Liste et fiches clients', plans: ['optiflow'] },
+      { key: 'client_analysis', label: 'Analyse clients avancée', description: 'Rentabilité par client', plans: ['optiflow'] },
+      { key: 'smart_quotes', label: 'Devis intelligents', description: 'Génération automatique de devis', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Flotte & Conducteurs',
     icon: Truck,
     features: [
-      { key: 'fleet_basic', label: 'Gestion flotte basique', description: 'Liste des véhicules', plans: ['start', 'pro', 'enterprise'] },
-      { key: 'fleet_management', label: 'Gestion flotte avancée', description: 'Suivi kilométrique et coûts', plans: ['pro', 'enterprise'] },
-      { key: 'multi_drivers', label: 'Multi-conducteurs', description: 'Gestion de plusieurs conducteurs', plans: ['pro', 'enterprise'] },
-      { key: 'unlimited_vehicles', label: 'Véhicules illimités', description: 'Pas de limite de véhicules', plans: ['enterprise'] },
+      { key: 'fleet_basic', label: 'Gestion flotte basique', description: 'Liste des véhicules', plans: ['optiflow'] },
+      { key: 'fleet_management', label: 'Gestion flotte avancée', description: 'Suivi kilométrique et coûts', plans: ['optiflow'] },
+      { key: 'multi_drivers', label: 'Multi-conducteurs', description: 'Gestion de plusieurs conducteurs', plans: ['optiflow'] },
+      { key: 'unlimited_vehicles', label: 'Véhicules illimités', description: 'Pas de limite de véhicules', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Exports',
     icon: FileText,
     features: [
-      { key: 'pdf_export_basic', label: 'Export PDF basique', description: 'Export simple en PDF', plans: ['start', 'pro', 'enterprise'] },
-      { key: 'pdf_export_pro', label: 'Export PDF Pro', description: 'PDF personnalisés avec logo', plans: ['pro', 'enterprise'] },
-      { key: 'excel_export', label: 'Export Excel', description: 'Export des données en Excel', plans: ['pro', 'enterprise'] },
+      { key: 'pdf_export_basic', label: 'Export PDF basique', description: 'Export simple en PDF', plans: ['optiflow'] },
+      { key: 'pdf_export_pro', label: 'Export PDF Pro', description: 'PDF personnalisés avec logo', plans: ['optiflow'] },
+      { key: 'excel_export', label: 'Export Excel', description: 'Export des données en Excel', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Intelligence Artificielle',
     icon: Brain,
     features: [
-      { key: 'ai_optimization', label: 'Optimisation IA', description: 'Optimisation des trajets par IA', plans: ['enterprise'] },
-      { key: 'ai_pdf_analysis', label: 'Analyse PDF IA', description: 'Extraction de données depuis PDF', plans: ['enterprise'] },
+      { key: 'ai_optimization', label: 'Optimisation IA', description: 'Optimisation des trajets par IA', plans: ['optiflow'] },
+      { key: 'ai_pdf_analysis', label: 'Analyse PDF IA', description: 'Extraction de données depuis PDF', plans: ['optiflow'] },
     ],
   },
   {
     name: 'Équipe & Entreprise',
     icon: Building2,
     features: [
-      { key: 'multi_users', label: 'Multi-utilisateurs', description: 'Plusieurs comptes utilisateurs', plans: ['enterprise'] },
-      { key: 'multi_agency', label: 'Multi-agences', description: 'Gestion de plusieurs agences', plans: ['enterprise'] },
-      { key: 'company_invite_members', label: 'Inviter des membres', description: 'Ajouter des collaborateurs', plans: ['pro', 'enterprise'] },
-      { key: 'company_data_sharing', label: 'Partage de données', description: 'Données partagées entre membres', plans: ['pro', 'enterprise'] },
-      { key: 'realtime_notifications', label: 'Notifications temps réel', description: 'Alertes instantanées', plans: ['pro', 'enterprise'] },
-      { key: 'tms_erp_integration', label: 'Intégration TMS/ERP', description: 'Connexion aux systèmes externes', plans: ['enterprise'] },
+      { key: 'multi_users', label: 'Multi-utilisateurs', description: 'Plusieurs comptes utilisateurs', plans: ['optiflow'] },
+      { key: 'multi_agency', label: 'Multi-agences', description: 'Gestion de plusieurs agences', plans: ['optiflow'] },
+      { key: 'company_invite_members', label: 'Inviter des membres', description: 'Ajouter des collaborateurs', plans: ['optiflow'] },
+      { key: 'company_data_sharing', label: 'Partage de données', description: 'Données partagées entre membres', plans: ['optiflow'] },
+      { key: 'realtime_notifications', label: 'Notifications temps réel', description: 'Alertes instantanées', plans: ['optiflow'] },
+      { key: 'tms_erp_integration', label: 'Intégration TMS/ERP', description: 'Connexion aux systèmes externes', plans: ['optiflow'] },
     ],
   },
 ] as const;
 
-type PlanType = 'start' | 'pro' | 'enterprise';
+type PlanType = 'optiflow';
 
 export function LicenseSyncSettings() {
   const { toast } = useToast();
@@ -270,16 +270,7 @@ export function LicenseSyncSettings() {
     }
   };
 
-  const getPlanBadge = () => {
-    switch (planType) {
-      case 'enterprise':
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">Enterprise</Badge>;
-      case 'pro':
-        return <Badge className="bg-primary text-primary-foreground">Pro</Badge>;
-      default:
-        return <Badge variant="secondary">Start</Badge>;
-    }
-  };
+  const getPlanBadge = () => <Badge className="bg-primary text-primary-foreground">OptiFlow</Badge>;
 
   const isFeatureAvailable = (featurePlans: readonly string[]) => {
     return featurePlans.includes(planType);
@@ -363,7 +354,7 @@ export function LicenseSyncSettings() {
               Synchroniser ma licence
             </Button>
             
-            {(planType === 'pro' || planType === 'enterprise') && (
+            {(true) && (
               <Button
                 onClick={handleSyncAllCompanyUsers}
                 disabled={syncing || isOffline}
@@ -465,12 +456,12 @@ export function LicenseSyncSettings() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-sm">{feature.label}</span>
-                                {feature.plans.includes('enterprise') && !feature.plans.includes('pro') && (
+                                {false && (
                                   <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">
                                     Enterprise
                                   </Badge>
                                 )}
-                                {feature.plans.includes('pro') && !feature.plans.includes('start') && (
+                                {false && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                     Pro+
                                   </Badge>

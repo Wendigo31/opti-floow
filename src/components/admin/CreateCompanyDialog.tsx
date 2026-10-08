@@ -65,7 +65,7 @@ export function CreateCompanyDialog({
   const { lookup, loading: sireneLoading, error: sireneError, company, reset: resetSiren } = useSireneLookup();
   const [sirenInput, setSirenInput] = useState('');
   const [companyIdentifier, setCompanyIdentifier] = useState('');
-  const [planType, setPlanType] = useState<PlanType>('start');
+  const [planType, setPlanType] = useState<PlanType>('optiflow');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerFirstName, setOwnerFirstName] = useState('');
   const [ownerLastName, setOwnerLastName] = useState('');
@@ -81,7 +81,7 @@ export function CreateCompanyDialog({
   useEffect(() => {
     if (open && editLicenseData) {
       setSirenInput(editLicenseData.siren || '');
-      setPlanType(editLicenseData.planType || 'start');
+      setPlanType('optiflow');
       setOwnerEmail(editLicenseData.email || '');
     }
   }, [open, editLicenseData]);
@@ -197,7 +197,7 @@ export function CreateCompanyDialog({
     setOwnerLastName('');
     setOwnerPhone('');
     setOwnerPosition('');
-    setPlanType('start');
+    setPlanType('optiflow');
     setCreatedLicense(null);
     resetSiren();
     onOpenChange(false);
@@ -366,19 +366,6 @@ export function CreateCompanyDialog({
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Forfait</Label>
-                  <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="start">Start</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             )}
 

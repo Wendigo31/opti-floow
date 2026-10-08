@@ -44,7 +44,7 @@ import {
 } from '@/types/features';
 
 interface FeatureEditorProps {
-  planType: 'start' | 'pro' | 'enterprise';
+  planType: 'optiflow';
   currentFeatures: Partial<LicenseFeatures> | null;
   activeAddOns?: string[]; // Keep for compatibility but unused
   onSave: (features: Partial<LicenseFeatures>, addOns: string[]) => Promise<void>;
@@ -379,9 +379,6 @@ export function FeatureEditor({
                                   variant="secondary" 
                                   className={cn(
                                     "text-xs",
-                                    feature.defaultPlan === 'start' && "bg-blue-500/20 text-blue-600",
-                                    feature.defaultPlan === 'pro' && "bg-orange-500/20 text-orange-600",
-                                    feature.defaultPlan === 'enterprise' && "bg-amber-500/20 text-amber-600",
                                   )}
                                 >
                                   {feature.defaultPlan}

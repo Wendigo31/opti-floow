@@ -471,7 +471,7 @@ export function UserDetailDialog({
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold uppercase">{license.plan_type || 'start'}</span>
+                    <span className="text-2xl font-bold uppercase">OptiFlow</span>
                   </div>
                 </CardContent>
               </Card>
@@ -1056,7 +1056,7 @@ export function UserDetailDialog({
             companyStatus: license.company_status || undefined,
             employeeCount: license.employee_count || undefined,
             email: license.email,
-            planType: (license.plan_type || 'start') as PlanType,
+            planType: 'optiflow' as PlanType,
           }}
         />
       </DialogContent>

@@ -5,40 +5,11 @@ import type { LicenseFeatures } from '@/types/features';
 // Flag to prevent re-validation loops
 let isRevalidating = false;
 
-export type PlanType = 'start' | 'pro' | 'enterprise';
-
-function inferPlanTypeFromCustomFeatures(features?: Partial<LicenseFeatures> | null): PlanType | null {
-  if (!features) return null;
-
-  // ENTERPRISE signals
-  const enterpriseSignals: (keyof LicenseFeatures)[] = [
-    'ai_optimization',
-    'ai_pdf_analysis',
-    'multi_agency',
-    'tms_erp_integration',
-    'multi_users',
-    'unlimited_vehicles',
-    'client_analysis',
-    'smart_quotes',
-  ];
-  if (enterpriseSignals.some((k) => features[k] === true)) return 'enterprise';
-
-  // PRO signals
-  const proSignals: (keyof LicenseFeatures)[] = [
-    'itinerary_planning',
-    'saved_tours',
-    'trip_history',
-    'forecast',
-    'dashboard_analytics',
-    'excel_export',
-    'pdf_export_pro',
-    'auto_pricing_basic',
-    'monthly_tracking',
-    'client_analysis_basic',
-  ];
-  if (proSignals.some((k) => features[k] === true)) return 'pro';
-
-  return null;
+/** Single all-inclusive plan. Legacy values (start/pro/enterprise) are normalized to 'optiflow'. */
+export type PlanType = 'optiflow';
+export const SINGLE_PLAN: PlanType = 'optiflow';
+export function normalizePlanType(_value?: unknown): PlanType {
+  return SINGLE_PLAN;
 }
 
 // User-specific feature override
@@ -194,127 +165,7 @@ export type FeatureKey =
 // src/hooks/usePlanLimits.ts, PricingSection.tsx
 // This is the CLIENT-SIDE fallback when customFeatures from server are not available.
 const PLAN_FEATURES: Record<PlanType, FeatureKey[]> = {
-  start: [
-    // Core START features
-    'basic_calculator',
-    'dashboard_basic',
-    'cost_analysis_basic',
-    'fleet_basic',
-    // Itinéraire PL inclus dans Start
-    'itinerary_planning',
-    // Tournées sauvegardées (5 max)
-    'saved_tours',
-    'auto_pricing_basic',
-    // Navigation/Pages - START
-    'page_dashboard',
-    'page_calculator',
-    'page_itinerary',
-    'page_tours',
-    'page_clients',
-    'page_vehicles',
-    'page_drivers',
-    'page_charges',
-    'page_settings',
-    // UI Components - START
-    'btn_map_preview',
-    'btn_contact_support',
-    'btn_save_tour',
-    'btn_load_tour',
-    'section_cost_breakdown',
-    // CRUD buttons
-    'btn_add_client',
-    'btn_add_vehicle',
-    'btn_add_driver',
-    'btn_add_charge',
-    'btn_add_trailer',
-    'btn_edit_client',
-    'btn_delete_client',
-    'btn_edit_vehicle',
-    'btn_delete_vehicle',
-    'btn_edit_driver',
-    'btn_delete_driver',
-    'btn_edit_charge',
-    'btn_delete_charge',
-    'section_client_stats',
-    'section_vehicle_stats',
-    'section_driver_stats',
-  ],
-  pro: [
-    // All START features
-    'basic_calculator',
-    'dashboard_basic',
-    'cost_analysis_basic',
-    'fleet_basic',
-    'itinerary_planning',
-    'saved_tours',
-    'auto_pricing_basic',
-    'btn_save_tour',
-    'btn_load_tour',
-    'btn_add_client',
-    'btn_add_vehicle',
-    'btn_add_driver',
-    'btn_add_charge',
-    'btn_add_trailer',
-    'btn_edit_client',
-    'btn_delete_client',
-    'btn_edit_vehicle',
-    'btn_delete_vehicle',
-    'btn_edit_driver',
-    'btn_delete_driver',
-    'btn_edit_charge',
-    'btn_delete_charge',
-    'section_client_stats',
-    'section_vehicle_stats',
-    'section_driver_stats',
-    // PRO features
-    'dashboard_analytics',
-    'trip_history',
-    'multi_drivers',
-    'cost_analysis',
-    'margin_alerts',
-    'dynamic_charts',
-    'pdf_export_pro',
-    'excel_export',
-    'monthly_tracking',
-    'auto_pricing',
-    'client_analysis_basic',
-    'client_analysis',
-    'fleet_management',
-    'ai_optimization',           // 5 analyses IA/jour
-    'ai_pdf_analysis',
-    // Company management - PRO (basic)
-    'company_invite_members',
-    'company_remove_members',
-    'company_view_activity',
-    'company_manage_settings',
-    'company_data_sharing',
-    'realtime_notifications',
-    // Navigation/Pages - PRO
-    'page_dashboard',
-    'page_calculator',
-    'page_itinerary',
-    'page_tours',
-    'page_clients',
-    'page_vehicles',
-    'page_drivers',
-    'page_charges',
-    'page_trip_history',
-    'page_ai_analysis',
-    'page_vehicle_reports',
-    'page_team',
-    'page_settings',
-    // UI Components - PRO
-    'btn_export_pdf',
-    'btn_export_excel',
-    'btn_map_preview',
-    'btn_contact_support',
-    'section_cost_breakdown',
-    'section_margin_alerts',
-    'section_charts',
-    'btn_add_trip',
-    'btn_add_quote',
-  ],
-  enterprise: [
+  optiflow: [
     // All PRO features
     'basic_calculator',
     'dashboard_basic',
@@ -592,7 +443,7 @@ export function useLicense(): UseLicenseReturn {
                   code: validateResponse.licenseData.code || data.code,
                   email: validateResponse.licenseData.email || data.email,
                   activatedAt: validateResponse.licenseData.activatedAt,
-                  planType: validateResponse.licenseData.planType,
+                  planType: SINGLE_PLAN,
                   firstName: validateResponse.licenseData.firstName || undefined,
                   lastName: validateResponse.licenseData.lastName || undefined,
                   companyName: validateResponse.licenseData.companyName || undefined,
@@ -693,7 +544,7 @@ export function useLicense(): UseLicenseReturn {
                 // IMPORTANT: Keep existing planType if server doesn't return one
                 const updatedData: LicenseData = {
                   ...data,
-                  planType: checkResponse.licenseData?.planType || data.planType || 'start',
+                  planType: SINGLE_PLAN,
                   firstName: checkResponse.licenseData?.firstName || undefined,
                   lastName: checkResponse.licenseData?.lastName || undefined,
                   companyName: checkResponse.licenseData?.companyName || undefined,
@@ -847,7 +698,7 @@ export function useLicense(): UseLicenseReturn {
         code: response.licenseData.code || code.trim().toUpperCase(),
         email: response.licenseData.email || email.trim().toLowerCase(),
         activatedAt: response.licenseData.activatedAt,
-        planType: response.licenseData.planType,
+        planType: SINGLE_PLAN,
         firstName: response.licenseData.firstName || undefined,
         lastName: response.licenseData.lastName || undefined,
         companyName: response.licenseData.companyName || undefined,
@@ -943,7 +794,7 @@ export function useLicense(): UseLicenseReturn {
         // IMPORTANT: Keep existing planType if server doesn't return one
         const updatedData: LicenseData = {
           ...data,
-          planType: checkResponse.licenseData?.planType || data.planType || 'start',
+          planType: SINGLE_PLAN,
           firstName: checkResponse.licenseData?.firstName || undefined,
           lastName: checkResponse.licenseData?.lastName || undefined,
           companyName: checkResponse.licenseData?.companyName || undefined,
@@ -1002,7 +853,7 @@ export function useLicense(): UseLicenseReturn {
   }, []);
 
   const planType: PlanType =
-    licenseData?.planType || inferPlanTypeFromCustomFeatures(licenseData?.customFeatures) || 'start';
+    SINGLE_PLAN;
 
   // Check if a feature is enabled (user overrides > custom features > plan defaults)
   const hasFeature = useCallback((feature: FeatureKey): boolean => {

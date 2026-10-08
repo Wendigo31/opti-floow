@@ -49,8 +49,8 @@ export function useTeam(): UseTeamReturn {
   const [isTeamLoading, setIsTeamLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const licensePlanType: PlanType = validatedPlanType || 'start';
-  const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
+  const licensePlanType: PlanType = 'optiflow';
+  const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] ?? 999;
 
   // Only consider team loading, license loading shouldn't block team page
   // If license context is done loading and there's no authUserId, stop loading
@@ -65,7 +65,7 @@ export function useTeam(): UseTeamReturn {
   const isOwner = effectiveRole === 'direction';
   const isAdmin = effectiveRole === 'direction';
   const isDirection = effectiveRole === 'direction';
-  const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
+  const hasMultiUsers = true;
   const canManageTeam = isDirection && hasMultiUsers;
 
   // Sync with context when it becomes available

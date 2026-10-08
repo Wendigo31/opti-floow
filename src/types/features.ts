@@ -128,7 +128,7 @@ export interface FeatureDefinition {
   description: string;
   descriptionEn: string;
   descriptionEs: string;
-  defaultPlan: 'start' | 'pro' | 'enterprise';
+  defaultPlan: 'optiflow' | 'pro' | 'enterprise';
   isLimit?: boolean;
   isAddonAvailable?: boolean;
   addonId?: string;
@@ -140,195 +140,8 @@ export interface FeatureDefinition {
 // SYNCHRONIZED WITH: shared.ts PLAN_DEFAULTS, useLicense.ts PLAN_FEATURES,
 // usePlanLimits.ts PLAN_LIMITS, PricingSection.tsx
 // UPDATE ALL FILES WHEN CHANGING!
-export const PLAN_DEFAULTS: Record<'start' | 'pro' | 'enterprise', Partial<LicenseFeatures>> = {
-  start: {
-    // Core features - Start includes calculator, itinerary PL, basic dashboard
-    basic_calculator: true,
-    itinerary_planning: true,    // Itinéraire PL inclus dans Start
-    dashboard_basic: true,
-    cost_analysis_basic: true,
-    auto_pricing_basic: true,    // Calcul prix/km basique
-    saved_tours: true,           // 5 tournées max
-    // Pro/Enterprise features OFF
-    dashboard_analytics: false,
-    forecast: false,
-    trip_history: false,
-    multi_drivers: false,
-    cost_analysis: false,
-    margin_alerts: false,
-    dynamic_charts: false,
-    pdf_export_pro: false,
-    excel_export: false,
-    monthly_tracking: false,
-    auto_pricing: false,
-    client_analysis_basic: false,
-    ai_optimization: false,
-    ai_pdf_analysis: false,
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    client_analysis: false,
-    smart_quotes: false,
-    // Company features - START: none
-    company_invite_members: false,
-    company_remove_members: false,
-    company_change_roles: false,
-    company_view_activity: false,
-    company_manage_settings: false,
-    company_data_sharing: false,
-    realtime_notifications: false,
-    // Navigation/Pages - START
-    page_dashboard: true,
-    page_calculator: true,
-    page_itinerary: true,        // Itinéraire PL inclus
-    page_tours: true,            // Tournées sauvegardées (limitées)
-    page_clients: true,
-    page_vehicles: true,
-    page_drivers: true,
-    page_charges: true,
-    page_forecast: false,
-    page_trip_history: false,
-    page_ai_analysis: false,
-    page_toxic_clients: false,
-    page_vehicle_reports: false,
-    page_team: false,
-    page_settings: true,
-    // UI Components - START
-    btn_export_pdf: false,
-    btn_export_excel: false,
-    btn_save_tour: true,         // Needed for saving tours (limited)
-    btn_load_tour: true,
-    btn_ai_optimize: false,
-    btn_map_preview: true,
-    btn_contact_support: true,
-    section_cost_breakdown: true,
-    section_margin_alerts: false,
-    section_charts: false,
-    // CRUD buttons - available on all plans
-    btn_add_client: true,
-    btn_add_vehicle: true,
-    btn_add_driver: true,
-    btn_add_charge: true,
-    btn_add_trailer: true,
-    btn_add_trip: false,
-    btn_add_quote: false,
-    btn_edit_client: true,
-    btn_delete_client: true,
-    btn_edit_vehicle: true,
-    btn_delete_vehicle: true,
-    btn_edit_driver: true,
-    btn_delete_driver: true,
-    btn_edit_charge: true,
-    btn_delete_charge: true,
-    section_client_stats: true,
-    section_vehicle_stats: true,
-    section_driver_stats: true,
-    // Limites START - synchronized with PricingSection
-    max_drivers: 5,
-    max_clients: 10,
-    max_vehicles: 5,
-    max_daily_charges: 20,
-    max_monthly_charges: 20,
-    max_yearly_charges: 10,
-    max_saved_tours: 5,
-    max_company_users: 1,
-  },
-  pro: {
-    // All Start features
-    basic_calculator: true,
-    itinerary_planning: true,
-    dashboard_basic: true,
-    cost_analysis_basic: true,
-    auto_pricing_basic: true,
-    saved_tours: true,
-    // Pro features ON
-    dashboard_analytics: true,
-    trip_history: true,
-    multi_drivers: true,
-    cost_analysis: true,
-    margin_alerts: true,
-    dynamic_charts: true,
-    pdf_export_pro: true,
-    excel_export: true,
-    monthly_tracking: true,
-    auto_pricing: true,
-    client_analysis_basic: true,
-    ai_optimization: true,       // 5 analyses IA/jour
-    ai_pdf_analysis: true,
-    client_analysis: true,
-    // Enterprise features OFF
-    forecast: false,             // Enterprise uniquement
-    smart_quotes: false,         // Enterprise uniquement
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    // Company features - PRO: basic team management
-    company_invite_members: true,
-    company_remove_members: true,
-    company_change_roles: false,  // Enterprise uniquement
-    company_view_activity: true,
-    company_manage_settings: true,
-    company_data_sharing: true,
-    realtime_notifications: true,
-    // Navigation/Pages - PRO
-    page_dashboard: true,
-    page_calculator: true,
-    page_itinerary: true,
-    page_tours: true,
-    page_clients: true,
-    page_vehicles: true,
-    page_drivers: true,
-    page_charges: true,
-    page_forecast: false,        // Enterprise uniquement
-    page_trip_history: true,
-    page_ai_analysis: true,      // 5 analyses IA/jour
-    page_toxic_clients: false,   // Enterprise uniquement
-    page_vehicle_reports: true,
-    page_team: true,
-    page_settings: true,
-    // UI Components - PRO
-    btn_export_pdf: true,
-    btn_export_excel: true,
-    btn_save_tour: true,
-    btn_load_tour: true,
-    btn_ai_optimize: false,      // Enterprise uniquement
-    btn_map_preview: true,
-    btn_contact_support: true,
-    section_cost_breakdown: true,
-    section_margin_alerts: true,
-    section_charts: true,
-    // CRUD buttons
-    btn_add_client: true,
-    btn_add_vehicle: true,
-    btn_add_driver: true,
-    btn_add_charge: true,
-    btn_add_trailer: true,
-    btn_add_trip: true,
-    btn_add_quote: true,
-    btn_edit_client: true,
-    btn_delete_client: true,
-    btn_edit_vehicle: true,
-    btn_delete_vehicle: true,
-    btn_edit_driver: true,
-    btn_delete_driver: true,
-    btn_edit_charge: true,
-    btn_delete_charge: true,
-    section_client_stats: true,
-    section_vehicle_stats: true,
-    section_driver_stats: true,
-    // Limites PRO - synchronized with PricingSection
-    max_drivers: 15,
-    max_clients: 30,
-    max_vehicles: 15,
-    max_daily_charges: 50,
-    max_monthly_charges: 50,
-    max_yearly_charges: 25,
-    max_saved_tours: 20,
-    max_company_users: 3,
-  },
-  enterprise: {
+export const PLAN_DEFAULTS: Record<'optiflow', Partial<LicenseFeatures>> = {
+  optiflow: {
     // All features ON
     basic_calculator: true,
     itinerary_planning: true,
@@ -439,7 +252,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Calcul des coûts et rentabilité',
         descriptionEn: 'Cost and profitability calculation',
         descriptionEs: 'Cálculo de costes y rentabilidad',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'itinerary_planning',
@@ -449,7 +262,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Carte interactive avec calcul de route',
         descriptionEn: 'Interactive map with route calculation',
         descriptionEs: 'Mapa interactivo con cálculo de ruta',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'auto_pricing',
@@ -459,7 +272,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Calcul automatique du prix selon marge',
         descriptionEn: 'Automatic price calculation based on margin',
         descriptionEs: 'Cálculo automático de precio según margen',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -476,7 +289,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Graphiques et statistiques détaillées',
         descriptionEn: 'Charts and detailed statistics',
         descriptionEs: 'Gráficos y estadísticas detalladas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'cost_analysis',
@@ -486,7 +299,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Répartition détaillée des coûts',
         descriptionEn: 'Detailed cost breakdown',
         descriptionEs: 'Desglose detallado de costes',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'dynamic_charts',
@@ -496,7 +309,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Visualisations interactives',
         descriptionEn: 'Interactive visualizations',
         descriptionEs: 'Visualizaciones interactivas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'margin_alerts',
@@ -506,7 +319,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Notifications si marge trop basse',
         descriptionEn: 'Notifications if margin too low',
         descriptionEs: 'Notificaciones si el margen es demasiado bajo',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -523,7 +336,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Suivi des trajets effectués',
         descriptionEn: 'Track completed trips',
         descriptionEs: 'Seguimiento de viajes completados',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'forecast',
@@ -533,7 +346,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Projections mensuelles de revenus',
         descriptionEn: 'Monthly revenue projections',
         descriptionEs: 'Proyecciones de ingresos mensuales',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'monthly_tracking',
@@ -543,7 +356,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Rapports mensuels automatiques',
         descriptionEn: 'Automatic monthly reports',
         descriptionEs: 'Informes mensuales automáticos',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'saved_tours',
@@ -553,7 +366,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Enregistrer et gérer les tournées',
         descriptionEn: 'Save and manage tours',
         descriptionEs: 'Guardar y gestionar rutas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -570,7 +383,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion de plusieurs conducteurs',
         descriptionEn: 'Manage multiple drivers',
         descriptionEs: 'Gestionar varios conductores',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'unlimited_vehicles',
@@ -580,7 +393,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Aucune limite de véhicules',
         descriptionEn: 'No vehicle limit',
         descriptionEs: 'Sin límite de vehículos',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'client_analysis',
@@ -590,7 +403,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Détection clients toxiques/rentables',
         descriptionEn: 'Toxic/profitable client detection',
         descriptionEs: 'Detección de clientes tóxicos/rentables',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -607,7 +420,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Rapports PDF détaillés',
         descriptionEn: 'Detailed PDF reports',
         descriptionEs: 'Informes PDF detallados',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'excel_export',
@@ -617,7 +430,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Export des données en Excel/CSV',
         descriptionEn: 'Export data to Excel/CSV',
         descriptionEs: 'Exportar datos a Excel/CSV',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'smart_quotes',
@@ -627,7 +440,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Générateur de devis avec prix optimaux',
         descriptionEn: 'Quote generator with optimal pricing',
         descriptionEs: 'Generador de presupuestos con precios óptimos',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -644,7 +457,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Analyse IA des trajets et recommandations',
         descriptionEn: 'AI trip analysis and recommendations',
         descriptionEs: 'Análisis IA de viajes y recomendaciones',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'ai_pdf_analysis',
@@ -654,7 +467,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Analyse de rentabilité IA dans les exports',
         descriptionEn: 'AI profitability analysis in exports',
         descriptionEs: 'Análisis de rentabilidad IA en exportaciones',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -671,7 +484,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion de plusieurs agences',
         descriptionEn: 'Manage multiple agencies',
         descriptionEs: 'Gestionar varias agencias',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'multi_users',
@@ -681,7 +494,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Plusieurs comptes par licence',
         descriptionEn: 'Multiple accounts per license',
         descriptionEs: 'Múltiples cuentas por licencia',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'tms_erp_integration',
@@ -691,7 +504,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Connexion aux systèmes externes',
         descriptionEn: 'Connect to external systems',
         descriptionEs: 'Conexión a sistemas externos',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -708,7 +521,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Accès au tableau de bord',
         descriptionEn: 'Access to dashboard',
         descriptionEs: 'Acceso al panel',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_calculator',
@@ -718,7 +531,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Accès au calculateur de trajets',
         descriptionEn: 'Access to trip calculator',
         descriptionEs: 'Acceso a la calculadora',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_itinerary',
@@ -728,7 +541,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Planification d\'itinéraires',
         descriptionEn: 'Itinerary planning',
         descriptionEs: 'Planificación de itinerarios',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_tours',
@@ -738,7 +551,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion des tournées sauvegardées',
         descriptionEn: 'Saved tours management',
         descriptionEs: 'Gestión de rutas guardadas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_clients',
@@ -748,7 +561,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion des clients',
         descriptionEn: 'Client management',
         descriptionEs: 'Gestión de clientes',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_vehicles',
@@ -758,7 +571,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion de la flotte',
         descriptionEn: 'Fleet management',
         descriptionEs: 'Gestión de flota',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_drivers',
@@ -768,7 +581,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion des conducteurs',
         descriptionEn: 'Driver management',
         descriptionEs: 'Gestión de conductores',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_charges',
@@ -778,7 +591,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion des charges fixes',
         descriptionEn: 'Fixed charges management',
         descriptionEs: 'Gestión de gastos fijos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_forecast',
@@ -788,7 +601,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Prévisions financières',
         descriptionEn: 'Financial forecasts',
         descriptionEs: 'Previsiones financieras',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_trip_history',
@@ -798,7 +611,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Historique des trajets',
         descriptionEn: 'Trip history',
         descriptionEs: 'Historial de viajes',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_ai_analysis',
@@ -808,7 +621,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Analyse par intelligence artificielle',
         descriptionEn: 'AI-powered analysis',
         descriptionEs: 'Análisis con inteligencia artificial',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_toxic_clients',
@@ -818,7 +631,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Analyse des clients non rentables',
         descriptionEn: 'Unprofitable client analysis',
         descriptionEs: 'Análisis de clientes no rentables',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_vehicle_reports',
@@ -828,7 +641,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Rapports détaillés par véhicule',
         descriptionEn: 'Detailed vehicle reports',
         descriptionEs: 'Informes detallados por vehículo',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_team',
@@ -838,7 +651,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Gestion de l\'équipe',
         descriptionEn: 'Team management',
         descriptionEs: 'Gestión del equipo',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'page_settings',
@@ -848,7 +661,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Configuration de l\'application',
         descriptionEn: 'App configuration',
         descriptionEs: 'Configuración de la aplicación',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -865,7 +678,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet l\'export en PDF',
         descriptionEn: 'Enable PDF export',
         descriptionEs: 'Habilitar exportación PDF',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_export_excel',
@@ -875,7 +688,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet l\'export en Excel',
         descriptionEn: 'Enable Excel export',
         descriptionEs: 'Habilitar exportación Excel',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -892,7 +705,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des clients',
         descriptionEn: 'Enable adding clients',
         descriptionEs: 'Habilitar agregar clientes',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_vehicle',
@@ -902,7 +715,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des véhicules',
         descriptionEn: 'Enable adding vehicles',
         descriptionEs: 'Habilitar agregar vehículos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_driver',
@@ -912,7 +725,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des conducteurs',
         descriptionEn: 'Enable adding drivers',
         descriptionEs: 'Habilitar agregar conductores',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_charge',
@@ -922,7 +735,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des charges',
         descriptionEn: 'Enable adding charges',
         descriptionEs: 'Habilitar agregar gastos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_trailer',
@@ -932,7 +745,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des remorques',
         descriptionEn: 'Enable adding trailers',
         descriptionEs: 'Habilitar agregar remolques',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_trip',
@@ -942,7 +755,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'ajouter des trajets',
         descriptionEn: 'Enable adding trips',
         descriptionEs: 'Habilitar agregar viajes',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_add_quote',
@@ -952,7 +765,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de créer des devis',
         descriptionEn: 'Enable creating quotes',
         descriptionEs: 'Habilitar crear presupuestos',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -969,7 +782,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de modifier les clients',
         descriptionEn: 'Enable editing clients',
         descriptionEs: 'Habilitar editar clientes',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_edit_vehicle',
@@ -979,7 +792,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de modifier les véhicules',
         descriptionEn: 'Enable editing vehicles',
         descriptionEs: 'Habilitar editar vehículos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_edit_driver',
@@ -989,7 +802,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de modifier les conducteurs',
         descriptionEn: 'Enable editing drivers',
         descriptionEs: 'Habilitar editar conductores',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_edit_charge',
@@ -999,7 +812,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de modifier les charges',
         descriptionEn: 'Enable editing charges',
         descriptionEs: 'Habilitar editar gastos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -1016,7 +829,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de supprimer les clients',
         descriptionEn: 'Enable deleting clients',
         descriptionEs: 'Habilitar eliminar clientes',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_delete_vehicle',
@@ -1026,7 +839,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de supprimer les véhicules',
         descriptionEn: 'Enable deleting vehicles',
         descriptionEs: 'Habilitar eliminar vehículos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_delete_driver',
@@ -1036,7 +849,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de supprimer les conducteurs',
         descriptionEn: 'Enable deleting drivers',
         descriptionEs: 'Habilitar eliminar conductores',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_delete_charge',
@@ -1046,7 +859,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de supprimer les charges',
         descriptionEn: 'Enable deleting charges',
         descriptionEs: 'Habilitar eliminar gastos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -1063,7 +876,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de sauvegarder les tournées',
         descriptionEn: 'Enable tour saving',
         descriptionEs: 'Habilitar guardado de rutas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_load_tour',
@@ -1073,7 +886,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de charger les tournées',
         descriptionEn: 'Enable tour loading',
         descriptionEs: 'Habilitar carga de rutas',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_ai_optimize',
@@ -1083,7 +896,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Active l\'optimisation IA',
         descriptionEn: 'Enable AI optimization',
         descriptionEs: 'Habilitar optimización IA',
-        defaultPlan: 'enterprise',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_map_preview',
@@ -1093,7 +906,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche l\'aperçu carte',
         descriptionEn: 'Show map preview',
         descriptionEs: 'Mostrar vista previa del mapa',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'btn_contact_support',
@@ -1103,7 +916,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de contacter le support',
         descriptionEn: 'Enable support contact',
         descriptionEs: 'Habilitar contacto de soporte',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -1120,7 +933,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche la répartition des coûts',
         descriptionEn: 'Show cost breakdown',
         descriptionEs: 'Mostrar desglose de costos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'section_margin_alerts',
@@ -1130,7 +943,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche les alertes de marge',
         descriptionEn: 'Show margin alerts',
         descriptionEs: 'Mostrar alertas de margen',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'section_charts',
@@ -1140,7 +953,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche les graphiques',
         descriptionEn: 'Show charts',
         descriptionEs: 'Mostrar gráficos',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'section_client_stats',
@@ -1150,7 +963,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche les statistiques clients',
         descriptionEn: 'Show client statistics',
         descriptionEs: 'Mostrar estadísticas de clientes',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'section_vehicle_stats',
@@ -1160,7 +973,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche les statistiques véhicules',
         descriptionEn: 'Show vehicle statistics',
         descriptionEs: 'Mostrar estadísticas de vehículos',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'section_driver_stats',
@@ -1170,7 +983,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Affiche les statistiques conducteurs',
         descriptionEn: 'Show driver statistics',
         descriptionEs: 'Mostrar estadísticas de conductores',
-        defaultPlan: 'start',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -1187,7 +1000,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet d\'inviter des membres',
         descriptionEn: 'Allow member invitations',
         descriptionEs: 'Permitir invitar miembros',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'company_remove_members',
@@ -1197,7 +1010,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de supprimer des membres',
         descriptionEn: 'Allow member removal',
         descriptionEs: 'Permitir eliminar miembros',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'company_change_roles',
@@ -1207,7 +1020,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de modifier les rôles',
         descriptionEn: 'Allow role changes',
         descriptionEs: 'Permitir cambiar roles',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'company_view_activity',
@@ -1217,7 +1030,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de voir l\'activité',
         descriptionEn: 'Allow activity viewing',
         descriptionEs: 'Permitir ver actividad',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'company_manage_settings',
@@ -1227,7 +1040,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Permet de gérer les paramètres',
         descriptionEn: 'Allow settings management',
         descriptionEs: 'Permitir gestionar ajustes',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'company_data_sharing',
@@ -1237,7 +1050,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Active le partage de données',
         descriptionEn: 'Enable data sharing',
         descriptionEs: 'Habilitar compartir datos',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
       {
         key: 'realtime_notifications',
@@ -1247,7 +1060,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
         description: 'Active les notifications temps réel',
         descriptionEn: 'Enable real-time notifications',
         descriptionEs: 'Habilitar notificaciones en tiempo real',
-        defaultPlan: 'pro',
+        defaultPlan: 'optiflow',
       },
     ],
   },
@@ -1291,7 +1104,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de conducteurs',
     descriptionEn: 'Maximum number of drivers',
     descriptionEs: 'Número máximo de conductores',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1302,7 +1115,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de clients',
     descriptionEn: 'Maximum number of clients',
     descriptionEs: 'Número máximo de clientes',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1313,7 +1126,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de véhicules',
     descriptionEn: 'Maximum number of vehicles',
     descriptionEs: 'Número máximo de vehículos',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1324,7 +1137,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de tournées sauvegardées',
     descriptionEn: 'Maximum number of saved tours',
     descriptionEs: 'Número máximo de rutas guardadas',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1335,7 +1148,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de charges journalières',
     descriptionEn: 'Maximum number of daily charges',
     descriptionEs: 'Número máximo de cargos diarios',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1346,7 +1159,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de charges mensuelles',
     descriptionEn: 'Maximum number of monthly charges',
     descriptionEs: 'Número máximo de cargos mensuales',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
   {
@@ -1357,7 +1170,7 @@ export const LIMIT_DEFINITIONS: FeatureDefinition[] = [
     description: 'Nombre maximum de charges annuelles',
     descriptionEn: 'Maximum number of yearly charges',
     descriptionEs: 'Número máximo de cargos anuales',
-    defaultPlan: 'start',
+    defaultPlan: 'optiflow',
     isLimit: true,
   },
 ];

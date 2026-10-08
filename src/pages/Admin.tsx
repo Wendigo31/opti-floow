@@ -150,7 +150,7 @@ interface LicenseFormData {
 
 const emptyFormData: LicenseFormData = {
   email: '',
-  planType: 'start',
+  planType: 'optiflow',
   firstName: '',
   lastName: '',
   companyName: '',
@@ -192,7 +192,7 @@ export default function Admin() {
   const [editingLicenseId, setEditingLicenseId] = useState<string | null>(null);
   const [formData, setFormData] = useState<LicenseFormData>(emptyFormData);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<PlanType>('start');
+  const [editingPlan, setEditingPlan] = useState<PlanType>('optiflow');
 
   // Limits editor
   const [editingLimitsId, setEditingLimitsId] = useState<string | null>(null);
@@ -449,7 +449,7 @@ export default function Admin() {
     setEditingLicenseId(license.id);
     setFormData({
       email: license.email,
-      planType: (license.plan_type as PlanType) || 'start',
+      planType: 'optiflow',
       firstName: license.first_name || '',
       lastName: license.last_name || '',
       companyName: license.company_name || '',
@@ -558,7 +558,7 @@ export default function Admin() {
         code: validateData.licenseData?.code || license.license_code,
         email: validateData.licenseData?.email || license.email,
         activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
-        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        planType: validateData.licenseData?.planType || 'optiflow',
         firstName: validateData.licenseData?.firstName ?? license.first_name,
         lastName: validateData.licenseData?.lastName ?? license.last_name,
         companyName: validateData.licenseData?.companyName ?? license.company_name,
@@ -623,9 +623,7 @@ export default function Admin() {
   const stats = {
     total: licenses.length,
     active: licenses.filter(l => l.is_active).length,
-    start: licenses.filter(l => l.plan_type === 'start').length,
-    pro: licenses.filter(l => l.plan_type === 'pro').length,
-    enterprise: licenses.filter(l => l.plan_type === 'enterprise').length,
+    inactive: licenses.filter(l => !l.is_active).length,
   };
 
   const getPlanIcon = (plan: string | null) => {
@@ -809,7 +807,7 @@ export default function Admin() {
           {adminActiveTab === 'licenses' && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="pt-4">
                     <div className="text-2xl font-bold">{stats.total}</div>
@@ -822,31 +820,10 @@ export default function Admin() {
                     <p className="text-xs text-muted-foreground">Actives</p>
                   </CardContent>
                 </Card>
-                <Card className="border-emerald-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-emerald-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.start}</div>
-                      <p className="text-xs text-muted-foreground">Start</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Star className="w-5 h-5 text-blue-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.pro}</div>
-                      <p className="text-xs text-muted-foreground">Pro</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-amber-500/20">
-                  <CardContent className="pt-4 flex items-center gap-3">
-                    <Crown className="w-5 h-5 text-amber-500" />
-                    <div>
-                      <div className="text-xl font-bold">{stats.enterprise}</div>
-                      <p className="text-xs text-muted-foreground">Enterprise</p>
-                    </div>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-muted-foreground">{stats.inactive}</div>
+                    <p className="text-xs text-muted-foreground">Désactivées</p>
                   </CardContent>
                 </Card>
               </div>
@@ -870,17 +847,6 @@ export default function Admin() {
                     <SelectItem value="all">Tous</SelectItem>
                     <SelectItem value="active">Actifs</SelectItem>
                     <SelectItem value="inactive">Inactifs</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={filterPlan} onValueChange={(v) => setFilterPlan(v as any)}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="start">Start</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="icon" onClick={fetchLicenses} disabled={loading}>
@@ -936,7 +902,7 @@ export default function Admin() {
                           <TableCell>
                             <Badge variant="outline" className={cn("gap-1", getPlanBadgeClass(license.plan_type))}>
                               {getPlanIcon(license.plan_type)}
-                              {(license.plan_type || 'start').toUpperCase()}
+                              {'optiflow'.toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1082,7 +1048,7 @@ export default function Admin() {
                                 {getPlanIcon(license.plan_type)}
                                 <span>{license.company_name || license.email}</span>
                                 <Badge variant="outline" className="ml-2 text-xs">
-                                  {(license.plan_type || 'start').toUpperCase()}
+                                  {'optiflow'.toUpperCase()}
                                 </Badge>
                               </div>
                             </SelectItem>
@@ -1094,7 +1060,7 @@ export default function Admin() {
 
                   {selectedLicenseForFeatures ? (
                     <FeatureEditor
-                      planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
+                      planType={'optiflow'}
                       currentFeatures={selectedLicenseForFeatures.features || null}
                       onSave={handleSaveFeatures}
                       saving={savingFeatures}
@@ -1226,19 +1192,6 @@ export default function Admin() {
                 </div>
                 {!formData.assignToCompanyId && (
                   <>
-                    <div className="space-y-2">
-                      <Label>Forfait</Label>
-                      <Select value={formData.planType} onValueChange={(v: PlanType) => setFormData(prev => ({ ...prev, planType: v }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="start">Start</SelectItem>
-                          <SelectItem value="pro">Pro</SelectItem>
-                          <SelectItem value="enterprise">Enterprise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label>Prénom</Label>

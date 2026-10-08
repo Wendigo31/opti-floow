@@ -395,15 +395,13 @@ const SLIDES = [
             Un investissement qui se<br />
             <span className="text-[hsl(175,85%,35%)]">rentabilise dès le 1er mois.</span>
           </h2>
-          <p className="text-[22px] text-[hsl(210,20%,45%)] mb-16 text-center">Tarifs adaptés à la taille de votre flotte.</p>
-          <div className="grid grid-cols-3 gap-10 w-full max-w-[1400px]">
+          <p className="text-[22px] text-[hsl(210,20%,45%)] mb-16 text-center">Un forfait unique, tout inclus. Tarif sur devis.</p>
+          <div className="grid grid-cols-1 gap-10 w-full max-w-[640px]">
             {[
-              { plan: 'Start', desc: 'Idéal pour les TPE', features: ['Calculateur de rentabilité', 'Jusqu\'à 5 conducteurs', 'Export PDF', 'Support email'], highlight: false },
-              { plan: 'Pro', desc: 'Pour les PME ambitieuses', features: ['Tout Start +', 'Itinéraires optimisés PL', 'Planning hebdomadaire', 'Multi-utilisateurs', 'Dashboard analytics', 'Alertes de marge'], highlight: true },
-              { plan: 'Enterprise', desc: 'Pour les grandes flottes', features: ['Tout Pro +', 'Utilisateurs illimités', 'IA & prédictions', 'Analyse clients toxiques', 'Support prioritaire'], highlight: false },
+              { plan: 'OptiFlow', desc: 'Toutes les fonctionnalités, sans option', features: ['Calculateur de rentabilité & itinéraires PL', 'Planning conducteurs & tournées', 'Utilisateurs, véhicules et conducteurs illimités', 'IA, prévisionnel & devis intelligents', 'Gestion d\'équipe par rôles, multi-agences', 'Support prioritaire'], highlight: true },
             ].map((item, i) => (
               <div key={i} className={`rounded-3xl p-10 ${item.highlight ? 'bg-[hsl(175,85%,35%)] text-white ring-4 ring-[hsl(175,85%,28%)] scale-105' : 'bg-white border border-[hsl(180,15%,88%)]'}`}>
-                {item.highlight && <p className="text-white/80 text-[14px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Le plus populaire</p>}
+                {item.highlight && <p className="text-white/80 text-[14px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Tout inclus</p>}
                 <h3 className={`text-[34px] font-bold mb-3 text-center ${item.highlight ? 'text-white' : 'text-[hsl(210,45%,15%)]'}`}>{item.plan}</h3>
                 <p className={`mb-8 text-center text-[18px] ${item.highlight ? 'text-white/75' : 'text-[hsl(210,20%,45%)]'}`}>{item.desc}</p>
                 <div className="space-y-4">

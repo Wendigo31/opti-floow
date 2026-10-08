@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
-import { useLicense, PlanType, FeatureKey } from '@/hooks/useLicense';
+import { useLicense, PlanType } from '@/hooks/useLicense';
 
-// Default limits per plan - SYNCHRONIZED WITH PricingSection.tsx and shared.ts
+// Single all-inclusive plan: unlimited by default.
+// Admin-defined per-license limits (licenses.max_*) still override these.
 const PLAN_LIMITS: Record<PlanType, {
   maxDrivers: number;
   maxClients: number;
@@ -10,23 +11,7 @@ const PLAN_LIMITS: Record<PlanType, {
   maxYearlyCharges: number;
   maxVehicles: number;
 }> = {
-  start: {
-    maxDrivers: 5,
-    maxClients: 10,
-    maxDailyCharges: 20,
-    maxMonthlyCharges: 20,
-    maxYearlyCharges: 10,
-    maxVehicles: 5,
-  },
-  pro: {
-    maxDrivers: 15,
-    maxClients: 30,
-    maxDailyCharges: 50,
-    maxMonthlyCharges: 50,
-    maxYearlyCharges: 25,
-    maxVehicles: 15,
-  },
-  enterprise: {
+  optiflow: {
     maxDrivers: Infinity,
     maxClients: Infinity,
     maxDailyCharges: Infinity,
@@ -48,10 +33,8 @@ interface PlanLimits {
 export function usePlanLimits() {
   const { planType, hasFeature, licenseData } = useLicense();
 
-  const defaultLimits = PLAN_LIMITS[planType];
+  const defaultLimits = PLAN_LIMITS.optiflow;
 
-  // Merge admin-defined custom limits with defaults
-  // Admin limits override plan defaults
   const limits: PlanLimits = useMemo(() => ({
     maxDrivers: licenseData?.maxDrivers ?? defaultLimits.maxDrivers,
     maxClients: licenseData?.maxClients ?? defaultLimits.maxClients,
@@ -81,10 +64,7 @@ export function usePlanLimits() {
     checkLimit,
     getRemainingCount,
     isUnlimited,
-    defaultLimits: PLAN_LIMITS[planType],
-    isStart: planType === 'start',
-    isPro: planType === 'pro',
-    isEnterprise: planType === 'enterprise',
+    defaultLimits,
   };
 }
 

@@ -89,7 +89,7 @@ export async function handleCheck(body: any, supabase: any, req: Request): Promi
     .update({ last_used_at: new Date().toISOString() })
     .eq("license_code", licenseCode.trim().toUpperCase());
 
-  const planType = license.plan_type || 'start';
+  const planType = 'optiflow';
   const effectiveFeatures = getEffectiveFeatures(planType, features);
 
   return jsonResponse({

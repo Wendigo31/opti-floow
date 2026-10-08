@@ -135,10 +135,10 @@ async function handleUpdatePlan(body: any, supabase: any, authHeader: string | n
   const { licenseId, planType } = body;
   const auth = await requireAdmin(body, authHeader);
   if (!auth.authorized) return errorResponse("Accès non autorisé", 403);
-  if (!['start', 'pro', 'enterprise'].includes(planType)) return errorResponse("Type de forfait invalide", 400);
+  if (planType !== undefined && planType !== 'optiflow') return errorResponse("Forfait unique : seule la valeur 'optiflow' est acceptée", 400);
 
   const { error } = await supabase.from("licenses").update({
-    plan_type: planType, max_users: getDefaultMaxUsersForPlan(planType),
+    plan_type: 'optiflow', max_users: getDefaultMaxUsersForPlan(),
   }).eq("id", licenseId);
   if (error) return errorResponse("Erreur mise à jour", 500);
   await logAdminAction(supabase, auth.email || 'admin', 'update_plan', licenseId, { planType }, clientIp);
@@ -195,8 +195,8 @@ async function handleCreateLicense(body: any, supabase: any, authHeader: string 
 
   const { data: newLicense, error } = await supabase.from("licenses").insert({
     license_code: licenseCode, company_identifier: companyIdentifier?.trim() || null,
-    email: email.trim().toLowerCase(), plan_type: planType || 'start',
-    max_users: getDefaultMaxUsersForPlan(planType || 'start'),
+    email: email.trim().toLowerCase(), plan_type: 'optiflow',
+    max_users: getDefaultMaxUsersForPlan(),
     first_name: firstName || null, last_name: lastName || null, company_name: companyName || null,
     siren: siren || null, address: address || null, city: city || null, postal_code: postalCode || null,
     employee_count: employeeCount || null, company_status: companyStatus || null, is_active: true,
@@ -232,7 +232,7 @@ async function handleUpdateLicense(body: any, supabase: any, authHeader: string 
 
   const updateData: Record<string, any> = {};
   if (email !== undefined) updateData.email = email.trim().toLowerCase();
-  if (planType !== undefined && ['start', 'pro', 'enterprise'].includes(planType)) updateData.plan_type = planType;
+  if (planType !== undefined) updateData.plan_type = 'optiflow';
   if (firstName !== undefined) updateData.first_name = firstName || null;
   if (lastName !== undefined) updateData.last_name = lastName || null;
   if (companyName !== undefined) updateData.company_name = companyName || null;

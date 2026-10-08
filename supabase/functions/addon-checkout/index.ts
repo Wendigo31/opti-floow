@@ -7,6 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Single plan 'optiflow' already includes every feature: only capacity add-ons remain.
 // Add-on definitions mapping addon_id to feature keys and limits to apply
 const ADDON_FEATURES: Record<string, { feature_keys?: Record<string, boolean>; limit_increases?: Record<string, number> }> = {
   extra_tours: {
@@ -20,12 +21,6 @@ const ADDON_FEATURES: Record<string, { feature_keys?: Record<string, boolean>; l
   },
   extra_clients: {
     limit_increases: { max_clients: 10 },
-  },
-  ai_analysis: {
-    feature_keys: { ai_optimization: true, ai_pdf_analysis: true, cost_analysis: true },
-  },
-  team: {
-    feature_keys: { multi_users: true },
   },
 };
 
@@ -63,6 +58,14 @@ serve(async (req) => {
       // Check existing customer
       const customers = await stripe.customers.list({ email, limit: 1 });
       const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+
+      // Only capacity add-ons are sold: every feature is already part of the single plan
+      const invalid = items.filter((i: any) => !ADDON_FEATURES[i?.addon_id]);
+      if (invalid.length > 0) {
+        return new Response(JSON.stringify({ error: "Module non disponible : toutes les fonctionnalités sont incluses dans le forfait OptiFlow" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // Build line items
       const lineItems = items.map((item: { price_id: string; quantity?: number }) => ({

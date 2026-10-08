@@ -7,86 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Plan defaults
-const PLAN_MAX_USERS: Record<string, number> = {
-  start: 1,
-  pro: 3,
-  enterprise: 999,
-};
+// Single all-inclusive plan 'optiflow'
+const SINGLE_PLAN = "optiflow";
+const PLAN_MAX_USERS: Record<string, number> = { optiflow: 999 };
 
-// Plan feature defaults - what gets inserted into license_features at creation
 const PLAN_FEATURE_DEFAULTS: Record<string, Record<string, any>> = {
-  start: {
-    basic_calculator: true,
-    itinerary_planning: true,
-    dashboard_basic: true,
-    dashboard_analytics: false,
-    forecast: false,
-    trip_history: true,
-    multi_drivers: false,
-    cost_analysis: false,
-    cost_analysis_basic: true,
-    margin_alerts: false,
-    dynamic_charts: false,
-    pdf_export_pro: false,
-    excel_export: false,
-    monthly_tracking: false,
-    auto_pricing: false,
-    auto_pricing_basic: true,
-    saved_tours: true,
-    client_analysis_basic: false,
-    ai_optimization: false,
-    ai_pdf_analysis: false,
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    client_analysis: false,
-    smart_quotes: false,
-    max_drivers: 5,
-    max_clients: 10,
-    max_vehicles: 5,
-    max_daily_charges: 20,
-    max_monthly_charges: 20,
-    max_yearly_charges: 10,
-    max_saved_tours: 5,
-  },
-  pro: {
-    basic_calculator: true,
-    itinerary_planning: true,
-    dashboard_basic: true,
-    dashboard_analytics: true,
-    forecast: false,
-    trip_history: true,
-    multi_drivers: true,
-    cost_analysis: true,
-    cost_analysis_basic: true,
-    margin_alerts: true,
-    dynamic_charts: true,
-    pdf_export_pro: true,
-    excel_export: true,
-    monthly_tracking: true,
-    auto_pricing: true,
-    auto_pricing_basic: true,
-    saved_tours: true,
-    client_analysis_basic: true,
-    ai_optimization: true,
-    ai_pdf_analysis: true,
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    client_analysis: true,
-    smart_quotes: false,
-    max_drivers: 15,
-    max_clients: 30,
-    max_vehicles: 15,
-    max_daily_charges: 50,
-    max_monthly_charges: 50,
-    max_yearly_charges: 25,
-    max_saved_tours: 20,
-  },
-  enterprise: {
+  optiflow: {
     basic_calculator: true,
     itinerary_planning: true,
     dashboard_basic: true,
@@ -294,7 +220,7 @@ serve(async (req) => {
     }
 
     // 5. Determine plan from metadata or parameter
-    const effectivePlan = session?.metadata?.plan_type || planType || "start";
+    const effectivePlan = SINGLE_PLAN; // planType/metadata ignored: single plan
 
     // 6. Generate company identifier
     const effectiveCompanyName = companyName || `${firstName} ${lastName}`;
@@ -393,7 +319,7 @@ serve(async (req) => {
     }
 
     // 10. Create default features for the plan
-    const planFeatures = PLAN_FEATURE_DEFAULTS[effectivePlan] || PLAN_FEATURE_DEFAULTS['start'];
+    const planFeatures = PLAN_FEATURE_DEFAULTS[SINGLE_PLAN];
     const { error: featError } = await supabase.from("license_features").insert({
       license_id: newLicense.id,
       ...planFeatures,

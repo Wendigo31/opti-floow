@@ -145,7 +145,7 @@ export default function Tours() {
   const [assignClientOpen, setAssignClientOpen] = useState(false);
   const [assignClientId, setAssignClientId] = useState<string>('');
   
-  const isEnterprise = planType === 'enterprise';
+  const isEnterprise = true;
 
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {

@@ -4,91 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // SYNCHRONIZED WITH: src/types/features.ts PLAN_DEFAULTS, src/hooks/useLicense.ts PLAN_FEATURES,
 // src/hooks/usePlanLimits.ts PLAN_LIMITS, src/components/activation/PricingSection.tsx
 // UPDATE ALL FILES WHEN CHANGING!
+// Single all-inclusive plan 'optiflow'. Legacy plan_type values map here.
 export const PLAN_DEFAULTS: Record<string, Record<string, boolean | number | null>> = {
-  start: {
-    // Core features
-    basic_calculator: true,
-    itinerary_planning: true,    // Itinéraire PL inclus dans Start
-    dashboard_basic: true,
-    cost_analysis_basic: true,
-    auto_pricing_basic: true,    // Calcul prix/km basique
-    saved_tours: true,           // 5 tournées max
-    // Pro/Enterprise features OFF
-    dashboard_analytics: false,
-    forecast: false,
-    trip_history: false,         // Pro uniquement
-    multi_drivers: false,
-    cost_analysis: false,
-    margin_alerts: false,
-    dynamic_charts: false,
-    pdf_export_pro: false,
-    excel_export: false,
-    monthly_tracking: false,
-    auto_pricing: false,
-    client_analysis_basic: false,
-    ai_optimization: false,
-    ai_pdf_analysis: false,
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    client_analysis: false,
-    smart_quotes: false,
-    // Limites START - synchronized with PricingSection
-    max_drivers: 5,
-    max_clients: 10,
-    max_vehicles: 5,
-    max_daily_charges: 20,
-    max_monthly_charges: 20,
-    max_yearly_charges: 10,
-    max_saved_tours: 5,
-    max_company_users: 1,
-    max_daily_calculations: 5,
-    max_daily_analyses: 0,
-  },
-  pro: {
-    // All Start features
-    basic_calculator: true,
-    itinerary_planning: true,
-    dashboard_basic: true,
-    cost_analysis_basic: true,
-    auto_pricing_basic: true,
-    saved_tours: true,
-    // Pro features ON
-    dashboard_analytics: true,
-    trip_history: true,
-    multi_drivers: true,
-    cost_analysis: true,
-    margin_alerts: true,
-    dynamic_charts: true,
-    pdf_export_pro: true,
-    excel_export: true,
-    monthly_tracking: true,
-    auto_pricing: true,
-    client_analysis_basic: true,
-    ai_optimization: true,       // 5 analyses IA/jour
-    ai_pdf_analysis: true,
-    client_analysis: true,
-    // Enterprise features OFF
-    forecast: false,             // Enterprise uniquement
-    smart_quotes: false,         // Enterprise uniquement
-    multi_agency: false,
-    tms_erp_integration: false,
-    multi_users: false,
-    unlimited_vehicles: false,
-    // Limites PRO - synchronized with PricingSection
-    max_drivers: 15,
-    max_clients: 30,
-    max_vehicles: 15,
-    max_daily_charges: 50,
-    max_monthly_charges: 50,
-    max_yearly_charges: 25,
-    max_saved_tours: 20,
-    max_company_users: 3,
-    max_daily_calculations: 25,
-    max_daily_analyses: 5,
-  },
-  enterprise: {
+  optiflow: {
     // All features ON
     basic_calculator: true,
     itinerary_planning: true,
@@ -135,7 +53,7 @@ export const corsHeaders = {
 
 // Get effective features: merge plan defaults with custom features from DB
 export function getEffectiveFeatures(planType: string, customFeatures: Record<string, any> | null): Record<string, any> {
-  const defaults = PLAN_DEFAULTS[planType] || PLAN_DEFAULTS['start'];
+  const defaults = PLAN_DEFAULTS.optiflow;
   if (!customFeatures) return { ...defaults };
   const merged: Record<string, any> = { ...defaults };
   for (const [key, value] of Object.entries(customFeatures)) {
@@ -283,14 +201,7 @@ export const mapToValidRole = (role: string | null | undefined): 'direction' | '
 };
 
 // Default max_users for plan
-export const getDefaultMaxUsersForPlan = (planType: string): number => {
-  const normalized = (planType || 'start').toLowerCase().trim();
-  switch (normalized) {
-    case 'enterprise': return 999;
-    case 'pro': return 3;
-    case 'start': default: return 1;
-  }
-};
+export const getDefaultMaxUsersForPlan = (_planType?: string): number => 999;
 
 // Create service role supabase client
 export function createServiceClient() {

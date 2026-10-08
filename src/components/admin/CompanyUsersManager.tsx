@@ -143,7 +143,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
         code: validateData.licenseData?.code || license.license_code,
         email: validateData.licenseData?.email || user.email,
         activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
-        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        planType: 'optiflow',
         companyName: validateData.licenseData?.companyName ?? license.company_name,
         companyUserId: validateData.companyUserId ?? user.id,
         userRole: validateData.userRole ?? user.role,
@@ -470,8 +470,6 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const selectedLicense = licenses.find(l => l.id === selectedLicenseId);
 
   const getEffectiveMaxUsers = (license: License): number | null => {
-    // Enterprise is unlimited, even if an old record still has max_users = 1
-    if ((license.plan_type || '').toLowerCase() === 'enterprise') return null;
     if (license.max_users == null) return null;
     if (license.max_users === 999) return null;
     return license.max_users;
