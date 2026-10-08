@@ -147,42 +147,35 @@ export function Sidebar() {
         </TooltipProvider>
       )}
 
-      {/* Navigation grouped by the 5 business categories */}
+      {/* Navigation : uniquement les onglets de l'espace sélectionné */}
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {NAV_CATEGORIES.map((category) => {
-          const visiblePages = category.pages.filter((page) => canSeeNavPage(page, accessCtx));
-          if (visiblePages.length === 0) return null;
-
-          return (
-            <div key={category.id} className="space-y-1">
-              {!collapsed && (
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 flex items-center gap-1.5">
-                  <category.icon className="w-3 h-3" />
-                  {category.label}
-                </p>
-              )}
-              {visiblePages.map((page) => {
-                const isActive = location.pathname === page.to;
-                return (
-                  <NavLink
-                    key={page.to}
-                    to={page.to}
-                    className={cn(
-                      "nav-item",
-                      isActive && "active"
-                    )}
-                    title={page.label}
-                  >
-                    <page.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
-                    {!collapsed && (
-                      <span className="truncate flex-1">{page.label}</span>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className="space-y-1">
+          {!collapsed && (
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 flex items-center gap-1.5">
+              <activeCategory.icon className="w-3 h-3" />
+              {activeCategory.label}
+            </p>
+          )}
+          {visiblePages.map((page) => {
+            const isActive = activePageTo === page.to;
+            return (
+              <NavLink
+                key={page.to}
+                to={`/espace/${activeCategory.id}?tab=${page.to}`}
+                className={cn(
+                  "nav-item",
+                  isActive && "active"
+                )}
+                title={page.label}
+              >
+                <page.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                {!collapsed && (
+                  <span className="truncate flex-1">{page.label}</span>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Collapse Toggle */}
