@@ -17,15 +17,15 @@ interface PricingSectionProps {
 
 export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
   return (
-    <section className="w-full max-w-6xl">
+    <section className="w-full max-w-md">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Nos forfaits</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Un forfait unique, tout inclus</h2>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Choisissez le forfait adapté à votre flotte. Évoluez à tout moment.
+          Toutes les fonctionnalités d'OptiFlow, sans option à choisir.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {PUBLIC_PLANS.map((plan) => {
           const Icon = plan.icon;
           const isBest = plan.bestValue;
@@ -44,7 +44,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
               {isBest && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 shadow-md">
-                    ⭐ Meilleur rapport qualité-prix
+                    Tout inclus
                   </Badge>
                 </div>
               )}
@@ -129,7 +129,7 @@ export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
           Modules complémentaires disponibles
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          +10 ressources, IA étendue, Gestion d'équipe — activables depuis votre espace.
+          Support prioritaire 24/7 et capacité supplémentaire — activables depuis votre espace.
         </p>
       </div>
     </section>
