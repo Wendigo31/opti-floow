@@ -24,6 +24,7 @@ const PAGE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   '/settings': lazy(() => import('./Settings')),
   '/my-restrictions': lazy(() => import('./MyRestrictions')),
   '/history': lazy(() => import('./TripHistory')),
+  '/tenders': lazy(() => import('./Tenders')),
   '/install': lazy(() => import('./Install')),
 };
 
