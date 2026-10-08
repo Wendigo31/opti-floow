@@ -185,10 +185,10 @@ export default function AIAnalysis() {
     
     // Convert stops from itinerary format to StopWaypoint format
     const itineraryStops = itineraryState.stops || [];
-    setStops(itineraryStops.map((s: any) => ({
-      id: s.id || crypto.randomUUID(),
-      address: s.address || '',
-      position: s.position || null,
+    setStops(itineraryStops.map((stop) => ({
+      id: stop.id || crypto.randomUUID(),
+      address: stop.address || '',
+      position: stop.position || null,
     })));
     
     setInputMode('itinerary');
