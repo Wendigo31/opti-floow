@@ -1,7 +1,30 @@
-import Home from './Home';
+import { useNavigate } from 'react-router-dom';
+import { useVisibleNavigation } from '@/hooks/useVisibleNavigation';
 
+/** Accueil post-connexion : uniquement les icônes des catégories. */
 const Index = () => {
-  return <Home />;
+  const navigate = useNavigate();
+  const categories = useVisibleNavigation();
+
+  return (
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10">
+      <h1 className="text-2xl font-semibold text-foreground">Choisissez votre espace</h1>
+      <div className="grid w-full max-w-5xl grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => navigate(`/espace/${category.id}`)}
+            className="group flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/15 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <category.icon className="h-10 w-10" />
+            </div>
+            <span className="text-center font-medium text-foreground">{category.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default Index;
