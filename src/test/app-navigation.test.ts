@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { NAV_CATEGORIES } from '@/config/appNavigation';
 
 describe('authenticated app navigation', () => {
-  it('contains the five requested categories in order', () => {
+  it('contains the requested categories in order', () => {
     expect(NAV_CATEGORIES.map((category) => category.label)).toEqual([
       'Exploitation',
       'Géoloc',
       'Comptabilité',
       'RH',
+      'Gestion de parc',
       'Gestion de rentabilité',
     ]);
   });
