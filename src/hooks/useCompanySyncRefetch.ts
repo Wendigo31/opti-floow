@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -30,7 +31,7 @@ export function useCompanySyncRefetch(
     if (!licenseId) return;
 
     channelRef.current = supabase
-      .channel(`sync_refetch_${entityType}_${licenseId}`)
+      .channel(uniqueChannelName(`sync_refetch_${entityType}_${licenseId}`))
       .on(
         'postgres_changes',
         {

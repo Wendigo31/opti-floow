@@ -79,7 +79,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (initRef.current) return;
+    // Pas de garde initRef : en StrictMode le 2e montage doit relancer init (le 1er est annulé).
     initRef.current = true;
 
     let isMounted = true;
@@ -112,42 +112,40 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
     void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Ne jamais attendre une requête dans ce callback (verrou d'auth → blocage) : on diffère.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const user = session?.user || null;
-
-      if (user) {
-        // Clear cache on sign in to get fresh data
-        if (event === 'SIGNED_IN') {
+      setTimeout(async () => {
+        if (!isMounted) return;
+        if (user) {
+          if (event === 'SIGNED_IN') {
+            cachedLicenseId = null;
+            cachedRole = null;
+            cacheTimestamp = 0;
+            if (!isInitializing.current) setIsLoading(true);
+          }
+          setAuthUserId(user.id);
+          const metaLicenseId = getLicenseIdFromUserMetadata(user);
+          if (metaLicenseId) setLicenseId(metaLicenseId);
+          try {
+            const data = await fetchUserLicenseDataFromDB(user.id);
+            if (!isMounted) return;
+            setLicenseId(data.licenseId);
+            setUserRole(data.role);
+          } finally {
+            if (isMounted) setIsLoading(false);
+          }
+        } else {
           cachedLicenseId = null;
           cachedRole = null;
           cacheTimestamp = 0;
-          // Only set loading during auth state changes, not initial load
-          if (!isInitializing.current) {
-            setIsLoading(true);
-          }
+          setLicenseId(null);
+          setUserRole(null);
+          setAuthUserId(null);
+          setIsLoading(false);
         }
-        setAuthUserId(user.id);
-
-        // Hydrate early from session metadata to avoid transient nulls.
-        const metaLicenseId = getLicenseIdFromUserMetadata(user);
-        if (metaLicenseId) {
-          setLicenseId(metaLicenseId);
-        }
-
-        const data = await fetchUserLicenseDataFromDB(user.id);
-        setLicenseId(data.licenseId);
-        setUserRole(data.role);
-        setIsLoading(false);
-      } else {
-        cachedLicenseId = null;
-        cachedRole = null;
-        cacheTimestamp = 0;
-        setLicenseId(null);
-        setUserRole(null);
-        setAuthUserId(null);
-        setIsLoading(false);
-      }
-      isInitializing.current = false;
+        isInitializing.current = false;
+      }, 0);
     });
 
     return () => {

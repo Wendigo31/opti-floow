@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -236,7 +237,7 @@ export function useItineraryState() {
   // Subscribe to realtime updates for team sessions
   useEffect(() => {
     const channel = supabase
-      .channel('itinerary_sessions_changes')
+      .channel(uniqueChannelName('itinerary_sessions_changes'))
       .on(
         'postgres_changes',
         {

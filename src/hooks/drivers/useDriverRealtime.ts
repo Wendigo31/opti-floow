@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanySyncRefetch } from '@/hooks/useCompanySyncRefetch';
@@ -27,7 +28,7 @@ export function useDriverRealtime(
     if (!licenseId) return;
 
     channelRef.current = supabase
-      .channel(`drivers_${licenseId}`)
+      .channel(uniqueChannelName(`drivers_${licenseId}`))
       .on(
         'postgres_changes',
         {

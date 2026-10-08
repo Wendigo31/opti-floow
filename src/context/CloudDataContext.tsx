@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
  /**
   * CloudDataContext - Système de synchronisation cloud temps réel global
   * Fonctionne comme Google Sheets: tout le monde voit les changements en direct
@@ -201,7 +202,7 @@ export { CloudDataContext };
      if (!licenseId) return;
  
      const channel = supabase
-       .channel(`sync_events_${licenseId}`)
+       .channel(uniqueChannelName(`sync_events_${licenseId}`))
        .on(
          'postgres_changes',
          {

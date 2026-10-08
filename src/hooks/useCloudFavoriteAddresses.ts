@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
@@ -83,7 +84,7 @@ export function useCloudFavoriteAddresses() {
     if (!licenseId) return;
 
     const channel = supabase
-      .channel('favorite_addresses_changes')
+      .channel(uniqueChannelName('favorite_addresses_changes'))
       .on(
         'postgres_changes',
         {

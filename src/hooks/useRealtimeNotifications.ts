@@ -143,9 +143,10 @@ export function useRealtimeNotifications() {
       }
     });
 
+    const channelSuffix = Math.random().toString(36).slice(2, 8);
     // Subscribe to vehicles changes
     const vehicleChannel = supabase
-      .channel('company-vehicles')
+      .channel(`company-vehicles-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -167,7 +168,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to trailers changes
     const trailerChannel = supabase
-      .channel('company-trailers')
+      .channel(`company-trailers-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -189,7 +190,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to saved tours changes
     const tourChannel = supabase
-      .channel('company-tours')
+      .channel(`company-tours-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -211,7 +212,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to drivers changes
     const driverChannel = supabase
-      .channel('company-drivers')
+      .channel(`company-drivers-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -233,7 +234,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to clients changes
     const clientChannel = supabase
-      .channel('company-clients')
+      .channel(`company-clients-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -255,7 +256,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to quotes changes
     const quoteChannel = supabase
-      .channel('company-quotes')
+      .channel(`company-quotes-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -278,7 +279,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to trips changes
     const tripChannel = supabase
-      .channel('company-trips')
+      .channel(`company-trips-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
@@ -301,7 +302,7 @@ export function useRealtimeNotifications() {
 
     // Subscribe to driver absences changes
     const absenceChannel = supabase
-      .channel('company-absences')
+      .channel(`company-absences-${channelSuffix}`)
       .on(
         'postgres_changes',
         {
