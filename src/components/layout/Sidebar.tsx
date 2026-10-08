@@ -1,33 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  Calculator, 
-  Users, 
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Navigation,
-  BarChart3,
-  UserCircle,
-  Lock,
-  TrendingUp,
-  Truck,
-  Route,
-  Settings,
-  EyeOff,
-   UsersRound,
-   CalendarDays,
-   Layers
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLicense, FeatureKey } from '@/hooks/useLicense';
+import { useLicense } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
-import { useUserFeatureOverrides, FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
+import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { useSidebarContext } from '@/context/SidebarContext';
-import { toast } from 'sonner';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NAV_CATEGORIES, canSeeNavPage } from '@/config/appNavigation';
 
-// Feature labels for tooltip display
+// Feature labels for the "restricted features" tooltip
 const FEATURE_LABELS: Record<string, string> = {
   basic_calculator: 'Calcul de rentabilité',
   itinerary_planning: 'Planification itinéraire',
@@ -56,83 +38,10 @@ const FEATURE_LABELS: Record<string, string> = {
   btn_ai_optimize: 'Optimisation IA',
 };
 
-// Navigation labels in French
-const NAV_LABELS = {
-  calculator: 'Calculateur',
-  itinerary: 'Itinéraire',
-  tours: 'Tournées',
-   planning: 'Planning',
-  dashboard: 'Analyse',
-  forecast: 'Prévisionnel',
-  vehicles: 'Véhicules',
-  drivers: 'Conducteurs',
-  charges: 'Charges',
-  clients: 'Clients',
-  settings: 'Paramètres',
-  team: 'Équipe',
-  lineMontage: 'Création de ligne',
-};
-
-// Type for nav items
-type NavItemConfig = {
-  to: string;
-  icon: any;
-  labelKey: keyof typeof NAV_LABELS;
-  requiredFeature?: FeatureKey;
-  requiredPlan?: 'pro' | 'enterprise';
-  directionOnly?: boolean;
-  userFeatureKey?: UserFeatureKey;
-};
-
-// Define navigation groups for a cleaner structure
-const navGroups: { label: string; items: NavItemConfig[] }[] = [
-  {
-    label: 'Principal',
-    items: [
-      { to: '/calculator', icon: Calculator, labelKey: 'calculator', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
-      { to: '/itinerary', icon: Navigation, labelKey: 'itinerary', requiredFeature: 'page_itinerary', requiredPlan: 'pro', userFeatureKey: 'page_itinerary' },
-    ]
-  },
-  {
-   label: 'Gestion',
-    items: [
-      { to: '/tours', icon: Route, labelKey: 'tours', requiredFeature: 'page_tours', requiredPlan: 'pro', userFeatureKey: 'page_tours' },
-       { to: '/planning', icon: CalendarDays, labelKey: 'planning', requiredPlan: 'pro' },
-      { to: '/clients', icon: UserCircle, labelKey: 'clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
-      { to: '/line-montage', icon: Layers, labelKey: 'lineMontage', requiredPlan: 'pro' },
-    ]
-  },
-  {
-    label: 'Flotte',
-    items: [
-      { to: '/vehicles', icon: Truck, labelKey: 'vehicles', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
-      { to: '/drivers', icon: Users, labelKey: 'drivers', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
-    ]
-  },
-  {
-    label: 'Analyse',
-    items: [
-      { to: '/dashboard', icon: BarChart3, labelKey: 'dashboard', requiredFeature: 'page_dashboard', requiredPlan: 'pro', userFeatureKey: 'page_dashboard' },
-      { to: '/forecast', icon: TrendingUp, labelKey: 'forecast', requiredFeature: 'page_forecast', requiredPlan: 'enterprise', directionOnly: true },
-    ]
-  },
-  {
-    label: 'Administration',
-    items: [
-      { to: '/charges', icon: Building2, labelKey: 'charges', requiredFeature: 'page_charges', directionOnly: true },
-      { to: '/team', icon: UsersRound, labelKey: 'team', requiredPlan: 'pro' },
-      { to: '/settings', icon: Settings, labelKey: 'settings', requiredFeature: 'page_settings' },
-    ]
-  },
-];
-
-// Flatten for MobileNav compatibility
-const navItems: NavItemConfig[] = navGroups.flatMap(g => g.items as NavItemConfig[]);
-
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
-  const { planType, hasFeature, licenseData } = useLicense();
+  const { hasFeature, licenseData } = useLicense();
   const { isDirection: isDirectionFromTeam } = useTeam();
   // Fallback: use userRole from cached license data when auth session isn't ready
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
@@ -141,38 +50,17 @@ export function Sidebar() {
   // Get restricted features (user-specific overrides that are disabled)
   const restrictedFeatures = licenseData?.userFeatureOverrides?.filter(o => !o.enabled) || [];
   const restrictedFeaturesCount = restrictedFeatures.length;
-  
-  // Get labels for restricted features
+
   const getRestrictedFeatureLabels = () => {
-    return restrictedFeatures.map(o => 
+    return restrictedFeatures.map(o =>
       FEATURE_LABELS[o.feature_key] || o.feature_key.replace(/_/g, ' ')
     );
   };
 
-  // Check if plan meets requirement
-  const isPlanSufficient = (requiredPlan?: 'pro' | 'enterprise') => {
-    if (!requiredPlan) return true;
-    // If planType is not yet loaded, don't hide items — show them by default
-    if (!planType) return true;
-    if (requiredPlan === 'pro') {
-      return true;
-    }
-    if (requiredPlan === 'enterprise') {
-      return true;
-    }
-    return true;
-  };
-
-  const handleLockedClick = (e: React.MouseEvent, label: string, requiredPlan: string) => {
-    e.preventDefault();
-    const planLabel = requiredPlan.toUpperCase();
-      toast.info(`"${label}" nécessite le forfait ${planLabel}`, {
-        description: 'Passez à un forfait supérieur pour accéder à cette fonctionnalité.',
-      });
-  };
+  const accessCtx = { hasFeature, canAccessUserFeature, isDirection };
 
   return (
-    <aside 
+    <aside
       className={cn(
         "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 z-50 no-print",
         collapsed ? "w-20" : "w-64"
@@ -181,9 +69,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <NavLink to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <img 
-            src={optiflowLogo} 
-            alt="OptiFlow" 
+          <img
+            src={optiflowLogo}
+            alt="OptiFlow"
             className="w-10 h-10 object-contain"
           />
           {!collapsed && (
@@ -242,67 +130,35 @@ export function Sidebar() {
         </TooltipProvider>
       )}
 
-      {/* Navigation */}
+      {/* Navigation grouped by the 5 business categories */}
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {navGroups.map((group, groupIndex) => {
-          // Filter visible items in this group
-          const visibleItems = group.items.filter((item) => {
-            if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
-            if (item.directionOnly && !isDirection) return false;
-            if (item.userFeatureKey && !canAccessUserFeature(item.userFeatureKey)) return false;
-            return true;
-          });
-
-          // Don't render empty groups
-          if (visibleItems.length === 0) return null;
+        {NAV_CATEGORIES.map((category) => {
+          const visiblePages = category.pages.filter((page) => canSeeNavPage(page, accessCtx));
+          if (visiblePages.length === 0) return null;
 
           return (
-            <div key={group.label} className="space-y-1">
+            <div key={category.id} className="space-y-1">
               {!collapsed && (
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                  {group.label}
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 flex items-center gap-1.5">
+                  <category.icon className="w-3 h-3" />
+                  {category.label}
                 </p>
               )}
-              {visibleItems.map((item) => {
-                const isActive = location.pathname === item.to;
-                const label = NAV_LABELS[item.labelKey];
-                const isLocked = !isPlanSufficient(item.requiredPlan);
-
-                if (isLocked) {
-                  return (
-                    <button
-                      key={item.to}
-                      onClick={(e) => handleLockedClick(e, label, item.requiredPlan!)}
-                      className="nav-item-locked w-full text-left upgrade-shimmer"
-                      title={`Forfait ${item.requiredPlan!.toUpperCase()} requis`}
-                    >
-                      <item.icon className="w-5 h-5 flex-shrink-0 opacity-60" />
-                      {!collapsed && (
-                        <span className="truncate flex-1 opacity-60">{label}</span>
-                      )}
-                      {!collapsed && (
-                        <Lock className="lock-icon w-4 h-4 text-muted-foreground" />
-                      )}
-                      {collapsed && (
-                        <Lock className="lock-icon w-3 h-3 absolute bottom-0 right-0 text-muted-foreground" />
-                      )}
-                    </button>
-                  );
-                }
-
+              {visiblePages.map((page) => {
+                const isActive = location.pathname === page.to;
                 return (
                   <NavLink
-                    key={item.to}
-                    to={item.to}
+                    key={page.to}
+                    to={page.to}
                     className={cn(
                       "nav-item",
                       isActive && "active"
                     )}
-                    title={label}
+                    title={page.label}
                   >
-                    <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                    <page.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
                     {!collapsed && (
-                      <span className="truncate flex-1">{label}</span>
+                      <span className="truncate flex-1">{page.label}</span>
                     )}
                   </NavLink>
                 );
@@ -311,7 +167,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
 
       {/* Collapse Toggle */}
       <div className="p-4 border-t border-sidebar-border">

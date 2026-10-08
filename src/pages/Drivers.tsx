@@ -31,28 +31,9 @@ import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { DriverAbsencesTab } from '@/components/drivers/DriverAbsencesTab';
 import { DeclareAbsenceDialog } from '@/components/drivers/DeclareAbsenceDialog';
-// Extended driver type with new fields
-// Champs de paie : jamais renvoyés par un membre qui n'y a pas accès
-const PAY_FIELDS = [
-  'baseSalary', 'hourlyRate', 'patronalCharges',
-  'mealAllowance', 'overnightAllowance',
-  'sundayBonus', 'nightBonus', 'seniorityBonus', 'unloadingBonus',
-  'interimHourlyRate', 'interimCoefficient',
-] as const;
-
-interface ExtendedDriver extends Driver {
-  isInterim?: boolean;
-  interimAgency?: string;
-  interimHourlyRate?: number;
-  interimCoefficient?: number;
-  scheduleType?: 'day' | 'night' | 'mixed';
-  nightStartHour?: number;
-  nightEndHour?: number;
-  nightBonusPercent?: number;
-  assignedClientId?: string;
-  assignedCity?: string;
-  assignedTourIds?: string[];
-}
+import { DriverForm } from '@/components/drivers/DriverForm';
+import { DriverCategoryTab } from '@/components/drivers/DriverCategoryTab';
+import { PAY_FIELDS, type DriverContractType, type ExtendedDriver } from '@/types/driver';
 
 export default function Drivers() {
   // Use cloud drivers for shared data sync
@@ -110,6 +91,26 @@ export default function Drivers() {
       return next;
     });
   };
+
+  // Toggle select-all for a given list of driver ids (used by the table header checkbox)
+  const handleToggleSelectAll = (ids: string[], select: boolean) => {
+    setCheckedDriverIds(prev => {
+      const next = new Set(prev);
+      if (select) {
+        ids.forEach(id => next.add(id));
+      } else {
+        ids.forEach(id => next.delete(id));
+      }
+      return next;
+    });
+  };
+
+  // True when this driver's inline edit form should be shown in place of its card/row.
+  // Mirrors the original `editingId === driver.id && formData.isInterim === isInterim`
+  // check, where `isInterim` came from the category tab being rendered (driverType),
+  // not from the driver itself.
+  const isEditingDriver = (driver: ExtendedDriver, driverType: DriverContractType) =>
+    editingId === driver.id && formData.isInterim === (driverType === 'interim');
 
   // Select all visible drivers
   const selectAllVisible = () => {
@@ -494,503 +495,7 @@ export default function Drivers() {
   const interimDrivers = cloudInterimDrivers as ExtendedDriver[];
   const autreDrivers = cloudAutreDrivers as ExtendedDriver[];
   const jokerDrivers = cloudJokerDrivers as ExtendedDriver[];
-  const renderForm = () => {
-    const isInterim = formContractType === 'interim';
-    const isAutre = formContractType === 'autre';
-    return (
-      <div className="glass-card p-6 space-y-4 opacity-0 animate-scale-in" style={{ animationFillMode: 'forwards' }}>
-        {/* Informations de base */}
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Informations</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nom du conducteur</Label>
-              <Input
-                id="name"
-                value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nom complet"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Type de contrat</Label>
-              <Select value={formContractType} onValueChange={(v) => {
-                const val = v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker';
-                setFormContractType(val);
-                setFormData({ ...formData, isInterim: val === 'interim' });
-              }}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cdi">CDI</SelectItem>
-                  <SelectItem value="cdd">CDD</SelectItem>
-                  <SelectItem value="interim">Intérim</SelectItem>
-                  <SelectItem value="joker">Joker / Polyvalent</SelectItem>
-                  <SelectItem value="autre">Autre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="workingDaysPerMonth">Jours travaillés/mois</Label>
-              <Input
-                id="workingDaysPerMonth"
-                type="number"
-                value={formData.workingDaysPerMonth || ''}
-                onChange={(e) => setFormData({ ...formData, workingDaysPerMonth: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hoursPerDay">Heures/jour</Label>
-              <Input
-                id="hoursPerDay"
-                type="number"
-                step="0.5"
-                value={formData.hoursPerDay || ''}
-                onChange={(e) => setFormData({ ...formData, hoursPerDay: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Horaires jour/nuit */}
-        <div className="border-t border-border pt-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Régime horaire
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Type d'horaire</Label>
-              <div className="flex gap-2">
-                <Button 
-                  type="button"
-                  variant={formData.scheduleType === 'day' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, scheduleType: 'day' })}
-                >
-                  Jour
-                </Button>
-                <Button 
-                  type="button"
-                  variant={formData.scheduleType === 'night' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, scheduleType: 'night' })}
-                >
-                  Nuit
-                </Button>
-                <Button 
-                  type="button"
-                  variant={formData.scheduleType === 'mixed' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, scheduleType: 'mixed' })}
-                >
-                  Mixte
-                </Button>
-              </div>
-            </div>
-            {(formData.scheduleType === 'night' || formData.scheduleType === 'mixed') && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="nightStartHour">Début de nuit (h)</Label>
-                  <Input
-                    id="nightStartHour"
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={formData.nightStartHour || 21}
-                    onChange={(e) => setFormData({ ...formData, nightStartHour: parseInt(e.target.value) || 21 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nightEndHour">Fin de nuit (h)</Label>
-                  <Input
-                    id="nightEndHour"
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={formData.nightEndHour || 6}
-                    onChange={(e) => setFormData({ ...formData, nightEndHour: parseInt(e.target.value) || 6 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nightBonusPercent">Majoration nuit (%)</Label>
-                  <Input
-                    id="nightBonusPercent"
-                    type="number"
-                    step="1"
-                    value={formData.nightBonusPercent || 25}
-                    onChange={(e) => setFormData({ ...formData, nightBonusPercent: parseFloat(e.target.value) || 25 })}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Section spécifique Intérim */}
-        {isInterim && (
-          <div className="border-t border-border pt-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Users2 className="w-4 h-4" />
-              Intérim
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="interimAgency">Agence d'intérim</Label>
-                <Input
-                  id="interimAgency"
-                  value={formData.interimAgency || ''}
-                  onChange={(e) => setFormData({ ...formData, interimAgency: e.target.value })}
-                  placeholder="Nom de l'agence"
-                />
-              </div>
-              {canViewFinancialData && (
-              <>
-              <div className="space-y-2">
-                <Label htmlFor="interimHourlyRate">Taux horaire intérim (€/h)</Label>
-                <Input
-                  id="interimHourlyRate"
-                  type="number"
-                  step="0.01"
-                  value={formData.interimHourlyRate || ''}
-                  onChange={(e) => setFormData({ ...formData, interimHourlyRate: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="interimCoefficient">Coefficient agence</Label>
-                <Input
-                  id="interimCoefficient"
-                  type="number"
-                  step="0.01"
-                  value={formData.interimCoefficient || ''}
-                  onChange={(e) => setFormData({ ...formData, interimCoefficient: parseFloat(e.target.value) || 0 })}
-                  placeholder="1.85"
-                />
-              </div>
-              </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Rémunération - Seulement pour CDI/CDD */}
-        {!isInterim && !isAutre && canViewFinancialData && (
-          <div className="border-t border-border pt-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Rémunération</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="baseSalary">Salaire brut mensuel (€)</Label>
-                <Input
-                  id="baseSalary"
-                  type="number"
-                  step="0.01"
-                  value={formData.baseSalary || ''}
-                  onChange={(e) => setFormData({ ...formData, baseSalary: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hourlyRate">Taux horaire brut (€/h)</Label>
-                <Input
-                  id="hourlyRate"
-                  type="number"
-                  step="0.01"
-                  value={formData.hourlyRate || ''}
-                  onChange={(e) => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="patronalCharges">Charges patronales (%)</Label>
-                <Input
-                  id="patronalCharges"
-                  type="number"
-                  step="0.1"
-                  value={formData.patronalCharges || ''}
-                  onChange={(e) => setFormData({ ...formData, patronalCharges: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Charges & Primes - Seulement pour CDI/CDD */}
-        {!isInterim && !isAutre && canViewFinancialData && (
-          <div className="border-t border-border pt-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Primes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sundayBonus">Prime dimanche (€)</Label>
-                <Input
-                  id="sundayBonus"
-                  type="number"
-                  step="0.01"
-                  value={formData.sundayBonus || ''}
-                  onChange={(e) => setFormData({ ...formData, sundayBonus: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nightBonus">Prime nuit fixe (€)</Label>
-                <Input
-                  id="nightBonus"
-                  type="number"
-                  step="0.01"
-                  value={formData.nightBonus || ''}
-                  onChange={(e) => setFormData({ ...formData, nightBonus: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="seniorityBonus">Prime ancienneté (€)</Label>
-                <Input
-                  id="seniorityBonus"
-                  type="number"
-                  step="0.01"
-                  value={formData.seniorityBonus || ''}
-                  onChange={(e) => setFormData({ ...formData, seniorityBonus: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unloadingBonus">Prime décaissage (€)</Label>
-                <Input
-                  id="unloadingBonus"
-                  type="number"
-                  step="0.01"
-                  value={formData.unloadingBonus || ''}
-                  onChange={(e) => setFormData({ ...formData, unloadingBonus: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Indemnités */}
-        {canViewFinancialData && (
-        <div className="border-t border-border pt-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Indemnités</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="mealAllowance">Indemnité repas (€)</Label>
-              <Input
-                id="mealAllowance"
-                type="number"
-                step="0.01"
-                value={formData.mealAllowance || ''}
-                onChange={(e) => setFormData({ ...formData, mealAllowance: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="overnightAllowance">Indemnité découcher (€)</Label>
-              <Input
-                id="overnightAllowance"
-                type="number"
-                step="0.01"
-                value={formData.overnightAllowance || ''}
-                onChange={(e) => setFormData({ ...formData, overnightAllowance: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-        </div>
-        )}
-
-        {!canViewFinancialData && (
-          <div className="border-t border-border pt-4">
-            <p className="text-sm text-muted-foreground">
-              Les éléments de rémunération sont réservés à la Direction. Ils sont conservés
-              automatiquement lorsque vous enregistrez cette fiche.
-            </p>
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={handleCancel}>
-            <X className="w-4 h-4 mr-2" />
-            Annuler
-          </Button>
-          <Button variant="gradient" onClick={handleSave}>
-            <Check className="w-4 h-4 mr-2" />
-            Enregistrer
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDriverCard = (driver: ExtendedDriver, index: number, driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => {
-    const isInterim = driverType === 'interim';
-    const driverInfo = getDriverInfo(driver.id);
-    const isShared = !!driverInfo?.licenseId;
-    const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
-    
-    return (
-      <div
-        key={driver.id}
-        className={cn(
-          "glass-card p-6 opacity-0 animate-slide-up",
-          selectedDriverIds.includes(driver.id) && "ring-2 ring-primary/50",
-          checkedDriverIds.has(driver.id) && "ring-2 ring-primary"
-        )}
-        style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
-      >
-      {editingId === driver.id && formData.isInterim === isInterim ? (
-          renderForm()
-        ) : (
-          <>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={checkedDriverIds.has(driver.id)}
-                  onCheckedChange={() => toggleDriverCheck(driver.id)}
-                  className="mr-1"
-                />
-                <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center",
-                  isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
-                )}>
-                  {isInterim ? (
-                    <Users2 className="w-6 h-6 text-orange-400" />
-                  ) : (
-                    <User className="w-6 h-6 text-purple-400" />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {driver.firstName && driver.lastName 
-                        ? `${driver.firstName} ${driver.lastName}`
-                        : driver.name
-                      }
-                    </h3>
-                    {driver.scheduleType === 'night' && (
-                      <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">Nuit</span>
-                    )}
-                    {driver.scheduleType === 'mixed' && (
-                      <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Mixte</span>
-                    )}
-                    {isCompanyMember && (
-                      <TooltipProvider>
-                        <SharedDataBadge 
-                          isShared={isShared}
-                          isOwn={isOwn}
-                          isFormerMember={driverInfo?.isFormerMember}
-                          createdBy={driverInfo?.displayName}
-                          createdByEmail={driverInfo?.userEmail}
-                          compact
-                        />
-                      </TooltipProvider>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {isInterim 
-                      ? `${driver.interimAgency || 'Intérim'} • ${formatCurrency(driver.interimHourlyRate || 0)}/h`
-                      : `${formatCurrency(driver.baseSalary)} brut/mois`
-                    }
-                </p>
-                {driver.phone && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <Phone className="w-3 h-3" />
-                    {driver.phone}
-                  </p>
-                )}
-                {(driver as ExtendedDriver).assignedCity && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    {(driver as ExtendedDriver).assignedCity}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEdit(driver, driverType === 'interim'); }}>
-                <Edit2 className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleDelete(driver.id, driverType); }}>
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            {isInterim ? (
-              <>
-                <div>
-                  <p className="text-muted-foreground">Taux horaire</p>
-                  <p className="font-medium text-foreground">{formatCurrency(driver.interimHourlyRate || 0)}/h</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Coefficient</p>
-                  <p className="font-medium text-foreground">{driver.interimCoefficient || 1.85}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Heures/jour</p>
-                  <p className="font-medium text-foreground">{driver.hoursPerDay || 10}h</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <p className="text-muted-foreground">Taux horaire</p>
-                  <p className="font-medium text-foreground">{formatCurrency(driver.hourlyRate || 0)}/h</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Heures/jour</p>
-                  <p className="font-medium text-foreground">{driver.hoursPerDay || 10}h</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Jours/mois</p>
-                  <p className="font-medium text-foreground">{driver.workingDaysPerMonth}</p>
-                </div>
-              </>
-            )}
-            <div>
-              <p className="text-muted-foreground">Indemnité repas</p>
-              <p className="font-medium text-foreground">{formatCurrency(driver.mealAllowance)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Indemnité découcher</p>
-              <p className="font-medium text-foreground">{formatCurrency(driver.overnightAllowance)}</p>
-            </div>
-            {!isInterim && (
-              <div>
-                <p className="text-muted-foreground">Charges patronales</p>
-                <p className="font-medium text-foreground">{driver.patronalCharges}%</p>
-              </div>
-            )}
-          </div>
-          {!isInterim && (driver.sundayBonus > 0 || driver.nightBonus > 0 || driver.seniorityBonus > 0) && (
-            <div className="grid grid-cols-3 gap-4 text-sm mt-3 pt-3 border-t border-border/30">
-              {driver.sundayBonus > 0 && (
-                <div>
-                  <p className="text-muted-foreground">Prime dimanche</p>
-                  <p className="font-medium text-success">{formatCurrency(driver.sundayBonus)}</p>
-                </div>
-              )}
-              {driver.nightBonus > 0 && (
-                <div>
-                  <p className="text-muted-foreground">Prime nuit</p>
-                  <p className="font-medium text-success">{formatCurrency(driver.nightBonus)}</p>
-                </div>
-              )}
-              {driver.seniorityBonus > 0 && (
-                <div>
-                  <p className="text-muted-foreground">Prime ancienneté</p>
-                  <p className="font-medium text-success">{formatCurrency(driver.seniorityBonus)}</p>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                {isInterim ? 'Coût agence mensuel' : 'Coût employeur mensuel'}
-              </span>
-              <span className="font-bold text-primary">
-                {formatCurrency(calculateEmployerCost(driver))}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-  };
 
   // Filter drivers based on search and ownership
   const filteredCdiDrivers = useMemo(() => {
@@ -1157,142 +662,18 @@ export default function Drivers() {
     return drivers.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }, [filteredJokerDrivers]);
 
-  const renderDriverRow = (driver: ExtendedDriver, driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => {
-    const isInterim = driverType === 'interim';
-    const driverInfo = getDriverInfo(driver.id);
-    const isShared = !!driverInfo?.licenseId;
-    const isOwn = driverInfo ? isOwnData(driverInfo.userId) : true;
-    
-    return (
-      <TableRow key={driver.id} className={cn(
-        selectedDriverIds.includes(driver.id) && "bg-primary/5",
-        checkedDriverIds.has(driver.id) && "bg-primary/10"
-      )}>
-        <TableCell>
-          <div className="flex items-center gap-3">
-            <Checkbox
-              checked={checkedDriverIds.has(driver.id)}
-              onCheckedChange={() => toggleDriverCheck(driver.id)}
-            />
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center",
-              isInterim ? "bg-orange-500/20" : "bg-purple-500/20"
-            )}>
-              {isInterim ? (
-                <Users2 className="w-4 h-4 text-orange-400" />
-              ) : (
-                <User className="w-4 h-4 text-purple-400" />
-              )}
-            </div>
-            <div>
-              <p className="font-medium">
-                {driver.firstName && driver.lastName 
-                  ? `${driver.firstName} ${driver.lastName}`
-                  : driver.name
-                }
-              </p>
-              {driver.phone && (
-                <span className="text-xs text-muted-foreground">{driver.phone}</span>
-              )}
-              {driver.scheduleType && driver.scheduleType !== 'day' && (
-                <span className={cn(
-                  "text-xs px-1.5 py-0.5 rounded-full",
-                  driver.scheduleType === 'night' ? "bg-indigo-500/20 text-indigo-400" : "bg-amber-500/20 text-amber-400"
-                )}>
-                  {driver.scheduleType === 'night' ? 'Nuit' : 'Mixte'}
-                </span>
-              )}
-            </div>
-          </div>
-        </TableCell>
-        <TableCell>
-          {isInterim ? (
-            <span className="text-sm text-muted-foreground">{driver.interimAgency || 'Intérim'}</span>
-          ) : (
-            <span className="text-sm">CDI</span>
-          )}
-        </TableCell>
-        <TableCell>
-          {isInterim 
-            ? formatCurrency(driver.interimHourlyRate || 0)
-            : formatCurrency(driver.hourlyRate || 0)
-          }/h
-        </TableCell>
-        <TableCell>{driver.hoursPerDay || 10}h</TableCell>
-        <TableCell>{driver.workingDaysPerMonth} j/mois</TableCell>
-        <TableCell className="text-right font-medium text-primary">
-          {formatCurrency(calculateEmployerCost(driver))}
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center gap-1 justify-end">
-            {isCompanyMember && (
-              <TooltipProvider>
-                <SharedDataBadge 
-                  isShared={isShared}
-                  isOwn={isOwn}
-                  isFormerMember={driverInfo?.isFormerMember}
-                  createdBy={driverInfo?.displayName}
-                  createdByEmail={driverInfo?.userEmail}
-                  compact
-                />
-              </TooltipProvider>
-            )}
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(driver, driverType === 'interim'); }}>
-              <Edit2 className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDelete(driver.id, driverType); }}>
-              <Trash2 className="w-4 h-4 text-destructive" />
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  };
-
-  const renderDriversTable = (drivers: ExtendedDriver[], driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => (
-    (() => { const isInterim = driverType === 'interim'; return (
-    <div className="glass-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[300px]">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={drivers.length > 0 && drivers.every(d => checkedDriverIds.has(d.id))}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      const ids = drivers.map(d => d.id);
-                      setCheckedDriverIds(prev => {
-                        const next = new Set(prev);
-                        ids.forEach(id => next.add(id));
-                        return next;
-                      });
-                    } else {
-                      const ids = drivers.map(d => d.id);
-                      setCheckedDriverIds(prev => {
-                        const next = new Set(prev);
-                        ids.forEach(id => next.delete(id));
-                        return next;
-                      });
-                    }
-                  }}
-                />
-                Conducteur
-              </div>
-            </TableHead>
-            <TableHead>{isInterim ? 'Agence' : 'Contrat'}</TableHead>
-            <TableHead>Taux horaire</TableHead>
-            <TableHead>Heures/jour</TableHead>
-            <TableHead>Jours/mois</TableHead>
-            <TableHead className="text-right">Coût mensuel</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {drivers.map(driver => renderDriverRow(driver, driverType))}
-        </TableBody>
-      </Table>
-    </div>)})()
+  // Shared add/edit form, rendered inside the active category tab (grid card slot or
+  // top-of-list add slot) — identical component/props regardless of which tab shows it.
+  const driverFormSlot = (
+    <DriverForm
+      formData={formData}
+      setFormData={setFormData}
+      formContractType={formContractType}
+      setFormContractType={setFormContractType}
+      canViewFinancialData={canViewFinancialData}
+      onCancel={handleCancel}
+      onSave={handleSave}
+    />
   );
 
   return (
@@ -1481,135 +862,158 @@ export default function Drivers() {
         />
 
         <TabsContent value="cdi" className="mt-6">
-          {/* Add Form */}
-          {isAdding && activeTab === 'cdi' && renderForm()}
-
-          {/* CDI Drivers List or Table */}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {sortedCdiDrivers.map((driver, index) => renderDriverCard(driver, index, 'cdi'))}
-            </div>
-          ) : (
-            sortedCdiDrivers.length > 0 && renderDriversTable(sortedCdiDrivers, 'cdi')
-          )}
-
-          {cdiDrivers.length === 0 && !isAdding && (
-            <div className="glass-card p-12 text-center">
-              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Aucun conducteur CDI</h3>
-              <p className="text-muted-foreground mb-4">
-                Commencez par ajouter un conducteur pour calculer les coûts salariaux.
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un conducteur
-              </Button>
-            </div>
-          )}
+          <DriverCategoryTab
+            driverType="cdi"
+            drivers={sortedCdiDrivers}
+            hasAnyDriver={cdiDrivers.length > 0}
+            viewMode={viewMode}
+            showAddForm={isAdding && activeTab === 'cdi'}
+            isAddingAnywhere={isAdding}
+            formSlot={driverFormSlot}
+            emptyState={{
+              icon: User,
+              title: 'Aucun conducteur CDI',
+              description: 'Commencez par ajouter un conducteur pour calculer les coûts salariaux.',
+              ctaLabel: 'Ajouter un conducteur',
+            }}
+            onAdd={handleAdd}
+            isEditingDriver={isEditingDriver}
+            selectedDriverIds={selectedDriverIds}
+            checkedDriverIds={checkedDriverIds}
+            onToggleCheck={toggleDriverCheck}
+            onToggleSelectAll={handleToggleSelectAll}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatCurrency={formatCurrency}
+            calculateEmployerCost={calculateEmployerCost}
+            isCompanyMember={isCompanyMember}
+            getDriverInfo={getDriverInfo}
+            isOwnData={isOwnData}
+          />
         </TabsContent>
 
         <TabsContent value="cdd" className="mt-6">
-          {/* Add Form */}
-          {isAdding && activeTab === 'cdd' && renderForm()}
-
-          {/* CDD Drivers List or Table */}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {sortedCddDrivers.map((driver, index) => renderDriverCard(driver, index, 'cdd'))}
-            </div>
-          ) : (
-            sortedCddDrivers.length > 0 && renderDriversTable(sortedCddDrivers, 'cdd')
-          )}
-
-          {cddDrivers.length === 0 && !isAdding && (
-            <div className="glass-card p-12 text-center">
-              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Aucun conducteur CDD</h3>
-              <p className="text-muted-foreground mb-4">
-                Ajoutez des conducteurs en contrat CDD.
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un conducteur CDD
-              </Button>
-            </div>
-          )}
+          <DriverCategoryTab
+            driverType="cdd"
+            drivers={sortedCddDrivers}
+            hasAnyDriver={cddDrivers.length > 0}
+            viewMode={viewMode}
+            showAddForm={isAdding && activeTab === 'cdd'}
+            isAddingAnywhere={isAdding}
+            formSlot={driverFormSlot}
+            emptyState={{
+              icon: User,
+              title: 'Aucun conducteur CDD',
+              description: 'Ajoutez des conducteurs en contrat CDD.',
+              ctaLabel: 'Ajouter un conducteur CDD',
+            }}
+            onAdd={handleAdd}
+            isEditingDriver={isEditingDriver}
+            selectedDriverIds={selectedDriverIds}
+            checkedDriverIds={checkedDriverIds}
+            onToggleCheck={toggleDriverCheck}
+            onToggleSelectAll={handleToggleSelectAll}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatCurrency={formatCurrency}
+            calculateEmployerCost={calculateEmployerCost}
+            isCompanyMember={isCompanyMember}
+            getDriverInfo={getDriverInfo}
+            isOwnData={isOwnData}
+          />
         </TabsContent>
 
         <TabsContent value="interim" className="mt-6">
-          {/* Add Form */}
-          {isAdding && activeTab === 'interim' && renderForm()}
-
-          {/* Interim Drivers List or Table */}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {sortedInterimDrivers.map((driver, index) => renderDriverCard(driver, index, 'interim'))}
-            </div>
-          ) : (
-            sortedInterimDrivers.length > 0 && renderDriversTable(sortedInterimDrivers, 'interim')
-          )}
-
-          {interimDrivers.length === 0 && !isAdding && (
-            <div className="glass-card p-12 text-center">
-              <Users2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Aucun intérimaire</h3>
-              <p className="text-muted-foreground mb-4">
-                Ajoutez des conducteurs intérimaires avec leur coût agence.
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un intérimaire
-              </Button>
-            </div>
-          )}
+          <DriverCategoryTab
+            driverType="interim"
+            drivers={sortedInterimDrivers}
+            hasAnyDriver={interimDrivers.length > 0}
+            viewMode={viewMode}
+            showAddForm={isAdding && activeTab === 'interim'}
+            isAddingAnywhere={isAdding}
+            formSlot={driverFormSlot}
+            emptyState={{
+              icon: Users2,
+              title: 'Aucun intérimaire',
+              description: 'Ajoutez des conducteurs intérimaires avec leur coût agence.',
+              ctaLabel: 'Ajouter un intérimaire',
+            }}
+            onAdd={handleAdd}
+            isEditingDriver={isEditingDriver}
+            selectedDriverIds={selectedDriverIds}
+            checkedDriverIds={checkedDriverIds}
+            onToggleCheck={toggleDriverCheck}
+            onToggleSelectAll={handleToggleSelectAll}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatCurrency={formatCurrency}
+            calculateEmployerCost={calculateEmployerCost}
+            isCompanyMember={isCompanyMember}
+            getDriverInfo={getDriverInfo}
+            isOwnData={isOwnData}
+          />
         </TabsContent>
 
         <TabsContent value="autre" className="mt-6">
-          {isAdding && activeTab === 'autre' && renderForm()}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {sortedAutreDrivers.map((driver, index) => renderDriverCard(driver, index, 'autre'))}
-            </div>
-          ) : (
-            sortedAutreDrivers.length > 0 && renderDriversTable(sortedAutreDrivers, 'autre')
-          )}
-          {autreDrivers.length === 0 && !isAdding && (
-            <div className="glass-card p-12 text-center">
-              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Aucun profil "Autre"</h3>
-              <p className="text-muted-foreground mb-4">
-                Ajoutez des profils non-conducteurs à utiliser dans le planning (ex: responsable, accompagnateur).
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un profil
-              </Button>
-            </div>
-          )}
+          <DriverCategoryTab
+            driverType="autre"
+            drivers={sortedAutreDrivers}
+            hasAnyDriver={autreDrivers.length > 0}
+            viewMode={viewMode}
+            showAddForm={isAdding && activeTab === 'autre'}
+            isAddingAnywhere={isAdding}
+            formSlot={driverFormSlot}
+            emptyState={{
+              icon: User,
+              title: 'Aucun profil "Autre"',
+              description: 'Ajoutez des profils non-conducteurs à utiliser dans le planning (ex: responsable, accompagnateur).',
+              ctaLabel: 'Ajouter un profil',
+            }}
+            onAdd={handleAdd}
+            isEditingDriver={isEditingDriver}
+            selectedDriverIds={selectedDriverIds}
+            checkedDriverIds={checkedDriverIds}
+            onToggleCheck={toggleDriverCheck}
+            onToggleSelectAll={handleToggleSelectAll}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatCurrency={formatCurrency}
+            calculateEmployerCost={calculateEmployerCost}
+            isCompanyMember={isCompanyMember}
+            getDriverInfo={getDriverInfo}
+            isOwnData={isOwnData}
+          />
         </TabsContent>
 
         <TabsContent value="joker" className="mt-6">
-          {isAdding && activeTab === 'joker' && renderForm()}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {sortedJokerDrivers.map((driver, index) => renderDriverCard(driver, index, 'joker'))}
-            </div>
-          ) : (
-            sortedJokerDrivers.length > 0 && renderDriversTable(sortedJokerDrivers, 'joker')
-          )}
-          {jokerDrivers.length === 0 && !isAdding && (
-            <div className="glass-card p-12 text-center">
-              <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">Aucun joker / polyvalent</h3>
-              <p className="text-muted-foreground mb-4">
-                Ajoutez des conducteurs polyvalents pouvant remplacer sur différentes lignes.
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un joker
-              </Button>
-            </div>
-          )}
+          <DriverCategoryTab
+            driverType="joker"
+            drivers={sortedJokerDrivers}
+            hasAnyDriver={jokerDrivers.length > 0}
+            viewMode={viewMode}
+            showAddForm={isAdding && activeTab === 'joker'}
+            isAddingAnywhere={isAdding}
+            formSlot={driverFormSlot}
+            emptyState={{
+              icon: Sparkles,
+              title: 'Aucun joker / polyvalent',
+              description: 'Ajoutez des conducteurs polyvalents pouvant remplacer sur différentes lignes.',
+              ctaLabel: 'Ajouter un joker',
+            }}
+            onAdd={handleAdd}
+            isEditingDriver={isEditingDriver}
+            selectedDriverIds={selectedDriverIds}
+            checkedDriverIds={checkedDriverIds}
+            onToggleCheck={toggleDriverCheck}
+            onToggleSelectAll={handleToggleSelectAll}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            formatCurrency={formatCurrency}
+            calculateEmployerCost={calculateEmployerCost}
+            isCompanyMember={isCompanyMember}
+            getDriverInfo={getDriverInfo}
+            isOwnData={isOwnData}
+          />
         </TabsContent>
 
         <TabsContent value="uncreated" className="mt-6">

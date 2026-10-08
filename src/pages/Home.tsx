@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
+import { CategoryLauncher } from '@/components/navigation/CategoryLauncher';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
@@ -57,7 +58,7 @@ const defaultWidgets: WidgetConfig[] = [
 ];
 
 const widgetLabels: Record<string, string> = {
-  'shortcuts': 'Raccourcis rapides',
+  'shortcuts': 'Accès par catégorie',
   'stats': 'Statistiques globales',
   'recent-tours': 'Dernières tournées',
   'fleet-status': 'État de la flotte',
@@ -121,48 +122,10 @@ export default function Home() {
   const activeVehicles = vehicles.filter(v => v.isActive).length;
   const activeTrailers = trailers.filter(t => t.isActive).length;
 
-  const shortcuts = [
-    { icon: Calculator, label: 'Calculateur', path: '/calculator', color: 'bg-blue-500/20 text-blue-500' },
-    { icon: Route, label: 'Itinéraire', path: '/itinerary', color: 'bg-green-500/20 text-green-500' },
-    { icon: FileText, label: 'Tournées', path: '/tours', color: 'bg-purple-500/20 text-purple-500' },
-    { icon: Truck, label: 'Véhicules', path: '/vehicles', color: 'bg-orange-500/20 text-orange-500' },
-    { icon: Users, label: 'Conducteurs', path: '/drivers', color: 'bg-cyan-500/20 text-cyan-500' },
-    { icon: Building2, label: 'Clients', path: '/clients', color: 'bg-pink-500/20 text-pink-500' },
-    { icon: BarChart3, label: 'Analyse', path: '/dashboard', color: 'bg-amber-500/20 text-amber-500' },
-    { icon: TrendingUp, label: 'Prévisionnel', path: '/forecast', color: 'bg-indigo-500/20 text-indigo-500' },
-  ];
-
   const renderWidget = (widgetId: string) => {
     switch (widgetId) {
       case 'shortcuts':
-        return (
-          <Card key={widgetId} className="col-span-full">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="w-5 h-5 text-primary" />
-                Accès rapide
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                {shortcuts.map((shortcut) => (
-                  <button
-                    key={shortcut.path}
-                    onClick={() => navigate(shortcut.path)}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-muted/50 transition-all hover:scale-105 group"
-                  >
-                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", shortcut.color)}>
-                      <shortcut.icon className="w-6 h-6" />
-                    </div>
-                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {shortcut.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <CategoryLauncher key={widgetId} />;
 
       case 'stats':
         return (

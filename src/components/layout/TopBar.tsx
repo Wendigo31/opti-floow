@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, Briefcase, RefreshCw } from 'lucide-react';
+import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -47,7 +48,7 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
 };
 
 export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
-  const { planType, licenseData, isOffline, clearLicense } = useLicense();
+  const { planType, licenseData, isOffline, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
   const { currentUserRole, currentUserInfo } = useTeam();
@@ -94,32 +95,8 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
       ? `${licenseData.firstName} ${licenseData.lastName}`
       : licenseData?.firstName || licenseData?.lastName || null);
 
-  // Blocage pour forfait Start hors-ligne
-  const isStartOfflineBlocked = false && (!isOnline || isOffline);
-
   return (
     <>
-      {/* Overlay de blocage pour Start hors-ligne */}
-      {isStartOfflineBlocked && (
-        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center space-y-4 p-8">
-            <div className="w-20 h-20 mx-auto rounded-full bg-destructive/20 flex items-center justify-center">
-              <Lock className="w-10 h-10 text-destructive" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">
-              Mode hors-ligne indisponible
-            </h2>
-            <p className="text-muted-foreground max-w-md">
-              Le forfait Start nécessite une connexion internet pour fonctionner. Passez au forfait Pro pour bénéficier du mode hors-ligne.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-destructive">
-              <WifiOff className="w-5 h-5" />
-              <span>Hors ligne</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className={`fixed top-0 right-0 h-14 z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${isMobile ? 'left-0' : 'left-20 lg:left-64'}`}>
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           {/* Left side - Mobile menu + Time + User info */}
@@ -209,6 +186,21 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
+
+            {/* Paramètres (hors des 5 catégories métier) */}
+            {hasFeature('page_settings') && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                title="Paramètres"
+                asChild
+              >
+                <Link to="/settings">
+                  <Settings className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
 
             {/* Desktop: Clear cache / Force reload */}
             {isTauri() && (
