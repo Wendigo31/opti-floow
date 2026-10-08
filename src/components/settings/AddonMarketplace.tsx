@@ -23,31 +23,12 @@ interface Addon {
 }
 
 // Features included by plan - used to hide already-included add-ons
+// Single plan 'optiflow' includes every feature: only capacity add-ons are listed.
 const PLAN_INCLUDED_FEATURES: Record<string, string[]> = {
-  start: ['itinerary_planning'],
-  pro: ['itinerary_planning', 'monthly_tracking', 'ai_optimization'],
-  enterprise: ['itinerary_planning', 'monthly_tracking', 'ai_optimization', 'multi_users'],
+  optiflow: ['itinerary_planning', 'monthly_tracking', 'ai_optimization', 'multi_users'],
 };
 
 const ADDONS: Addon[] = [
-  {
-    id: 'ai_analysis',
-    name: 'Analyse IA (3/jour)',
-    description: 'Analyses avancées par intelligence artificielle pour optimiser vos coûts. Réservé au forfait Start.',
-    price: 14.99,
-    priceId: 'price_1T8pHS0uHa1YT0odE2QHlcn9',
-    icon: Brain,
-    category: 'feature',
-  },
-  {
-    id: 'team',
-    name: 'Équipe & Confidentialité',
-    description: "Gestion d'équipe avec rôles et confidentialité des données financières.",
-    price: 19.99,
-    priceId: 'price_1T8pHT0uHa1YT0odG5KtcsQc',
-    icon: Shield,
-    category: 'feature',
-  },
   {
     id: 'extra_tours',
     name: '+10 Tournées',
