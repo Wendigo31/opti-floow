@@ -20,6 +20,7 @@ import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 
 import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import { exportTourDetailedPDF, exportToursSummaryPDF } from '@/utils/tourPdfExport';
+import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 
 export default function TripHistory() {
   const { toast } = useToast();
@@ -27,6 +28,7 @@ export default function TripHistory() {
   
   const { tours, loading, fetchTours, deleteTour, updateTour, saveTour } = useSavedTours();
   const { clients } = useClients();
+  const realCosts = useTourRealCosts(tours);
   const [searchTerm, setSearchTerm] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [selectedTours, setSelectedTours] = useState<string[]>([]);
@@ -395,7 +397,7 @@ export default function TripHistory() {
                               variant="ghost" 
                               size="icon" 
                               onClick={() => {
-                                exportTourDetailedPDF(tour, { includeAIAnalysis: true, includeVehicleDetails: true, includeDriverDetails: true });
+                                exportTourDetailedPDF(tour, { includeAIAnalysis: true, includeVehicleDetails: true, includeDriverDetails: true, realCost: realCosts.get(tour.id) });
                                 toast({ title: "PDF exporté avec succès" });
                               }}
                               title="Exporter en PDF détaillé"

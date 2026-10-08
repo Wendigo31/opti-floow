@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 import { exportTourDetailedPDF, exportMissionOrderPDF } from '@/utils/tourPdfExport';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -41,6 +42,7 @@ interface ToursListProps {
 
 export function ToursList({ onExportPDF, onLoadTour, clientFilter }: ToursListProps) {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite } = useSavedTours();
+  const realCosts = useTourRealCosts(tours);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -199,7 +201,7 @@ export function ToursList({ onExportPDF, onLoadTour, clientFilter }: ToursListPr
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onExportPDF ? onExportPDF(tour) : exportTourDetailedPDF(tour, { includeAIAnalysis: false })}
+                          onClick={() => onExportPDF ? onExportPDF(tour) : exportTourDetailedPDF(tour, { includeAIAnalysis: false, realCost: realCosts.get(tour.id) })}
                         >
                           <FileText className="w-4 h-4 mr-1" />
                           PDF complet
