@@ -13,6 +13,8 @@ import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 import { computeQuotePrices } from '@/domain/quotes/quotePricing';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { QuoteCalculator } from '@/components/quotes/QuoteCalculator';
 
 const STATUSES: Record<string, string> = {
   draft: 'Brouillon',
@@ -36,6 +38,8 @@ export default function Tenders() {
   const [clientFilter, setClientFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [tab, setTab] = useState('list');
+  const [calcKey, setCalcKey] = useState(0);
 
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? 'Sans client';
   const filtered = useMemo(
@@ -75,7 +79,17 @@ export default function Tenders() {
   };
 
   return (
-    <div className="space-y-4">
+    <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="list">Devis</TabsTrigger>
+        <TabsTrigger value="calc">Calculateur de devis</TabsTrigger>
+      </TabsList>
+      <TabsContent value="calc">
+        <Card><CardHeader><CardTitle className="text-base">Calculer un devis sans tournée</CardTitle></CardHeader>
+          <CardContent><QuoteCalculator key={calcKey} onSaved={() => { setCalcKey((k) => k + 1); setTab('list'); }} /></CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="list" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Select value={clientFilter} onValueChange={setClientFilter}>
           <SelectTrigger className="w-64"><SelectValue placeholder="Client" /></SelectTrigger>
@@ -160,6 +174,7 @@ export default function Tenders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

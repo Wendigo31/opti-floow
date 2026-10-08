@@ -17,6 +17,8 @@ import { validateAIRequest } from '@/utils/aiValidation';
 import type { SavedTour } from '@/types/savedTour';
 import { AIAnalysisInputPanel } from '@/components/ai-analysis/AIAnalysisInputPanel';
 import { AIAnalysisResultsPanel } from '@/components/ai-analysis/AIAnalysisResultsPanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { QuoteCalculator } from '@/components/quotes/QuoteCalculator';
 import type { AIResponse, AnalysisMode, Position, StopWaypoint } from '@/types/aiAnalysis';
 
 // Import itinerary state to get current search
@@ -76,6 +78,7 @@ export default function AIAnalysis() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<AIResponse | null>(null);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>('recommendation');
 
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
@@ -462,6 +465,7 @@ export default function AIAnalysis() {
             destination={destination}
             getStopsForAPI={getStopsForAPI}
             handleSaveAsNewTour={handleSaveAsNewTour}
+            onCreateQuote={() => setQuoteOpen(true)}
             formatCurrency={formatCurrency}
             expandedSection={expandedSection}
             toggleSection={toggleSection}
@@ -470,6 +474,25 @@ export default function AIAnalysis() {
           />
         </div>
       </div>
+
+      <Dialog open={quoteOpen} onOpenChange={setQuoteOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Devis client depuis l'analyse IA</DialogTitle></DialogHeader>
+          {result && (
+            <QuoteCalculator
+              initial={{
+                origin, destination,
+                distanceKm: Math.round(result.recommendation.estimatedDistance || 0),
+                tollCost: result.costBreakdown?.tolls || 0,
+                vehicleId: selectedVehicleId,
+                driverIds: selectedDriverIds,
+                notes: `Analyse IA - ${result.recommendation.strategy || 'optimisée'}`,
+              }}
+              onSaved={() => { setQuoteOpen(false); toast({ title: 'Devis enregistré', description: "Retrouvez-le dans Appels d'offres." }); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Load Tour Dialog */}
       <LoadTourDialog
