@@ -84,7 +84,7 @@ export default function Tours() {
   const { trailers } = useCloudTrailers();
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
-  const { vehicle: appVehicleParams, settings, charges } = useApp();
+  useApp();
 
   // ── Coût réel par tournée : recalculé automatiquement depuis la flotte, le trajet et les conducteurs actuels ──
   const realCosts = useTourRealCosts(tours);
