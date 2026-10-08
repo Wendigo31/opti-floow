@@ -82,9 +82,9 @@ export function usePlanLimits() {
     getRemainingCount,
     isUnlimited,
     defaultLimits: PLAN_LIMITS[planType],
-    isStart: planType === 'start',
+    isStart: false,
     isPro: planType === 'pro',
-    isEnterprise: planType === 'enterprise',
+    isEnterprise: true,
   };
 }
 

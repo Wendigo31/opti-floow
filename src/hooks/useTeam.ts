@@ -65,7 +65,7 @@ export function useTeam(): UseTeamReturn {
   const isOwner = effectiveRole === 'direction';
   const isAdmin = effectiveRole === 'direction';
   const isDirection = effectiveRole === 'direction';
-  const hasMultiUsers = licensePlanType === 'pro' || licensePlanType === 'enterprise';
+  const hasMultiUsers = true;
   const canManageTeam = isDirection && hasMultiUsers;
 
   // Sync with context when it becomes available

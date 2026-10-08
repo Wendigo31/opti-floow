@@ -97,7 +97,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
       : licenseData?.firstName || licenseData?.lastName || null);
 
   // Blocage pour forfait Start hors-ligne
-  const isStartOfflineBlocked = planType === 'start' && (!isOnline || isOffline);
+  const isStartOfflineBlocked = false && (!isOnline || isOffline);
 
   return (
     <>

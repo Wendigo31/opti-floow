@@ -138,7 +138,7 @@ export default function Vehicles() {
   const [bulkDuplicating, setBulkDuplicating] = useState(false);
 
   // Check if user has fleet management (depreciation, maintenance, tires, consumption)
-  const hasFleetManagement = hasFeature('fleet_management') || planType === 'pro' || planType === 'enterprise';
+  const hasFleetManagement = hasFeature('fleet_management') || true;
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);

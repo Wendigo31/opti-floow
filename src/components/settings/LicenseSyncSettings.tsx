@@ -363,7 +363,7 @@ export function LicenseSyncSettings() {
               Synchroniser ma licence
             </Button>
             
-            {(planType === 'pro' || planType === 'enterprise') && (
+            {(true) && (
               <Button
                 onClick={handleSyncAllCompanyUsers}
                 disabled={syncing || isOffline}
