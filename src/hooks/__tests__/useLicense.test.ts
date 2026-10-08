@@ -46,14 +46,14 @@ describe('useLicense', () => {
       expect(result.current.licenseData).toBeNull();
     });
 
-    it('should default to start plan type', async () => {
+    it('should default to the single optiflow plan', async () => {
       const { result } = renderHook(() => useLicense());
-      
+
       await act(async () => {
         await waitForNextUpdate();
       });
-      
-      expect(result.current.planType).toBe('start');
+
+      expect(result.current.planType).toBe('optiflow');
     });
   });
 
@@ -63,7 +63,7 @@ describe('useLicense', () => {
         code: 'TEST-LICENSE-001',
         email: 'test@example.com',
         activatedAt: new Date().toISOString(),
-        planType: 'pro' as PlanType,
+        planType: 'optiflow' as PlanType,
       };
 
       mockInvoke.mockResolvedValueOnce({
@@ -138,84 +138,28 @@ describe('useLicense', () => {
     });
   });
 
-  describe('Feature Checks', () => {
-    it('should check features for start plan', async () => {
+  describe('Feature Checks (single all-inclusive plan)', () => {
+    it('gives every former Enterprise feature by default', async () => {
       const { result } = renderHook(() => useLicense());
+      await act(async () => { await waitForNextUpdate(); });
 
-      await act(async () => {
-        await waitForNextUpdate();
-      });
-
-      // Start plan should have basic features
-      expect(result.current.hasFeature('basic_calculator')).toBe(true);
-      expect(result.current.hasFeature('itinerary_planning')).toBe(true);
-      expect(result.current.hasFeature('saved_tours')).toBe(true);
-      
-      // Start plan should NOT have pro/enterprise features
-      expect(result.current.hasFeature('ai_optimization')).toBe(false);
-      expect(result.current.hasFeature('forecast')).toBe(false);
+      for (const f of ['basic_calculator', 'itinerary_planning', 'trip_history', 'pdf_export_pro',
+        'dashboard_analytics', 'forecast', 'ai_optimization', 'multi_agency', 'tms_erp_integration'] as const) {
+        expect(result.current.hasFeature(f)).toBe(true);
+      }
     });
 
-    it('should check features for pro plan', async () => {
-      const mockLicenseData = {
-        code: 'PRO-LICENSE',
-        email: 'pro@example.com',
-        activatedAt: new Date().toISOString(),
-        planType: 'pro' as PlanType,
-      };
-
+    it('normalizes a legacy "pro" plan returned by the server to optiflow', async () => {
       mockInvoke.mockResolvedValueOnce({
-        data: { success: true, licenseData: mockLicenseData, features: null },
+        data: { success: true, licenseData: { code: 'LEGACY', email: 'l@example.com', activatedAt: new Date().toISOString(), planType: 'pro' }, features: null },
         error: null,
       });
-
       const { result } = renderHook(() => useLicense());
+      await act(async () => { await waitForNextUpdate(); });
+      await act(async () => { await result.current.validateLicense('LEGACY', 'l@example.com'); });
 
-      await act(async () => {
-        await waitForNextUpdate();
-      });
-
-      await act(async () => {
-        await result.current.validateLicense('PRO-LICENSE', 'pro@example.com');
-      });
-
-      expect(result.current.planType).toBe('pro');
-      expect(result.current.hasFeature('trip_history')).toBe(true);
-      expect(result.current.hasFeature('pdf_export_pro')).toBe(true);
-      expect(result.current.hasFeature('dashboard_analytics')).toBe(true);
-
-      // Enterprise-exclusive features should NOT be available on Pro
-      expect(result.current.hasFeature('forecast')).toBe(false);
-      expect(result.current.hasFeature('multi_agency')).toBe(false);
-    });
-
-    it('should check features for enterprise plan', async () => {
-      const mockLicenseData = {
-        code: 'ENTERPRISE-LICENSE',
-        email: 'enterprise@example.com',
-        activatedAt: new Date().toISOString(),
-        planType: 'enterprise' as PlanType,
-      };
-
-      mockInvoke.mockResolvedValueOnce({
-        data: { success: true, licenseData: mockLicenseData, features: null },
-        error: null,
-      });
-
-      const { result } = renderHook(() => useLicense());
-
-      await act(async () => {
-        await waitForNextUpdate();
-      });
-
-      await act(async () => {
-        await result.current.validateLicense('ENTERPRISE-LICENSE', 'enterprise@example.com');
-      });
-
-      expect(result.current.planType).toBe('enterprise');
-      expect(result.current.hasFeature('ai_optimization')).toBe(true);
-      expect(result.current.hasFeature('multi_agency')).toBe(true);
-      expect(result.current.hasFeature('tms_erp_integration')).toBe(true);
+      expect(result.current.planType).toBe('optiflow');
+      expect(result.current.hasFeature('forecast')).toBe(true);
     });
   });
 
@@ -225,7 +169,7 @@ describe('useLicense', () => {
         code: 'PERSIST-LICENSE',
         email: 'persist@example.com',
         activatedAt: new Date().toISOString(),
-        planType: 'pro' as PlanType,
+        planType: 'optiflow' as PlanType,
       };
 
       mockInvoke.mockResolvedValueOnce({
