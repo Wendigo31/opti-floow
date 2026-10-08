@@ -10,8 +10,9 @@ interface CategoryLauncherProps {
 }
 
 export function CategoryLauncher({ categories }: CategoryLauncherProps) {
-  const [selectedId, setSelectedId] = useState(categories[0]?.id);
-  const selected = categories.find((category) => category.id === selectedId) ?? categories[0];
+  const firstAvailable = categories.find((category) => category.items.length > 0) ?? categories[0];
+  const [selectedId, setSelectedId] = useState(firstAvailable?.id);
+  const selected = categories.find((category) => category.id === selectedId) ?? firstAvailable;
 
   return (
     <div className="space-y-8">

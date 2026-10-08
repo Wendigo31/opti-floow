@@ -18,6 +18,13 @@ describe('authenticated app navigation', () => {
     expect(accounting?.items[0].directionOnly).toBe(true);
   });
 
+  it('keeps shared operational pages available from exploitation', () => {
+    const operations = APP_NAVIGATION.find((category) => category.id === 'operations');
+    expect(operations?.items.map((item) => item.to)).toEqual(expect.arrayContaining([
+      '/calculator', '/itinerary', '/drivers', '/vehicle-reports',
+    ]));
+  });
+
   it('does not expose internal or removed routes', () => {
     const paths = APP_NAVIGATION.flatMap((category) => category.items.map((item) => item.to));
     expect(paths).not.toContain('/pricing');

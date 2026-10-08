@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronLeft, ChevronRight, EyeOff, Lock } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
@@ -21,6 +21,7 @@ const FEATURE_LABELS: Record<string, string> = {
 
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { licenseData } = useLicense();
   const categories = useVisibleNavigation();
@@ -67,7 +68,7 @@ export function Sidebar() {
           return (
             <Collapsible key={category.id} open={open} onOpenChange={(value) => toggleCategory(category.id, value)}>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className={cn('w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground', collapsed ? 'px-0' : 'px-3', active && 'text-sidebar-primary')} title={category.label}>
+                <Button variant="ghost" className={cn('w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground', collapsed ? 'px-0' : 'px-3', active && 'text-sidebar-primary')} title={category.label} onClick={() => { if (collapsed) navigate(category.items[0].to); }}>
                   <category.icon className="h-5 w-5 shrink-0" />
                   {!collapsed && <><span className="min-w-0 flex-1 truncate text-left text-xs font-semibold">{category.label}</span><ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} /></>}
                 </Button>

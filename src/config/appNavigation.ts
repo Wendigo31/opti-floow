@@ -45,11 +45,15 @@ export const APP_NAVIGATION: AppNavigationCategory[] = [
     description: 'Organiser les tournées, les ressources et les clients',
     icon: BriefcaseBusiness,
     items: [
+      { label: 'Calculateur', to: '/calculator', aliases: ['/history'], icon: Calculator, requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
+      { label: 'Itinéraire', to: '/itinerary', icon: Navigation, requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
       { label: 'Planning', to: '/planning', icon: CalendarDays },
       { label: 'Tournées', to: '/tours', icon: Route, requiredFeature: 'page_tours', userFeatureKey: 'page_tours' },
       { label: 'Création de ligne', to: '/line-montage', icon: Layers },
       { label: 'Clients', to: '/clients', icon: UserCircle, requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
       { label: 'Véhicules et remorques', to: '/vehicles', icon: Truck, requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
+      { label: 'Conducteurs', to: '/drivers', icon: Users, requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
+      { label: 'Rapports véhicules', to: '/vehicle-reports', icon: FileBarChart, requiredFeature: 'page_vehicle_reports' },
     ],
   },
   {
