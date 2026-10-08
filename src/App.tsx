@@ -37,6 +37,7 @@ const AIAnalysis = lazy(() => import("./pages/AIAnalysis"));
 const LineMontage = lazy(() => import("./pages/LineMontage"));
 const VehicleReports = lazy(() => import("./pages/VehicleReports"));
 const Tours = lazy(() => import("./pages/Tours"));
+const Tenders = lazy(() => import("./pages/Tenders"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MyRestrictions = lazy(() => import("./pages/MyRestrictions"));
 const Team = lazy(() => import("./pages/Team"));
@@ -127,6 +128,7 @@ function LicensedAppContent() {
                   <Route path="/line-montage" element={<LineMontage />} />
                   <Route path="/vehicle-reports" element={<VehicleReports />} />
                   <Route path="/tours" element={<Tours />} />
+                  <Route path="/tenders" element={<Tenders />} />
                   <Route path="/planning" element={<Planning />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/my-restrictions" element={<MyRestrictions />} />
