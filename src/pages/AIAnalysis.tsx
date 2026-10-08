@@ -53,132 +53,8 @@ import { validateAIRequest } from '@/utils/aiValidation';
 import { AddressInput } from '@/components/route/AddressInput';
 import type { Vehicle } from '@/types/vehicle';
 import type { SavedTour } from '@/types/savedTour';
-
-interface Position {
-  lat: number;
-  lon: number;
-}
-
-interface StopWaypoint {
-  id: string;
-  address: string;
-  position: Position | null;
-}
-
-// Import itinerary state to get current search
-const ITINERARY_STORAGE_KEY = 'optiflow_itinerary_state';
-function getItineraryState() {
-  try {
-    const stored = sessionStorage.getItem(ITINERARY_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-interface AIOptimization {
-  type: string;
-  description: string;
-  savings: number;
-  impact?: string;
-}
-
-interface AISegment {
-  from: string;
-  to: string;
-  distance: number;
-  duration: number;
-  driver: string;
-  type: string;
-  startTime?: string;
-  endTime?: string;
-  notes?: string;
-}
-
-interface AIRelayPoint {
-  location: string;
-  km: number;
-  driverOut: string;
-  driverIn: string;
-  estimatedTime: string;
-  waitTime: number;
-  notes?: string;
-}
-
-interface AIStrategy {
-  name: string;
-  type: string;
-  timing: string;
-  totalCost: number;
-  totalDuration: number;
-  breakdown: {
-    fuel: number;
-    tolls: number;
-    drivers: number;
-    meals: number;
-    overnight: number;
-    vehicleCost?: number;
-  };
-  pros: string[];
-  cons: string[];
-  isRecommended: boolean;
-}
-
-interface AIRelayPlan {
-  isRecommended: boolean;
-  reason: string;
-  relayPoints: AIRelayPoint[];
-  totalDriversCost: number;
-  savingsVsSolo: number;
-}
-
-interface AIResponse {
-  recommendation: {
-    summary: string;
-    strategy?: string;
-    estimatedCost: number;
-    estimatedDuration: number;
-    estimatedDistance: number;
-    savings: number;
-    savingsPercent: number;
-    comparedTo?: string;
-  };
-  strategies?: AIStrategy[];
-  relayPlan?: AIRelayPlan;
-  routeDetails?: {
-    departureTime: string;
-    arrivalTime: string;
-    segments: AISegment[];
-  };
-  costBreakdown?: {
-    fuel: number;
-    tolls: number;
-    drivers: number;
-    driverBonuses?: number;
-    meals: number;
-    overnight: number;
-    vehicleCost?: number;
-    structureCost?: number;
-    total: number;
-  };
-  timeOptimization?: {
-    standardDuration: number;
-    optimizedDuration: number;
-    timeSaved: number;
-    explanation: string;
-  };
-  optimizations?: AIOptimization[];
-  alternatives?: { name: string; cost: number; duration: number; pros: string[]; cons: string[] }[];
-  warnings?: string[];
-  tips?: string[];
-  regulatoryNotes?: string[];
-  rawResponse?: string;
-}
-
-type AnalysisMode = 'basic' | 'optimize_route' | 'relay_analysis' | 'full_optimization';
+import type { AIResponse, AIStrategy, AnalysisMode, GeoPosition as Position, StopWaypoint } from '@/types/aiAnalysis';
+import { getItinerarySessionState } from '@/utils/itinerarySession';
 
 export default function AIAnalysis() {
   const { toast } = useToast();
@@ -292,7 +168,7 @@ export default function AIAnalysis() {
   };
 
   const handleLoadFromItinerary = () => {
-    const itineraryState = getItineraryState();
+    const itineraryState = getItinerarySessionState();
     if (!itineraryState?.originAddress || !itineraryState?.destinationAddress) {
       toast({
         title: "Aucun itinéraire",
@@ -309,10 +185,10 @@ export default function AIAnalysis() {
     
     // Convert stops from itinerary format to StopWaypoint format
     const itineraryStops = itineraryState.stops || [];
-    setStops(itineraryStops.map((s: any) => ({
-      id: s.id || crypto.randomUUID(),
-      address: s.address || '',
-      position: s.position || null,
+    setStops(itineraryStops.map((stop) => ({
+      id: stop.id || crypto.randomUUID(),
+      address: stop.address || '',
+      position: stop.position || null,
     })));
     
     setInputMode('itinerary');

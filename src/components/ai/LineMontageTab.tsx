@@ -43,6 +43,7 @@ import { AddressInput } from '@/components/route/AddressInput';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { QuickDriverDialog } from '@/components/ai/QuickDriverDialog';
 import type { Driver } from '@/types';
+import { computeDriverDailyCost, type MontageResponse, type MontageScenario } from '@/domain/lineMontage/lineMontageModel';
 
 interface Position {
   lat: number;
@@ -53,97 +54,6 @@ interface StopWaypoint {
   id: string;
   address: string;
   position: Position | null;
-}
-
-interface MontageScenario {
-  name: string;
-  driverCount: number;
-  overnightStays: boolean;
-  totalCost: number;
-  totalDuration: number;
-  weeklySchedule: {
-    day: string;
-    segments: {
-      driver: string;
-      startTime: string;
-      endTime: string;
-      activity: string;
-      notes?: string;
-    }[];
-  }[];
-  costBreakdown: {
-    fuel: number;
-    tolls: number;
-    drivers: number;
-    meals: number;
-    overnight: number;
-    vehicleCost: number;
-    structureCost: number;
-    total: number;
-  };
-  rseCompliance: {
-    valid: boolean;
-    notes: string[];
-    warnings: string[];
-  };
-  pros: string[];
-  cons: string[];
-  isRecommended: boolean;
-}
-
-interface MontageResponse {
-  recommendation: {
-    summary: string;
-    bestScenario: string;
-    estimatedWeeklyCost: number;
-    estimatedMonthlyCost: number;
-  };
-  scenarios: MontageScenario[];
-  regulatoryNotes: string[];
-  tips: string[];
-  warnings: string[];
-}
-
-// Helper: compute daily cost for a driver (matching tourCostCalculation logic)
-function computeDriverDailyCost(driver: Driver): {
-  dailyCost: number;
-  dailyBonuses: number;
-  dailyAllowances: number;
-  contractLabel: string;
-} {
-  const isInterim = driver.contractType === 'interim';
-  const isAutre = driver.contractType === 'autre';
-
-  if (isAutre) {
-    return { dailyCost: 0, dailyBonuses: 0, dailyAllowances: 0, contractLabel: 'Autre' };
-  }
-
-  if (isInterim) {
-    const interimRate = driver.interimHourlyRate || driver.hourlyRate || 0;
-    const coefficient = driver.interimCoefficient || 1.85;
-    const hoursPerDay = driver.hoursPerDay || 7;
-    return {
-      dailyCost: interimRate * coefficient * hoursPerDay,
-      dailyBonuses: 0,
-      dailyAllowances: driver.mealAllowance || 0,
-      contractLabel: 'Intérim',
-    };
-  }
-
-  // CDI / CDD / Joker
-  const monthlyEmployerCost = driver.baseSalary * (1 + driver.patronalCharges / 100);
-  const dailyRate = monthlyEmployerCost / driver.workingDaysPerMonth;
-  const monthlyBonuses = (driver.nightBonus || 0) + (driver.sundayBonus || 0) + (driver.seniorityBonus || 0);
-  const dailyBonuses = monthlyBonuses / driver.workingDaysPerMonth;
-  const dailyAllowances = (driver.mealAllowance || 0) + (driver.overnightAllowance || 0);
-
-  const contractLabels: Record<string, string> = { cdi: 'CDI', cdd: 'CDD', joker: 'Joker' };
-  return {
-    dailyCost: dailyRate,
-    dailyBonuses,
-    dailyAllowances,
-    contractLabel: contractLabels[driver.contractType || 'cdi'] || 'CDI',
-  };
 }
 
 export function LineMontageTab() {

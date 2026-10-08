@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, Briefcase, RefreshCw } from 'lucide-react';
+import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Lock, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -191,6 +192,10 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
 
             {/* Theme toggle */}
+            <Button variant="ghost" size="icon" asChild className="rounded-full" title="Paramètres">
+              <Link to="/settings"><Settings className="h-4 w-4" /><span className="sr-only">Paramètres</span></Link>
+            </Button>
+
             <Button
               variant="outline"
               size="icon"
