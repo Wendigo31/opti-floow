@@ -134,3 +134,24 @@ export function getVisibleNavCategories(ctx: NavAccessContext): (NavCategoryConf
     }))
     .filter((category) => category.pages.length > 0);
 }
+
+/** Alias de routes : une même page peut être joignable par plusieurs chemins. */
+const PATH_ALIASES: Record<string, string> = {
+  '/history': '/calculator',
+};
+
+/**
+ * Catégorie active pour un chemin donné.
+ * - `/espace/:categoryId` → la catégorie de l'espace ouvert.
+ * - Route directe d'une page (ex. `/tours`) → la catégorie qui la contient.
+ * - Accueil `/` et pages transversales (settings, etc.) → null (pas de barre latérale).
+ */
+export function getCategoryIdForPath(pathname: string): NavCategoryId | null {
+  if (pathname.startsWith('/espace/')) {
+    const id = pathname.split('/')[2] as NavCategoryId;
+    return NAV_CATEGORIES.some((c) => c.id === id) ? id : null;
+  }
+  const target = PATH_ALIASES[pathname] ?? pathname;
+  const category = NAV_CATEGORIES.find((c) => c.pages.some((p) => p.to === target));
+  return category ? category.id : null;
+}
