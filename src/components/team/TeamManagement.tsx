@@ -179,8 +179,7 @@ export function TeamManagement() {
   }
 
   // Check if multi-users is available (AFTER loading is done)
-  const effectivePlan = licensePlanType || 'start';
-  if (effectivePlan !== 'pro' && effectivePlan !== 'enterprise') {
+  if (false) {
     return (
       <Card>
         <CardHeader>

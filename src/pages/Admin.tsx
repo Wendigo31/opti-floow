@@ -150,7 +150,7 @@ interface LicenseFormData {
 
 const emptyFormData: LicenseFormData = {
   email: '',
-  planType: 'start',
+  planType: 'optiflow',
   firstName: '',
   lastName: '',
   companyName: '',
@@ -192,7 +192,7 @@ export default function Admin() {
   const [editingLicenseId, setEditingLicenseId] = useState<string | null>(null);
   const [formData, setFormData] = useState<LicenseFormData>(emptyFormData);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<PlanType>('start');
+  const [editingPlan, setEditingPlan] = useState<PlanType>('optiflow');
 
   // Limits editor
   const [editingLimitsId, setEditingLimitsId] = useState<string | null>(null);
@@ -449,7 +449,7 @@ export default function Admin() {
     setEditingLicenseId(license.id);
     setFormData({
       email: license.email,
-      planType: (license.plan_type as PlanType) || 'start',
+      planType: 'optiflow',
       firstName: license.first_name || '',
       lastName: license.last_name || '',
       companyName: license.company_name || '',
@@ -558,7 +558,7 @@ export default function Admin() {
         code: validateData.licenseData?.code || license.license_code,
         email: validateData.licenseData?.email || license.email,
         activatedAt: validateData.licenseData?.activatedAt || new Date().toISOString(),
-        planType: validateData.licenseData?.planType || (license.plan_type || 'start'),
+        planType: validateData.licenseData?.planType || 'optiflow',
         firstName: validateData.licenseData?.firstName ?? license.first_name,
         lastName: validateData.licenseData?.lastName ?? license.last_name,
         companyName: validateData.licenseData?.companyName ?? license.company_name,
@@ -936,7 +936,7 @@ export default function Admin() {
                           <TableCell>
                             <Badge variant="outline" className={cn("gap-1", getPlanBadgeClass(license.plan_type))}>
                               {getPlanIcon(license.plan_type)}
-                              {(license.plan_type || 'start').toUpperCase()}
+                              {'optiflow'.toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1082,7 +1082,7 @@ export default function Admin() {
                                 {getPlanIcon(license.plan_type)}
                                 <span>{license.company_name || license.email}</span>
                                 <Badge variant="outline" className="ml-2 text-xs">
-                                  {(license.plan_type || 'start').toUpperCase()}
+                                  {'optiflow'.toUpperCase()}
                                 </Badge>
                               </div>
                             </SelectItem>
@@ -1094,7 +1094,7 @@ export default function Admin() {
 
                   {selectedLicenseForFeatures ? (
                     <FeatureEditor
-                      planType={(selectedLicenseForFeatures.plan_type as 'start' | 'pro' | 'enterprise') || 'start'}
+                      planType={'optiflow'}
                       currentFeatures={selectedLicenseForFeatures.features || null}
                       onSave={handleSaveFeatures}
                       saving={savingFeatures}

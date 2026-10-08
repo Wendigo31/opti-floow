@@ -270,16 +270,7 @@ export function LicenseSyncSettings() {
     }
   };
 
-  const getPlanBadge = () => {
-    switch (planType) {
-      case 'enterprise':
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">Enterprise</Badge>;
-      case 'pro':
-        return <Badge className="bg-primary text-primary-foreground">Pro</Badge>;
-      default:
-        return <Badge variant="secondary">Start</Badge>;
-    }
-  };
+  const getPlanBadge = () => <Badge className="bg-primary text-primary-foreground">OptiFlow</Badge>;
 
   const isFeatureAvailable = (featurePlans: readonly string[]) => {
     return featurePlans.includes(planType);

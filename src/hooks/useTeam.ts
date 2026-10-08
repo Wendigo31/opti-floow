@@ -49,8 +49,8 @@ export function useTeam(): UseTeamReturn {
   const [isTeamLoading, setIsTeamLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const licensePlanType: PlanType = validatedPlanType || 'start';
-  const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] || 1;
+  const licensePlanType: PlanType = 'optiflow';
+  const licenseMaxUsers = MAX_USERS_PER_PLAN[licensePlanType] ?? 999;
 
   // Only consider team loading, license loading shouldn't block team page
   // If license context is done loading and there's no authUserId, stop loading

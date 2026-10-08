@@ -36,9 +36,7 @@ interface TopBarProps {
 }
 
 const planConfig: Record<PlanType, { label: string; icon: React.ElementType; color: string }> = {
-  start: { label: 'Start', icon: Sparkles, color: 'bg-blue-500/20 text-blue-500 border-blue-500/30' },
-  pro: { label: 'Pro', icon: Star, color: 'bg-orange-500/20 text-orange-500 border-orange-500/30' },
-  enterprise: { label: 'Enterprise', icon: Crown, color: 'bg-amber-500/20 text-amber-500 border-amber-500/30' },
+  optiflow: { label: 'OptiFlow', icon: Crown, color: 'bg-primary/15 text-primary border-primary/30' },
 };
 
 // Role configuration for display

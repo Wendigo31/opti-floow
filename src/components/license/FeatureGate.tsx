@@ -194,15 +194,11 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
 };
 
 const PLAN_LABELS: Record<PlanType, string> = {
-  start: 'OptiFlow START',
-  pro: 'OptiFlow PRO',
-  enterprise: 'OptiFlow ENTERPRISE',
+  optiflow: 'OptiFlow',
 };
 
 const PLAN_ICONS: Record<PlanType, typeof Sparkles> = {
-  start: Sparkles,
-  pro: Star,
-  enterprise: Crown,
+  optiflow: Crown,
 };
 
 export function FeatureGate({ 
