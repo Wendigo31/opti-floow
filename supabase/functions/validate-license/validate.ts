@@ -289,7 +289,7 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
     }
   }
 
-  const planType = license.plan_type || 'start';
+  const planType = 'optiflow';
   const effectiveFeatures = getEffectiveFeatures(planType, features);
 
   const responsePayload: Record<string, any> = {
