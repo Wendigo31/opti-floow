@@ -61,7 +61,9 @@ export function useTeam(): UseTeamReturn {
   const canAddMore = currentUserCount < maxUsers;
 
   // Use context role as primary source, fallback to fetched role
-  const effectiveRole = currentUserRole || contextUserRole;
+  // Titulaire de licence sans équipe déclarée = Direction (aligné sur license_has_members côté serveur).
+  const isSoleOwner = !isTeamLoading && !!licenseId && members.length === 0;
+  const effectiveRole = currentUserRole || contextUserRole || (isSoleOwner ? 'direction' : null);
   const isOwner = effectiveRole === 'direction';
   const isAdmin = effectiveRole === 'direction';
   const isDirection = effectiveRole === 'direction';

@@ -28,6 +28,9 @@ import {
   FileSpreadsheet,
   Boxes,
   MapPinned,
+  History,
+  Download,
+  Warehouse,
   ShieldCheck,
   Settings as SettingsIcon,
   type LucideIcon,
@@ -40,6 +43,7 @@ export type NavCategoryId =
   | 'geoloc'
   | 'comptabilite'
   | 'rh'
+  | 'parc'
   | 'rentabilite';
 
 export interface NavPageConfig {
@@ -77,6 +81,8 @@ const P = {
   dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard' },
   forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', directionOnly: true },
   vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
+  history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
+  install: { to: '/install', icon: Download, label: "Installer l'application" },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 } satisfies Record<string, NavPageConfig>;
 
@@ -84,7 +90,7 @@ const P = {
 export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'exploitation', label: 'Exploitation', icon: Boxes,
-    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.clients, P.vehicles, P.drivers, P.vehicleReports, P.settings],
+    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers, P.settings],
   },
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
@@ -92,15 +98,19 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
   },
   {
     id: 'comptabilite', label: 'Comptabilité', icon: Building2,
-    pages: [P.charges, P.dashboard, P.forecast, P.calculator, P.clients, P.settings],
+    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
   },
   {
     id: 'rh', label: 'RH', icon: Users,
     pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
   },
   {
+    id: 'parc', label: 'Gestion de parc', icon: Warehouse,
+    pages: [P.vehicles, P.vehicleReports, P.drivers, P.settings, P.install],
+  },
+  {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
-    pages: [P.calculator, P.dashboard, P.forecast, P.vehicleReports, P.tours, P.charges, P.aiAnalysis, P.settings],
+    pages: [P.calculator, P.history, P.dashboard, P.forecast, P.vehicleReports, P.tours, P.charges, P.aiAnalysis, P.settings],
   },
 ];
 
@@ -130,7 +140,7 @@ export function getVisibleNavCategories(ctx: NavAccessContext): (NavCategoryConf
 
 /** Alias de routes : une même page peut être joignable par plusieurs chemins. */
 const PATH_ALIASES: Record<string, string> = {
-  '/history': '/calculator',
+  
 };
 
 /**
