@@ -1,16 +1,16 @@
 import { ArrowRight, CircleSlash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { AppNavigationCategory } from '@/config/appNavigation';
+import type { NavCategoryConfig } from '@/config/appNavigation';
 import { Button } from '@/components/ui/button';
 
 interface CategoryPageListProps {
-  category: AppNavigationCategory;
+  category: NavCategoryConfig;
 }
 
 export function CategoryPageList({ category }: CategoryPageListProps) {
   const navigate = useNavigate();
 
-  if (category.items.length === 0) {
+  if (category.pages.length === 0) {
     return (
       <div className="flex min-h-40 flex-col items-center justify-center gap-3 border border-dashed border-border bg-muted/20 p-6 text-center">
         <CircleSlash2 className="h-7 w-7 text-muted-foreground" />
@@ -24,7 +24,7 @@ export function CategoryPageList({ category }: CategoryPageListProps) {
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      {category.items.map((item) => (
+      {category.pages.map((item) => (
         <Button
           key={item.to}
           variant="outline"

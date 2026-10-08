@@ -1,5 +1,5 @@
 import { AlertCircle, Zap, TreePine } from 'lucide-react';
-import { MapPreview } from '@/components/map/MapPreview';
+import { MapPreview, type RestrictionMarker } from '@/components/map/MapPreview';
 import { cn } from '@/lib/utils';
 import type { RouteResult } from '@/types/itinerary';
 
@@ -9,14 +9,6 @@ interface MapMarker {
   type: 'start' | 'end' | 'stop';
 }
 
-interface RestrictionMarker {
-  lat: number;
-  lng: number;
-  type: string;
-  value: number;
-  unit: string;
-  description: string;
-}
 
 interface ItineraryMapPanelProps {
   markers: MapMarker[];

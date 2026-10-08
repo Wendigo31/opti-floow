@@ -19,7 +19,7 @@ interface AdminFeaturesTabProps {
   licenses: License[];
   selectedLicenseForFeatures: License | null;
   setSelectedLicenseForFeatures: (license: License | null) => void;
-  handleSaveFeatures: (features: Partial<LicenseFeatures>) => void;
+  handleSaveFeatures: (features: Partial<LicenseFeatures>, addOns: string[]) => Promise<void>;
   savingFeatures: boolean;
   getAdminToken: () => string | null;
   getPlanIcon: (plan: string | null) => JSX.Element;
