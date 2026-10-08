@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
@@ -108,7 +109,7 @@ export function useSearchHistory() {
   // Subscribe to realtime updates
   useEffect(() => {
     const channel = supabase
-      .channel('search_history_changes')
+      .channel(uniqueChannelName('search_history_changes'))
       .on(
         'postgres_changes',
         {

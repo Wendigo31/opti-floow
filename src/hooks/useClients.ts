@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
@@ -282,7 +283,7 @@ export function useClients() {
     if (!contextLicenseId) return;
 
     channelRef.current = supabase
-      .channel(`clients_${contextLicenseId}`)
+      .channel(uniqueChannelName(`clients_${contextLicenseId}`))
       .on(
         'postgres_changes',
         {

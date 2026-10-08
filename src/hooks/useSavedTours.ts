@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
@@ -112,7 +113,7 @@ export function useSavedTours() {
     // Create channel for realtime sync
     const filter = licenseId ? `license_id=eq.${licenseId}` : `user_id=eq.${authUserId}`;
     channelRef.current = supabase
-      .channel(`saved_tours_${licenseId || authUserId}`)
+      .channel(uniqueChannelName(`saved_tours_${licenseId || authUserId}`))
       .on(
         'postgres_changes',
         {

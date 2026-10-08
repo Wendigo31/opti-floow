@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate, Json } from '@/integrations/supabase/types';
@@ -67,7 +68,7 @@ export function useChargePresets() {
   // Subscribe to realtime changes
   useEffect(() => {
     const channel = supabase
-      .channel('charge_presets_realtime')
+      .channel(uniqueChannelName('charge_presets_realtime'))
       .on(
         'postgres_changes',
         {

@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesUpdate } from '@/integrations/supabase/types';
@@ -198,7 +199,7 @@ export function useQuotes() {
     if (!licenseId) return;
 
     channelRef.current = supabase
-      .channel(`quotes_${licenseId}`)
+      .channel(uniqueChannelName(`quotes_${licenseId}`))
       .on(
         'postgres_changes',
         {

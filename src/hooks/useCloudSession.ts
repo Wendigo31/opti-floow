@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -291,7 +292,7 @@ export function useCloudSession({
     if (!userIdRef.current || !licenseIdRef.current) return;
 
     const channel = supabase
-      .channel(`user_session_${userIdRef.current}`)
+      .channel(uniqueChannelName(`user_session_${userIdRef.current}`))
       .on(
         'postgres_changes',
         {

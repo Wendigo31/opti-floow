@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -81,7 +82,7 @@ export function useCloudTrailers() {
     if (!licenseId) return;
 
     channelRef.current = supabase
-      .channel(`trailers_${licenseId}`)
+      .channel(uniqueChannelName(`trailers_${licenseId}`))
       .on(
         'postgres_changes',
         {

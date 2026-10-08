@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -51,7 +52,7 @@ export function useDriverAbsences() {
     if (!licenseId) return;
 
     const channel = supabase
-      .channel(`driver_absences_${licenseId}`)
+      .channel(uniqueChannelName(`driver_absences_${licenseId}`))
       .on(
         'postgres_changes',
         {

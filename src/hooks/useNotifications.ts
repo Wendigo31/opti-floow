@@ -1,3 +1,4 @@
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -74,7 +75,7 @@ export function useNotifications() {
   useEffect(() => {
     if (!authUserId) return;
     const channel = supabase
-      .channel(`notifications_${authUserId}`)
+      .channel(uniqueChannelName(`notifications_${authUserId}`))
       .on(
         'postgres_changes',
         {
