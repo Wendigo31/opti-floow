@@ -1,10 +1,12 @@
 import { ReactNode, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { LoadingScreen } from './LoadingScreen';
 import { TutorialDialog } from '../onboarding/TutorialDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarProvider, useSidebarContext } from '@/context/SidebarContext';
+import { getCategoryIdForPath } from '@/config/appNavigation';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -79,9 +81,14 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     }
   };
 
+  // La barre latérale n'existe que dans un espace (catégorie) sélectionné :
+  // absente sur l'accueil et les pages transversales.
+  const location = useLocation();
+  const showSidebar = !isMobile && getCategoryIdForPath(location.pathname) !== null;
+
   // Calculate margin based on sidebar state
   const getMainMargin = () => {
-    if (isMobile) return 'ml-0';
+    if (!showSidebar) return 'ml-0';
     return collapsed ? 'ml-20' : 'ml-64';
   };
 
@@ -91,10 +98,10 @@ function MainLayoutContent({ children }: MainLayoutProps) {
       {isLoading && (
         <LoadingScreen onComplete={handleLoadingComplete} minDuration={2500} />
       )}
-      
+
       <div className="min-h-screen bg-background">
-        {/* Hide sidebar on mobile */}
-        {!isMobile && <Sidebar />}
+        {/* Hide sidebar on mobile and outside category workspaces */}
+        {showSidebar && <Sidebar />}
         <TopBar isDark={isDark} onToggleTheme={handleToggleTheme} />
         <main className={`pt-14 transition-all duration-300 ${getMainMargin()}`}>
           <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>

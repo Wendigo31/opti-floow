@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Lock, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
@@ -7,7 +7,7 @@ import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { useSidebarContext } from '@/context/SidebarContext';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NAV_CATEGORIES, canSeeNavPage } from '@/config/appNavigation';
+import { NAV_CATEGORIES, canSeeNavPage, getCategoryIdForPath } from '@/config/appNavigation';
 
 // Feature labels for the "restricted features" tooltip
 const FEATURE_LABELS: Record<string, string> = {
@@ -41,6 +41,7 @@ const FEATURE_LABELS: Record<string, string> = {
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { hasFeature, licenseData } = useLicense();
   const { isDirection: isDirectionFromTeam } = useTeam();
   // Fallback: use userRole from cached license data when auth session isn't ready
@@ -58,6 +59,22 @@ export function Sidebar() {
   };
 
   const accessCtx = { hasFeature, canAccessUserFeature, isDirection };
+
+  // La barre latérale n'apparaît que dans un espace (catégorie) sélectionné :
+  // elle disparaît sur l'accueil et les pages transversales.
+  const activeCategoryId = getCategoryIdForPath(location.pathname);
+  const activeCategory = activeCategoryId
+    ? NAV_CATEGORIES.find((c) => c.id === activeCategoryId)
+    : null;
+  const visiblePages = activeCategory
+    ? activeCategory.pages.filter((page) => canSeeNavPage(page, accessCtx))
+    : [];
+
+  // Onglet actif : paramètre ?tab= dans un espace, sinon la route directe.
+  const isWorkspace = location.pathname.startsWith('/espace/');
+  const activePageTo = isWorkspace ? searchParams.get('tab') : location.pathname;
+
+  if (!activeCategory || visiblePages.length === 0) return null;
 
   return (
     <aside
@@ -130,42 +147,35 @@ export function Sidebar() {
         </TooltipProvider>
       )}
 
-      {/* Navigation grouped by the 5 business categories */}
+      {/* Navigation : uniquement les onglets de l'espace sélectionné */}
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {NAV_CATEGORIES.map((category) => {
-          const visiblePages = category.pages.filter((page) => canSeeNavPage(page, accessCtx));
-          if (visiblePages.length === 0) return null;
-
-          return (
-            <div key={category.id} className="space-y-1">
-              {!collapsed && (
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 flex items-center gap-1.5">
-                  <category.icon className="w-3 h-3" />
-                  {category.label}
-                </p>
-              )}
-              {visiblePages.map((page) => {
-                const isActive = location.pathname === page.to;
-                return (
-                  <NavLink
-                    key={page.to}
-                    to={page.to}
-                    className={cn(
-                      "nav-item",
-                      isActive && "active"
-                    )}
-                    title={page.label}
-                  >
-                    <page.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
-                    {!collapsed && (
-                      <span className="truncate flex-1">{page.label}</span>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className="space-y-1">
+          {!collapsed && (
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 flex items-center gap-1.5">
+              <activeCategory.icon className="w-3 h-3" />
+              {activeCategory.label}
+            </p>
+          )}
+          {visiblePages.map((page) => {
+            const isActive = activePageTo === page.to;
+            return (
+              <NavLink
+                key={page.to}
+                to={`/espace/${activeCategory.id}?tab=${page.to}`}
+                className={cn(
+                  "nav-item",
+                  isActive && "active"
+                )}
+                title={page.label}
+              >
+                <page.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                {!collapsed && (
+                  <span className="truncate flex-1">{page.label}</span>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Collapse Toggle */}
