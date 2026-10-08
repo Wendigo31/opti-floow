@@ -198,7 +198,7 @@ export function TeamManagement() {
             <p className="text-muted-foreground mb-4">
               La gestion d'équipe multi-utilisateurs est disponible avec les forfaits Pro et Enterprise.
             </p>
-            <Badge variant="outline">Forfait actuel : {effectivePlan.toUpperCase()}</Badge>
+            <Badge variant="outline">Forfait actuel : OptiFlow</Badge>
           </div>
         </CardContent>
       </Card>
