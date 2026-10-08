@@ -1,37 +1,116 @@
-# Forfait unique "OptiFlow" (fusion Start / Pro / Enterprise)
+# Navigation par catégories et allègement du code
 
-## Décisions proposées
-- **Nom affiché** : "OptiFlow". **Valeur interne** (`plan_type`) : `optiflow`.
-- **Contenu** : toutes les fonctionnalités Enterprise, limites illimitées (conducteurs, clients, véhicules, charges, tournées). Les surcharges admin par licence (`max_*`, `license_features`) restent possibles.
-- **Prix** : 79 € HT/mois, 790 € HT/an — uniquement dans Stripe et `pricing_config`, jamais sur une page publique ("Sur devis" conservé).
-- **Add-ons** : à confirmer (voir question en fin de plan). Par défaut, ceux qui débloquent une fonctionnalité (déjà incluse désormais) sont retirés ; ceux qui ajoutent de la capacité (ex. utilisateurs en plus) sont conservés.
+## Objectif
+Remplacer l’accueil post-connexion actuel par un lanceur à **5 icônes**, qui réorganise uniquement les pages déjà présentes. Les routes, droits, données et comportements métier restent inchangés.
 
-## Étapes
-1. **Stripe** : le compte Live est déjà relié (clé en place). Créer le produit "OptiFlow" avec un prix mensuel 7900 EUR-cents (`recurring=month`) et un prix annuel 79000 (`recurring=year`). Archiver les 6 anciens prix de forfait (sans client actif, aucun risque).
-2. **Base de données (migration)**
-   - `UPDATE licenses SET plan_type='optiflow'` sur toutes les lignes.
-   - Supprimer `licenses_plan_type_check`, recréer `CHECK (plan_type = 'optiflow')`, `DEFAULT 'optiflow'`.
-   - `pricing_config` : `stripe_prices` = `{ optiflow_monthly, optiflow_annual }` ; `plans` réduit à une seule entrée ; `discounts` (remises/planchers) adaptés à cette entrée.
-   - `license_features` : passer les lignes existantes à tout-inclus (via contexte admin).
-3. **Frontend — source unique**
-   - `src/hooks/useLicense.ts` : `PlanType = 'optiflow'`, `PLAN_FEATURES` = une seule entrée tout-inclus ; normaliser les anciennes valeurs lues depuis le cache local (`start|pro|enterprise` → `optiflow`).
-   - `src/types/features.ts` : `PLAN_DEFAULTS` à une seule entrée.
-   - `src/hooks/usePlanLimits.ts` : une seule entrée illimitée ; `isStart/isPro/isEnterprise` retirés (les appelants mis à jour).
-   - `src/config/pricingPlans.ts` : une seule carte "OptiFlow", toutes fonctionnalités `included: true`, libellés "Sur devis" / "Nous contacter" inchangés.
-   - `PricingSection.tsx`, `Activation.tsx`, `Presentation.tsx`, `PricingExport.tsx` : affichage d'une seule carte.
-   - `FeatureGate.tsx`, `AddonMarketplace.tsx`, `TopBar`/`Sidebar`/`MobileNav`, `Settings`/`LicenseSyncSettings` : retrait des badges "Pro/Enterprise requis" et des messages de montée en gamme.
-   - `src/pages/Admin.tsx`, `CreateCompanyDialog.tsx`, `FeatureEditor.tsx`, `PricingConfigManager.tsx` : sélecteur de forfait supprimé ; il reste activer/désactiver la licence, les limites et surcharges.
-   - `src/types/team.ts` : constantes tarifaires internes réduites au forfait unique.
-4. **Edge functions**
-   - `validate-license/shared.ts` : `PLAN_DEFAULTS` unique ; `admin.ts` : action `update-plan` retirée, création de licence force `optiflow` ; `validate.ts`/`check.ts` : tout ancien `plan_type` est traité comme `optiflow`.
-   - `create-checkout` : n'accepte que `planKey ∈ {optiflow_monthly, optiflow_annual}`, métadonnée `plan_type=optiflow`.
-   - `self-register` : écrit `plan_type='optiflow'`, ignore tout paramètre de forfait.
-   - `addon-checkout` : retire les add-ons devenus inclus, garde les add-ons de capacité.
-5. **Tests**
-   - Mettre à jour `useLicense.test.ts` (tests par forfait → un test "forfait unique donne accès à toutes les fonctionnalités" et un test "ancienne valeur `pro` en cache normalisée en `optiflow`").
-   - Ajouter un test : `PLAN_LIMITS.optiflow` illimité, `PUBLIC_PLANS` contient exactement 1 forfait, toutes fonctionnalités incluses.
-   - Les deux tests "aucun prix public" doivent rester verts sans modification.
-6. **Validation** : `tsgo` propre, `vitest --run` vert, build de prod OK, mise à jour des mémoires projet (Pricing Tiers, Enterprise Conversion, Activation Layout) qui décrivent encore 3 forfaits.
+## Classement proposé des pages existantes
 
-## Question à trancher
-- Add-ons : garder seulement les add-ons de capacité (utilisateurs supplémentaires, etc.) et supprimer ceux qui sont maintenant inclus — ça vous va ? Et l'argument commercial "87 % choisissent Enterprise" est retiré.
+### 1. Exploitation
+- **Planning** (`/planning`)
+- **Tournées** (`/tours`)
+- **Création de ligne** (`/line-montage`)
+- **Clients** (`/clients`)
+- **Véhicules et remorques** (`/vehicles`)
+
+### 2. Géoloc
+- **Itinéraire** (`/itinerary`)
+- **Analyse par IA** (`/ai-analysis`) — analyse et optimisation d’itinéraires existante, sans ajout de capacité
+
+### 3. Comptabilité — point ouvert
+- **Charges fixes** (`/charges`) est la seule page existante qui s’en rapproche, mais elle alimente le calcul de rentabilité : ce n’est pas un module comptable.
+- Proposition : placer **Charges fixes** sous cette icône, avec son libellé actuel, sans laisser entendre qu’OptiFlow gère factures, journaux ou écritures comptables.
+- Si le client refuse ce rattachement, l’icône **Comptabilité** sera visible mais indiquée comme indisponible, sans page ni fonctionnalité inventée.
+
+### 4. RH
+- **Conducteurs et absences** (`/drivers`)
+- **Équipe et droits** (`/team`)
+
+### 5. Gestion de rentabilité
+- **Calculateur et historique** (`/calculator`, `/history`)
+- **Analyse & graphiques** (`/dashboard`)
+- **Prévisionnel** (`/forecast`)
+- **Rapports véhicules** (`/vehicle-reports`)
+
+### Pages transversales, hors catégories
+- **Paramètres** (`/settings`) reste accessible depuis la barre supérieure et le menu secondaire.
+- **Mes restrictions** (`/my-restrictions`) reste accessible depuis son indicateur actuel.
+- **Installation** (`/install`) reste un accès technique depuis les paramètres, sans icône métier.
+- **Export tarifaire interne** (`/pricing-export`) et **Administration** (`/admin`) ne seront pas exposés dans le lanceur utilisateur.
+- La page d’accueil (`/`) devient le lanceur ; elle n’est donc pas classée comme fonctionnalité.
+
+## Structure de navigation
+
+```text
+Connexion validée
+└── Accueil / lanceur
+    ├── Exploitation
+    ├── Géoloc
+    ├── Comptabilité
+    ├── RH
+    └── Gestion de rentabilité
+         └── Pages existantes autorisées pour l’utilisateur
+```
+
+- Chaque icône ouvre sur le même écran la liste courte des pages de sa catégorie ; un clic sur une page conserve sa route actuelle.
+- Le menu latéral reprend les 5 mêmes groupes, repliables, avec le groupe de la page active ouvert.
+- Le menu mobile reprend exactement la même configuration, au lieu de maintenir une seconde liste différente.
+- Les règles actuelles sont conservées : fonctionnalités désactivées masquées, **Charges** et **Prévisionnel** réservés à Direction, restrictions individuelles respectées.
+- Une seule configuration de navigation alimentera l’accueil, le menu latéral et le menu mobile. Elle supprimera notamment le lien mobile obsolète vers `/pricing` et rendra accessibles les pages existantes actuellement absentes des menus (`/ai-analysis`, `/vehicle-reports`).
+- Aucun nouveau module, aucune nouvelle table et aucun calcul métier ne sont prévus.
+
+## Fichiers de navigation concernés
+- `src/pages/Home.tsx` : remplacer les widgets actuels par le lanceur des 5 catégories.
+- `src/components/layout/Sidebar.tsx` : afficher les catégories partagées et leurs pages.
+- `src/components/layout/MobileNav.tsx` : utiliser les mêmes catégories et règles que le menu ordinateur.
+- `src/config/appNavigation.ts` (nouveau) : source unique des catégories, icônes, routes et restrictions.
+- `src/components/navigation/CategoryLauncher.tsx` et `CategoryPageList.tsx` (nouveaux) : affichage du lanceur et des pages d’une catégorie.
+- `src/App.tsx` : routes inchangées ; uniquement adaptation minimale si le retour à l’accueil doit réinitialiser la catégorie ouverte.
+
+## Découpage des fichiers anormalement volumineux
+Le découpage sera progressif et strictement sans changement fonctionnel. L’état et les appels existants resteront d’abord dans la page parente ; les blocs visuels seront extraits avec des propriétés explicites.
+
+1. **`src/pages/Vehicles.tsx` — 2 535 lignes**
+   - Extraire les onglets formulaire : informations, consommation, entretien, pneus.
+   - Extraire les listes Véhicules et Remorques avec leurs actions groupées/import-export.
+   - Conserver les hooks cloud et l’orchestration dans la page au premier passage.
+
+2. **`src/pages/Drivers.tsx` — 1 735 lignes**
+   - Raccorder et compléter les composants `DriverForm` et `DriverTable` déjà présents et testés, aujourd’hui non utilisés par la page réelle.
+   - Remplacer les rendus répétés CDI/CDD/Intérim/Joker/Autre par une vue de catégorie commune.
+   - Déplacer le type étendu et la liste protégée des champs de paie dans le domaine Conducteurs, sans modifier le masquage financier.
+
+3. **`src/pages/AIAnalysis.tsx` — 1 516 lignes**
+   - Extraire les types de réponse IA.
+   - Séparer saisie, contraintes et vues de résultats par mode d’analyse.
+   - Centraliser la lecture de l’itinéraire partagé au lieu de lire directement son stockage depuis la page.
+
+4. **`src/pages/Itinerary.tsx` — 1 417 lignes**
+   - Extraire la ligne d’étape déplaçable, le décodage de tracé et les blocs formulaire/carte/résultat.
+   - Vérifier puis réutiliser les boîtes de sauvegarde existantes si elles couvrent bien le même flux ; sinon conserver les deux usages séparés.
+
+5. **`src/pages/Calculator.tsx` — 1 412 lignes**
+   - Extraire les sections Véhicule, Remorque, Trajet & tarification, Conducteurs et Récapitulatif.
+   - Garder le moteur de coûts unique et l’état du calcul dans la page parente afin de ne modifier aucune formule.
+
+6. **`src/pages/Admin.tsx` — 1 315 lignes**
+   - Extraire la boîte de création/modification de licence et la table de licences.
+   - Garder l’authentification admin et la coordination des onglets dans la page.
+
+7. **`src/components/ai/LineMontageTab.tsx` — 1 121 lignes / 46 états locaux**
+   - Séparer les modes formulaire structuré et texte libre.
+   - Extraire les types et le calcul pur de coût conducteur, puis couvrir ce calcul par un test ciblé.
+
+Les fichiers générés (`src/integrations/supabase/types.ts`) et les grands catalogues de types/configuration ne seront pas découpés artificiellement.
+
+## Ordre d’exécution et validation
+1. Créer la configuration centrale et ses tests de classement/droits.
+2. Construire le lanceur post-connexion, puis brancher menus ordinateur et mobile sur la même source.
+3. Vérifier chaque rôle sur ordinateur et mobile, les liens directs, le retour accueil et l’absence de lien mort.
+4. Découper les gros fichiers **un par un** ; après chaque extraction, vérifier la page concernée avant de passer à la suivante.
+5. Ajouter des tests ciblés aux composants réellement utilisés, notamment Conducteurs, et conserver les tests des règles financières et de confidentialité.
+6. Validation finale : vérification TypeScript, suite de tests complète, construction de production et parcours connecté des cinq catégories.
+
+## Décision attendue avant développement
+Valider l’un des deux traitements pour **Comptabilité** :
+- **Recommandé :** y rattacher uniquement **Charges fixes**, avec son nom actuel et sans promesse comptable ;
+- ou afficher l’icône sans destination disponible, jusqu’à ce qu’une vraie page existante puisse y être rattachée.
