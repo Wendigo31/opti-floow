@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { APP_NAVIGATION } from '@/config/appNavigation';
+import { NAV_CATEGORIES } from '@/config/appNavigation';
 
 describe('authenticated app navigation', () => {
   it('contains the five requested categories in order', () => {
-    expect(APP_NAVIGATION.map((category) => category.label)).toEqual([
+    expect(NAV_CATEGORIES.map((category) => category.label)).toEqual([
       'Exploitation',
       'Géoloc',
       'Comptabilité',
@@ -13,20 +13,20 @@ describe('authenticated app navigation', () => {
   });
 
   it('keeps fixed charges as the only accounting page', () => {
-    const accounting = APP_NAVIGATION.find((category) => category.id === 'accounting');
-    expect(accounting?.items.map((item) => item.to)).toEqual(['/charges']);
-    expect(accounting?.items[0].directionOnly).toBe(true);
+    const accounting = NAV_CATEGORIES.find((category) => category.id === 'comptabilite');
+    expect(accounting?.pages.map((page) => page.to)).toEqual(['/charges']);
+    expect(accounting?.pages[0].directionOnly).toBe(true);
   });
 
   it('keeps shared operational pages available from exploitation', () => {
-    const operations = APP_NAVIGATION.find((category) => category.id === 'operations');
-    expect(operations?.items.map((item) => item.to)).toEqual(expect.arrayContaining([
-      '/calculator', '/itinerary', '/drivers', '/vehicle-reports',
+    const operations = NAV_CATEGORIES.find((category) => category.id === 'exploitation');
+    expect(operations?.pages.map((page) => page.to)).toEqual(expect.arrayContaining([
+      '/planning', '/tours', '/clients', '/vehicles',
     ]));
   });
 
   it('does not expose internal or removed routes', () => {
-    const paths = APP_NAVIGATION.flatMap((category) => category.items.map((item) => item.to));
+    const paths = NAV_CATEGORIES.flatMap((category) => category.pages.map((page) => page.to));
     expect(paths).not.toContain('/pricing');
     expect(paths).not.toContain('/pricing-export');
     expect(paths).not.toContain('/admin');
