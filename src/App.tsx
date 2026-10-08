@@ -44,6 +44,7 @@ const Install = lazy(() => import("./pages/Install"));
 const Planning = lazy(() => import("./pages/Planning"));
 const Presentation = lazy(() => import("./pages/Presentation"));
 const PricingExport = lazy(() => import("./pages/PricingExport"));
+const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -110,6 +111,7 @@ function LicensedAppContent() {
                 <Suspense fallback={<RouteSuspenseFallback />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/espace/:categoryId" element={<CategoryWorkspace />} />
                   <Route path="/calculator" element={<CalculatorWithHistory />} />
                   <Route path="/itinerary" element={<Itinerary />} />
                   <Route path="/dashboard" element={<Dashboard />} />
