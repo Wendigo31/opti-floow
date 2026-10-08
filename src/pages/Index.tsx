@@ -7,9 +7,9 @@ const Index = () => {
   const categories = useVisibleNavigation();
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10">
-      <h1 className="text-2xl font-semibold text-foreground">Choisissez votre espace</h1>
-      <div className="grid w-full max-w-5xl grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="flex min-h-[calc(100vh-9rem)] flex-col items-center justify-center gap-12">
+      <h1 className="text-center text-2xl font-semibold text-foreground">Choisissez votre espace</h1>
+      <div className="mx-auto grid w-full max-w-4xl auto-rows-fr grid-cols-2 items-center justify-items-center gap-6 sm:grid-cols-3 lg:grid-cols-5">
         {categories.map((category) => (
           <button
             key={category.id}
