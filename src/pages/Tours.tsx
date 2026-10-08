@@ -70,7 +70,6 @@ import { toast } from 'sonner';
 import type { SavedTour } from '@/types/savedTour';
 import jsPDF from 'jspdf';
 import { FeatureGate } from '@/components/license/FeatureGate';
-import { useApp } from '@/context/AppContext';
 import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 import { useMemo } from 'react';
 
@@ -84,7 +83,6 @@ export default function Tours() {
   const { trailers } = useCloudTrailers();
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
-  useApp();
 
   // ── Coût réel par tournée : recalculé automatiquement depuis la flotte, le trajet et les conducteurs actuels ──
   const realCosts = useTourRealCosts(tours);
