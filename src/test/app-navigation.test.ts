@@ -28,7 +28,7 @@ describe('authenticated app navigation', () => {
   });
 
   it('every navigation page renders content in its workspace', async () => {
-    const src = (await import('node:fs')).readFileSync('src/pages/CategoryWorkspace.tsx', 'utf8');
+    const src = (await import('@/pages/CategoryWorkspace.tsx?raw')).default as string;
     for (const page of NAV_CATEGORIES.flatMap((c) => c.pages)) {
       expect(src, page.to).toContain(`'${page.to}':`);
     }
