@@ -59,6 +59,14 @@ serve(async (req) => {
       const customers = await stripe.customers.list({ email, limit: 1 });
       const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
 
+      // Only capacity add-ons are sold: every feature is already part of the single plan
+      const invalid = items.filter((i: any) => !ADDON_FEATURES[i?.addon_id]);
+      if (invalid.length > 0) {
+        return new Response(JSON.stringify({ error: "Module non disponible : toutes les fonctionnalités sont incluses dans le forfait OptiFlow" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Build line items
       const lineItems = items.map((item: { price_id: string; quantity?: number }) => ({
         price: item.price_id,
