@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Lock, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
@@ -7,7 +7,7 @@ import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { useSidebarContext } from '@/context/SidebarContext';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NAV_CATEGORIES, canSeeNavPage } from '@/config/appNavigation';
+import { NAV_CATEGORIES, canSeeNavPage, getCategoryIdForPath } from '@/config/appNavigation';
 
 // Feature labels for the "restricted features" tooltip
 const FEATURE_LABELS: Record<string, string> = {
@@ -41,6 +41,7 @@ const FEATURE_LABELS: Record<string, string> = {
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { hasFeature, licenseData } = useLicense();
   const { isDirection: isDirectionFromTeam } = useTeam();
   // Fallback: use userRole from cached license data when auth session isn't ready
@@ -58,6 +59,22 @@ export function Sidebar() {
   };
 
   const accessCtx = { hasFeature, canAccessUserFeature, isDirection };
+
+  // La barre latérale n'apparaît que dans un espace (catégorie) sélectionné :
+  // elle disparaît sur l'accueil et les pages transversales.
+  const activeCategoryId = getCategoryIdForPath(location.pathname);
+  const activeCategory = activeCategoryId
+    ? NAV_CATEGORIES.find((c) => c.id === activeCategoryId)
+    : null;
+  const visiblePages = activeCategory
+    ? activeCategory.pages.filter((page) => canSeeNavPage(page, accessCtx))
+    : [];
+
+  // Onglet actif : paramètre ?tab= dans un espace, sinon la route directe.
+  const isWorkspace = location.pathname.startsWith('/espace/');
+  const activePageTo = isWorkspace ? searchParams.get('tab') : location.pathname;
+
+  if (!activeCategory || visiblePages.length === 0) return null;
 
   return (
     <aside
