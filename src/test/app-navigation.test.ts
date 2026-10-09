@@ -3,13 +3,16 @@ import { NAV_CATEGORIES } from '@/config/appNavigation';
 
 describe('authenticated app navigation', () => {
   it('contains the requested categories in order', () => {
+    // Ordre pensé comme un flux de travail : le quotidien (Exploitation/Géoloc) → les
+    // ressources (parc/RH) → développer l'activité (Appels d'offres) → le suivi financier
+    // (Comptabilité) → la synthèse (Gestion de rentabilité).
     expect(NAV_CATEGORIES.map((category) => category.label)).toEqual([
       'Exploitation',
       'Géoloc',
-      'Comptabilité',
-      'RH',
       'Gestion de parc',
+      'RH',
       "Appels d'offres",
+      'Comptabilité',
       'Gestion de rentabilité',
     ]);
   });

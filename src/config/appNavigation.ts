@@ -1,15 +1,22 @@
 /**
  * SOURCE UNIQUE de la navigation authentifiée.
  *
- * Regroupe les pages EXISTANTES sous 5 catégories métier (Exploitation, Géoloc,
- * Comptabilité, RH, Gestion de rentabilité). Le lanceur d'accueil, la barre
- * latérale et le menu mobile consomment tous cette même configuration pour
- * rester cohérents.
+ * Regroupe les pages EXISTANTES par catégorie métier. Le lanceur d'accueil, la
+ * barre latérale et le menu mobile consomment tous cette même configuration
+ * pour rester cohérents.
  *
  * Aucune nouvelle fonctionnalité n'est créée ici : chaque entrée pointe vers
  * une route déjà existante dans src/App.tsx. Les règles d'accès réelles
  * (feature flags d'entreprise, restrictions par utilisateur, accès Direction)
  * sont conservées à l'identique.
+ *
+ * Ordre des catégories et des pages à l'intérieur de chacune : pensé comme un
+ * flux de travail (du plus utilisé/central au plus annexe), Paramètres étant
+ * systématiquement en dernier par convention —
+ * Exploitation (le quotidien) → Géoloc (suivi en temps réel) → Gestion de
+ * parc (les véhicules) → RH (les équipes) → Appels d'offres (gagner de
+ * nouveaux contrats) → Comptabilité (enregistrer les coûts) → Gestion de
+ * rentabilité (analyser la marge, la vue de synthèse).
  */
 import {
   Calculator,
@@ -94,31 +101,39 @@ const P = {
 export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'exploitation', label: 'Exploitation', icon: Boxes,
+    // Planifier (Planning) → monter une ligne → gérer les tournées → calculer un trajet →
+    // consulter l'historique → données de référence (clients/véhicules/conducteurs) → réglages.
     pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers, P.settings],
   },
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
-    pages: [P.itinerary, P.aiAnalysis, P.tours, P.planning, P.settings],
-  },
-  {
-    id: 'comptabilite', label: 'Comptabilité', icon: Building2,
-    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
-  },
-  {
-    id: 'rh', label: 'RH', icon: Users,
-    pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
+    // Calculer un itinéraire → l'optimiser par IA → le planifier → le retrouver dans les tournées → réglages.
+    pages: [P.itinerary, P.aiAnalysis, P.planning, P.tours, P.settings],
   },
   {
     id: 'parc', label: 'Gestion de parc', icon: Warehouse,
-    pages: [P.vehicles, P.vehicleReports, P.drivers, P.settings, P.install],
+    // Le parc de véhicules → ses rapports → les conducteurs qui les utilisent → installer l'appli → réglages.
+    pages: [P.vehicles, P.vehicleReports, P.drivers, P.install, P.settings],
+  },
+  {
+    id: 'rh', label: 'RH', icon: Users,
+    // Les conducteurs → l'équipe → leur planning → mes propres accès → réglages.
+    pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
   },
   {
     id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
-    pages: [P.tenders, P.clients, P.tours, P.calculator, P.itinerary],
+    // Le devis (outil principal) → le client → l'itinéraire → le prix → comparaison avec les tournées passées.
+    pages: [P.tenders, P.clients, P.itinerary, P.calculator, P.tours],
+  },
+  {
+    id: 'comptabilite', label: 'Comptabilité', icon: Building2,
+    // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients → réglages.
+    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
   },
   {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
-    pages: [P.calculator, P.history, P.dashboard, P.forecast, P.vehicleReports, P.tours, P.charges, P.aiAnalysis, P.settings],
+    // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent → réglages.
+    pages: [P.dashboard, P.aiAnalysis, P.forecast, P.calculator, P.history, P.tours, P.charges, P.vehicleReports, P.settings],
   },
 ];
 
