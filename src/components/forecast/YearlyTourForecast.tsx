@@ -45,7 +45,7 @@ export function YearlyTourForecast() {
   const months = useMemo(() => {
     const info = new Map<string, ForecastTourInfo>();
     for (const t of tours) {
-      info.set(t.id, { revenue: Number(t.revenue) || 0, realCost: realCosts.get(t.id)?.totalCost ?? Number(t.total_cost) ?? 0 });
+      info.set(t.id, { revenue: Number(t.revenue) || 0, realCost: realCosts.get(t.id)?.totalCost ?? (Number(t.total_cost) || 0) });
     }
     return buildYearlyTourForecast(rows, info, year);
   }, [rows, tours, realCosts, year]);

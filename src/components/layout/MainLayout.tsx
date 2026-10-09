@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -71,7 +71,11 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   // Tutorial on first session
   const [showTutorial, setShowTutorial] = useState(false);
 
-  const handleLoadingComplete = () => {
+  // Mémoïsé : passé en dépendance d'effet dans LoadingScreen. Une référence qui change à
+  // chaque rendu y relancerait le minuteur de sortie (2.5s) depuis zéro à chaque re-rendu
+  // de MainLayoutContent survenant avant la fin du chargement, retardant inutilement l'écran
+  // d'accueil réel.
+  const handleLoadingComplete = useCallback(() => {
     setIsLoading(false);
     // Show tutorial if never seen
     const seen = localStorage.getItem('optiflow_tutorial_seen');
@@ -79,7 +83,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
       setShowTutorial(true);
       localStorage.setItem('optiflow_tutorial_seen', 'true');
     }
-  };
+  }, []);
 
   // La barre latérale n'existe que dans un espace (catégorie) sélectionné :
   // absente sur l'accueil et les pages transversales.

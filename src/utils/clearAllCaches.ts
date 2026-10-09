@@ -36,9 +36,21 @@
    'optiflow_company_settings_cache',
  ];
  
+ // Clés "optiflow_*" qui ne sont PAS des caches de données mais des préférences/état
+ // durables de l'utilisateur. Elles doivent survivre à clearAllCaches() (appelée à
+ // chaque changement de CACHE_VERSION dans main.tsx), sinon chaque mise à jour de
+ // l'app réinitialise silencieusement ces préférences pour tous les utilisateurs
+ // existants (ex: le tutoriel de bienvenue qui se réaffiche après chaque déploiement).
+ const PRESERVE_KEYS = [
+   'optiflow_cache_version',   // écrite juste après l'appel, ne doit pas être effacée entre-temps
+   'optiflow_tutorial_seen',   // ne doit s'afficher qu'une seule fois, jamais à cause d'une MAJ
+   'optiflow_notification_prefs', // préférences de notifications choisies par l'utilisateur
+   'optiflow_current_version', // sert à détecter les nouvelles versions pour la bannière "nouveautés"
+ ];
+
  export function clearAllCaches(): number {
    let cleared = 0;
-   
+
    // Clear specific keys
    CACHE_KEYS_TO_CLEAR.forEach(key => {
      if (localStorage.getItem(key) !== null) {
@@ -46,16 +58,17 @@
        cleared++;
      }
    });
-   
-   // Also clear any keys that start with optiflow_ that we might have missed
+
+   // Also clear any keys that start with optiflow_ that we might have missed —
+   // à l'exclusion des préférences/état listées dans PRESERVE_KEYS.
    const allKeys = Object.keys(localStorage);
    allKeys.forEach(key => {
-     if (key.startsWith('optiflow_') && !CACHE_KEYS_TO_CLEAR.includes(key)) {
+     if (key.startsWith('optiflow_') && !CACHE_KEYS_TO_CLEAR.includes(key) && !PRESERVE_KEYS.includes(key)) {
        localStorage.removeItem(key);
        cleared++;
      }
    });
-   
+
    return cleared;
  }
  
