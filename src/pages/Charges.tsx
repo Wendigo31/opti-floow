@@ -444,12 +444,10 @@ export default function Charges() {
               <Package className="w-4 h-4" />
               Presets
             </Button>
-            <FeatureGate feature="btn_export_excel" showLockedIndicator={false}>
-              <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
-                <Upload className="w-4 h-4" />
-                Importer Excel
-              </Button>
-            </FeatureGate>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
+              <Upload className="w-4 h-4" />
+              Importer Excel
+            </Button>
           </div>
         )}
       </div>

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { FixedCharge } from '@/types';
+import { YearlyTourForecast } from '@/components/forecast/YearlyTourForecast';
 
 type PeriodType = '3' | '6' | '12';
 
@@ -479,6 +480,8 @@ export default function Forecast() {
             </table>
           </div>
         </div>
+
+        <YearlyTourForecast />
       </div>
     </FeatureGate>
   );
