@@ -34,6 +34,10 @@ import { NotificationCenter } from '@/components/layout/NotificationCenter';
 interface TopBarProps {
   isDark: boolean | null;
   onToggleTheme: () => void;
+  /** Classe Tailwind `left-*` : calculée par MainLayout à partir du même état
+   * (sidebar visible ou non, repliée ou non) que la marge du contenu, pour que
+   * la barre du haut reste toujours alignée avec la barre latérale. */
+  leftOffsetClass: string;
 }
 
 const planConfig: Record<PlanType, { label: string; icon: React.ElementType; color: string }> = {
@@ -47,7 +51,7 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
   membre: { label: 'Membre', icon: User, color: 'bg-gray-500/20 text-gray-600 border-gray-500/30' },
 };
 
-export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
+export function TopBar({ isDark, onToggleTheme, leftOffsetClass }: TopBarProps) {
   const { planType, licenseData, isOffline, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
@@ -97,7 +101,7 @@ export function TopBar({ isDark, onToggleTheme }: TopBarProps) {
 
   return (
     <>
-      <div className={`fixed top-0 right-0 h-14 z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${isMobile ? 'left-0' : 'left-20 lg:left-64'}`}>
+      <div className={`fixed top-0 right-0 h-14 z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${leftOffsetClass}`}>
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           {/* Left side - Mobile menu + Time + User info */}
           <div className="flex items-center gap-2 md:gap-4">

@@ -96,6 +96,14 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     return collapsed ? 'ml-20' : 'ml-64';
   };
 
+  // La TopBar (fixed) doit utiliser exactement la même logique que la marge du
+  // contenu ci-dessus : sinon elle se désynchronise de la Sidebar (gap ou
+  // chevauchement) dès qu'elle est absente, repliée ou dépliée.
+  const getTopBarLeft = () => {
+    if (!showSidebar) return 'left-0';
+    return collapsed ? 'left-20' : 'left-64';
+  };
+
   return (
     <>
       {/* Loading overlay - always render layout underneath to keep hooks stable */}
@@ -106,7 +114,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
       <div className="min-h-screen bg-background">
         {/* Hide sidebar on mobile and outside category workspaces */}
         {showSidebar && <Sidebar />}
-        <TopBar isDark={isDark} onToggleTheme={handleToggleTheme} />
+        <TopBar isDark={isDark} onToggleTheme={handleToggleTheme} leftOffsetClass={getTopBarLeft()} />
         <main className={`pt-14 transition-all duration-300 ${getMainMargin()}`}>
           <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
             {children}
