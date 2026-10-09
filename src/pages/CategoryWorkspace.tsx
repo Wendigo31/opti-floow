@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useVisibleNavigation } from '@/hooks/useVisibleNavigation';
 
@@ -59,15 +59,9 @@ export default function CategoryWorkspace() {
         <h1 className="text-2xl font-semibold text-foreground">{category.label}</h1>
       </div>
 
+      {/* Pas de barre d'onglets ici : la navigation entre pages de l'espace se fait
+          depuis la barre latérale (Sidebar), qui liste déjà les mêmes pages. */}
       <Tabs value={active} onValueChange={(v) => setParams({ tab: v }, { replace: true })}>
-        <TabsList className="h-auto flex-wrap justify-start">
-          {category.pages.map((page) => (
-            <TabsTrigger key={page.to} value={page.to} className="gap-2">
-              <page.icon className="h-4 w-4" />
-              {page.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
         {category.pages.map((page) => {
           const PageComponent = PAGE_COMPONENTS[page.to];
           return (
