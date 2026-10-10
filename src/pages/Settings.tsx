@@ -283,12 +283,25 @@ export default function Settings() {
                 </div>
                 <CardTitle>Version</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Version de l'application</span>
                   <Badge variant="secondary" className="font-mono text-sm">
                     {getAppVersion()}
                   </Badge>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-foreground">Visite guidée</p>
+                    <p className="text-sm text-muted-foreground">Redécouvrez les 7 espaces d'OptiFlow</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.dispatchEvent(new CustomEvent('optiflow:replay-tutorial'))}
+                  >
+                    Relancer le tutoriel
+                  </Button>
                 </div>
               </CardContent>
             </Card>

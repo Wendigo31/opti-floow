@@ -85,6 +85,15 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     }
   }, []);
 
+  // Permet de relancer le tutoriel à la demande (bouton dans Paramètres), sans
+  // faire remonter l'état jusqu'ici via les props — même pattern que les autres
+  // événements inter-composants de l'app (ex. optiflow:license-updated).
+  useEffect(() => {
+    const handleReplay = () => setShowTutorial(true);
+    window.addEventListener('optiflow:replay-tutorial', handleReplay);
+    return () => window.removeEventListener('optiflow:replay-tutorial', handleReplay);
+  }, []);
+
   // La barre latérale n'existe que dans un espace (catégorie) sélectionné :
   // absente sur l'accueil et les pages transversales.
   const location = useLocation();
