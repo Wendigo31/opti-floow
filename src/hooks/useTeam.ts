@@ -20,7 +20,11 @@ interface UseTeamReturn {
   isOwner: boolean;
   isAdmin: boolean;
   isDirection: boolean;
+  isRH: boolean;
   canManageTeam: boolean;
+  /** Direction ET RH peuvent créer de nouveaux accès (inviter) — seule la
+   * Direction peut ensuite changer un rôle ou retirer un accès (canManageTeam). */
+  canInviteMembers: boolean;
   maxUsers: number;
   currentUserCount: number;
   canAddMore: boolean;
@@ -67,8 +71,10 @@ export function useTeam(): UseTeamReturn {
   const isOwner = effectiveRole === 'direction';
   const isAdmin = effectiveRole === 'direction';
   const isDirection = effectiveRole === 'direction';
+  const isRH = effectiveRole === 'rh';
   const hasMultiUsers = true;
   const canManageTeam = isDirection && hasMultiUsers;
+  const canInviteMembers = (isDirection || isRH) && hasMultiUsers;
 
   // Sync with context when it becomes available
   useEffect(() => {
@@ -162,7 +168,7 @@ export function useTeam(): UseTeamReturn {
 
   // Add member directly (no invitation flow)
   const addMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
-    if (!canManageTeam) {
+    if (!canInviteMembers) {
       return { success: false, error: 'Vous n\'avez pas les permissions pour ajouter des membres' };
     }
 
@@ -170,7 +176,7 @@ export function useTeam(): UseTeamReturn {
       return { success: false, error: `Limite de ${maxUsers} utilisateur(s) atteinte pour votre forfait` };
     }
 
-    // Direction can add exploitation and membre, but not another direction
+    // Direction et RH peuvent ajouter exploitation/comptabilite/rh, mais jamais un autre compte Direction
     if (role === 'direction') {
       return { success: false, error: 'Seul l\'administrateur système peut créer un compte Direction' };
     }
@@ -220,7 +226,7 @@ export function useTeam(): UseTeamReturn {
       console.error('Error in addMember:', e);
       return { success: false, error: 'Erreur inattendue' };
     }
-  }, [authUserId, canManageTeam, canAddMore, maxUsers, licenseId, fetchTeam]);
+  }, [authUserId, canInviteMembers, canAddMore, maxUsers, licenseId, fetchTeam]);
 
   const updateMemberRole = useCallback(async (memberId: string, role: TeamRole): Promise<{ success: boolean; error?: string }> => {
     if (!canManageTeam) {
@@ -299,7 +305,9 @@ export function useTeam(): UseTeamReturn {
     isOwner,
     isAdmin,
     isDirection,
+    isRH,
     canManageTeam,
+    canInviteMembers,
     maxUsers,
     currentUserCount,
     canAddMore,

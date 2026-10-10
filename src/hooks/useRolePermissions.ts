@@ -140,7 +140,8 @@ export function useRolePermissions(): RolePermissions {
     
     const isDirection = normalizedRole === 'direction';
     const isExploitation = normalizedRole === 'exploitation';
-    
+    const isComptabilite = normalizedRole === 'comptabilite';
+
     // Merge exploitation_metric_settings with role defaults for exploitation users
     let financial = { ...config.financial };
     if (isExploitation && metricSettings) {
@@ -160,8 +161,8 @@ export function useRolePermissions(): RolePermissions {
       };
     }
     
-    // Direction & Exploitation can see detailed financial data
-    const canSeeFinancials = isDirection || isExploitation;
+    // Direction, Exploitation (selon réglages) & Comptabilité (toujours) voient le détail financier
+    const canSeeFinancials = isDirection || isExploitation || isComptabilite;
     
     return {
       role: normalizedRole,
@@ -180,10 +181,10 @@ export function useRolePermissions(): RolePermissions {
       financial,
       
       // Legacy compatibility
-      canViewCharges: isDirection,
+      canViewCharges: isDirection || isComptabilite,
       canViewFinancialData: canSeeFinancials,
       canViewPricing: true, // All can see suggested price
-      canViewCostBreakdown: isDirection,
+      canViewCostBreakdown: isDirection || isComptabilite,
       
       // Data modification
       canModifyCharges: config.crud.charges.create,

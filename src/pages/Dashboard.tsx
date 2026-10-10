@@ -39,8 +39,9 @@ export default function Dashboard() {
   const { licenseData } = useLicense();
   const { clients } = useClients();
   const { tours } = useSavedTours();
-  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
   const { settings: marginSettings } = useMarginAlerts();
   
   const [chartType, setChartType] = useState<ChartType>('donut');
@@ -303,8 +304,8 @@ export default function Dashboard() {
   
   const hasActiveFilters = selectedClientId || selectedTourIds.length > 0;
 
-  // Show operational dashboard for non-direction users (after all hooks)
-  if (!isTeamLoading && !isDirection) {
+  // Show operational dashboard for non-direction/non-comptabilite users (after all hooks)
+  if (!isTeamLoading && !isDirection && !isComptabilite) {
     return <OperationalDashboard />;
   }
 

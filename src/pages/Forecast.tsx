@@ -48,8 +48,9 @@ export default function Forecast() {
   const drivers = [...cdiDrivers, ...interimDrivers];
   
   const { licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
   const { clients } = useClients();
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);
@@ -155,8 +156,8 @@ export default function Forecast() {
 
   const avgMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
 
-  // Only Direction can access this page - guard AFTER all hooks
-  if (!isTeamLoading && !isDirection) {
+  // Direction et Comptabilité peuvent accéder à cette page - guard AFTER all hooks
+  if (!isTeamLoading && !isDirection && !isComptabilite) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">

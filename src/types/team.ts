@@ -1,6 +1,8 @@
 // Team/Company Users Types
-// Only 3 roles: direction, exploitation, membre
-export type TeamRole = 'direction' | 'exploitation' | 'membre';
+// 4 rôles métier : direction, exploitation, comptabilite, rh.
+// (L'ancien rôle générique 'membre' a été retiré — migré vers 'exploitation'
+// par la migration SQL 20261010150000_role_model_comptabilite_rh.)
+export type TeamRole = 'direction' | 'exploitation' | 'comptabilite' | 'rh';
 
 export interface CompanyUser {
   id: string;
@@ -24,13 +26,15 @@ export interface TeamMember extends CompanyUser {
 export const ROLE_LABELS: Record<TeamRole, string> = {
   direction: 'Direction',
   exploitation: 'Exploitation',
-  membre: 'Membre',
+  comptabilite: 'Comptabilité',
+  rh: 'RH',
 };
 
 export const ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
-  direction: 'Accès complet, gestion de l\'équipe, des charges et de la licence',
-  exploitation: 'Accès aux données partagées et aux calculs de tournées',
-  membre: 'Accès limité aux données partagées de l\'entreprise',
+  direction: 'Accès complet : gestion de l\'équipe, des charges et de la licence',
+  exploitation: 'Le quotidien opérationnel (tournées, itinéraires, calculs) — pas d\'accès à la Comptabilité ni à la RH',
+  comptabilite: 'Charges fixes, prévisionnel et rentabilité — pas d\'accès aux espaces opérationnels ni à la RH',
+  rh: 'Équipe, accès et conducteurs — peut créer de nouveaux accès pour l\'entreprise',
 };
 
 // Maximum users per plan - SYNCHRONIZED WITH PricingSection.tsx and shared.ts

@@ -25,7 +25,8 @@ import {
   UserCheck,
   Power,
   PowerOff,
-  LogIn
+  LogIn,
+  UsersRound
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -48,13 +49,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-// Simplified roles - direction has full access, exploitation is manager, membre is staff
-type UserRole = 'direction' | 'exploitation' | 'membre';
+// 4 rôles métier (voir src/types/team.ts — migration SQL 20261010150000 pour le détail)
+type UserRole = 'direction' | 'exploitation' | 'comptabilite' | 'rh';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   direction: 'Direction',
   exploitation: 'Exploitation',
-  membre: 'Membre',
+  comptabilite: 'Comptabilité',
+  rh: 'RH',
 };
 
 interface CompanyUser {
@@ -98,6 +100,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   // Add user form
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRole>('exploitation');
+  // (direction reste possible depuis cet outil interne, pour dépanner une société sans Direction)
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
 
   // Login as a specific company user
@@ -442,12 +445,16 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     switch (dbRole) {
       case 'owner':
       case 'direction': return 'direction';
+      case 'comptabilite': return 'comptabilite';
+      case 'rh': return 'rh';
       case 'admin':
       case 'responsable':
       case 'exploitation': return 'exploitation';
+      // 'member'/'membre' : ancien rôle générique, migré vers 'exploitation'
+      // par 20261010150000_role_model_comptabilite_rh.
       case 'member':
       case 'membre':
-      default: return 'membre';
+      default: return 'exploitation';
     }
   };
 
@@ -455,6 +462,8 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
     switch (role) {
       case 'direction': return <Crown className="h-4 w-4 text-amber-500" />;
       case 'exploitation': return <Shield className="h-4 w-4 text-blue-500" />;
+      case 'comptabilite': return <Building2 className="h-4 w-4 text-orange-500" />;
+      case 'rh': return <UsersRound className="h-4 w-4 text-emerald-500" />;
       default: return <User className="h-4 w-4 text-emerald-500" />;
     }
   };
@@ -462,7 +471,9 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
   const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" => {
     switch (role) {
       case 'direction': return 'default';
-      case 'exploitation': return 'secondary';
+      case 'exploitation':
+      case 'comptabilite':
+      case 'rh': return 'secondary';
       default: return 'outline';
     }
   };
@@ -503,7 +514,7 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
           license_id: u.license_id,
           user_id: u.user_id,
           email: u.email,
-          role: u.role as 'owner' | 'admin' | 'member',
+          role: mapLegacyRole(u.role),
           display_name: u.display_name,
           is_active: u.is_active ?? true,
           created_at: u.created_at,
@@ -683,12 +694,13 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="membre">Membre</SelectItem>
                         <SelectItem value="exploitation">Exploitation</SelectItem>
+                        <SelectItem value="comptabilite">Comptabilité</SelectItem>
+                        <SelectItem value="rh">RH</SelectItem>
                         <SelectItem value="direction">Direction</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     {/* Toggle active/inactive button */}
                     <Button
                       variant={user.is_active ? "outline" : "default"}
@@ -760,13 +772,14 @@ export function CompanyUsersManager({ getAdminToken }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="membre">Membre</SelectItem>
                   <SelectItem value="exploitation">Exploitation</SelectItem>
+                  <SelectItem value="comptabilite">Comptabilité</SelectItem>
+                  <SelectItem value="rh">RH</SelectItem>
                   <SelectItem value="direction">Direction</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Direction: accès total • Exploitation: gestion opérationnelle • Membre: accès restreint
+                Direction : accès total • Exploitation : quotidien opérationnel • Comptabilité : charges et rentabilité • RH : équipe et accès
               </p>
             </div>
           </div>

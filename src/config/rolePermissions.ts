@@ -1,15 +1,28 @@
 /**
  * Role-based permissions configuration for OptiFlow
- * 
+ *
  * This file centralizes all role-based access control settings.
- * 
- * ROLES:
- * - direction: Full access to everything, can manage team and see all financial data
- * - exploitation: Operational access, can see margins/pricing, hidden cost details (configurable)
- * - membre: Basic access, can see suggested price only, no financial details
+ *
+ * ROLES (voir src/types/team.ts, seule source du type — réexporté ici sous
+ * le nom historique UserRole pour ne pas casser les imports existants) :
+ * - direction: accès complet, gère l'équipe, voit toutes les données financières
+ * - exploitation: le quotidien opérationnel ; marge/prix visibles par défaut
+ *   (ajustable par société via exploitation_metric_settings), détail des
+ *   coûts masqué par défaut
+ * - comptabilite: Charges + Prévisionnel/Rentabilité, visibilité financière
+ *   complète (comme Direction) mais aucun accès aux espaces opérationnels ni
+ *   à la gestion d'équipe
+ * - rh: espace RH uniquement (conducteurs, équipe) ; peut créer de nouveaux
+ *   accès pour l'entreprise, aucune visibilité financière
+ *
+ * L'ancien rôle générique 'membre' a été retiré (migré vers 'exploitation'
+ * par la migration SQL 20261010150000_role_model_comptabilite_rh — ses
+ * droits financiers étaient plus restreints qu'exploitation ; ajustez
+ * Paramètres > Métriques exploitation si besoin pour un membre migré).
  */
 
-export type UserRole = 'direction' | 'exploitation' | 'membre';
+export type { TeamRole as UserRole } from '@/types/team';
+import type { TeamRole as UserRole } from '@/types/team';
 
 // Pages configuration per role
 export interface RolePageAccess {
@@ -178,41 +191,40 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       quotes: { create: true, read: true, update: true, delete: true },
     },
   },
-  membre: {
+  comptabilite: {
     pages: {
       calculator: true,
-      itinerary: true,
-      tours: true,
-      dashboard: true, // Operational view only
-      forecast: false,
-      vehicles: true,
-      drivers: true,
-      charges: false,
-      clients: true,
+      itinerary: false,
+      tours: false,
+      dashboard: true,
+      forecast: true,
+      vehicles: false,
+      drivers: false,
+      charges: true, // Leur espace principal
+      clients: true, // Facturation / suivi client
       settings: true,
-      team: true, // Can view team members only
-      pricing: false,
+      team: false, // Ne gère pas l'équipe
+      pricing: true,
       aiAnalysis: false,
       vehicleReports: false,
     },
     financial: {
-      // All cost details hidden
-      canViewFuelCost: false,
-      canViewTollCost: false,
-      canViewDriverCost: false,
-      canViewStructureCost: false,
-      canViewTotalCost: false,
-      // Only suggested price visible
-      canViewMargin: false,
-      canViewProfit: false,
-      canViewRevenue: false,
-      canViewPricePerKm: false,
-      canViewSuggestedPrice: true, // Only this is visible
-      canViewDashboardFinancials: false,
-      canViewForecast: false,
+      // Comptabilité a besoin de la visibilité financière complète, comme Direction
+      canViewFuelCost: true,
+      canViewTollCost: true,
+      canViewDriverCost: true,
+      canViewStructureCost: true,
+      canViewTotalCost: true,
+      canViewMargin: true,
+      canViewProfit: true,
+      canViewRevenue: true,
+      canViewPricePerKm: true,
+      canViewSuggestedPrice: true,
+      canViewDashboardFinancials: true,
+      canViewForecast: true,
     },
     team: {
-      canViewTeam: true,
+      canViewTeam: false,
       canInviteMembers: false,
       canRemoveMembers: false,
       canChangeRoles: false,
@@ -220,13 +232,63 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       canManagePermissions: false,
     },
     crud: {
-      vehicles: { create: true, read: true, update: true, delete: true },
-      drivers: { create: true, read: true, update: true, delete: true },
-      clients: { create: true, read: true, update: true, delete: true },
+      vehicles: { create: false, read: false, update: false, delete: false },
+      drivers: { create: false, read: false, update: false, delete: false },
+      clients: { create: true, read: true, update: true, delete: false },
+      charges: { create: true, read: true, update: true, delete: true },
+      tours: { create: false, read: true, update: false, delete: false },
+      trips: { create: false, read: true, update: true, delete: false },
+      quotes: { create: false, read: true, update: true, delete: false },
+    },
+  },
+  rh: {
+    pages: {
+      calculator: false,
+      itinerary: false,
+      tours: false,
+      dashboard: false,
+      forecast: false,
+      vehicles: false,
+      drivers: true, // Leur espace principal (conducteurs = personnel)
+      charges: false,
+      clients: false,
+      settings: true,
+      team: true, // Peut créer de nouveaux accès pour l'entreprise
+      pricing: false,
+      aiAnalysis: false,
+      vehicleReports: false,
+    },
+    financial: {
+      // Pas de visibilité sur les coûts/marges des tournées (hors de leur périmètre)
+      canViewFuelCost: false,
+      canViewTollCost: false,
+      canViewDriverCost: false,
+      canViewStructureCost: false,
+      canViewTotalCost: false,
+      canViewMargin: false,
+      canViewProfit: false,
+      canViewRevenue: false,
+      canViewPricePerKm: false,
+      canViewSuggestedPrice: true,
+      canViewDashboardFinancials: false,
+      canViewForecast: false,
+    },
+    team: {
+      canViewTeam: true,
+      canInviteMembers: true, // Demande explicite : la RH peut aussi créer de nouveaux accès
+      canRemoveMembers: false, // Seule la Direction retire un accès
+      canChangeRoles: false, // Seule la Direction change le rôle d'un membre
+      canConfigureMetrics: false,
+      canManagePermissions: false,
+    },
+    crud: {
+      vehicles: { create: false, read: false, update: false, delete: false },
+      drivers: { create: true, read: true, update: true, delete: false },
+      clients: { create: false, read: false, update: false, delete: false },
       charges: { create: false, read: false, update: false, delete: false },
-      tours: { create: true, read: true, update: true, delete: false }, // Can create/edit but not delete
-      trips: { create: true, read: true, update: true, delete: false },
-      quotes: { create: true, read: true, update: true, delete: false },
+      tours: { create: false, read: false, update: false, delete: false },
+      trips: { create: false, read: false, update: false, delete: false },
+      quotes: { create: false, read: false, update: false, delete: false },
     },
   },
 };
@@ -243,18 +305,25 @@ export function getRoleConfig(role: string | null): RoleConfig {
  * Normalize role names to handle legacy formats
  */
 export function normalizeRole(role: string | null): UserRole {
-  if (!role) return 'membre';
-  
+  if (!role) return 'exploitation';
+
   switch (role.toLowerCase()) {
     case 'direction':
     case 'owner':
       return 'direction';
+    case 'comptabilite':
+      return 'comptabilite';
+    case 'rh':
+      return 'rh';
     case 'exploitation':
     case 'admin':
       return 'exploitation';
+    // 'membre'/'member' : anciennes valeurs (avant comptabilite/rh), déjà
+    // migrées côté base par 20261010150000_role_model_comptabilite_rh —
+    // ce repli ne sert qu'à un cache client obsolète ou une valeur orpheline.
     case 'membre':
     case 'member':
     default:
-      return 'membre';
+      return 'exploitation';
   }
 }

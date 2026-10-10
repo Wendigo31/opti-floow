@@ -8,16 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Users, 
-  UserPlus, 
-  Crown, 
-  Shield, 
-  User, 
-  Mail, 
-  Trash2, 
+import {
+  Users,
+  UserPlus,
+  Crown,
+  Shield,
+  User,
+  Mail,
+  Trash2,
   Loader2,
   AlertCircle,
+  Building2,
+  UsersRound,
 } from 'lucide-react';
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, TeamRole } from '@/types/team';
 import {
@@ -38,6 +40,7 @@ export function TeamManagement() {
     currentUserRole,
     isOwner,
     canManageTeam,
+    canInviteMembers,
     maxUsers,
     currentUserCount,
     canAddMore,
@@ -51,7 +54,7 @@ export function TeamManagement() {
 
   const [memberEmail, setMemberEmail] = useState('');
   const [memberDisplayName, setMemberDisplayName] = useState('');
-  const [memberRole, setMemberRole] = useState<TeamRole>('membre');
+  const [memberRole, setMemberRole] = useState<TeamRole>('exploitation');
   const [isAdding, setIsAdding] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
 
@@ -61,6 +64,10 @@ export function TeamManagement() {
         return <Crown className="h-4 w-4 text-amber-500" />;
       case 'exploitation':
         return <Shield className="h-4 w-4 text-blue-500" />;
+      case 'comptabilite':
+        return <Building2 className="h-4 w-4 text-orange-500" />;
+      case 'rh':
+        return <UsersRound className="h-4 w-4 text-emerald-500" />;
       default:
         return <User className="h-4 w-4 text-muted-foreground" />;
     }
@@ -71,6 +78,8 @@ export function TeamManagement() {
       case 'direction':
         return 'default';
       case 'exploitation':
+      case 'comptabilite':
+      case 'rh':
         return 'secondary';
       default:
         return 'outline';
@@ -107,7 +116,7 @@ export function TeamManagement() {
       });
       setMemberEmail('');
       setMemberDisplayName('');
-      setMemberRole('membre');
+      setMemberRole('exploitation');
     } else {
       toast({
         title: 'Erreur',
@@ -229,8 +238,8 @@ export function TeamManagement() {
           </CardHeader>
         </Card>
 
-        {/* Add member form */}
-        {canManageTeam && (
+        {/* Add member form — Direction ET RH peuvent inviter */}
+        {canInviteMembers && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -273,8 +282,9 @@ export function TeamManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="membre">Membre</SelectItem>
                       <SelectItem value="exploitation">Exploitation</SelectItem>
+                      <SelectItem value="comptabilite">Comptabilité</SelectItem>
+                      <SelectItem value="rh">RH</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -353,8 +363,9 @@ export function TeamManagement() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="membre">Membre</SelectItem>
                             <SelectItem value="exploitation">Exploitation</SelectItem>
+                            <SelectItem value="comptabilite">Comptabilité</SelectItem>
+                            <SelectItem value="rh">RH</SelectItem>
                           </SelectContent>
                         </Select>
                         {isOwner && (

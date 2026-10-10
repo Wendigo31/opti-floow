@@ -5,38 +5,46 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTeam } from '@/hooks/useTeam';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Users, 
-  Crown, 
-  Briefcase, 
+import {
+  Users,
+  Crown,
+  Briefcase,
   Truck,
   User,
   Mail,
   Loader2,
   AlertCircle,
+  Building2,
+  UsersRound,
 } from 'lucide-react';
 import { TeamRole } from '@/types/team';
 
-const SIMPLE_ROLES = ['exploitation', 'membre'] as const;
+const SIMPLE_ROLES = ['exploitation', 'comptabilite', 'rh'] as const;
 type SimpleRole = typeof SIMPLE_ROLES[number];
 
-const ROLE_CONFIG: Record<SimpleRole, { 
-  label: string; 
-  description: string; 
+const ROLE_CONFIG: Record<SimpleRole, {
+  label: string;
+  description: string;
   icon: React.ElementType;
   color: string;
 }> = {
   exploitation: {
     label: 'Exploitation',
-    description: 'Accès au calculateur et données opérationnelles',
+    description: 'Le quotidien opérationnel — pas d\'accès à la Comptabilité ni à la RH',
     icon: Truck,
     color: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
   },
-  membre: {
-    label: 'Membre',
-    description: 'Gère véhicules, conducteurs et clients sans données financières',
-    icon: User,
-    color: 'bg-gray-500/20 text-gray-600 border-gray-500/30',
+  comptabilite: {
+    label: 'Comptabilité',
+    description: 'Charges, prévisionnel et rentabilité — pas d\'accès aux espaces opérationnels ni à la RH',
+    icon: Building2,
+    color: 'bg-orange-500/20 text-orange-600 border-orange-500/30',
+  },
+  rh: {
+    label: 'RH',
+    description: 'Équipe et conducteurs — peut aussi créer de nouveaux accès',
+    icon: UsersRound,
+    color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30',
   },
 };
 
@@ -77,8 +85,12 @@ export function RoleManagement() {
         return 'direction';
       case 'exploitation':
         return 'exploitation';
+      case 'comptabilite':
+        return 'comptabilite';
+      case 'rh':
+        return 'rh';
       default:
-        return 'membre';
+        return 'exploitation';
     }
   };
 
@@ -129,7 +141,7 @@ export function RoleManagement() {
           Gestion des rôles
         </CardTitle>
         <CardDescription>
-          Changez le rôle des membres de l'équipe (Exploitation ou Membre)
+          Changez le rôle des membres de l'équipe (Exploitation, Comptabilité ou RH)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

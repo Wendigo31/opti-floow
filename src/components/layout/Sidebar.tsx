@@ -7,7 +7,8 @@ import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { useSidebarContext } from '@/context/SidebarContext';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NAV_CATEGORIES, canSeeNavPage, getCategoryIdForPath } from '@/config/appNavigation';
+import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory, getCategoryIdForPath } from '@/config/appNavigation';
+import type { TeamRole } from '@/types/team';
 
 // Feature labels for the "restricted features" tooltip
 const FEATURE_LABELS: Record<string, string> = {
@@ -43,9 +44,10 @@ export function Sidebar() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { hasFeature, licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam } = useTeam();
+  const { isDirection: isDirectionFromTeam, currentUserRole } = useTeam();
   // Fallback: use userRole from cached license data when auth session isn't ready
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const role = currentUserRole || (licenseData?.userRole as TeamRole | null | undefined) || null;
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   // Get restricted features (user-specific overrides that are disabled)
@@ -58,13 +60,17 @@ export function Sidebar() {
     );
   };
 
-  const accessCtx = { hasFeature, canAccessUserFeature, isDirection };
+  const accessCtx = { hasFeature, canAccessUserFeature, isDirection, role };
 
-  // La barre latérale n'apparaît que dans un espace (catégorie) sélectionné :
-  // elle disparaît sur l'accueil et les pages transversales.
+  // La barre latérale n'apparaît que dans un espace (catégorie) sélectionné,
+  // et uniquement si ce rôle y a accès — elle disparaît sur l'accueil, les
+  // pages transversales, et pour un espace réservé à un autre rôle.
   const activeCategoryId = getCategoryIdForPath(location.pathname);
-  const activeCategory = activeCategoryId
+  const rawActiveCategory = activeCategoryId
     ? NAV_CATEGORIES.find((c) => c.id === activeCategoryId)
+    : null;
+  const activeCategory = rawActiveCategory && canSeeNavCategory(rawActiveCategory, accessCtx)
+    ? rawActiveCategory
     : null;
   const visiblePages = activeCategory
     ? activeCategory.pages.filter((page) => canSeeNavPage(page, accessCtx))

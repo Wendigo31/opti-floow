@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import type { FeatureKey } from '@/hooks/useLicense';
 import type { FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
+import type { TeamRole } from '@/types/team';
 
 export type NavCategoryId =
   | 'exploitation'
@@ -64,8 +65,8 @@ export interface NavPageConfig {
   requiredFeature?: FeatureKey;
   /** Restriction individuelle (par utilisateur). */
   userFeatureKey?: UserFeatureKey;
-  /** Visible uniquement par le rôle Direction. */
-  directionOnly?: boolean;
+  /** Visible uniquement par ces rôles métier (absent = tous les rôles). */
+  allowedRoles?: TeamRole[];
 }
 
 export interface NavCategoryConfig {
@@ -73,6 +74,8 @@ export interface NavCategoryConfig {
   label: string;
   icon: LucideIcon;
   pages: NavPageConfig[];
+  /** Espace visible uniquement par ces rôles métier (absent = tous les rôles). */
+  allowedRoles?: TeamRole[];
 }
 
 const P = {
@@ -83,13 +86,13 @@ const P = {
   vehicles: { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
   itinerary: { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
   aiAnalysis: { to: '/ai-analysis', icon: Sparkles, label: 'Analyse par IA', requiredFeature: 'page_ai_analysis' },
-  charges: { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', directionOnly: true },
+  charges: { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', allowedRoles: ['direction', 'comptabilite'] },
   drivers: { to: '/drivers', icon: Users, label: 'Conducteurs', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
-  team: { to: '/team', icon: UsersRound, label: 'Équipe' },
+  team: { to: '/team', icon: UsersRound, label: 'Équipe', allowedRoles: ['direction', 'rh'] },
   restrictions: { to: '/my-restrictions', icon: ShieldCheck, label: 'Mes accès' },
   calculator: { to: '/calculator', icon: Calculator, label: 'Calculateur', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
-  dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard' },
-  forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', directionOnly: true },
+  dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard', allowedRoles: ['direction', 'comptabilite'] },
+  forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', allowedRoles: ['direction', 'comptabilite'] },
   vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
   history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
   install: { to: '/install', icon: Download, label: "Installer l'application" },
@@ -101,37 +104,44 @@ const P = {
 export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'exploitation', label: 'Exploitation', icon: Boxes,
+    allowedRoles: ['direction', 'exploitation'],
     // Planifier (Planning) → monter une ligne → gérer les tournées → calculer un trajet →
     // consulter l'historique → données de référence (clients/véhicules/conducteurs) → réglages.
     pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers, P.settings],
   },
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
+    allowedRoles: ['direction', 'exploitation'],
     // Calculer un itinéraire → l'optimiser par IA → le planifier → le retrouver dans les tournées → réglages.
     pages: [P.itinerary, P.aiAnalysis, P.planning, P.tours, P.settings],
   },
   {
     id: 'parc', label: 'Gestion de parc', icon: Warehouse,
+    allowedRoles: ['direction', 'exploitation'],
     // Le parc de véhicules → ses rapports → les conducteurs qui les utilisent → installer l'appli → réglages.
     pages: [P.vehicles, P.vehicleReports, P.drivers, P.install, P.settings],
   },
   {
     id: 'rh', label: 'RH', icon: Users,
+    allowedRoles: ['direction', 'rh'],
     // Les conducteurs → l'équipe → leur planning → mes propres accès → réglages.
     pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
   },
   {
     id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
+    allowedRoles: ['direction', 'exploitation'],
     // Le devis (outil principal) → le client → l'itinéraire → le prix → comparaison avec les tournées passées.
     pages: [P.tenders, P.clients, P.itinerary, P.calculator, P.tours],
   },
   {
     id: 'comptabilite', label: 'Comptabilité', icon: Building2,
+    allowedRoles: ['direction', 'comptabilite'],
     // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients → réglages.
     pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
   },
   {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
+    allowedRoles: ['direction', 'comptabilite'],
     // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent → réglages.
     pages: [P.dashboard, P.aiAnalysis, P.forecast, P.calculator, P.history, P.tours, P.charges, P.vehicleReports, P.settings],
   },
@@ -140,20 +150,36 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
 interface NavAccessContext {
   hasFeature: (feature: FeatureKey) => boolean;
   canAccessUserFeature: (feature: UserFeatureKey) => boolean;
+  /** Conservé pour compat (quelques écrans ne lisent que ce booléen). */
   isDirection: boolean;
+  /** Rôle métier de l'utilisateur courant (direction/exploitation/comptabilite/rh). */
+  role?: TeamRole | null;
+}
+
+/** Vrai si le rôle courant fait partie de la liste autorisée (absente = tous les rôles). */
+function isRoleAllowed(allowedRoles: TeamRole[] | undefined, ctx: NavAccessContext): boolean {
+  if (!allowedRoles || allowedRoles.length === 0) return true;
+  if (ctx.isDirection) return true; // Direction voit toujours tout.
+  return !!ctx.role && allowedRoles.includes(ctx.role);
 }
 
 /** Vrai si la page doit être visible pour l'utilisateur courant. */
 export function canSeeNavPage(page: NavPageConfig, ctx: NavAccessContext): boolean {
   if (page.requiredFeature && !ctx.hasFeature(page.requiredFeature)) return false;
   if (page.userFeatureKey && !ctx.canAccessUserFeature(page.userFeatureKey)) return false;
-  if (page.directionOnly && !ctx.isDirection) return false;
+  if (!isRoleAllowed(page.allowedRoles, ctx)) return false;
   return true;
 }
 
-/** Catégories avec uniquement leurs pages visibles ; les catégories vides sont omises. */
+/** Vrai si l'espace (catégorie) lui-même est accessible au rôle courant. */
+export function canSeeNavCategory(category: NavCategoryConfig, ctx: NavAccessContext): boolean {
+  return isRoleAllowed(category.allowedRoles, ctx);
+}
+
+/** Catégories accessibles au rôle, avec uniquement leurs pages visibles ; les catégories vides ou non autorisées sont omises. */
 export function getVisibleNavCategories(ctx: NavAccessContext): (NavCategoryConfig & { pages: NavPageConfig[] })[] {
   return NAV_CATEGORIES
+    .filter((category) => canSeeNavCategory(category, ctx))
     .map((category) => ({
       ...category,
       pages: category.pages.filter((page) => canSeeNavPage(page, ctx)),

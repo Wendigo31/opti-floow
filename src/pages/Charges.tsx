@@ -56,8 +56,9 @@ export default function Charges() {
   
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
   const { licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, isLoading: isTeamLoading } = useTeam();
+  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -73,10 +74,10 @@ export default function Charges() {
     }
   }, []);
   
-  // Only direction role can view and modify charges
+  // Direction et Comptabilité peuvent voir et modifier les charges
   // Default to showing charges while team role is loading (avoid flash of "access denied")
-  const canViewCharges = isTeamLoading ? true : isDirection;
-  const canModifyCharges = isTeamLoading ? true : isDirection;
+  const canViewCharges = isTeamLoading ? true : (isDirection || isComptabilite);
+  const canModifyCharges = isTeamLoading ? true : (isDirection || isComptabilite);
   
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);

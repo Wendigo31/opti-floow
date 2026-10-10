@@ -9,18 +9,20 @@ import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { NAV_CATEGORIES, canSeeNavPage } from '@/config/appNavigation';
+import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory } from '@/config/appNavigation';
+import type { TeamRole } from '@/types/team';
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { hasFeature } = useLicense();
-  const { isDirection: isDirectionFromTeam } = useTeam();
+  const { isDirection: isDirectionFromTeam, currentUserRole } = useTeam();
   const { licenseData } = useLicense();
   const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
+  const role = currentUserRole || (licenseData?.userRole as TeamRole | null | undefined) || null;
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
-  const accessCtx = { hasFeature, canAccessUserFeature, isDirection };
+  const accessCtx = { hasFeature, canAccessUserFeature, isDirection, role };
 
   const handleNavClick = () => {
     setOpen(false);
@@ -55,6 +57,7 @@ export function MobileNav() {
         {/* Navigation grouped by the 5 business categories */}
         <nav className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-80px)]">
           {NAV_CATEGORIES.map((category) => {
+            if (!canSeeNavCategory(category, accessCtx)) return null;
             const visiblePages = category.pages.filter((page) => canSeeNavPage(page, accessCtx));
             if (visiblePages.length === 0) return null;
 

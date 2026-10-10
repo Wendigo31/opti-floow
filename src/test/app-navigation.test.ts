@@ -17,10 +17,34 @@ describe('authenticated app navigation', () => {
     ]);
   });
 
-  it('keeps fixed charges Direction-only in accounting', () => {
+  it('keeps fixed charges reserved to Direction and Comptabilité', () => {
     const accounting = NAV_CATEGORIES.find((category) => category.id === 'comptabilite');
     const charges = accounting?.pages.find((page) => page.to === '/charges');
-    expect(charges?.directionOnly).toBe(true);
+    expect(charges?.allowedRoles).toEqual(['direction', 'comptabilite']);
+  });
+
+  it('separates the 4 roles across categories (Exploitation cannot reach Comptabilité or RH)', () => {
+    const exploitation = NAV_CATEGORIES.find((category) => category.id === 'exploitation');
+    const comptabilite = NAV_CATEGORIES.find((category) => category.id === 'comptabilite');
+    const rentabilite = NAV_CATEGORIES.find((category) => category.id === 'rentabilite');
+    const rh = NAV_CATEGORIES.find((category) => category.id === 'rh');
+
+    expect(exploitation?.allowedRoles).toEqual(['direction', 'exploitation']);
+    expect(comptabilite?.allowedRoles).toEqual(['direction', 'comptabilite']);
+    expect(rentabilite?.allowedRoles).toEqual(['direction', 'comptabilite']);
+    expect(rh?.allowedRoles).toEqual(['direction', 'rh']);
+
+    // Un rôle hors liste n'a jamais accès à l'espace (sauf Direction, qui voit tout).
+    expect(comptabilite?.allowedRoles).not.toContain('exploitation');
+    expect(rh?.allowedRoles).not.toContain('exploitation');
+    expect(exploitation?.allowedRoles).not.toContain('comptabilite');
+    expect(exploitation?.allowedRoles).not.toContain('rh');
+  });
+
+  it('reserves the team page to Direction and RH', () => {
+    const rh = NAV_CATEGORIES.find((category) => category.id === 'rh');
+    const team = rh?.pages.find((page) => page.to === '/team');
+    expect(team?.allowedRoles).toEqual(['direction', 'rh']);
   });
 
   it('keeps shared operational pages available from exploitation', () => {

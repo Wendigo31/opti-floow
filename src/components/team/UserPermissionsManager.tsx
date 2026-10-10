@@ -27,7 +27,7 @@ import {
   EyeOff,
   Save,
 } from 'lucide-react';
-import { TeamMember } from '@/types/team';
+import { TeamMember, ROLE_LABELS } from '@/types/team';
 
 // Feature definitions for granular permissions
 const PERMISSION_FEATURES = {
@@ -314,8 +314,8 @@ export function UserPermissionsManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="capitalize">
-                      {member.role}
+                    <Badge variant="outline">
+                      {ROLE_LABELS[member.role] ?? member.role}
                     </Badge>
                     {overrides.filter(o => !o.enabled).length > 0 && (
                       <Badge variant="secondary" className="text-xs">
