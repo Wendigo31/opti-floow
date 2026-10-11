@@ -109,45 +109,26 @@ export function AccessRequestsManager({ getAdminToken }: Props) {
     fetchLicenses();
   }, [getAdminToken]);
 
-  // Fetch access requests
+  // Fetch access requests.
+  // NOTE (corrigé le 10/10) : la connexion au panneau admin (code secret) n'ouvre
+  // aucune vraie session Supabase Auth, seulement un jeton interne — les anciens
+  // appels directs `.from('access_requests')`/`.from('company_users')` ici étaient
+  // donc bloqués par RLS (auth.uid() = NULL) et ne renvoyaient jamais rien. On passe
+  // par l'edge function (service-role, autorisation via le jeton admin) à la place.
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      // Fetch requests
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('access_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const token = getAdminToken();
+      if (!token) throw new Error('Session admin expirée');
 
-      if (requestsError) throw requestsError;
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: { action: 'list-access-requests', adminToken: token },
+      });
 
-      // Fetch user and license info separately to avoid join issues
-      const formattedRequests: AccessRequest[] = await Promise.all(
-        (requestsData || []).map(async (r: any) => {
-          // Get user info
-          const { data: userData } = await supabase
-            .from('company_users')
-            .select('email, display_name')
-            .eq('id', r.company_user_id)
-            .maybeSingle();
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erreur inconnue');
 
-          // Get license info
-          const { data: licenseData } = await supabase
-            .from('licenses')
-            .select('company_name')
-            .eq('id', r.license_id)
-            .maybeSingle();
-
-          return {
-            ...r,
-            user_email: userData?.email,
-            user_display_name: userData?.display_name,
-            company_name: licenseData?.company_name,
-          };
-        })
-      );
-
-      setRequests(formattedRequests);
+      setRequests(data.requests || []);
     } catch (err) {
       console.error('Error fetching requests:', err);
       toast({
@@ -168,29 +149,26 @@ export function AccessRequestsManager({ getAdminToken }: Props) {
 
     setProcessing(true);
     try {
-      const { error } = await supabase.rpc('process_access_request', {
-        p_request_id: selectedRequest.id,
-        p_status: status,
-        p_comment: adminComment || null,
-        p_processed_by: 'admin',
+      // Même raison que fetchRequests ci-dessus : le panneau admin n'a pas de vraie
+      // session Supabase, donc ni la RPC `process_access_request` (qui revérifie
+      // auth.uid() en interne) ni l'upsert direct sur user_feature_overrides ne
+      // pouvaient fonctionner depuis ici. L'edge function fait les deux, en
+      // service-role, avec l'autorisation déjà validée par le jeton admin.
+      const token = getAdminToken();
+      if (!token) throw new Error('Session admin expirée');
+
+      const { data, error } = await supabase.functions.invoke('validate-license', {
+        body: {
+          action: 'process-access-request',
+          adminToken: token,
+          requestId: selectedRequest.id,
+          status,
+          comment: adminComment || null,
+        },
       });
 
       if (error) throw error;
-
-      // If approved, create the feature overrides
-      if (status === 'approved') {
-        for (const feature of selectedRequest.requested_features) {
-          await supabase
-            .from('user_feature_overrides')
-            .upsert({
-              company_user_id: selectedRequest.company_user_id,
-              feature_key: feature,
-              enabled: true,
-            }, {
-              onConflict: 'company_user_id,feature_key',
-            });
-        }
-      }
+      if (!data?.success) throw new Error(data?.error || 'Erreur inconnue');
 
       toast({
         title: status === 'approved' ? 'Demande approuvée' : 'Demande refusée',

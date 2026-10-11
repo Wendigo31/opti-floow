@@ -1,6 +1,7 @@
 import { Users, Building2, Settings2, FileText } from 'lucide-react';
 import type { PlanType } from '@/hooks/useLicense';
 import type { LicenseFeatures } from '@/types/features';
+import type { TeamRole } from '@/types/team';
 
 /**
  * Types et constantes partagés par la page src/pages/Admin.tsx et ses
@@ -50,7 +51,10 @@ export interface LicenseFormData {
   city: string;
   postalCode: string;
   assignToCompanyId: string | null;
-  userRole: 'owner' | 'admin' | 'member';
+  // 4 vrais rôles métier (voir src/types/team.ts) — remplace les anciennes
+  // valeurs 'owner'/'admin'/'member' qui ne mappaient qu'à direction/
+  // exploitation et ne permettaient pas d'assigner Comptabilité/RH ici.
+  userRole: TeamRole;
 }
 
 export const emptyFormData: LicenseFormData = {
@@ -64,7 +68,7 @@ export const emptyFormData: LicenseFormData = {
   city: '',
   postalCode: '',
   assignToCompanyId: null,
-  userRole: 'member',
+  userRole: 'exploitation',
 };
 
 // Sidebar navigation items - Simplified (pricing removed)

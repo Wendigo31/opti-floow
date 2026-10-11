@@ -190,13 +190,19 @@ export const logAdminAction = async (
   }
 };
 
-// Map legacy roles to new simplified roles
-export const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploitation' | 'membre' => {
+// Map legacy roles to the 4 real business roles (direction/exploitation/comptabilite/rh).
+// SYNCHRONIZED WITH: src/config/rolePermissions.ts normalizeRole() — keep both in sync.
+// 'membre' n'est plus une valeur valide depuis la migration 20261010150000 (contrainte
+// CHECK resserrée côté company_users) : un fallback vers 'membre' ferait échouer
+// l'INSERT ci-dessous avec une violation de contrainte au lieu de créer un compte.
+export const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploitation' | 'comptabilite' | 'rh' => {
   const normalizedRole = (role || '').toLowerCase().trim();
   switch (normalizedRole) {
     case 'owner': case 'direction': return 'direction';
+    case 'comptabilite': return 'comptabilite';
+    case 'rh': return 'rh';
     case 'admin': case 'exploitation': return 'exploitation';
-    case 'member': case 'membre': default: return 'membre';
+    case 'member': case 'membre': default: return 'exploitation';
   }
 };
 

@@ -81,13 +81,15 @@ USING (
 -- MAIS la connexion admin (code secret vendeur) n'ouvre aucune vraie
 -- session Supabase Auth — seul un jeton interne en sessionStorage. Sans
 -- "Se connecter en tant que" (impersonation d'un client précis), auth.uid()
--- est donc NULL et cette policy ne renvoie jamais aucune ligne au
--- panneau admin, quel que soit son contenu. Ce correctif rend la policy
--- cohérente sur le papier, mais NE RÉSOUT PAS ce problème plus profond —
--- il faudrait un accès service_role (edge function dédiée, comme
--- validate-license le fait déjà pour lister les licences) pour que le
--- panneau admin voie vraiment toutes les demandes. Signalé à l'utilisateur,
--- pas corrigé ici (changement d'architecture, pas un correctif de policy).
+-- est donc NULL et cette policy ne renvoyait jamais aucune ligne au panneau
+-- admin, quel que soit son contenu. CÔTÉ FRONT : AccessRequestsManager.tsx
+-- passe maintenant par deux nouvelles actions service-role de l'edge
+-- function validate-license (list-access-requests / process-access-request,
+-- supabase/functions/validate-license/admin.ts), sur le même principe que
+-- list-all pour les licences — le panneau admin voit maintenant vraiment
+-- toutes les demandes. Cette policy RLS reste nécessaire pour un éventuel
+-- accès direct par un compte Direction/RH authentifié normalement dans
+-- l'app (hors panneau admin), d'où sa correction ici malgré tout.
 
 DROP POLICY IF EXISTS "Direction and responsable can view all requests" ON public.access_requests;
 CREATE POLICY "Direction and RH can view all requests"
@@ -101,3 +103,58 @@ USING (
       AND company_users.role = ANY (ARRAY['direction'::text, 'rh'::text])
   )
 );
+
+-- =====================================================================
+-- process_access_request() : même rôle mort ('responsable'), corrigé
+-- =====================================================================
+-- La fonction elle-même n'est plus appelée par le panneau admin (qui passe
+-- maintenant par process-access-request, service-role, voir ci-dessus),
+-- mais elle reste appelable par un compte Direction authentifié normalement
+-- dans l'app. Même correction que la policy : 'responsable' → 'rh'.
+CREATE OR REPLACE FUNCTION public.process_access_request(
+  p_request_id uuid,
+  p_status text,
+  p_comment text DEFAULT NULL,
+  p_processed_by text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_license_id UUID;
+  v_caller_role TEXT;
+BEGIN
+  SELECT license_id INTO v_license_id
+  FROM public.access_requests
+  WHERE id = p_request_id;
+
+  IF v_license_id IS NULL THEN
+    RAISE EXCEPTION 'Access request not found';
+  END IF;
+
+  -- Verify caller is direction or rh (anciennement 'responsable', rôle mort)
+  SELECT role INTO v_caller_role
+  FROM public.company_users
+  WHERE user_id = auth.uid()
+    AND license_id = v_license_id
+    AND is_active = true
+    AND role IN ('direction', 'rh');
+
+  IF v_caller_role IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Only direction or rh can process access requests';
+  END IF;
+
+  UPDATE public.access_requests
+  SET
+    status = p_status,
+    admin_comment = p_comment,
+    processed_by = COALESCE(p_processed_by, (SELECT email FROM auth.users WHERE id = auth.uid())),
+    processed_at = now(),
+    updated_at = now()
+  WHERE id = p_request_id;
+
+  RETURN FOUND;
+END;
+$$;

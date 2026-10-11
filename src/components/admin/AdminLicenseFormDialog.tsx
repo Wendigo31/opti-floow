@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { License, LicenseFormData } from '@/types/admin';
+import { ROLE_LABELS } from '@/types/team';
 
 interface AdminLicenseFormDialogProps {
   dialogOpen: boolean;
@@ -122,9 +123,10 @@ export function AdminLicenseFormDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="member">Membre</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="owner">Propriétaire</SelectItem>
+                        <SelectItem value="exploitation">{ROLE_LABELS.exploitation}</SelectItem>
+                        <SelectItem value="comptabilite">{ROLE_LABELS.comptabilite}</SelectItem>
+                        <SelectItem value="rh">{ROLE_LABELS.rh}</SelectItem>
+                        <SelectItem value="direction">{ROLE_LABELS.direction}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

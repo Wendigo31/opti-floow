@@ -274,7 +274,7 @@ export default function Admin() {
       city: license.city || '',
       postalCode: license.postal_code || '',
       assignToCompanyId: null,
-      userRole: 'member',
+      userRole: 'exploitation', // non affiché en mode édition (sélecteur réservé à dialogMode === 'create')
     });
     setCreatedLicense(null);
     setDialogOpen(true);

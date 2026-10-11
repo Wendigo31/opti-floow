@@ -12,6 +12,7 @@ const ADMIN_ACTIONS = new Set([
   "get-login-history", "get-user-stats", "get-user-details",
   "get-addons", "update-addons", "admin-update-addons", "admin-get-addons",
   "get-audit-logs", "sync-company",
+  "list-access-requests", "process-access-request",
 ]);
 
 serve(async (req: Request): Promise<Response> => {

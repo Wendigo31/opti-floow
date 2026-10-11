@@ -30,6 +30,8 @@ export async function handleAdminAction(
     case "admin-get-addons": return handleAdminGetAddons(body, supabase, authHeader);
     case "get-audit-logs": return handleGetAuditLogs(body, supabase, authHeader);
     case "sync-company": return handleSyncCompany(body, supabase);
+    case "list-access-requests": return handleListAccessRequests(body, supabase, authHeader, clientIp);
+    case "process-access-request": return handleProcessAccessRequest(body, supabase, authHeader, clientIp);
     default: return errorResponse("Action non reconnue", 400);
   }
 }
@@ -579,4 +581,76 @@ async function handleSyncCompany(body: any, supabase: any) {
   await supabase.from("licenses").update({ last_used_at: new Date().toISOString() }).eq("id", license.id);
   console.log(`[sync-company] Synced ${companyUsers?.length || 0} users for company ${license.company_name}`);
   return jsonResponse({ success: true, syncedCount: companyUsers?.length || 0, companyName: license.company_name, planType: license.plan_type });
+}
+
+// NOTE (audit du 10/10) : le panneau admin (code secret) n'ouvre jamais de vraie
+// session Supabase Auth — seul un jeton interne est stocké. Les deux handlers
+// ci-dessous existent PARCE QUE les anciens appels client directs
+// (`supabase.from('access_requests')...`, `supabase.rpc('process_access_request', ...)`)
+// dépendaient tous de `auth.uid()` (RLS ou vérification interne de la fonction) et ne
+// renvoyaient donc jamais rien côté panneau admin, quel que soit leur contenu. Ici, le
+// client service-role (créé dans index.ts) contourne RLS, et l'autorisation vient de
+// `requireAdmin` (même garde que tous les autres handlers de ce fichier) — pas de
+// `auth.uid()` à vérifier.
+
+async function handleListAccessRequests(body: any, supabase: any, authHeader: string | null, _clientIp: string) {
+  const auth = await requireAdmin(body, authHeader);
+  if (!auth.authorized) return errorResponse("Accès non autorisé", 403);
+
+  const { data: requestsData, error } = await supabase
+    .from("access_requests").select("*").order("created_at", { ascending: false });
+  if (error) return errorResponse("Erreur base de données", 500);
+
+  const requests = await Promise.all(
+    (requestsData || []).map(async (r: any) => {
+      const [{ data: userData }, { data: licenseData }] = await Promise.all([
+        supabase.from("company_users").select("email, display_name").eq("id", r.company_user_id).maybeSingle(),
+        supabase.from("licenses").select("company_name").eq("id", r.license_id).maybeSingle(),
+      ]);
+      return {
+        ...r,
+        user_email: userData?.email,
+        user_display_name: userData?.display_name,
+        company_name: licenseData?.company_name,
+      };
+    })
+  );
+
+  return jsonResponse({ success: true, requests });
+}
+
+async function handleProcessAccessRequest(body: any, supabase: any, authHeader: string | null, clientIp: string) {
+  const { requestId, status, comment } = body;
+  const auth = await requireAdmin(body, authHeader);
+  if (!auth.authorized) return errorResponse("Accès non autorisé", 403);
+  if (!requestId || !status) return errorResponse("requestId et status requis", 400);
+  if (status !== "approved" && status !== "rejected") return errorResponse("status invalide", 400);
+
+  const { data: request, error: fetchError } = await supabase
+    .from("access_requests").select("company_user_id, requested_features").eq("id", requestId).maybeSingle();
+  if (fetchError || !request) return errorResponse("Demande introuvable", 404);
+
+  const { error: updateError } = await supabase.from("access_requests").update({
+    status,
+    admin_comment: comment || null,
+    processed_by: auth.email || "admin",
+    processed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", requestId);
+  if (updateError) return errorResponse("Erreur lors du traitement: " + updateError.message, 500);
+
+  // Approuver accorde les fonctionnalités demandées (même effet que l'ancien code
+  // client, désormais fait côté service-role pour que ça fonctionne réellement).
+  if (status === "approved") {
+    for (const feature of (request.requested_features || [])) {
+      await supabase.from("user_feature_overrides").upsert({
+        company_user_id: request.company_user_id,
+        feature_key: feature,
+        enabled: true,
+      }, { onConflict: "company_user_id,feature_key" });
+    }
+  }
+
+  await logAdminAction(supabase, auth.email || "admin", "process_access_request", requestId, { status }, clientIp);
+  return jsonResponse({ success: true });
 }
