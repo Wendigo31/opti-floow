@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { parseExcelFile, parseChargesFromExcel, parseToursFromExcel, generateExcelTemplate } from '@/utils/excelImport';
+import { parseExcelFile, parseChargesFromExcel, parseToursFromExcel, generateExcelTemplate, type ToursExcelLookups } from '@/utils/excelImport';
 import type { FixedCharge } from '@/types';
 import type { SavedTour } from '@/types/savedTour';
 import { toast } from 'sonner';
@@ -14,9 +14,11 @@ interface ExcelImportDialogProps {
   onOpenChange: (open: boolean) => void;
   type: 'charges' | 'tours';
   onImport: (data: Partial<FixedCharge>[] | Partial<SavedTour>[]) => void;
+  /** type: 'tours' uniquement — permet de rapprocher par nom les colonnes véhicule/client/conducteur avec les données déjà en base. */
+  tourLookups?: ToursExcelLookups;
 }
 
-export function ExcelImportDialog({ open, onOpenChange, type, onImport }: ExcelImportDialogProps) {
+export function ExcelImportDialog({ open, onOpenChange, type, onImport, tourLookups }: ExcelImportDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any[]>([]);
@@ -33,9 +35,9 @@ export function ExcelImportDialog({ open, onOpenChange, type, onImport }: ExcelI
 
     try {
       const workbook = await parseExcelFile(selectedFile);
-      const data = type === 'charges' 
+      const data = type === 'charges'
         ? parseChargesFromExcel(workbook)
-        : parseToursFromExcel(workbook);
+        : parseToursFromExcel(workbook, tourLookups);
       
       setPreview(data);
     } catch (err) {

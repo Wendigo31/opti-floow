@@ -15,7 +15,8 @@ import {
   Sparkles,
   EyeOff,
   Copy,
-  UserCheck
+  UserCheck,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +73,8 @@ import jsPDF from 'jspdf';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 import { useMemo } from 'react';
+import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
+import type { ToursExcelLookups } from '@/utils/excelImport';
 
 export default function Tours() {
   const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour, updateTour } = useSavedTours();
@@ -82,10 +85,59 @@ export default function Tours() {
   const { vehicles } = useCloudVehicles();
   const { trailers } = useCloudTrailers();
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
-  const allDrivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
+  const allDrivers = useMemo(
+    () => [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers],
+    [cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers],
+  );
 
   // ── Coût réel par tournée : recalculé automatiquement depuis la flotte, le trajet et les conducteurs actuels ──
   const realCosts = useTourRealCosts(tours);
+
+  // ── Import Excel de trajets/missions, comme sur Charges fixes/Véhicules ──
+  const [importToursOpen, setImportToursOpen] = useState(false);
+  const toursExcelLookups: ToursExcelLookups = useMemo(() => ({
+    vehicles: vehicles.map(v => ({ id: v.id, name: v.name })),
+    clients: clients.map(c => ({ id: c.id, name: c.name })),
+    drivers: allDrivers.map(d => ({
+      id: d.id,
+      name: (d.firstName && d.lastName) ? `${d.firstName} ${d.lastName}` : (d.name || ''),
+    })),
+  }), [vehicles, clients, allDrivers]);
+
+  const handleImportTours = async (data: Partial<SavedTour>[]) => {
+    let imported = 0;
+    for (const row of data) {
+      const ok = await saveTour({
+        name: row.name || 'Tournée importée',
+        origin_address: row.origin_address || '',
+        destination_address: row.destination_address || '',
+        distance_km: row.distance_km || 0,
+        toll_cost: row.toll_cost || 0,
+        fuel_cost: row.fuel_cost || 0,
+        adblue_cost: row.adblue_cost || 0,
+        driver_cost: row.driver_cost || 0,
+        structure_cost: row.structure_cost || 0,
+        vehicle_cost: row.vehicle_cost || 0,
+        total_cost: row.total_cost || 0,
+        pricing_mode: row.pricing_mode || 'fixed',
+        revenue: row.revenue || 0,
+        profit: row.profit || 0,
+        profit_margin: row.profit_margin || 0,
+        notes: row.notes || null,
+        client_id: row.client_id || null,
+        vehicle_id: row.vehicle_id || null,
+        driver_ids: row.driver_ids || [],
+      });
+      if (ok) imported += 1;
+    }
+    if (imported > 0) {
+      toast.success(`${imported} tournée(s) importée(s) depuis Excel`);
+      fetchTours();
+    }
+    if (imported < data.length) {
+      toast.error(`${data.length - imported} ligne(s) n'ont pas pu être importées`);
+    }
+  };
 
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -443,6 +495,12 @@ export default function Tours() {
             <h1 className="text-3xl font-bold text-foreground">Tournées sauvegardées</h1>
             <p className="text-muted-foreground">Gérez et exportez vos tournées</p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportToursOpen(true)} title="Importer des trajets/missions depuis Excel">
+            <Upload className="w-4 h-4 mr-2" />
+            Importer Excel
+          </Button>
         </div>
       </div>
 
@@ -950,6 +1008,15 @@ export default function Tours() {
           trailers={trailers}
         />
       )}
+
+      {/* Import Excel : trajets/missions, comme sur Charges fixes/Véhicules */}
+      <ExcelImportDialog
+        open={importToursOpen}
+        onOpenChange={setImportToursOpen}
+        type="tours"
+        tourLookups={toursExcelLookups}
+        onImport={(data) => handleImportTours(data as Partial<SavedTour>[])}
+      />
     </div>
   );
 }

@@ -89,6 +89,10 @@
    relay_driver_id?: string | null;
    relay_location?: string | null;
    relay_time?: string | null;
+   // Assigne la mission (et toutes ses occurrences générées) à une tournée
+   // réelle déjà enregistrée (src/types/savedTour.ts) — c'est ce lien qui
+   // fait apparaître la mission dans le Prévisionnel (src/domain/forecast/yearlyTourForecast.ts).
+   saved_tour_id?: string | null;
  }
  
  export const planningStatusLabels: Record<PlanningEntry['status'], string> = {

@@ -70,8 +70,9 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
      relay_driver_id: null,
      relay_location: null,
      relay_time: null,
+     saved_tour_id: null,
    });
-   
+
    const [showRelay, setShowRelay] = useState(false);
    const [weeksAhead, setWeeksAhead] = useState(4);
    const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,6 +155,7 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
          relay_driver_id: null,
          relay_location: null,
          relay_time: null,
+         saved_tour_id: null,
        });
        setShowRelay(false);
      }
@@ -248,6 +250,30 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
              />
            </div>
  
+           {/* Link to a real saved tour, so this mission feeds the Prévisionnel */}
+           <div className="space-y-2">
+             <Label>Tournée liée (pour le Prévisionnel)</Label>
+             <Select
+               value={formData.saved_tour_id || ''}
+               onValueChange={(value) => setFormData(prev => ({ ...prev, saved_tour_id: value === 'none' ? null : (value || null) }))}
+             >
+               <SelectTrigger>
+                 <SelectValue placeholder="Aucune (mission non comptée dans le Prévisionnel)" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="none">Aucune</SelectItem>
+                 {savedTours.map((tour) => (
+                   <SelectItem key={tour.id} value={tour.id}>
+                     {tour.name} — {tour.revenue ? `${tour.revenue} €` : 'sans tarif'}
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
+             <p className="text-xs text-muted-foreground">
+               Sans tournée liée, cette mission apparaît dans le Planning mais pas dans le Prévisionnel (Comptabilité/Direction).
+             </p>
+           </div>
+
            {/* Days selection */}
            <div className="space-y-3">
              <div className="flex items-center justify-between">

@@ -312,6 +312,7 @@ export function usePlanning() {
            relay_time: input.relay_time || null,
             parent_tour_id: input.parent_tour_id || null,
             sector_manager: input.sector_manager || null,
+            saved_tour_id: input.saved_tour_id || null,
          })
          .select()
          .single();
@@ -479,6 +480,7 @@ export function usePlanning() {
          relay_driver_id: input.relay_driver_id || null,
          relay_location: input.relay_location || null,
          relay_time: input.relay_time || null,
+         saved_tour_id: input.saved_tour_id || null,
        }));
        
        const { error } = await supabase
@@ -913,4 +915,4 @@ export function usePlanning() {
       }
     },
    };
- }
+ }

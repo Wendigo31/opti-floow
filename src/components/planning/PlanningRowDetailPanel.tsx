@@ -22,6 +22,7 @@ import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, 
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useSavedTours } from '@/hooks/useSavedTours';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
 import type { Driver } from '@/types';
@@ -78,6 +79,10 @@ export function PlanningRowDetailPanel({
   const [relayTime, setRelayTime] = useState('');
   const [relayLocation, setRelayLocation] = useState('');
   const [isRewriting, setIsRewriting] = useState(false);
+  const [savedTourId, setSavedTourId] = useState('');
+
+  // Tournées réelles disponibles pour lier cette mission (alimente le Prévisionnel).
+  const { tours: savedTours, loading: loadingSavedTours } = useSavedTours();
 
   useEffect(() => {
     if (open && first) {
@@ -97,6 +102,7 @@ export function PlanningRowDetailPanel({
       setRelayDriverId(first.relay_driver_id || '');
       setRelayTime(first.relay_time || '');
       setRelayLocation(first.relay_location || '');
+      setSavedTourId(first.saved_tour_id || '');
     }
   }, [open, first?.id]);
 
@@ -129,6 +135,7 @@ export function PlanningRowDetailPanel({
       relay_driver_id: showRelay ? (relayDriverId || null) : null,
       relay_time: showRelay ? (relayTime || null) : null,
       relay_location: showRelay ? (relayLocation || null) : null,
+      saved_tour_id: savedTourId || null,
     };
 
     let success = true;
@@ -138,7 +145,6 @@ export function PlanningRowDetailPanel({
     }
 
     // Sync to linked saved tour if exists
-    const savedTourId = first?.saved_tour_id;
     if (success && savedTourId && onSyncToSavedTour) {
       try {
         await onSyncToSavedTour(savedTourId, {
@@ -271,7 +277,7 @@ export function PlanningRowDetailPanel({
           <SheetTitle className="flex items-center gap-2">
             🚚 {tourName || 'Ligne sans nom'}
             <Badge variant="secondary" className="text-xs">{entries.length} jours</Badge>
-            {first?.saved_tour_id && (
+            {savedTourId && (
               <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
                 <Link2 className="h-3 w-3" /> Tournée liée
               </Badge>
@@ -284,6 +290,32 @@ export function PlanningRowDetailPanel({
           <div className="space-y-1.5">
             <Label className="text-xs">Ligne (nom de tournée)</Label>
             <Input value={tourName} onChange={e => setTourName(e.target.value)} placeholder="Nom de la ligne" />
+          </div>
+
+          {/* Assignation à une tournée réelle — c'est ce lien qui fait apparaître
+              la mission dans le Prévisionnel (Comptabilité/Direction). */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Tournée liée (Prévisionnel)</Label>
+            <Select
+              value={savedTourId || '_none'}
+              onValueChange={v => setSavedTourId(v === '_none' ? '' : v)}
+              disabled={loadingSavedTours}
+            >
+              <SelectTrigger><SelectValue placeholder="Aucune tournée liée" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Aucune</SelectItem>
+                {savedTours.map(t => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} — {t.revenue ? `${t.revenue} €` : 'sans tarif'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              {savedTourId
+                ? 'Chaque jour planifié de cette mission compte dans le Prévisionnel du mois correspondant, avec le CA et le coût réel de la tournée liée.'
+                : 'Sans tournée liée, cette mission reste visible dans le Planning mais n\'apparaît pas dans le Prévisionnel.'}
+            </p>
           </div>
 
           {/* Line references */}
@@ -478,7 +510,7 @@ export function PlanningRowDetailPanel({
           </div>
 
           {/* Mission orders are now managed in the Tours page (linked via saved_tour_id). */}
-          {first?.saved_tour_id && (
+          {savedTourId && (
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
               📋 L'ordre de mission de cette tournée est désormais géré dans la page <strong>Tournées</strong>. Cliquez sur la traction sur le planning pour ouvrir directement la tournée liée.
             </div>
