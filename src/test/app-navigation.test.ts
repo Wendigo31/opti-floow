@@ -54,9 +54,32 @@ describe('authenticated app navigation', () => {
     ]));
   });
 
-  it('gives every one of the 7 workspaces a Planification tab (assigning missions to tours)', () => {
+  it('reserves the Planification tab to Exploitation, RH and Gestion de parc only', () => {
+    const withPlanning = ['exploitation', 'rh', 'parc'];
+    const withoutPlanning = ['geoloc', 'appels-offres', 'comptabilite', 'rentabilite'];
+
     for (const category of NAV_CATEGORIES) {
-      expect(category.pages.map((page) => page.to), category.label).toContain('/planning');
+      const hasPlanning = category.pages.some((page) => page.to === '/planning');
+      if (withPlanning.includes(category.id)) {
+        expect(hasPlanning, category.label).toBe(true);
+      } else {
+        expect(withoutPlanning, category.id).toContain(category.id);
+        expect(hasPlanning, category.label).toBe(false);
+      }
+    }
+  });
+
+  it('removes the Paramètres tab from Exploitation only (the top-right gear already gives access there)', () => {
+    const exploitation = NAV_CATEGORIES.find((category) => category.id === 'exploitation');
+    expect(exploitation?.pages.map((page) => page.to)).not.toContain('/settings');
+
+    // Les autres espaces qui avaient déjà un onglet Paramètres le gardent (portée de la
+    // demande : Exploitation uniquement). Appels d'offres n'en a jamais eu.
+    const othersWithSettings = NAV_CATEGORIES.filter(
+      (category) => category.id !== 'exploitation' && category.id !== 'appels-offres'
+    );
+    for (const category of othersWithSettings) {
+      expect(category.pages.map((page) => page.to), category.label).toContain('/settings');
     }
   });
 

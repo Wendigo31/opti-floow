@@ -252,6 +252,9 @@ export default function Planning() {
   );
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  // Devient vrai dès le premier chargement automatique (voir l'effet ci-dessous) : la page
+  // affiche toutes les lignes par défaut, ce booléen ne gate plus l'affichage, il sert juste
+  // à savoir qu'un premier jeu de données a déjà été demandé (banner, compteur de lignes).
   const [hasSearched, setHasSearched] = useState(false);
 
   // Detail panel
@@ -348,19 +351,17 @@ export default function Planning() {
     setHasSearched(true);
   }, [currentWeekStart, searchQuery, filterClient, filterSector, fetchEntries]);
 
-  // Re-fetch when week changes (only if already searched)
+  // Charge automatiquement la semaine en cours dès l'ouverture de la page (et à chaque
+  // changement de semaine) : toutes les lignes (conducteurs, tournées) s'affichent tout de
+  // suite, sans avoir besoin de lancer une recherche au préalable. La recherche et les
+  // filtres ci-dessous ne servent plus qu'à affiner ensuite ce qui est déjà affiché.
   useEffect(() => {
-    if (hasSearched) {
-      doSearch();
-    }
+    doSearch();
   }, [currentWeekStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch when background import completes — but only with existing filters (search-first)
+  // Re-fetch when background import completes, in sync with the current filters.
   useEffect(() => {
     if (importProgress.completedAt > 0) {
-      // Don't auto-load everything — respect search-first.
-      // Only refetch if the user had already searched.
-      if (!hasSearched) return;
       const startDate = format(currentWeekStart, 'yyyy-MM-dd');
       const endDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
       const filters: PlanningServerFilters = {};
@@ -613,29 +614,18 @@ export default function Planning() {
       {/* Grid */}
       <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
-          {!hasSearched ? (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
-              <Filter className="h-10 w-10 text-muted-foreground/50" />
-              <div className="text-center space-y-1">
-                <p className="font-medium text-foreground">Recherchez pour afficher le planning</p>
-                <p className="text-sm">Saisissez un critère (client, ligne, conducteur, responsable secteur) puis cliquez sur Rechercher</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsTourDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> Ajouter
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
-                  <Upload className="h-4 w-4 mr-1" /> Importer
-                </Button>
-              </div>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
             </div>
           ) : filteredGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
-              <p>Aucun résultat pour cette recherche.</p>
+              <Filter className="h-10 w-10 text-muted-foreground/50" />
+              <p>
+                {searchQuery || filterSector || filterClient || filterDay
+                  ? 'Aucun résultat pour cette recherche/ce filtre.'
+                  : 'Aucune tournée planifiée cette semaine.'}
+              </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setIsTourDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" /> Ajouter

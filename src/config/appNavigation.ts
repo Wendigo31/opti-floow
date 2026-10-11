@@ -106,19 +106,22 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
     id: 'exploitation', label: 'Exploitation', icon: Boxes,
     allowedRoles: ['direction', 'exploitation'],
     // Planifier (Planning) → monter une ligne → gérer les tournées → calculer un trajet →
-    // consulter l'historique → données de référence (clients/véhicules/conducteurs) → réglages.
-    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers, P.settings],
+    // consulter l'historique → données de référence (clients/véhicules/conducteurs).
+    // Pas d'onglet Paramètres ici : l'écrou en haut à droite de l'app y donne déjà accès.
+    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers],
   },
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
     allowedRoles: ['direction', 'exploitation'],
-    // Calculer un itinéraire → l'optimiser par IA → le planifier → le retrouver dans les tournées → réglages.
-    pages: [P.itinerary, P.aiAnalysis, P.planning, P.tours, P.settings],
+    // Calculer un itinéraire → l'optimiser par IA → le retrouver dans les tournées → réglages.
+    // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
+    pages: [P.itinerary, P.aiAnalysis, P.tours, P.settings],
   },
   {
     id: 'parc', label: 'Gestion de parc', icon: Warehouse,
     allowedRoles: ['direction', 'exploitation'],
-    // Le parc de véhicules → planifier leurs missions → ses rapports → les conducteurs qui les utilisent → installer l'appli → réglages.
+    // Le parc de véhicules → planifier leurs missions (sert à terme à repérer les véhicules
+    // indisponibles - entretien, accident...) → ses rapports → les conducteurs qui les utilisent → installer l'appli → réglages.
     pages: [P.vehicles, P.planning, P.vehicleReports, P.drivers, P.install, P.settings],
   },
   {
@@ -130,20 +133,23 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
     allowedRoles: ['direction', 'exploitation'],
-    // Le devis (outil principal) → le client → l'itinéraire → le prix → comparaison avec les tournées passées → planifier la mission gagnée.
-    pages: [P.tenders, P.clients, P.itinerary, P.calculator, P.tours, P.planning],
+    // Le devis (outil principal) → le client → l'itinéraire → le prix → comparaison avec les tournées passées.
+    // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
+    pages: [P.tenders, P.clients, P.itinerary, P.calculator, P.tours],
   },
   {
     id: 'comptabilite', label: 'Comptabilité', icon: Building2,
     allowedRoles: ['direction', 'comptabilite'],
-    // Les charges fixes (base de coût) → calculer → historiser → analyser → vérifier les missions qui alimentent le prévisionnel → prévoir → clients → réglages.
-    pages: [P.charges, P.calculator, P.history, P.dashboard, P.planning, P.forecast, P.clients, P.settings],
+    // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients → réglages.
+    // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
+    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
   },
   {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
     allowedRoles: ['direction', 'comptabilite'],
-    // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent (missions, tournées, charges, parc) → réglages.
-    pages: [P.dashboard, P.aiAnalysis, P.forecast, P.planning, P.calculator, P.history, P.tours, P.charges, P.vehicleReports, P.settings],
+    // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent (tournées, charges, parc) → réglages.
+    // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
+    pages: [P.dashboard, P.aiAnalysis, P.forecast, P.calculator, P.history, P.tours, P.charges, P.vehicleReports, P.settings],
   },
 ];
 
