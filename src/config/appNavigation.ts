@@ -11,12 +11,15 @@
  * sont conservées à l'identique.
  *
  * Ordre des catégories et des pages à l'intérieur de chacune : pensé comme un
- * flux de travail (du plus utilisé/central au plus annexe), Paramètres étant
- * systématiquement en dernier par convention —
+ * flux de travail (du plus utilisé/central au plus annexe) —
  * Exploitation (le quotidien) → Géoloc (suivi en temps réel) → Gestion de
  * parc (les véhicules) → RH (les équipes) → Appels d'offres (gagner de
  * nouveaux contrats) → Comptabilité (enregistrer les coûts) → Gestion de
  * rentabilité (analyser la marge, la vue de synthèse).
+ *
+ * Paramètres (P.settings) n'apparaît dans AUCUN espace : l'écrou en haut à
+ * droite de l'app (TopBar.tsx) donne déjà accès à /settings pour tout le
+ * monde, un onglet dédié dans la Sidebar serait redondant.
  */
 import {
   Calculator,
@@ -113,22 +116,23 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
     allowedRoles: ['direction', 'exploitation'],
-    // Calculer un itinéraire → l'optimiser par IA → le retrouver dans les tournées → réglages.
+    // Calculer un itinéraire → l'optimiser par IA → le retrouver dans les tournées.
     // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
-    pages: [P.itinerary, P.aiAnalysis, P.tours, P.settings],
+    // Pas d'onglet Paramètres nulle part : l'écrou en haut à droite de l'app y donne déjà accès.
+    pages: [P.itinerary, P.aiAnalysis, P.tours],
   },
   {
     id: 'parc', label: 'Gestion de parc', icon: Warehouse,
     allowedRoles: ['direction', 'exploitation'],
     // Le parc de véhicules → planifier leurs missions (sert à terme à repérer les véhicules
-    // indisponibles - entretien, accident...) → ses rapports → les conducteurs qui les utilisent → installer l'appli → réglages.
-    pages: [P.vehicles, P.planning, P.vehicleReports, P.drivers, P.install, P.settings],
+    // indisponibles - entretien, accident...) → ses rapports → les conducteurs qui les utilisent → installer l'appli.
+    pages: [P.vehicles, P.planning, P.vehicleReports, P.drivers, P.install],
   },
   {
     id: 'rh', label: 'RH', icon: Users,
     allowedRoles: ['direction', 'rh'],
-    // Les conducteurs → l'équipe → leur planning → mes propres accès → réglages.
-    pages: [P.drivers, P.team, P.planning, P.restrictions, P.settings],
+    // Les conducteurs → l'équipe → leur planning → mes propres accès.
+    pages: [P.drivers, P.team, P.planning, P.restrictions],
   },
   {
     id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
@@ -140,16 +144,16 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
   {
     id: 'comptabilite', label: 'Comptabilité', icon: Building2,
     allowedRoles: ['direction', 'comptabilite'],
-    // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients → réglages.
+    // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients.
     // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
-    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients, P.settings],
+    pages: [P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients],
   },
   {
     id: 'rentabilite', label: 'Gestion de rentabilité', icon: TrendingUp,
     allowedRoles: ['direction', 'comptabilite'],
-    // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent (tournées, charges, parc) → réglages.
+    // La vue de synthèse (Analyse) en premier → IA → prévisionnel → données sources qui l'alimentent (tournées, charges, parc).
     // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
-    pages: [P.dashboard, P.aiAnalysis, P.forecast, P.calculator, P.history, P.tours, P.charges, P.vehicleReports, P.settings],
+    pages: [P.dashboard, P.aiAnalysis, P.forecast, P.calculator, P.history, P.tours, P.charges, P.vehicleReports],
   },
 ];
 
