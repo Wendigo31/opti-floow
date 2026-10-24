@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
-import { User, Users2, Edit2, Trash2, Phone } from 'lucide-react';
+import { User, Users2, Edit2, Trash2, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { cn } from '@/lib/utils';
 import type { DriverContractType, ExtendedDriver } from '@/types/driver';
+import { getDocumentsNeedingAttention } from '@/utils/driverDocumentStatus';
 
 interface SharedDriverInfo {
   licenseId?: string;
@@ -58,6 +60,7 @@ export function DriverCard({
 }: DriverCardProps) {
   const isInterim = driverType === 'interim';
   const isShared = !!driverInfo?.licenseId;
+  const documentsNeedingAttention = getDocumentsNeedingAttention(driver.documents);
 
   return (
     <div
@@ -103,6 +106,12 @@ export function DriverCard({
                   )}
                   {driver.scheduleType === 'mixed' && (
                     <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Mixte</span>
+                  )}
+                  {documentsNeedingAttention.length > 0 && (
+                    <Badge variant="destructive" className="gap-1" title={documentsNeedingAttention.map(d => d.label).join(', ')}>
+                      <AlertTriangle className="w-3 h-3" />
+                      {documentsNeedingAttention.length} échéance(s)
+                    </Badge>
                   )}
                   {isCompanyMember && (
                     <TooltipProvider>

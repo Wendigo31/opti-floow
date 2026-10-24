@@ -47,6 +47,7 @@ const Presentation = lazy(() => import("./pages/Presentation"));
 const PricingExport = lazy(() => import("./pages/PricingExport"));
 const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const AcceptQuote = lazy(() => import("./pages/AcceptQuote"));
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -169,6 +170,9 @@ function AppRoutes() {
   // personne invitée n'en a jamais saisi une elle-même), donc en dehors du
   // garde isLicensed ci-dessous, comme /admin et /presentation.
   const isAcceptInviteRoute = location.pathname === '/accept-invite';
+  // Lien public d'acceptation de devis (client, sans compte) : même tier
+  // que /accept-invite, en dehors du garde isLicensed ci-dessous.
+  const isAcceptQuoteRoute = location.pathname === '/accepter-devis';
 
   return (
     <AppProvider>
@@ -181,6 +185,10 @@ function AppRoutes() {
       ) : isAcceptInviteRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
           <AcceptInvite />
+        </Suspense>
+      ) : isAcceptQuoteRoute ? (
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <AcceptQuote />
         </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
@@ -196,13 +204,15 @@ function AppRoutes() {
 }
 
 function AppContent() {
-  // Detect presentation/accept-invite routes from actual browser URL for MemoryRouter.
-  // accept-invite garde aussi la query string (?lc=...) : lue par useSearchParams()
-  // dans AcceptInvite.tsx pour le code de licence transmis par invite-teammate.
+  // Detect presentation/accept-invite/accepter-devis routes from actual browser
+  // URL for MemoryRouter. accept-invite et accepter-devis gardent aussi la query
+  // string (?lc=... / ?token=...), lue par useSearchParams() dans leurs pages
+  // respectives.
   const { pathname, search } = window.location;
   const initialEntry =
     pathname === '/presentation' ? '/presentation' :
     pathname === '/accept-invite' ? `/accept-invite${search}` :
+    pathname === '/accepter-devis' ? `/accepter-devis${search}` :
     '/';
 
   return (

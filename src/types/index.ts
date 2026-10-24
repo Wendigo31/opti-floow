@@ -1,4 +1,24 @@
 // OptiFlow Types
+
+// Échéances documentaires conducteur (permis, visite médicale, FIMO/FCO, fin
+// de CDD...) — non financier, donc jamais retiré par strip_driver_salary_keys
+// côté base (voir get_drivers_masked) : visible par tous les rôles.
+export type DriverDocumentType =
+  | 'permis'
+  | 'carte_conducteur'
+  | 'fimo_fco'
+  | 'visite_medicale'
+  | 'contrat_cdd'
+  | 'other';
+
+export interface DriverDocument {
+  id: string;
+  type: DriverDocumentType;
+  label: string; // ex: "Permis C+E" — pré-rempli depuis le type, modifiable
+  expiryDate: string; // ISO date format (YYYY-MM-DD)
+  notes?: string;
+}
+
 export interface Driver {
   id: string;
   name: string;
@@ -22,6 +42,7 @@ export interface Driver {
   interimAgency?: string;
   interimHourlyRate?: number;
   interimCoefficient?: number;
+  documents?: DriverDocument[];
 }
 
 export interface FixedCharge {

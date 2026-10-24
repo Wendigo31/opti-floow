@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ import { useTourRealCosts } from '@/hooks/useTourRealCosts';
 import { computeQuotePrices } from '@/domain/quotes/quotePricing';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QuoteCalculator } from '@/components/quotes/QuoteCalculator';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const STATUSES: Record<string, string> = {
   draft: 'Brouillon',
@@ -40,8 +42,39 @@ export default function Tenders() {
   const [form, setForm] = useState(emptyForm);
   const [tab, setTab] = useState('list');
   const [calcKey, setCalcKey] = useState(0);
+  const [sendingLinkId, setSendingLinkId] = useState<string | null>(null);
 
   const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? 'Sans client';
+  const clientEmail = (id: string | null) => clients.find((c) => c.id === id)?.email ?? null;
+
+  // Lien public d'acceptation de devis (remplace le changement de statut
+  // manuel ci-dessous comme chemin principal, sans le retirer) : envoie un
+  // email au client avec un lien non authentifié où il peut accepter ou
+  // refuser en signant d'un nom tapé. Edge function quote-public-link,
+  // action "generate" — voir supabase/functions/quote-public-link/index.ts.
+  const sendQuoteLink = async (quoteId: string) => {
+    setSendingLinkId(quoteId);
+    try {
+      const { data, error } = await supabase.functions.invoke('quote-public-link', {
+        body: { action: 'generate', quoteId, origin: window.location.origin },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || "Erreur lors de l'envoi du lien");
+        return;
+      }
+      if (data.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success('Lien envoyé au client par email');
+      }
+    } catch (e) {
+      console.error('Error sending quote link:', e);
+      toast.error("Erreur lors de l'envoi du lien");
+    } finally {
+      setSendingLinkId(null);
+    }
+  };
+
   const filtered = useMemo(
     () => quotes.filter((q) => clientFilter === 'all' || q.client_id === clientFilter),
     [quotes, clientFilter]
@@ -139,10 +172,25 @@ export default function Tenders() {
                   <span>Coût {eur(q.total_cost)}</span>
                   <span className="font-semibold text-foreground">{eur(q.price_ht)} HT</span>
                 </div>
-                <Select value={q.status ?? 'draft'} onValueChange={(v) => updateQuote(q.id, { status: v })}>
-                  <SelectTrigger className="h-8 w-32"><Badge variant="secondary">{STATUSES[q.status ?? 'draft'] ?? q.status}</Badge></SelectTrigger>
-                  <SelectContent>{Object.entries(STATUSES).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  {q.status !== 'accepted' && q.status !== 'rejected' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      disabled={!clientEmail(q.client_id) || sendingLinkId === q.id}
+                      title={clientEmail(q.client_id) ? 'Envoyer le lien d\'acceptation par email' : 'Ce client n\'a pas d\'adresse email'}
+                      onClick={() => sendQuoteLink(q.id)}
+                    >
+                      <Send className="mr-1.5 h-3.5 w-3.5" />
+                      {sendingLinkId === q.id ? 'Envoi...' : 'Envoyer le lien'}
+                    </Button>
+                  )}
+                  <Select value={q.status ?? 'draft'} onValueChange={(v) => updateQuote(q.id, { status: v })}>
+                    <SelectTrigger className="h-8 w-32"><Badge variant="secondary">{STATUSES[q.status ?? 'draft'] ?? q.status}</Badge></SelectTrigger>
+                    <SelectContent>{Object.entries(STATUSES).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
           ))}

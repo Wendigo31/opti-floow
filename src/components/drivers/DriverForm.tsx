@@ -1,9 +1,19 @@
-import { Check, X, Clock, Users2 } from 'lucide-react';
+import { useState } from 'react';
+import { Check, X, Clock, Users2, FileWarning, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import type { DriverContractType, ExtendedDriver } from '@/types/driver';
+import type { DriverDocument, DriverDocumentType } from '@/types';
+import {
+  driverDocumentTypes,
+  getDriverDocumentTypeLabel,
+  getDocumentUrgency,
+  formatExpiryStatus,
+  generateDriverDocumentId,
+} from '@/utils/driverDocumentStatus';
 
 interface DriverFormProps {
   formData: Partial<ExtendedDriver>;
@@ -32,6 +42,26 @@ export function DriverForm({
 }: DriverFormProps) {
   const isInterim = formContractType === 'interim';
   const isAutre = formContractType === 'autre';
+
+  const [newDocType, setNewDocType] = useState<DriverDocumentType>('permis');
+  const [newDocExpiry, setNewDocExpiry] = useState('');
+  const documents = formData.documents || [];
+
+  const addDocument = () => {
+    if (!newDocExpiry) return;
+    const doc: DriverDocument = {
+      id: generateDriverDocumentId(),
+      type: newDocType,
+      label: getDriverDocumentTypeLabel(newDocType),
+      expiryDate: newDocExpiry,
+    };
+    setFormData({ ...formData, documents: [...documents, doc] });
+    setNewDocExpiry('');
+  };
+
+  const removeDocument = (id: string) => {
+    setFormData({ ...formData, documents: documents.filter(d => d.id !== id) });
+  };
 
   return (
     <div className="glass-card p-6 space-y-4 opacity-0 animate-scale-in" style={{ animationFillMode: 'forwards' }}>
@@ -335,6 +365,70 @@ export function DriverForm({
           </p>
         </div>
       )}
+
+      {/* Échéances documentaires (permis, visite médicale, FIMO/FCO, fin de CDD...) */}
+      <div className="border-t border-border pt-4">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+          <FileWarning className="w-4 h-4" />
+          Échéances documentaires
+        </h3>
+        {documents.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {documents.map((doc) => {
+              const urgency = getDocumentUrgency(doc);
+              return (
+                <div key={doc.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Badge
+                      variant="outline"
+                      className={
+                        urgency === 'danger' ? 'bg-destructive/15 text-destructive border-destructive/30'
+                        : urgency === 'warning' ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                      }
+                    >
+                      {doc.label}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {formatExpiryStatus(doc)}
+                    </span>
+                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => removeDocument(doc.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+          <div className="space-y-2">
+            <Label>Type de document</Label>
+            <Select value={newDocType} onValueChange={(v) => setNewDocType(v as DriverDocumentType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {driverDocumentTypes.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Date d'échéance</Label>
+            <Input
+              type="date"
+              value={newDocExpiry}
+              onChange={(e) => setNewDocExpiry(e.target.value)}
+            />
+          </div>
+          <Button type="button" variant="outline" onClick={addDocument} disabled={!newDocExpiry} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Ajouter
+          </Button>
+        </div>
+      </div>
 
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="outline" onClick={onCancel}>
