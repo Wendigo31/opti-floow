@@ -1,11 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { History, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Calculator from './Calculator';
 import TripHistory from './TripHistory';
 
 export default function CalculatorWithHistory() {
-  const [activeTab, setActiveTab] = useState('calculator');
+  // /calculator et /history partagent ce même composant (voir App.tsx) : comme React ne
+  // démonte pas un composant identique entre deux Route, l'onglet actif doit suivre la
+  // route à chaque navigation, sinon arriver sur /history depuis la Sidebar affiche
+  // encore "Nouveau calcul" tant qu'on ne clique pas sur l'onglet "Historique" à la main.
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.pathname === '/history' ? 'history' : 'calculator');
+
+  useEffect(() => {
+    setActiveTab(location.pathname === '/history' ? 'history' : 'calculator');
+  }, [location.pathname]);
 
   return (
     <div className="space-y-6 animate-fade-in">

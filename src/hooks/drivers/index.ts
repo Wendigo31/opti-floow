@@ -56,7 +56,7 @@ export function useCloudDrivers() {
       // Lecture via chemin sécurisé : masque les salaires pour les non-Direction
       const { data, error } = await supabase
         .rpc('get_drivers_masked')
-        .select('driver_data, driver_type')
+        .select('driver_data, driver_type, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

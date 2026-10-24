@@ -13,7 +13,7 @@ import {
   Clock, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useApp } from '@/context/AppContext';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useClients } from '@/hooks/useClients';
 import type { LocalClient, LocalClientReport } from '@/types/local';
 import { generateId } from '@/types/local';
@@ -42,7 +42,11 @@ interface SharedTractionsDialogProps {
 
 export function SharedTractionsDialog({ open, onOpenChange }: SharedTractionsDialogProps) {
   const { toast } = useToast();
-  const { drivers } = useApp();
+  // Conducteurs cloud, pas useApp()'s `drivers` (tableau local-storage hérité, toujours vide
+  // pour un compte réel) : sinon la liste de conducteurs à assigner à une traction partagée
+  // reste vide en permanence.
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   const { clients } = useClients();
   const [tractions, setTractions] = useLocalStorage<SharedTraction[]>('optiflow_shared_tractions', []);
   

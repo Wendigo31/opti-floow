@@ -45,7 +45,7 @@
        .order('created_at', { ascending: false }),
      supabase
        .rpc('get_drivers_masked')
-       .select('driver_data, driver_type')
+       .select('driver_data, driver_type, created_at')
        .order('created_at', { ascending: false }),
      supabase
        .from('user_charges')

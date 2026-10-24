@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureGate } from '@/components/license/FeatureGate';
@@ -37,8 +38,14 @@ function getItineraryState() {
 
 export default function AIAnalysis() {
   const { toast } = useToast();
-  const { vehicle, drivers } = useApp();
+  const { vehicle } = useApp();
   const { vehicles } = useCloudVehicles();
+  // Les conducteurs doivent venir de la base cloud (comme partout ailleurs dans l'app :
+  // Itinerary.tsx, Calculator.tsx, Tours.tsx...), pas de useApp()'s `drivers`, qui est un
+  // tableau local-storage hérité (toujours vide pour un compte réel) et rendait la sélection
+  // de conducteur — donc le bouton "Analyser et Optimiser" — impossible à utiliser.
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   const { saveTour } = useSavedTours();
   
   const [loadTourOpen, setLoadTourOpen] = useState(false);

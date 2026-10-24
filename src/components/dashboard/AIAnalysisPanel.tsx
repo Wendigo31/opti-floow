@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { useCloudVehicles } from '@/hooks/useCloudVehicles';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { LoadTourDialog } from '@/components/ai/LoadTourDialog';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useLicense } from '@/hooks/useLicense';
@@ -58,7 +59,12 @@ interface AIResponse {
 
 export default function AIAnalysisPanel() {
   const { toast } = useToast();
-  const { vehicle, drivers } = useApp();
+  const { vehicle } = useApp();
+  // Conducteurs cloud, pas useApp()'s `drivers` (tableau local-storage hérité, toujours vide
+  // pour un compte réel) : sinon le sélecteur de conducteur de ce panneau reste vide en
+  // permanence (même cause que le bouton "Analyser et Optimiser" bloqué sur /ai-analysis).
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   const { hasFeature, refreshLicense } = useLicense();
   const { vehicles } = useCloudVehicles();
   const { saveTour } = useSavedTours();

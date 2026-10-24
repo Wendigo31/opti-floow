@@ -467,7 +467,7 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
               </Button>
               <Button 
                 type="submit" 
-                disabled={!formData.tour_name || !formData.vehicle_id || formData.recurring_days.length === 0 || isSubmitting}
+                disabled={!formData.tour_name || formData.recurring_days.length === 0 || isSubmitting}
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSubmitting ? 'Création...' : 'Créer la tournée'}

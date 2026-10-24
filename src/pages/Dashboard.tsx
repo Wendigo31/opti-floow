@@ -7,6 +7,7 @@ import { OperationalDashboard } from '@/components/dashboard/OperationalDashboar
 import { CostPredictionPanel } from '@/components/dashboard/CostPredictionPanel';
 import { MarginAlertIndicator, MarginAlertsList } from '@/components/alerts/MarginAlertIndicator';
 import { useApp } from '@/context/AppContext';
+import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useCalculations } from '@/hooks/useCalculations';
 import { useClients } from '@/hooks/useClients';
 import { useSavedTours } from '@/hooks/useSavedTours';
@@ -35,7 +36,12 @@ interface StoredRoute {
 }
 
 export default function Dashboard() {
-  const { trip, vehicle, drivers, selectedDriverIds, charges, settings } = useApp();
+  const { trip, vehicle, selectedDriverIds, charges, settings } = useApp();
+  // Conducteurs cloud (et non useApp()'s `drivers`, un tableau local-storage hérité toujours
+  // vide pour un compte réel) : sinon le coût conducteur est silencieusement exclu du
+  // prévisionnel mensuel exporté en PDF/Excel depuis cette page (voir monthlyForecast ci-dessous).
+  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   const { licenseData } = useLicense();
   const { clients } = useClients();
   const { tours } = useSavedTours();

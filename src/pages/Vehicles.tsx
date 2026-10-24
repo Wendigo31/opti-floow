@@ -370,6 +370,11 @@ export default function Vehicles() {
   };
 
   const handleDelete = async (id: string) => {
+    // Confirmation avant suppression, comme pour les clients (Clients.tsx) et les
+    // conducteurs (Drivers.tsx) : sans ce garde-fou, un simple clic sur l'icône
+    // corbeille supprimait un véhicule de façon définitive et instantanée, sans
+    // possibilité d'annuler (trouvé en testant en conditions réelles).
+    if (!window.confirm('Supprimer ce véhicule ?')) return;
     const success = await deleteVehicle(id);
     if (success) {
       removeVehicleCharges(id);
@@ -395,6 +400,9 @@ export default function Vehicles() {
 
   const handleBulkDeleteVehicles = async () => {
     if (selectedVehicleIds.size === 0) return;
+    // Même garde-fou que la suppression unitaire : une suppression groupée est
+    // encore plus risquée en cas de mauvaise sélection.
+    if (!window.confirm(`Supprimer ${selectedVehicleIds.size} véhicule(s) ?`)) return;
     setBulkDeleting(true);
     for (const id of selectedVehicleIds) {
       await deleteVehicle(id);
@@ -633,6 +641,9 @@ export default function Vehicles() {
   };
 
   const handleDeleteTrailer = async (id: string) => {
+    // Même garde-fou que pour les véhicules : suppression définitive sans confirmation
+    // sinon.
+    if (!window.confirm('Supprimer cette remorque ?')) return;
     const success = await deleteTrailer(id);
     if (success) {
       removeTrailerCharges(id);

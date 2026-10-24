@@ -124,6 +124,12 @@ export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogP
   };
 
   const handleReplaceWithPreset = async (preset: ChargePreset) => {
+    // Sans confirmation, "Remplacer" supprimait TOUTES les charges fixes actuelles d'un
+    // seul clic avant de les recréer depuis le modèle — un vrai risque de perte de données
+    // sur simple mauvais clic (trouvé en testant en conditions réelles).
+    if (!window.confirm(`Remplacer toutes les charges actuelles par celles du modèle "${preset.name}" ? Cette action supprime les charges existantes.`)) {
+      return;
+    }
     // Replace all charges with preset charges
     const newCharges = preset.charges.map(c => ({
       ...c,
@@ -176,7 +182,16 @@ export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogP
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => duplicatePreset(preset)} title="Dupliquer">
               <Copy className="w-3.5 h-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deletePreset(preset.id)} title="Supprimer">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => {
+                if (!window.confirm(`Supprimer le modèle "${preset.name}" ?`)) return;
+                deletePreset(preset.id);
+              }}
+              title="Supprimer"
+            >
               <Trash2 className="w-3.5 h-3.5 text-destructive" />
             </Button>
           </div>

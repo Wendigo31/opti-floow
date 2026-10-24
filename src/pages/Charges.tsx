@@ -167,6 +167,10 @@ export default function Charges() {
   };
 
   const handleDelete = async (id: string) => {
+    // Même garde-fou que pour les autres suppressions de l'app (véhicules, clients,
+    // devis, conducteurs...) : sans confirmation, un clic supprimait la charge fixe
+    // définitivement et instantanément.
+    if (!window.confirm('Supprimer cette charge fixe ?')) return;
     await deleteCloudCharge(id);
   };
 

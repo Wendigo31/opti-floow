@@ -192,7 +192,12 @@ export function DriverAbsenceManager({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive"
-                      onClick={() => deleteAbsence(a.id)}
+                      onClick={() => {
+                        // Cohérence avec DriverAbsencesTab.tsx, qui demande déjà confirmation
+                        // pour la même action.
+                        if (!window.confirm('Supprimer cette absence ?')) return;
+                        deleteAbsence(a.id);
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

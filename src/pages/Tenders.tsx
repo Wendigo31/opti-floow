@@ -118,7 +118,18 @@ export default function Tenders() {
                   <CardTitle className="text-base">{q.quote_number} · {clientName(q.client_id)}</CardTitle>
                   <p className="text-sm text-muted-foreground">{q.origin_address} → {q.destination_address}</p>
                 </div>
-                <Button variant="ghost" size="icon" aria-label="Supprimer" onClick={() => deleteQuote(q.id)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Supprimer"
+                  onClick={() => {
+                    // Même garde-fou que pour les clients/conducteurs/véhicules : sans
+                    // confirmation, un simple clic supprimait le devis de façon définitive
+                    // et instantanée (trouvé en testant en conditions réelles).
+                    if (!window.confirm('Supprimer ce devis ?')) return;
+                    deleteQuote(q.id);
+                  }}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
