@@ -10,16 +10,16 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { Button } from '@/components/ui/button';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory } from '@/config/appNavigation';
-import type { TeamRole } from '@/types/team';
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { hasFeature } = useLicense();
-  const { isDirection: isDirectionFromTeam, currentUserRole } = useTeam();
-  const { licenseData } = useLicense();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const role = currentUserRole || (licenseData?.userRole as TeamRole | null | undefined) || null;
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et contournerait les
+  // restrictions d'accès par espace.
+  const { isDirection, currentUserRole: role } = useTeam();
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   const accessCtx = { hasFeature, canAccessUserFeature, isDirection, role };

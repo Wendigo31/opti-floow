@@ -8,7 +8,6 @@ import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/context/AppContext';
 import { useCloudCharges } from '@/hooks/useCloudCharges';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { useLicense } from '@/hooks/useLicense';
 import { useNavigate } from 'react-router-dom';
 import type { FixedCharge } from '@/types';
 import { cn } from '@/lib/utils';
@@ -55,10 +54,12 @@ export default function Charges() {
   } = useCloudCharges();
   
   const { limits, checkLimit, isUnlimited } = usePlanLimits();
-  const { licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et donnerait accès aux
+  // charges fixes à n'importe qui.
+  const { isDirection, currentUserRole, isLoading: isTeamLoading } = useTeam();
+  const isComptabilite = currentUserRole === 'comptabilite';
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -74,10 +75,13 @@ export default function Charges() {
     }
   }, []);
   
-  // Direction et Comptabilité peuvent voir et modifier les charges
-  // Default to showing charges while team role is loading (avoid flash of "access denied")
-  const canViewCharges = isTeamLoading ? true : (isDirection || isComptabilite);
-  const canModifyCharges = isTeamLoading ? true : (isDirection || isComptabilite);
+  // Direction et Comptabilité peuvent voir et modifier les charges.
+  // Pendant le chargement du rôle, l'accès n'est jamais accordé par défaut
+  // (un écran de chargement explicite s'affiche à la place, voir plus bas) —
+  // accorder l'accès par défaut exposerait brièvement les charges fixes à
+  // n'importe quel rôle le temps que la vraie valeur arrive du serveur.
+  const canViewCharges = isDirection || isComptabilite;
+  const canModifyCharges = isDirection || isComptabilite;
   
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -390,8 +394,7 @@ export default function Charges() {
   };
 
   // Show access denied message for non-direction users
-  // Only show loading for charges data, not team role check (default to showing content)
-  if (chargesLoading && charges.length === 0) {
+  if (isTeamLoading || (chargesLoading && charges.length === 0)) {
     return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

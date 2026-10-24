@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+// Source unique du rôle (voir src/types/team.ts) : évite la dérive d'une
+// 4e copie locale constatée pendant l'audit du modèle de rôles.
+import type { TeamRole as UserRole } from '@/types/team';
+import { ROLE_LABELS } from '@/types/team';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,16 +52,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-// 4 rôles métier (voir src/types/team.ts — migration SQL 20261010150000 pour le détail)
-type UserRole = 'direction' | 'exploitation' | 'comptabilite' | 'rh';
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  direction: 'Direction',
-  exploitation: 'Exploitation',
-  comptabilite: 'Comptabilité',
-  rh: 'RH',
-};
 
 interface CompanyUser {
   id: string;

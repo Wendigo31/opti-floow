@@ -10,13 +10,16 @@ import { Users, Settings, UserCog, Shield, Lock } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 export default function Team() {
-  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
-  const { licenseData, isLoading: isLicenseLoading } = useLicense();
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et donnerait accès à
+  // la gestion d'équipe/des accès à n'importe qui.
+  const { isDirection, currentUserRole, isLoading: isTeamLoading } = useTeam();
+  const { isLoading: isLicenseLoading } = useLicense();
   const [activeTab, setActiveTab] = useState('team');
 
   const isLoading = isTeamLoading || isLicenseLoading;
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const isRH = currentUserRole === 'rh' || licenseData?.userRole === 'rh';
+  const isRH = currentUserRole === 'rh';
 
   if (isLoading) {
     return (

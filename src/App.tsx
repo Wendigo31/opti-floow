@@ -46,6 +46,7 @@ const Planning = lazy(() => import("./pages/Planning"));
 const Presentation = lazy(() => import("./pages/Presentation"));
 const PricingExport = lazy(() => import("./pages/PricingExport"));
 const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const queryClient = new QueryClient();
 
 // Hook global pour le raccourci admin
@@ -164,6 +165,10 @@ function AppRoutes() {
 
   const isAdminRoute = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
   const isPresentationRoute = location.pathname === '/presentation';
+  // Route d'activation d'invitation : accessible avant toute licence (la
+  // personne invitée n'en a jamais saisi une elle-même), donc en dehors du
+  // garde isLicensed ci-dessous, comme /admin et /presentation.
+  const isAcceptInviteRoute = location.pathname === '/accept-invite';
 
   return (
     <AppProvider>
@@ -172,6 +177,10 @@ function AppRoutes() {
       ) : isPresentationRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
           <Presentation />
+        </Suspense>
+      ) : isAcceptInviteRoute ? (
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <AcceptInvite />
         </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
@@ -187,9 +196,15 @@ function AppRoutes() {
 }
 
 function AppContent() {
-  // Detect presentation route from actual browser URL for MemoryRouter
-  const initialEntry = window.location.pathname === '/presentation' ? '/presentation' : '/';
-  
+  // Detect presentation/accept-invite routes from actual browser URL for MemoryRouter.
+  // accept-invite garde aussi la query string (?lc=...) : lue par useSearchParams()
+  // dans AcceptInvite.tsx pour le code de licence transmis par invite-teammate.
+  const { pathname, search } = window.location;
+  const initialEntry =
+    pathname === '/presentation' ? '/presentation' :
+    pathname === '/accept-invite' ? `/accept-invite${search}` :
+    '/';
+
   return (
     <MemoryRouter initialEntries={[initialEntry]}>
       <GlobalShortcuts>

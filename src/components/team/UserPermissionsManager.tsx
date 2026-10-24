@@ -104,6 +104,7 @@ export function UserPermissionsManager() {
 
       if (error) {
         console.error('Error fetching overrides:', error);
+        toast.error('Erreur lors du chargement des permissions');
       }
 
       const permissions: MemberPermissions[] = filteredMembers.map(member => ({
@@ -122,6 +123,7 @@ export function UserPermissionsManager() {
       setMemberPermissions(permissions);
     } catch (e) {
       console.error('Error in fetchOverrides:', e);
+      toast.error('Erreur inattendue lors du chargement des permissions');
     } finally {
       setIsLoading(false);
     }

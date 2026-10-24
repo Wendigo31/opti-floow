@@ -166,7 +166,11 @@ export function useTeam(): UseTeamReturn {
     }
   }, [authUserId, fetchTeam]);
 
-  // Add member directly (no invitation flow)
+  // Invite un membre par email (edge function invite-teammate) : crée son
+  // compte Supabase Auth et lui envoie un lien d'activation à usage unique
+  // (src/pages/AcceptInvite.tsx), plutôt que d'insérer une ligne company_users
+  // sans compte que la personne devait auparavant réclamer à la main avec le
+  // code de licence partagé de la société.
   const addMember = useCallback(async (email: string, role: TeamRole, displayName?: string): Promise<{ success: boolean; error?: string }> => {
     if (!canInviteMembers) {
       return { success: false, error: 'Vous n\'avez pas les permissions pour ajouter des membres' };
@@ -190,34 +194,25 @@ export function useTeam(): UseTeamReturn {
     }
 
     try {
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('company_users')
-        .select('id')
-        .eq('license_id', licenseId)
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
-
-      if (existingMember) {
-        return { success: false, error: 'Cet utilisateur est déjà membre de l\'équipe' };
-      }
-
-      // Create company_users entry directly
-      const { error: userError } = await supabase
-        .from('company_users')
-        .insert({
-          license_id: licenseId,
+      const { data, error } = await supabase.functions.invoke('invite-teammate', {
+        body: {
+          licenseId,
           email: email.toLowerCase(),
           role,
-          display_name: displayName?.trim() || null,
-          invited_by: authUserId,
-          invited_at: new Date().toISOString(),
-          is_active: true,
-        });
+          displayName,
+          origin: window.location.origin,
+        },
+      });
 
-      if (userError) {
-        console.error('Error creating company user:', userError);
-        return { success: false, error: 'Erreur lors de l\'ajout du membre' };
+      // supabase.functions.invoke ne rejette pas sur un statut HTTP non-2xx :
+      // `error` n'est posé que pour une vraie erreur réseau/invocation, donc
+      // le message d'erreur applicatif (ex. "déjà membre") est dans `data`.
+      if (error) {
+        console.error('Error invoking invite-teammate:', error);
+        return { success: false, error: 'Erreur lors de l\'invitation' };
+      }
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Erreur lors de l\'invitation' };
       }
 
       await fetchTeam();

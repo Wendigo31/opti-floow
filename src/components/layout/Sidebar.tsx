@@ -8,7 +8,6 @@ import { useSidebarContext } from '@/context/SidebarContext';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory, getCategoryIdForPath } from '@/config/appNavigation';
-import type { TeamRole } from '@/types/team';
 
 // Feature labels for the "restricted features" tooltip
 const FEATURE_LABELS: Record<string, string> = {
@@ -44,10 +43,11 @@ export function Sidebar() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { hasFeature, licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, currentUserRole } = useTeam();
-  // Fallback: use userRole from cached license data when auth session isn't ready
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const role = currentUserRole || (licenseData?.userRole as TeamRole | null | undefined) || null;
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et contournerait les
+  // restrictions d'accès par espace.
+  const { isDirection, currentUserRole: role } = useTeam();
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   // Get restricted features (user-specific overrides that are disabled)

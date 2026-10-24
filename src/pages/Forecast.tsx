@@ -13,7 +13,6 @@ import { useCalculations } from '@/hooks/useCalculations';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useClients } from '@/hooks/useClients';
 import { useTeam } from '@/hooks/useTeam';
-import { useLicense } from '@/hooks/useLicense';
 import { FeatureGate, LockedButton } from '@/components/license/FeatureGate';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -47,10 +46,12 @@ export default function Forecast() {
   const { cdiDrivers, interimDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...interimDrivers];
   
-  const { licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et contournerait cette
+  // restriction d'accès.
+  const { isDirection, currentUserRole, isLoading: isTeamLoading } = useTeam();
+  const isComptabilite = currentUserRole === 'comptabilite';
   const { clients } = useClients();
   const selectedDrivers = drivers.filter(d => selectedDriverIds.includes(d.id));
   const costs = useCalculations(trip, vehicle, selectedDrivers, charges, settings);

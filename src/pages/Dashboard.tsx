@@ -22,7 +22,6 @@ import { PDFExportDialog, ExportOptions } from '@/components/export/PDFExportDia
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useLicense } from '@/hooks/useLicense';
 import AIAnalysisPanel from '@/components/dashboard/AIAnalysisPanel';
 import { FeatureGate } from '@/components/license/FeatureGate';
 
@@ -42,12 +41,14 @@ export default function Dashboard() {
   // prévisionnel mensuel exporté en PDF/Excel depuis cette page (voir monthlyForecast ci-dessous).
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
-  const { licenseData } = useLicense();
   const { clients } = useClients();
   const { tours } = useSavedTours();
-  const { isDirection: isDirectionFromTeam, currentUserRole, isLoading: isTeamLoading } = useTeam();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const isComptabilite = currentUserRole === 'comptabilite' || licenseData?.userRole === 'comptabilite';
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et contournerait cette
+  // restriction d'accès.
+  const { isDirection, currentUserRole, isLoading: isTeamLoading } = useTeam();
+  const isComptabilite = currentUserRole === 'comptabilite';
   const { settings: marginSettings } = useMarginAlerts();
   
   const [chartType, setChartType] = useState<ChartType>('donut');

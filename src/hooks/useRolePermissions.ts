@@ -133,9 +133,14 @@ export function useRolePermissions(): RolePermissions {
   const isLoading = contextLoading || isMetricLoading;
   
   const permissions = useMemo<RolePermissions>(() => {
-    // During loading, default to 'direction' to avoid flash of restricted content
-    // Once loaded, the actual role will be applied
-    const normalizedRole = contextLoading ? 'direction' : normalizeRole(userRole);
+    // Pendant le chargement, ne jamais défauter sur 'direction' : les 3 appelants
+    // de ce hook (CalculatorResultsSummary, Tours.tsx, Drivers.tsx) utilisent les
+    // booléens directement sans attendre `isLoading`, donc un défaut 'direction'
+    // exposait brièvement le détail des coûts/marges à n'importe quel rôle le
+    // temps que le vrai rôle arrive du serveur. 'rh' est le rôle le moins
+    // privilégié (aucune visibilité financière) : une fois le rôle réel chargé,
+    // les permissions réelles s'appliquent normalement.
+    const normalizedRole = contextLoading ? 'rh' : normalizeRole(userRole);
     const config = getRoleConfig(normalizedRole);
     
     const isDirection = normalizedRole === 'direction';

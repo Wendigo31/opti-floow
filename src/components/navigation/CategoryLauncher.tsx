@@ -7,7 +7,6 @@ import { useLicense } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
 import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { getVisibleNavCategories, type NavCategoryId } from '@/config/appNavigation';
-import type { TeamRole } from '@/types/team';
 
 /**
  * Lanceur d'accueil : 5 icônes de catégories métier qui réorganisent les
@@ -15,10 +14,12 @@ import type { TeamRole } from '@/types/team';
  */
 export function CategoryLauncher() {
   const navigate = useNavigate();
-  const { hasFeature, licenseData } = useLicense();
-  const { isDirection: isDirectionFromTeam, currentUserRole } = useTeam();
-  const isDirection = isDirectionFromTeam || licenseData?.userRole === 'direction';
-  const role = currentUserRole || (licenseData?.userRole as TeamRole | null | undefined) || null;
+  const { hasFeature } = useLicense();
+  // Seule la source serveur (company_users, via useTeam) fait foi pour le rôle :
+  // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
+  // modifiable à la main par n'importe quel utilisateur et contournerait les
+  // restrictions d'accès par espace.
+  const { isDirection, currentUserRole: role } = useTeam();
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
   const categories = getVisibleNavCategories({ hasFeature, canAccessUserFeature, isDirection, role });
