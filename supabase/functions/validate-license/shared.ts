@@ -75,7 +75,10 @@ export const verifyAdminToken = async (token: string): Promise<{ valid: boolean;
     const [headerB64, payloadB64, signatureB64] = parts;
     const data = `${headerB64}.${payloadB64}`;
     const encoder = new TextEncoder();
-    const secret = (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
+    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
+    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
+    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
+    const secret = (Deno.env.get('ADMIN_JWT_SECRET') ?? '').trim() || (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
     if (!secret) {
       console.error('[validate-license] ADMIN_SECRET_CODE not configured');
       return { valid: false };

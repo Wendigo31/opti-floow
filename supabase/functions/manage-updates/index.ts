@@ -8,7 +8,10 @@ const corsHeaders = {
 // JWT verification for admin authentication
 async function verifyAdminToken(token: string): Promise<{ valid: boolean; payload?: any }> {
   try {
-    const adminSecret = Deno.env.get('ADMIN_SECRET_CODE');
+    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
+    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
+    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
+    const adminSecret = Deno.env.get('ADMIN_JWT_SECRET') || Deno.env.get('ADMIN_SECRET_CODE');
     if (!adminSecret) {
       console.error('[manage-updates] ADMIN_SECRET_CODE not configured');
       return { valid: false };

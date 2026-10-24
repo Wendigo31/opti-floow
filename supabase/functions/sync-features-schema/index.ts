@@ -70,8 +70,11 @@ const verifyAdminToken = async (token: string): Promise<{ valid: boolean; payloa
     const data = `${headerB64}.${payloadB64}`;
     
     const encoder = new TextEncoder();
-    const secret = Deno.env.get('ADMIN_SECRET_CODE') || '';
-    
+    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
+    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
+    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
+    const secret = Deno.env.get('ADMIN_JWT_SECRET') || Deno.env.get('ADMIN_SECRET_CODE') || '';
+
     const key = await crypto.subtle.importKey(
       'raw',
       encoder.encode(secret),

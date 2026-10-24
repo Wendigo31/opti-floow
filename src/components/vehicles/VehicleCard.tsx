@@ -23,7 +23,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { cn } from '@/lib/utils';
 import type { Vehicle, VehicleMaintenance, VehicleTire } from '@/types/vehicle';
-import { maintenanceTypes } from '@/types/vehicle';
+import { maintenanceTypes, vehicleAvailabilityStatuses, getVehicleAvailabilityStatus } from '@/types/vehicle';
 import { formatCostPerKm, getCostPerKmColor, type VehicleCostBreakdown } from '@/hooks/useVehicleCost';
 
 interface SharedVehicleInfo {
@@ -84,6 +84,8 @@ export function VehicleCard({
   );
   const costColor = getCostPerKmColor(costBreakdown.totalCostPerKm);
   const isShared = !!vehicleInfo?.licenseId;
+  const availabilityStatus = getVehicleAvailabilityStatus(vehicle);
+  const availabilityConfig = vehicleAvailabilityStatuses.find(s => s.value === availabilityStatus);
 
   return (
     <div
@@ -116,13 +118,18 @@ export function VehicleCard({
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="secondary" className="font-mono text-sm font-semibold bg-primary/10 text-primary border-primary/20">
                     {vehicle.licensePlate}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
                     {vehicle.brand} {vehicle.model} • {vehicle.year}
                   </span>
+                  {availabilityStatus !== 'disponible' && availabilityConfig && (
+                    <Badge variant="outline" className={availabilityConfig.colorClass} title={vehicle.availabilityNote || undefined}>
+                      {availabilityConfig.label}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>

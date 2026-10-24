@@ -236,7 +236,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      const jwtSecret = (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
+      // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
+      // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
+      // pas configuré côté Supabase, on retombe sur l'ancien comportement pour
+      // ne rien casser en production.
+      const jwtSecret = (Deno.env.get('ADMIN_JWT_SECRET') ?? '').trim() || (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
       const result = await verifyJWTAsync(token, jwtSecret);
 
       if (!result.valid) {
@@ -307,8 +311,10 @@ Deno.serve(async (req) => {
     // Get first admin email for the token (or use a generic admin identifier)
     const adminEmail = adminEmails[0] || 'admin@optiflow.app';
     
-    // Generate JWT token (2 hour expiry for better security)
-    const jwtSecret = expected; // Use the admin code as JWT secret
+    // Generate JWT token (2 hour expiry for better security).
+    // ADMIN_JWT_SECRET (dédié, si configuré) prend le pas sur l'ancien
+    // comportement (le mot de passe lui-même servait de clé de signature).
+    const jwtSecret = (Deno.env.get('ADMIN_JWT_SECRET') ?? '').trim() || expected;
     const token = await createJWTAsync(
       { 
         role: 'admin',

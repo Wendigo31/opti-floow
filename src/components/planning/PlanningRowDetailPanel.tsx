@@ -23,8 +23,11 @@ import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { useDriverAbsences } from '@/hooks/useDriverAbsences';
+import { getOverlappingAbsences, formatAbsencePeriod } from '@/utils/driverAbsenceOverlap';
 import type { PlanningEntry, PlanningEntryInput } from '@/types/planning';
 import type { Vehicle } from '@/types/vehicle';
+import { getVehicleAvailabilityStatus, vehicleAvailabilityStatuses } from '@/types/vehicle';
 import type { Driver } from '@/types';
 import type { ClientWithCreator } from '@/hooks/useClients';
 
@@ -83,6 +86,21 @@ export function PlanningRowDetailPanel({
 
   // Tournées réelles disponibles pour lier cette mission (alimente le Prévisionnel).
   const { tours: savedTours, loading: loadingSavedTours } = useSavedTours();
+
+  // Absences conducteur en conflit avec les dates concrètes de cette traction
+  // — purement informatif, n'empêche pas l'enregistrement.
+  const { absences } = useDriverAbsences();
+  const missionDateRange = useMemo(() => {
+    const dates = entries.map(e => e.planning_date).filter(Boolean).sort();
+    if (dates.length === 0) return null;
+    return { start: dates[0], end: dates[dates.length - 1] };
+  }, [entries]);
+  const driverAbsenceConflicts = missionDateRange
+    ? getOverlappingAbsences(absences, driverId, missionDateRange.start, missionDateRange.end)
+    : [];
+  const relayAbsenceConflicts = missionDateRange
+    ? getOverlappingAbsences(absences, relayDriverId, missionDateRange.start, missionDateRange.end)
+    : [];
 
   useEffect(() => {
     if (open && first) {
@@ -357,6 +375,14 @@ export function PlanningRowDetailPanel({
               onChange={v => setDriverId(v)}
               placeholder="Rechercher un conducteur..."
             />
+            {driverAbsenceConflicts.length > 0 && (
+              <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Ce conducteur est déclaré absent {formatAbsencePeriod(driverAbsenceConflicts[0])}, période qui chevauche cette mission.
+                </span>
+              </p>
+            )}
             {/* Driver contact info */}
             {(() => {
               const selectedDriver = drivers.find(d => d.id === driverId);
@@ -401,11 +427,14 @@ export function PlanningRowDetailPanel({
                 {vehicles.map(v => {
                   const isGeneric = !v.licensePlate;
                   // Check if this registered vehicle is already used on any date of this traction's entries
-                  const isConflict = !isGeneric && entries.length > 0 && allEntries.some(e => 
-                    e.vehicle_id === v.id && 
+                  const isConflict = !isGeneric && entries.length > 0 && allEntries.some(e =>
+                    e.vehicle_id === v.id &&
                     entries.some(te => te.planning_date === e.planning_date) &&
                     !entries.some(te => te.id === e.id)
                   );
+                  const availability = getVehicleAvailabilityStatus(v);
+                  const isUnavailable = availability !== 'disponible';
+                  const availabilityLabel = vehicleAvailabilityStatuses.find(s => s.value === availability)?.label;
                   return (
                     <SelectItem key={v.id} value={v.id} disabled={isConflict}>
                       <div className="flex items-center gap-2">
@@ -416,6 +445,9 @@ export function PlanningRowDetailPanel({
                         )}
                         <span>{v.name}</span>
                         {isConflict && <span className="text-destructive text-[10px]">(Déjà affecté)</span>}
+                        {!isConflict && isUnavailable && (
+                          <span className="text-amber-600 text-[10px]">({availabilityLabel})</span>
+                        )}
                       </div>
                     </SelectItem>
                   );
@@ -496,6 +528,14 @@ export function PlanningRowDetailPanel({
                     placeholder="Rechercher un relais..."
                     excludeId={driverId}
                   />
+                  {relayAbsenceConflicts.length > 0 && (
+                    <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>
+                        Ce conducteur relais est déclaré absent {formatAbsencePeriod(relayAbsenceConflicts[0])}, période qui chevauche cette mission.
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Heure relais</Label>

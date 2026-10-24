@@ -15,6 +15,8 @@ import {
   fuelTypes,
   tirePositions,
   depreciationMethods,
+  vehicleAvailabilityStatuses,
+  getVehicleAvailabilityStatus,
 } from '@/types/vehicle';
 import { getVehicleBrands, getVehicleModels } from '@/data/vehicleDefaults';
 
@@ -223,6 +225,36 @@ export function VehicleForm({
                 value={formData.currentKm || ''}
                 onChange={(e) => setFormData({ ...formData, currentKm: parseInt(e.target.value) || 0 })}
               />
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Disponibilité</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Statut</Label>
+                <Select
+                  value={getVehicleAvailabilityStatus(formData)}
+                  onValueChange={(value: Vehicle['availabilityStatus']) => setFormData({ ...formData, availabilityStatus: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleAvailabilityStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Détail (optionnel)</Label>
+                <Input
+                  value={formData.availabilityNote || ''}
+                  onChange={(e) => setFormData({ ...formData, availabilityNote: e.target.value })}
+                  placeholder="Ex: retour d'entretien prévu le 28/10"
+                />
+              </div>
             </div>
           </div>
 

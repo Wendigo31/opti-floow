@@ -22,6 +22,12 @@ export interface VehicleTire {
   lastChangeDate: string;
 }
 
+// Disponibilité opérationnelle du véhicule — distincte d'isActive (qui sert à
+// l'archivage) : un véhicule actif peut très bien être temporairement
+// indisponible (entretien, accident...), ce que l'app ne pouvait pas encore
+// représenter avant cet ajout.
+export type VehicleAvailabilityStatus = 'disponible' | 'entretien' | 'accidente' | 'indisponible';
+
 export interface Vehicle {
   id: string;
   name: string;
@@ -30,6 +36,11 @@ export interface Vehicle {
   model: string;
   year: number;
   type: 'porteur' | 'tracteur' | 'porteur_caisse' | 'fourgon' | 'other';
+
+  // Disponibilité (absent sur les véhicules créés avant cet ajout : à traiter
+  // comme 'disponible', voir getVehicleAvailabilityStatus ci-dessous)
+  availabilityStatus?: VehicleAvailabilityStatus;
+  availabilityNote?: string; // ex: date de retour d'entretien prévue, détail de l'accident...
   
   // Dimensions
   length: number; // mètres
@@ -78,6 +89,8 @@ export const defaultVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
   model: '',
   year: new Date().getFullYear(),
   type: 'tracteur',
+  availabilityStatus: 'disponible',
+  availabilityNote: '',
   length: 16.5,
   width: 2.55,
   height: 4,
@@ -124,6 +137,22 @@ export const vehicleTypes = [
   { value: 'fourgon', label: 'Fourgon' },
   { value: 'other', label: 'Autre' },
 ] as const;
+
+export const vehicleAvailabilityStatuses: readonly {
+  value: VehicleAvailabilityStatus;
+  label: string;
+  colorClass: string; // classes Tailwind pour un badge (texte+fond+bordure)
+}[] = [
+  { value: 'disponible', label: 'Disponible', colorClass: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' },
+  { value: 'entretien', label: 'En entretien', colorClass: 'bg-amber-500/15 text-amber-600 border-amber-500/30' },
+  { value: 'accidente', label: 'Accidenté', colorClass: 'bg-destructive/15 text-destructive border-destructive/30' },
+  { value: 'indisponible', label: 'Indisponible', colorClass: 'bg-muted text-muted-foreground border-border' },
+] as const;
+
+/** Les véhicules créés avant cet ajout n'ont pas ce champ : traités comme 'disponible'. */
+export function getVehicleAvailabilityStatus(vehicle: Pick<Vehicle, 'availabilityStatus'>): VehicleAvailabilityStatus {
+  return vehicle.availabilityStatus ?? 'disponible';
+}
 
 export const fuelTypes = [
   { value: 'diesel', label: 'Gazole' },

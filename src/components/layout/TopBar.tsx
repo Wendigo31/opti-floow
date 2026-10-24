@@ -61,9 +61,12 @@ export function TopBar({ isDark, onToggleTheme, leftOffsetClass }: TopBarProps) 
   const cloudSyncState = useCloudDataSafe();
 
 
-  // Normalize role for display - use licenseData.userRole directly
+  // Normalize role for display - seule la source serveur (company_users, via
+  // useTeam) fait foi : un repli sur licenseData.userRole (mis en cache dans
+  // localStorage) afficherait un badge de rôle faux si cette clé est modifiée
+  // à la main (même motif que les 8 autres fichiers corrigés le 24/10).
   const getNormalizedRole = (): string | null => {
-    const role = licenseData?.userRole || currentUserRole;
+    const role = currentUserRole;
     if (!role) return null;
     switch (role.toLowerCase()) {
       case 'direction':

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSavedTours } from '@/hooks/useSavedTours';
+import { useDriverAbsences } from '@/hooks/useDriverAbsences';
+import { getOverlappingAbsences, formatAbsencePeriod } from '@/utils/driverAbsenceOverlap';
 import type { SavedTour } from '@/types/savedTour';
  import {
    Dialog,
@@ -27,7 +29,7 @@ import {
 } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-react';
+import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
  import { dayLabels, fullDayLabels } from '@/types/planning';
  import type { TourInput } from '@/types/planning';
  import type { Vehicle } from '@/types/vehicle';
@@ -80,7 +82,17 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
   
   // Load saved tours
   const { tours: savedTours, loading: loadingSavedTours } = useSavedTours();
- 
+
+  // Absences conducteur en conflit avec la période de la mission — purement
+  // informatif (n'empêche pas l'enregistrement, l'utilisateur reste décideur).
+  const { absences } = useDriverAbsences();
+  const driverAbsenceConflicts = getOverlappingAbsences(
+    absences, formData.driver_id, formData.start_date, formData.end_date
+  );
+  const relayAbsenceConflicts = getOverlappingAbsences(
+    absences, formData.relay_driver_id, formData.start_date, formData.end_date
+  );
+
    const toggleDay = (dayIndex: number) => {
      setFormData(prev => ({
        ...prev,
@@ -367,9 +379,17 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
                    ))}
                  </SelectContent>
                </Select>
+               {driverAbsenceConflicts.length > 0 && (
+                 <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1">
+                   <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                   <span>
+                     Ce conducteur est déclaré absent {formatAbsencePeriod(driverAbsenceConflicts[0])}, période qui chevauche cette mission.
+                   </span>
+                 </p>
+               )}
              </div>
            </div>
- 
+
            {/* Relay Driver Toggle */}
            <div className="space-y-3">
              <Button
@@ -403,6 +423,14 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2 } from 'lucide-rea
                        ))}
                      </SelectContent>
                    </Select>
+                   {relayAbsenceConflicts.length > 0 && (
+                     <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1">
+                       <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                       <span>
+                         Ce conducteur relais est déclaré absent {formatAbsencePeriod(relayAbsenceConflicts[0])}, période qui chevauche cette mission.
+                       </span>
+                     </p>
+                   )}
                  </div>
                  <div className="space-y-2">
                    <Label htmlFor="relay_time">Heure de relais</Label>
