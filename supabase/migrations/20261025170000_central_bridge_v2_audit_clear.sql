@@ -209,7 +209,7 @@ begin
 
   when 'audit_clear' then
     -- Vide le journal d'administration du logiciel ; une ligne garde la trace du vidage.
-    execute format('delete from public.%I', cfg->>'audit_table');
+    execute format('delete from public.%I where true', cfg->>'audit_table');
     get diagnostics n_del = row_count;
     perform _central_log(cfg, actor, 'central_audit_cleared', null, jsonb_build_object('deleted', n_del));
     return jsonb_build_object('deleted', n_del);
