@@ -76,7 +76,6 @@ export function LoginForm({
             disabled={busy}
           />
         </div>
-        {footer}
         {error && <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full" disabled={busy || !canSubmit}>
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
@@ -86,6 +85,7 @@ export function LoginForm({
           L'identifiant est la partie de votre email avant le @. Pas encore de mot de passe, ou oublié ?
           Demandez-en un à votre direction ou à vos RH.
         </p>
+        {footer}
       </form>
     </div>
   );

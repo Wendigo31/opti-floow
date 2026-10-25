@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useLicense } from '@/hooks/useLicense';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
@@ -14,7 +13,6 @@ import { LoginForm } from '@/components/accounts/LoginForm';
  */
 export default function Activation() {
   const { validateLicense, loginWithPassword } = useLicense();
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -36,7 +34,6 @@ export default function Activation() {
       <LoginForm
         logo={optiflowLogo}
         appName="OptiFlow"
-        canSubmit={acceptedTerms}
         onSubmit={async (login, password) => {
           const r = await loginWithPassword(login, password);
           if (!r.success) return r.error || 'Connexion impossible';
@@ -44,19 +41,13 @@ export default function Activation() {
           return null;
         }}
         footer={
-          <label className="flex items-start gap-2 text-xs leading-tight text-muted-foreground">
-            <Checkbox checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(c === true)} />
-            <span>
-              J'accepte les{' '}
-              <button type="button" onClick={() => setShowLegal(true)} className="font-medium text-primary hover:underline">
-                CGVU
-              </button>{' '}
-              et la{' '}
-              <button type="button" onClick={() => setShowLegal(true)} className="font-medium text-primary hover:underline">
-                Politique de confidentialité
-              </button>
-            </span>
-          </label>
+          <p className="text-center text-[11px] leading-tight text-muted-foreground">
+            En vous connectant, vous acceptez les{' '}
+            <button type="button" onClick={() => setShowLegal(true)} className="underline hover:text-foreground">
+              CGVU et la politique de confidentialité
+            </button>
+            .
+          </p>
         }
       />
 
