@@ -53,11 +53,14 @@ export interface TeamUser {
   created_by: string | null;
 }
 
-/** Email de connexion : tel quel s'il contient « @ », sinon retrouvé depuis l'identifiant personnel. */
+/** Email de connexion : tel quel s'il contient « @ », sinon retrouvé depuis l'identifiant (partie avant le @). */
 export async function loginEmail(input: string): Promise<string | null> {
   const v = input.trim();
   if (v.includes('@')) return v.toLowerCase();
-  const email = await unwrap<string | null>(rpc('resolve_login', { p_login: v })).catch(() => null);
+  const email = await unwrap<string | null>(rpc('resolve_login', { p_login: v })).catch((e: Error) => {
+    if (/plusieurs comptes/i.test(e.message)) throw e;
+    return null;
+  });
   return email ? email.toLowerCase() : null;
 }
 
