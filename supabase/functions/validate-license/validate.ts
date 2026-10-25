@@ -5,7 +5,20 @@ import {
 
 // Handle "validate" action - initial license activation with Supabase Auth
 export async function handleValidate(body: any, supabase: any, req: Request, clientIp: string): Promise<Response> {
-  const { licenseCode, email } = body;
+  const { email } = body;
+  let { licenseCode } = body;
+
+  // Connexion depuis le lien de la société (?societe=…) : le lien remplace
+  // l'identifiant société, retrouvé ici côté serveur (jamais envoyé à la page).
+  if (!licenseCode && typeof body.slug === "string" && /^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(body.slug.toLowerCase())) {
+    const { data: bySlug } = await supabase
+      .from("licenses")
+      .select("company_identifier, license_code")
+      .eq("slug", body.slug.toLowerCase())
+      .maybeSingle();
+    licenseCode = bySlug?.company_identifier || bySlug?.license_code || null;
+    if (!licenseCode) return errorResponse("Lien de société inconnu", 404);
+  }
 
   if (!licenseCode || !email) {
     return errorResponse("Code de licence et email requis", 400);

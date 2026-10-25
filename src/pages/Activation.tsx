@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, Users } from 'lucide-react';
+import { Key, Mail, Loader2, AlertCircle, CheckCircle2, HelpCircle, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LegalTabs from '@/components/settings/LegalTabs';
+import { currentCompanySlug, forgetCompanySlug, resolveCompanyLink, type LinkedCompany } from '@/lib/companyLink';
 
 
 export default function Activation() {
@@ -29,6 +30,34 @@ export default function Activation() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
 
+  // Page ouverte depuis le lien de la société (?societe=…) : connexion à son
+  // nom, sans identifiant société à saisir.
+  const [companySlug, setCompanySlug] = useState<string | null>(() => currentCompanySlug());
+  const [company, setCompany] = useState<LinkedCompany | null>(null);
+  const [companyStatus, setCompanyStatus] = useState<'none' | 'loading' | 'found' | 'not-found'>(companySlug ? 'loading' : 'none');
+  useEffect(() => {
+    if (!companySlug) return;
+    let cancelled = false;
+    resolveCompanyLink(companySlug)
+      .then((c) => {
+        if (cancelled) return;
+        setCompany(c);
+        setCompanyStatus(c ? 'found' : 'not-found');
+      })
+      .catch(() => !cancelled && setCompanyStatus('not-found'));
+    return () => {
+      cancelled = true;
+    };
+  }, [companySlug]);
+  const linkedCompany = companyStatus === 'found' && company ? company : null;
+
+  const leaveCompanyLink = () => {
+    forgetCompanySlug();
+    setCompanySlug(null);
+    setCompany(null);
+    setCompanyStatus('none');
+  };
+
   // Check if returning from Stripe checkout
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -38,6 +67,7 @@ export default function Activation() {
   }, []);
 
   const handleOnboardingComplete = (companyIdentifier: string, userEmail: string) => {
+    leaveCompanyLink();
     setCode(companyIdentifier);
     setEmail(userEmail);
     setShowOnboarding(false);
@@ -48,7 +78,7 @@ export default function Activation() {
     setError(null);
     setSuccess(false);
 
-    const validation = activationSchema.safeParse({ code, email });
+    const validation = activationSchema.safeParse({ code: linkedCompany ? linkedCompany.slug : code, email });
     if (!validation.success) {
       setError(validation.error.errors[0].message);
       return;
@@ -56,7 +86,9 @@ export default function Activation() {
 
     setLoading(true);
     try {
-      const result = await validateLicense(code, email);
+      const result = linkedCompany
+        ? await validateLicense('', email, linkedCompany.slug)
+        : await validateLicense(code, email);
       if (result.success) {
         setSuccess(true);
         setTimeout(() => {
@@ -87,13 +119,34 @@ export default function Activation() {
         {/* Login Card */}
         <div className="glass-card p-8 w-full max-w-md">
           <div className="text-center mb-6">
+            {linkedCompany && (
+              <div className="flex items-center justify-center gap-2 text-sm font-medium text-primary mb-1">
+                <Building2 className="w-4 h-4" />
+                <span>{linkedCompany.name}</span>
+              </div>
+            )}
             <h2 className="text-xl font-semibold text-foreground">Connexion</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Entrez vos identifiants pour accéder à votre espace
             </p>
           </div>
 
+          {companyStatus === 'not-found' && (
+            <div className="flex items-start gap-2 p-3 mb-4 rounded-lg text-sm bg-muted text-muted-foreground">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>Ce lien de société n'est pas reconnu : saisissez votre identifiant société.</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {linkedCompany ? (
+            <p className="text-xs text-center text-muted-foreground">
+              Pas votre société ?{' '}
+              <button type="button" onClick={leaveCompanyLink} className="text-primary hover:underline">
+                Saisir un autre identifiant
+              </button>
+            </p>
+            ) : (
             <div className="space-y-2">
               <Label htmlFor="code" className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-primary" />
@@ -106,9 +159,10 @@ export default function Activation() {
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="TRANSPORT-MARTIN"
                 className="font-mono text-center tracking-wider"
-                disabled={loading || success} />
+                disabled={loading || success || companyStatus === 'loading'} />
               
             </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">

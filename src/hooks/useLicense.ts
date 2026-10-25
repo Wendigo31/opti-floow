@@ -64,7 +64,7 @@ interface UseLicenseReturn {
   isLoading: boolean;
   licenseData: LicenseData | null;
   planType: PlanType;
-  validateLicense: (code: string, email: string) => Promise<{ success: boolean; error?: string }>;
+  validateLicense: (code: string, email: string, slug?: string | null) => Promise<{ success: boolean; error?: string }>;
   clearLicense: () => void;
   refreshLicense: () => Promise<{ success: boolean; error?: string }>;
   hasFeature: (feature: FeatureKey) => boolean;
@@ -651,11 +651,13 @@ export function useLicense(): UseLicenseReturn {
     checkStoredLicense();
   }, []);
 
-  const validateLicense = useCallback(async (code: string, email: string): Promise<{ success: boolean; error?: string }> => {
+  const validateLicense = useCallback(async (code: string, email: string, slug?: string | null): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('validate-license', {
-        body: { licenseCode: code, email, action: 'validate' },
-      });
+      // Lien de la société : l'identifiant est retrouvé par le serveur.
+      const body = !code && slug
+        ? { slug, email, action: 'validate' }
+        : { licenseCode: code, email, action: 'validate' };
+      const { data: response, error } = await supabase.functions.invoke('validate-license', { body });
 
       if (error) {
         console.error('License validation error:', error);

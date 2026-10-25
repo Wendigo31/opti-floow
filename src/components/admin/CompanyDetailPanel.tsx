@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { COMPANY_APP_DOMAIN } from '@/lib/companyLink';
 import { 
   Building2, 
   Users, 
@@ -47,7 +48,8 @@ import {
   DollarSign,
   Edit,
   Save,
-  X
+  X,
+  Copy
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -56,6 +58,7 @@ interface License {
   id: string;
   license_code: string;
   company_identifier?: string;
+  slug?: string | null;
   email: string;
   company_name?: string;
   plan_type: string;
@@ -389,6 +392,27 @@ export function CompanyDetailPanel({ getAdminToken }: Props) {
                           }}
                         >
                           <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    {selectedLicense.slug && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">Lien :</span>
+                        <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{selectedLicense.slug}</code>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          title="Copier le lien de connexion de la société"
+                          onClick={() => {
+                            const url = `https://${COMPANY_APP_DOMAIN}/?societe=${selectedLicense.slug}`;
+                            navigator.clipboard.writeText(url).then(
+                              () => toast.success('Lien copié'),
+                              () => toast.error('Copie impossible'),
+                            );
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     )}
