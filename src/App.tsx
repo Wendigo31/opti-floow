@@ -1,11 +1,14 @@
-import { useEffect, useCallback, lazy, Suspense } from "react";
+import { useEffect, useCallback, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
-import { LicenseProvider } from "./context/LicenseContext";
+import { LicenseProvider, useLicenseContext } from "./context/LicenseContext";
+import { installCloudStatus } from "@/lib/cloudStatus";
+import { CloudPresenceProvider } from "@/hooks/useCloudPresence";
+import { supabase } from "@/integrations/supabase/client";
 import { CloudDataProvider } from "./context/CloudDataContext";
 import { MainLayout } from "./components/layout/MainLayout";
 import { CompanyAccessGuard } from "./components/CompanyAccessGuard";
@@ -50,6 +53,23 @@ const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const AcceptQuote = lazy(() => import("./pages/AcceptQuote"));
 const queryClient = new QueryClient();
+// Indicateur du cloud, hors ligne et session : identiques dans les 3 logiciels.
+installCloudStatus(queryClient, supabase);
+
+/** Collègues connectés en ce moment (présence du cloud de la société). */
+function FlowPresence({ children }: { children: ReactNode }) {
+  const { licenseId, userRole } = useLicenseContext();
+  const { licenseData } = useLicense();
+  const email = licenseData?.email ?? '';
+  const name =
+    [licenseData?.firstName, licenseData?.lastName].filter(Boolean).join(' ') || email.split('@')[0] || 'Utilisateur';
+  const role = userRole ?? licenseData?.userRole ?? 'exploitation';
+  const me = useMemo(
+    () => (licenseId && email ? { licenseId, email, name, role } : null),
+    [licenseId, email, name, role],
+  );
+  return <CloudPresenceProvider me={me}>{children}</CloudPresenceProvider>;
+}
 
 // Hook global pour le raccourci admin
 function useGlobalAdminShortcut() {
@@ -112,6 +132,7 @@ function LicensedAppContent() {
           <CloudSessionProvider>
             <RealtimeNotificationsWrapper>
               <CompanyAccessGuard>
+              <FlowPresence>
               <MainLayout>
                 <Suspense fallback={<RouteSuspenseFallback />}>
                 <Routes>
@@ -143,6 +164,7 @@ function LicensedAppContent() {
                 </Routes>
                 </Suspense>
               </MainLayout>
+              </FlowPresence>
               </CompanyAccessGuard>
             </RealtimeNotificationsWrapper>
           </CloudSessionProvider>

@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useCloudSession } from '@/hooks/useCloudSession';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Cloud, CloudOff, Loader2 } from 'lucide-react';
+import { cloudActivity } from '@/lib/cloudStatus';
 
 /**
  * Provider component that enables automatic cloud session saving every 60 seconds.
@@ -35,11 +34,9 @@ export function CloudSessionProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const { 
-    isLoading, 
     isSaving, 
     lastSavedAt, 
     error,
-    forceSave,
   } = useCloudSession({
     vehicle,
     trip,
@@ -66,57 +63,21 @@ export function CloudSessionProvider({ children }: { children: React.ReactNode }
         setSelectedDriverIds(session.selectedDriverIds);
       }
 
-      toast.success('Session restaurée depuis le cloud', {
-        icon: <Cloud className="w-4 h-4" />,
-        duration: 3000,
-      });
+      // Message de reprise de session : le même dans les 3 logiciels (lib/cloudStatus).
     },
   });
 
-  // Show error toast if cloud session fails
+  // Sauvegarde de l'espace de travail : affichée par l'indicateur du cloud commun.
   useEffect(() => {
-    if (error) {
-      toast.error('Erreur de synchronisation cloud', {
-        description: error,
-        icon: <CloudOff className="w-4 h-4" />,
-      });
-    }
+    if (!isSaving) return;
+    return cloudActivity.begin();
+  }, [isSaving]);
+  useEffect(() => {
+    if (lastSavedAt) cloudActivity.synced(lastSavedAt.getTime());
+  }, [lastSavedAt]);
+  useEffect(() => {
+    if (error) cloudActivity.failed(`Sauvegarde de l'espace de travail impossible : ${error}`);
   }, [error]);
 
-  // Log save status for debugging
-  useEffect(() => {
-    if (lastSavedAt) {
-      console.log('[CloudSessionProvider] Last saved at:', lastSavedAt.toLocaleTimeString());
-    }
-  }, [lastSavedAt]);
-
-  return (
-    <>
-      {children}
-      
-      {/* Save status indicator (bottom right) */}
-      <div className="fixed bottom-4 right-4 z-50">
-        {isLoading ? (
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-full text-sm text-muted-foreground shadow-lg">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Chargement session...</span>
-          </div>
-        ) : isSaving ? (
-          <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full text-sm text-primary shadow-lg">
-            <Cloud className="w-4 h-4 animate-pulse" />
-            <span>Sauvegarde...</span>
-          </div>
-        ) : lastSavedAt ? (
-          <button
-            onClick={forceSave}
-            className="flex items-center gap-2 px-3 py-2 bg-success/10 rounded-full text-sm text-success shadow-lg hover:bg-success/20 transition-colors cursor-pointer"
-            title={`Dernière sauvegarde: ${lastSavedAt.toLocaleTimeString()}`}
-          >
-            <Cloud className="w-4 h-4" />
-            <span className="hidden sm:inline">Cloud sync</span>
-          </button>
-        ) : null}
-      </div>
-    </>
-  );
+  return <>{children}</>;
 }

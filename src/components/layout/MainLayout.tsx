@@ -2,6 +2,8 @@ import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { CloudBanner } from '@/components/cloud/CloudStatus';
+import { useLicense } from '@/hooks/useLicense';
 import { LoadingScreen } from './LoadingScreen';
 import { TutorialDialog } from '../onboarding/TutorialDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -16,6 +18,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
   const { collapsed } = useSidebarContext();
+  const { clearLicense } = useLicense();
   
   // Tutorial on first session
   const [showTutorial, setShowTutorial] = useState(false);
@@ -74,6 +77,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
         {showSidebar && <Sidebar />}
         <TopBar leftOffsetClass={getTopBarLeft()} />
         <main className={`pt-14 transition-all duration-300 ${getMainMargin()}`}>
+          <CloudBanner onReconnect={clearLicense} />
           <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
             {children}
           </div>

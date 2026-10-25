@@ -1,6 +1,6 @@
 import { ThemeModeSwitch } from '@/components/ThemeModeSwitch';
 import React, { useEffect, useState } from 'react';
-import { Calendar, Crown, Star, Sparkles, WifiOff, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users } from 'lucide-react';
+import { Calendar, Crown, Star, Sparkles, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -21,15 +21,14 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import { useLicense, PlanType } from '@/hooks/useLicense';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { isTauri } from '@/hooks/useTauri';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 
 import { useTeam } from '@/hooks/useTeam';
 import { MobileNav } from './MobileNav';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CloudSyncIndicator } from '@/components/shared/CloudSyncIndicator';
-import { useCloudDataSafe } from '@/hooks/useCloudDataSafe';
+import { CloudStatus } from '@/components/cloud/CloudStatus';
+import { NAV_CATEGORIES } from '@/config/appNavigation';
 import { NotificationCenter } from '@/components/layout/NotificationCenter';
 
 interface TopBarProps {
@@ -51,13 +50,18 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
   rh: { label: 'RH', icon: Users, color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
 };
 
+const pageLabel = (path: string) => {
+  if (path === '/') return 'Accueil';
+  if (path === '/settings') return 'Paramètres';
+  for (const c of NAV_CATEGORIES) for (const p of c.pages) if (p.to === path) return p.label;
+  return '';
+};
+
 export function TopBar({ leftOffsetClass }: TopBarProps) {
-  const { planType, licenseData, isOffline, clearLicense, hasFeature } = useLicense();
+  const { planType, licenseData, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const isOnline = useNetworkStatus();
   const { currentUserRole, currentUserInfo } = useTeam();
   const isMobile = useIsMobile();
-  const cloudSyncState = useCloudDataSafe();
 
 
   // Normalize role for display - seule la source serveur (company_users, via
@@ -136,23 +140,12 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
               </div>
             )}
 
-            {/* Indicateur hors-ligne */}
-            {(!isOnline || isOffline) && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/20 text-destructive animate-pulse">
-                <WifiOff className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">Hors ligne</span>
-              </div>
-            )}
           </div>
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Cloud Sync Indicator - Shows real-time activity */}
-            <CloudSyncIndicator
-              isConnected={cloudSyncState.isConnected}
-              isLoading={cloudSyncState.isLoading}
-              recentActivity={cloudSyncState.recentActivity}
-            />
+            {/* Cloud : synchronisation, hors ligne, collègues connectés (identique dans les 3 logiciels) */}
+            <CloudStatus pageLabel={pageLabel} onReconnect={clearLicense} />
 
             {/* Notification Center */}
             <NotificationCenter />
