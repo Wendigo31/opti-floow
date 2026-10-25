@@ -56,6 +56,8 @@ interface LicenseData {
   authMode?: 'password' | 'code';
   /** Mot de passe provisoire à remplacer avant d'accéder au logiciel. */
   mustChangePassword?: boolean;
+  /** Forfait de la société : start (Essentiel), pro, enterprise (Entreprise). */
+  planName?: string | null;
 }
 // Cached license with offline support
 interface CachedLicense {
@@ -456,6 +458,7 @@ export function useLicense(): UseLicenseReturn {
                   firstName: validateResponse.licenseData.firstName || undefined,
                   lastName: validateResponse.licenseData.lastName || undefined,
                   companyName: validateResponse.licenseData.companyName || undefined,
+                  planName: validateResponse.licenseData.planName ?? null,
                   siren: validateResponse.licenseData.siren || undefined,
                   companyStatus: validateResponse.licenseData.companyStatus || undefined,
                   employeeCount: validateResponse.licenseData.employeeCount || undefined,
@@ -557,6 +560,7 @@ export function useLicense(): UseLicenseReturn {
                   firstName: checkResponse.licenseData?.firstName || undefined,
                   lastName: checkResponse.licenseData?.lastName || undefined,
                   companyName: checkResponse.licenseData?.companyName || undefined,
+                  planName: checkResponse.licenseData?.planName ?? null,
                   siren: checkResponse.licenseData?.siren || undefined,
                   companyStatus: checkResponse.licenseData?.companyStatus || undefined,
                   employeeCount: checkResponse.licenseData?.employeeCount || undefined,
@@ -713,6 +717,7 @@ export function useLicense(): UseLicenseReturn {
         firstName: response.licenseData.firstName || undefined,
         lastName: response.licenseData.lastName || undefined,
         companyName: response.licenseData.companyName || undefined,
+        planName: response.licenseData.planName ?? null,
         siren: response.licenseData.siren || undefined,
         companyStatus: response.licenseData.companyStatus || undefined,
         employeeCount: response.licenseData.employeeCount || undefined,
@@ -789,6 +794,7 @@ export function useLicense(): UseLicenseReturn {
         firstName: str('firstName'),
         lastName: str('lastName'),
         companyName: str('companyName'),
+        planName: str('planName') ?? null,
         siren: str('siren'),
         companyStatus: str('companyStatus'),
         employeeCount: lic['employeeCount'] == null ? undefined : Number(lic['employeeCount']),
@@ -886,6 +892,7 @@ export function useLicense(): UseLicenseReturn {
           firstName: checkResponse.licenseData?.firstName || undefined,
           lastName: checkResponse.licenseData?.lastName || undefined,
           companyName: checkResponse.licenseData?.companyName || undefined,
+          planName: checkResponse.licenseData?.planName ?? null,
           siren: checkResponse.licenseData?.siren || undefined,
           companyStatus: checkResponse.licenseData?.companyStatus || undefined,
           employeeCount: checkResponse.licenseData?.employeeCount || undefined,
@@ -945,6 +952,10 @@ export function useLicense(): UseLicenseReturn {
 
   // Check if a feature is enabled (user overrides > custom features > plan defaults)
   const hasFeature = useCallback((feature: FeatureKey): boolean => {
+    // Une fonctionnalité bloquée par le forfait de la société l'est pour tout le monde :
+    // aucun réglage individuel ne peut la rouvrir.
+    const companyValue = (licenseData?.customFeatures as Record<string, unknown> | null | undefined)?.[feature];
+    if (companyValue === false) return false;
     // First check user-specific overrides (highest priority)
     const userOverrides = licenseData?.userFeatureOverrides;
     if (userOverrides) {

@@ -194,7 +194,7 @@ const REQUIRED_PLAN: Record<FeatureKey, PlanType> = {
 };
 
 const PLAN_LABELS: Record<PlanType, string> = {
-  optiflow: 'OptiFlow',
+  optiflow: 'supérieur (Pro ou Entreprise)',
 };
 
 const PLAN_ICONS: Record<PlanType, typeof Sparkles> = {

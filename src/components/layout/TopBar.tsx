@@ -20,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-import { useLicense, PlanType } from '@/hooks/useLicense';
+import { useLicense } from '@/hooks/useLicense';
 import { isTauri } from '@/hooks/useTauri';
 import { clearDesktopCacheAndReload } from '@/utils/desktopCache';
 
@@ -38,8 +38,11 @@ interface TopBarProps {
   leftOffsetClass: string;
 }
 
-const planConfig: Record<PlanType, { label: string; icon: React.ElementType; color: string }> = {
-  optiflow: { label: 'OptiFlow', icon: Crown, color: 'bg-primary/15 text-primary border-primary/30' },
+// Les 3 forfaits, identiques dans OptiFlow, OptiFret et OptiXpress.
+const planConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  start: { label: 'Essentiel', icon: Star, color: 'bg-sky-500/15 text-sky-600 border-sky-500/30' },
+  pro: { label: 'Pro', icon: Sparkles, color: 'bg-primary/15 text-primary border-primary/30' },
+  enterprise: { label: 'Entreprise', icon: Crown, color: 'bg-amber-500/15 text-amber-600 border-amber-500/30' },
 };
 
 // Role configuration for display
@@ -58,7 +61,7 @@ const pageLabel = (path: string) => {
 };
 
 export function TopBar({ leftOffsetClass }: TopBarProps) {
-  const { planType, licenseData, clearLicense, hasFeature } = useLicense();
+  const { licenseData, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentUserRole, currentUserInfo } = useTeam();
   const isMobile = useIsMobile();
@@ -100,7 +103,7 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
     return () => clearInterval(timer);
   }, []);
 
-  const plan = planConfig[planType];
+  const plan = planConfig[licenseData?.planName ?? ''] ?? planConfig.pro;
   const PlanIcon = plan.icon;
 
   // User display name - prioritize user-specific info from company_users over license owner info

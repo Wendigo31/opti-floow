@@ -328,7 +328,7 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
       companyName: license.company_name, siren: license.siren,
       companyStatus: license.company_status, employeeCount: license.employee_count,
       address: license.address, city: license.city, postalCode: license.postal_code,
-      activatedAt: license.activated_at || now, planType,
+      activatedAt: license.activated_at || now, planType, planName: license.plan_type ?? null,
       maxDrivers: license.max_drivers, maxClients: license.max_clients,
       maxDailyCharges: license.max_daily_charges, maxMonthlyCharges: license.max_monthly_charges,
       maxYearlyCharges: license.max_yearly_charges,
