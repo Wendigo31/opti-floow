@@ -64,6 +64,8 @@ ALTER TABLE public.company_users
 ADD CONSTRAINT company_users_role_check
 CHECK (role = ANY (ARRAY['direction'::text, 'exploitation'::text, 'comptabilite'::text, 'rh'::text]));
 
+ALTER TABLE public.company_users ALTER COLUMN role SET DEFAULT 'exploitation';
+
 -- ---------------------------------------------------------------------
 -- 2. Nouvelles fonctions d'aide RLS (même convention que get_user_license_id
 --    / is_company_owner déjà en place).
@@ -250,8 +252,8 @@ ON public.saved_tours
 AS RESTRICTIVE
 FOR UPDATE
 TO authenticated
-USING (user_id = auth.uid() OR public.is_company_owner(license_id, auth.uid()) OR public.is_company_financial(license_id, auth.uid()))
-WITH CHECK (user_id = auth.uid() OR public.is_company_owner(license_id, auth.uid()) OR public.is_company_financial(license_id, auth.uid()));
+USING (user_id = auth.uid()::text OR public.is_company_owner(license_id, auth.uid()) OR public.is_company_financial(license_id, auth.uid()))
+WITH CHECK (user_id = auth.uid()::text OR public.is_company_owner(license_id, auth.uid()) OR public.is_company_financial(license_id, auth.uid()));
 
 DROP POLICY IF EXISTS "Financial write scope on user_drivers" ON public.user_drivers;
 CREATE POLICY "Financial write scope on user_drivers"

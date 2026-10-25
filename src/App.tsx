@@ -8,6 +8,7 @@ import { AppProvider } from "./context/AppContext";
 import { LicenseProvider } from "./context/LicenseContext";
 import { CloudDataProvider } from "./context/CloudDataContext";
 import { MainLayout } from "./components/layout/MainLayout";
+import { CompanyAccessGuard } from "./components/CompanyAccessGuard";
 
 import { DataSyncProvider } from "./components/DataSyncProvider";
 import { CloudSessionProvider } from "./components/CloudSessionProvider";
@@ -110,6 +111,7 @@ function LicensedAppContent() {
         <DataSyncProvider>
           <CloudSessionProvider>
             <RealtimeNotificationsWrapper>
+              <CompanyAccessGuard>
               <MainLayout>
                 <Suspense fallback={<RouteSuspenseFallback />}>
                 <Routes>
@@ -141,6 +143,7 @@ function LicensedAppContent() {
                 </Routes>
                 </Suspense>
               </MainLayout>
+              </CompanyAccessGuard>
             </RealtimeNotificationsWrapper>
           </CloudSessionProvider>
         </DataSyncProvider>

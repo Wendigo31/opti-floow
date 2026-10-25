@@ -164,6 +164,8 @@ interface NavAccessContext {
   isDirection: boolean;
   /** Rôle métier de l'utilisateur courant (direction/exploitation/comptabilite/rh). */
   role?: TeamRole | null;
+  /** Onglets désactivés pour la société depuis OptiCentral (chemins). */
+  hiddenPaths?: string[];
 }
 
 /** Vrai si le rôle courant fait partie de la liste autorisée (absente = tous les rôles). */
@@ -175,6 +177,7 @@ function isRoleAllowed(allowedRoles: TeamRole[] | undefined, ctx: NavAccessConte
 
 /** Vrai si la page doit être visible pour l'utilisateur courant. */
 export function canSeeNavPage(page: NavPageConfig, ctx: NavAccessContext): boolean {
+  if (ctx.hiddenPaths?.includes(page.to)) return false;
   if (page.requiredFeature && !ctx.hasFeature(page.requiredFeature)) return false;
   if (page.userFeatureKey && !ctx.canAccessUserFeature(page.userFeatureKey)) return false;
   if (!isRoleAllowed(page.allowedRoles, ctx)) return false;
@@ -216,4 +219,20 @@ export function getCategoryIdForPath(pathname: string): NavCategoryId | null {
   const target = PATH_ALIASES[pathname] ?? pathname;
   const category = NAV_CATEGORIES.find((c) => c.pages.some((p) => p.to === target));
   return category ? category.id : null;
+}
+
+/** Toutes les pages présentes dans au moins un espace. */
+const NAV_PATHS = new Set(NAV_CATEGORIES.flatMap((c) => c.pages.map((p) => p.to)));
+
+/**
+ * Vrai si l'utilisateur peut ouvrir ce chemin. Une page de navigation n'est
+ * ouverte que si elle est visible dans au moins un de ses espaces (rôle,
+ * fonctionnalités, onglets désactivés par l'administrateur) : un lien direct
+ * ne contourne donc pas le cloisonnement. Les pages hors espaces (accueil,
+ * paramètres, espaces eux-mêmes…) restent ouvertes.
+ */
+export function canAccessPath(pathname: string, ctx: NavAccessContext): boolean {
+  const target = PATH_ALIASES[pathname] ?? pathname;
+  if (!NAV_PATHS.has(target)) return true;
+  return getVisibleNavCategories(ctx).some((c) => c.pages.some((p) => p.to === target));
 }
