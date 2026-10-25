@@ -69,3 +69,58 @@ export function useRefreshCompanyAccess() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: ['company-access'] });
 }
+
+// ---------- Bandeaux OptiCentral et suivi des onglets ouverts ----------
+// Fonctions SQL : active_announcements / track_page_view
+// (migration 20261025160000_central_bridge_v2.sql).
+
+export interface CentralAnnouncement {
+  id: string;
+  message: string;
+  level: 'info' | 'warning' | 'maintenance';
+  ends_at: string | null;
+}
+
+/** Messages diffusés depuis OptiCentral à toutes les sociétés ou à celle-ci. */
+export function useCentralAnnouncements(licenseId: string | null | undefined) {
+  const q = useQuery({
+    queryKey: ['central-announcements', licenseId ?? 'none'],
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+    queryFn: async (): Promise<CentralAnnouncement[]> => {
+      const { data, error } = await rpc('active_announcements', { p_license_id: licenseId ?? null });
+      if (error || !Array.isArray(data)) return [];
+      return data as CentralAnnouncement[];
+    },
+  });
+  return q.data ?? [];
+}
+
+/**
+ * Chemin enregistré pour une page : identifiants retirés et 2 niveaux au plus,
+ * pour que OptiCentral sache quels onglets la société ouvre réellement.
+ */
+export function trackedPath(pathname: string): string | null {
+  const parts = pathname
+    .split('/')
+    .filter(Boolean)
+    .filter((s) => !/\d/.test(s) || s.length < 8)
+    .slice(0, 2);
+  const p = '/' + parts.join('/');
+  return /^\/[A-Za-z0-9/_-]{0,80}$/.test(p) ? p : null;
+}
+
+const lastTracked = { key: '' };
+
+/** Enregistre l'ouverture d'un onglet (une fois par chemin et par minute). */
+export function trackPageView(licenseId: string | null | undefined, pathname: string): void {
+  if (!licenseId) return;
+  const path = trackedPath(pathname);
+  if (!path) return;
+  const key = `${licenseId}|${path}|${Math.floor(Date.now() / 60_000)}`;
+  if (lastTracked.key === key) return;
+  lastTracked.key = key;
+  void rpc('track_page_view', { p_license_id: licenseId, p_path: path }).catch(() => undefined);
+}

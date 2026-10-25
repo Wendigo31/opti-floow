@@ -5,6 +5,7 @@ import { useLicense } from '@/hooks/useLicense';
 import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { canAccessPath } from '@/config/appNavigation';
 import { CompanyContactGate } from '@/components/CompanyContactGate';
+import { CentralBanner } from '@/components/CentralBanner';
 
 /**
  * Même contrôle que dans OptiFret et OptiXpress :
@@ -44,5 +45,10 @@ export function CompanyAccessGuard({ children }: { children: ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <CentralBanner licenseId={licenseId} />
+      {children}
+    </>
+  );
 }
