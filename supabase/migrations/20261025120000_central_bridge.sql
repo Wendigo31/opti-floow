@@ -117,6 +117,9 @@ begin
      or encode(extensions.digest(p_secret, 'sha256'), 'hex') is distinct from (select secret_hash from public.central_bridge where id = 1) then
     raise exception 'Accès refusé' using errcode = '28000';
   end if;
+  -- OptiCentral agit en administrateur : les garde-fous anti-escalade des logiciels
+  -- (prevent_role_escalation) reconnaissent ce contexte, limité à cette transaction.
+  perform set_config('app.admin_context', 'true', true);
 
   case p_action
   when 'ping' then
