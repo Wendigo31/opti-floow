@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { signInWithPassword } from '@/lib/accounts';
 import type { LicenseFeatures } from '@/types/features';
 
 // Flag to prevent re-validation loops
@@ -51,6 +52,10 @@ interface LicenseData {
   companyUserId?: string | null;
   // User role in the company
   userRole?: string | null;
+  /** Connexion par email + mot de passe personnel (et non par identifiant société). */
+  authMode?: 'password' | 'code';
+  /** Mot de passe provisoire à remplacer avant d'accéder au logiciel. */
+  mustChangePassword?: boolean;
 }
 // Cached license with offline support
 interface CachedLicense {
@@ -65,6 +70,10 @@ interface UseLicenseReturn {
   licenseData: LicenseData | null;
   planType: PlanType;
   validateLicense: (code: string, email: string, slug?: string | null) => Promise<{ success: boolean; error?: string }>;
+  /** Connexion email (ou identifiant) + mot de passe, identique dans les 3 logiciels. */
+  loginWithPassword: (login: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** Après le choix du mot de passe personnel. */
+  markPasswordChanged: () => void;
   clearLicense: () => void;
   refreshLicense: () => Promise<{ success: boolean; error?: string }>;
   hasFeature: (feature: FeatureKey) => boolean;
@@ -752,6 +761,83 @@ export function useLicense(): UseLicenseReturn {
     }
   }, []);
 
+  const loginWithPassword = useCallback(async (login: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const companies = await signInWithPassword(login, password);
+      const target = companies.find((c) => c.license_active) ?? companies[0];
+      const { data, error } = await (supabase as unknown as {
+        rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      }).rpc('flow_license_payload', { p_license_id: target.license_id });
+      if (error || !data) {
+        await supabase.auth.signOut();
+        return { success: false, error: error?.message || 'Licence introuvable' };
+      }
+      const d = data as {
+        license: Record<string, unknown>;
+        features: Partial<LicenseFeatures>;
+        company_user: { id: string; role: string; email: string; must_change_password: boolean };
+        overrides: UserFeatureOverride[];
+      };
+      const lic = d.license;
+      const str = (k: string) => (lic[k] == null ? undefined : String(lic[k]));
+      const num = (k: string) => (lic[k] == null ? null : Number(lic[k]));
+      const licenseDataToStore: LicenseData = {
+        code: String(lic['code']),
+        email: d.company_user.email,
+        activatedAt: String(lic['activatedAt']),
+        planType: SINGLE_PLAN,
+        firstName: str('firstName'),
+        lastName: str('lastName'),
+        companyName: str('companyName'),
+        siren: str('siren'),
+        companyStatus: str('companyStatus'),
+        employeeCount: lic['employeeCount'] == null ? undefined : Number(lic['employeeCount']),
+        address: str('address'),
+        city: str('city'),
+        postalCode: str('postalCode'),
+        maxDrivers: num('maxDrivers'),
+        maxClients: num('maxClients'),
+        maxDailyCharges: num('maxDailyCharges'),
+        maxMonthlyCharges: num('maxMonthlyCharges'),
+        maxYearlyCharges: num('maxYearlyCharges'),
+        customFeatures: d.features,
+        userFeatureOverrides: d.overrides.length ? d.overrides : null,
+        showUserInfo: lic['showUserInfo'] !== false,
+        showCompanyInfo: lic['showCompanyInfo'] !== false,
+        showAddressInfo: lic['showAddressInfo'] !== false,
+        showLicenseInfo: lic['showLicenseInfo'] !== false,
+        companyUserId: d.company_user.id,
+        userRole: d.company_user.role,
+        authMode: 'password',
+        mustChangePassword: d.company_user.must_change_password === true,
+      };
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(licenseDataToStore));
+      const now = new Date();
+      const newCache: CachedLicense = {
+        data: licenseDataToStore,
+        lastValidated: now.toISOString(),
+        expiresAt: new Date(now.getTime() + OFFLINE_VALIDITY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(newCache));
+      setLicenseData(licenseDataToStore);
+      setIsLicensed(true);
+      broadcastLicenseUpdate(licenseDataToStore);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Connexion impossible' };
+    }
+  }, []);
+
+  const markPasswordChanged = useCallback(() => {
+    setLicenseData((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, mustChangePassword: false };
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(next));
+      broadcastLicenseUpdate(next);
+      return next;
+    });
+  }, []);
+
   const clearLicense = useCallback(async () => {
     localStorage.removeItem(LICENSE_STORAGE_KEY);
     localStorage.removeItem(LICENSE_CACHE_KEY);
@@ -896,6 +982,8 @@ export function useLicense(): UseLicenseReturn {
     licenseData,
     planType,
     validateLicense,
+    loginWithPassword,
+    markPasswordChanged,
     clearLicense,
     refreshLicense,
     hasFeature,

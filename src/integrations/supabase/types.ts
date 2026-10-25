@@ -649,6 +649,11 @@ export type Database = {
           role: string
           updated_at: string | null
           user_id: string | null
+          must_change_password: boolean
+          login_id: string | null
+          password_set_at: string | null
+          created_via: string | null
+          created_by: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -664,6 +669,11 @@ export type Database = {
           role?: string
           updated_at?: string | null
           user_id?: string | null
+          must_change_password?: boolean
+          login_id?: string | null
+          password_set_at?: string | null
+          created_via?: string | null
+          created_by?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -679,6 +689,11 @@ export type Database = {
           role?: string
           updated_at?: string | null
           user_id?: string | null
+          must_change_password?: boolean
+          login_id?: string | null
+          password_set_at?: string | null
+          created_via?: string | null
+          created_by?: string | null
         }
         Relationships: [
           {

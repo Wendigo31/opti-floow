@@ -6,6 +6,7 @@ import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { canAccessPath } from '@/config/appNavigation';
 import { CompanyContactGate } from '@/components/CompanyContactGate';
 import { CentralBanner } from '@/components/CentralBanner';
+import { ForcedPasswordChange } from '@/components/accounts/ForcedPasswordChange';
 
 /**
  * Même contrôle que dans OptiFret et OptiXpress :
@@ -16,7 +17,7 @@ import { CentralBanner } from '@/components/CentralBanner';
  */
 export function CompanyAccessGuard({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const { licenseData, clearLicense } = useLicense();
+  const { licenseData, clearLicense, markPasswordChanged } = useLicense();
   const { ctx, access, licenseId, loading } = useNavAccessContext();
 
   if (licenseId && loading) {
@@ -27,9 +28,16 @@ export function CompanyAccessGuard({ children }: { children: ReactNode }) {
     );
   }
 
+  // Mot de passe provisoire donné par la Direction / les RH : à remplacer d'abord.
+  if (licenseData?.mustChangePassword) {
+    return <ForcedPasswordChange name={licenseData.email} onDone={markPasswordChanged} onLogout={clearLicense} />;
+  }
+
   if (licenseId && !access.contact_complete) {
     return (
-      <CompanyContactGate
+      <>
+        <CentralBanner licenseId={licenseId} />
+        <CompanyContactGate
         licenseId={licenseId}
         companyName={access.company_name ?? licenseData?.companyName}
         isDirection={ctx.isDirection}
@@ -37,6 +45,7 @@ export function CompanyAccessGuard({ children }: { children: ReactNode }) {
         userEmail={licenseData?.email}
         onLogout={clearLicense}
       />
+      </>
     );
   }
 

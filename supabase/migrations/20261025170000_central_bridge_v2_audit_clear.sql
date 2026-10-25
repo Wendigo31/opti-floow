@@ -214,6 +214,13 @@ begin
     perform _central_log(cfg, actor, 'central_audit_cleared', null, jsonb_build_object('deleted', n_del));
     return jsonb_build_object('deleted', n_del);
 
+  when 'set_password' then
+    -- Mot de passe provisoire pour un utilisateur ; il devra le changer à sa première connexion.
+    v_id := (p->>'company_user_id')::uuid;
+    v_code := public._company_temp_password(v_id);
+    perform _central_log(cfg, actor, 'central_set_password', v_id, '{}'::jsonb);
+    return jsonb_build_object('ok', true, 'password', v_code);
+
   when 'autosuspend_get' then
     return coalesce(cfg->'autosuspend', '{"enabled": false, "days": 15}'::jsonb);
 

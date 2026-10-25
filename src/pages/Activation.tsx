@@ -20,7 +20,11 @@ export default function Activation() {
     email: z.string().email('Email invalide').min(1, 'Email requis')
   });
 
-  const { validateLicense } = useLicense();
+  const { validateLicense, loginWithPassword } = useLicense();
+  // Connexion habituelle : email (ou identifiant) + mot de passe ; l'identifiant société reste possible.
+  const [mode, setMode] = useState<'password' | 'code'>('password');
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,6 +81,26 @@ export default function Activation() {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+
+    if (mode === 'password') {
+      if (!login.trim() || !password) {
+        setError('Saisissez votre email (ou identifiant) et votre mot de passe');
+        return;
+      }
+      setLoading(true);
+      try {
+        const result = await loginWithPassword(login, password);
+        if (result.success) {
+          setSuccess(true);
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          setError(result.error || 'Connexion impossible');
+        }
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     const validation = activationSchema.safeParse({ code: linkedCompany ? linkedCompany.slug : code, email });
     if (!validation.success) {
@@ -139,6 +163,42 @@ export default function Activation() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'password' ? (
+            <>
+            <div className="space-y-2">
+              <Label htmlFor="login" className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-primary" />
+                Email ou identifiant
+              </Label>
+              <Input
+                id="login"
+                type="text"
+                autoCapitalize="none"
+                autoComplete="username"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder="votre@email.com ou identifiant"
+                disabled={loading || success} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-primary" />
+                Mot de passe
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading || success} />
+              <p className="text-xs text-muted-foreground">
+                Pas encore de mot de passe ? Demandez-le à votre direction ou à vos RH.
+              </p>
+            </div>
+            </>
+            ) : (
+            <>
             {linkedCompany ? (
             <p className="text-xs text-center text-muted-foreground">
               Pas votre société ?{' '}
@@ -178,6 +238,8 @@ export default function Activation() {
                 disabled={loading || success} />
               
             </div>
+            </>
+            )}
 
             {error &&
             <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
@@ -241,6 +303,12 @@ export default function Activation() {
               }
             </Button>
           </form>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            <button type="button" className="hover:underline" onClick={() => { setMode(mode === 'password' ? 'code' : 'password'); setError(null); }}>
+              {mode === 'password' ? 'Connexion avec un identifiant société (ancienne méthode)' : '← Connexion avec email et mot de passe'}
+            </button>
+          </p>
 
           <div className="mt-6 pt-6 border-t border-border">
             <Accordion type="single" collapsible className="w-full">

@@ -136,6 +136,21 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
     .eq("license_id", license.id)
     .maybeSingle();
 
+  // Compte avec mot de passe personnel (connexion email + mot de passe) : l'ancienne
+  // connexion par identifiant société remplacerait ce mot de passe. On la refuse.
+  {
+    const { data: personal } = await supabase
+      .from("company_users")
+      .select("id")
+      .eq("license_id", license.id)
+      .ilike("email", normalizedEmail)
+      .or("password_set_at.not.is.null,must_change_password.eq.true")
+      .maybeSingle();
+    if (personal) {
+      return errorResponse("Ce compte a un mot de passe personnel : connectez-vous avec votre email et votre mot de passe.", 403);
+    }
+  }
+
   // --- Supabase Auth Integration ---
   let authSession = null;
   let authUserId = null;

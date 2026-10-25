@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TeamManagement } from '@/components/team/TeamManagement';
+import { TeamAccounts } from '@/components/accounts/TeamAccounts';
 import { ExploitationMetricsConfig } from '@/components/team/ExploitationMetricsConfig';
 import { RoleManagement } from '@/components/team/RoleManagement';
 import { UserPermissionsManager } from '@/components/team/UserPermissionsManager';
@@ -14,7 +14,7 @@ export default function Team() {
   // un repli sur licenseData.userRole (mis en cache dans localStorage) serait
   // modifiable à la main par n'importe quel utilisateur et donnerait accès à
   // la gestion d'équipe/des accès à n'importe qui.
-  const { isDirection, currentUserRole, isLoading: isTeamLoading } = useTeam();
+  const { isDirection, currentUserRole, isLoading: isTeamLoading, licenseId } = useTeam();
   const { isLoading: isLicenseLoading } = useLicense();
   const [activeTab, setActiveTab] = useState('team');
 
@@ -71,7 +71,7 @@ export default function Team() {
           </TabsList>
 
           <TabsContent value="team">
-            <TeamManagement />
+            {licenseId && <TeamAccounts licenseId={licenseId} />}
           </TabsContent>
 
           <TabsContent value="roles">
@@ -87,7 +87,7 @@ export default function Team() {
           </TabsContent>
         </Tabs>
       ) : (
-        <TeamManagement />
+        licenseId && <TeamAccounts licenseId={licenseId} />
       )}
     </div>
   );
