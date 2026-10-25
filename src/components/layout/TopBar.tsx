@@ -1,5 +1,6 @@
+import { ThemeModeSwitch } from '@/components/ThemeModeSwitch';
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Calendar, Crown, Star, Sparkles, WifiOff, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users } from 'lucide-react';
+import { Calendar, Crown, Star, Sparkles, WifiOff, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -32,8 +33,6 @@ import { useCloudDataSafe } from '@/hooks/useCloudDataSafe';
 import { NotificationCenter } from '@/components/layout/NotificationCenter';
 
 interface TopBarProps {
-  isDark: boolean | null;
-  onToggleTheme: () => void;
   /** Classe Tailwind `left-*` : calculée par MainLayout à partir du même état
    * (sidebar visible ou non, repliée ou non) que la marge du contenu, pour que
    * la barre du haut reste toujours alignée avec la barre latérale. */
@@ -52,7 +51,7 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
   rh: { label: 'RH', icon: Users, color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
 };
 
-export function TopBar({ isDark, onToggleTheme, leftOffsetClass }: TopBarProps) {
+export function TopBar({ leftOffsetClass }: TopBarProps) {
   const { planType, licenseData, isOffline, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const isOnline = useNetworkStatus();
@@ -179,25 +178,8 @@ export function TopBar({ isDark, onToggleTheme, leftOffsetClass }: TopBarProps) 
             </div>
 
 
-            {/* Theme toggle */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onToggleTheme}
-              className="rounded-full"
-              title={isDark === null ? 'Auto' : isDark ? 'Sombre' : 'Clair'}
-            >
-              {isDark === null ? (
-                <div className="relative">
-                  <Sun className="h-4 w-4 absolute opacity-50" />
-                  <Moon className="h-4 w-4 opacity-50" />
-                </div>
-              ) : isDark ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
+            {/* Thème jour / nuit : Automatique, Clair ou Sombre */}
+            <ThemeModeSwitch />
 
             {/* Paramètres (hors des 5 catégories métier) */}
             {hasFeature('page_settings') && (
