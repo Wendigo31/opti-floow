@@ -122,5 +122,6 @@ export function trackPageView(licenseId: string | null | undefined, pathname: st
   const key = `${licenseId}|${path}|${Math.floor(Date.now() / 60_000)}`;
   if (lastTracked.key === key) return;
   lastTracked.key = key;
-  void rpc('track_page_view', { p_license_id: licenseId, p_path: path }).catch(() => undefined);
+  // Le constructeur de requête n'a pas de .catch : on passe par une vraie promesse.
+  void Promise.resolve(rpc('track_page_view', { p_license_id: licenseId, p_path: path })).catch(() => undefined);
 }
