@@ -10,14 +10,15 @@ import {
   resetUserPassword,
   setUserActive,
   setUserRole,
+  deleteCompanyUser,
   type TeamUser,
 } from '@/lib/accounts';
 
 /**
  * Accès de la société — identique dans OptiFlow, OptiFret et OptiXpress.
- * La Direction et les RH créent les accès (email ou identifiant + mot de passe
- * provisoire), redonnent un mot de passe provisoire et désactivent un accès.
- * Les autres rôles voient la liste.
+ * La Direction et les RH, piliers de la société, gèrent TOUS les accès : création
+ * (email ou identifiant + mot de passe provisoire), rôle, mot de passe provisoire,
+ * désactivation et suppression — sauf leur propre accès. Les autres rôles voient la liste.
  */
 export function TeamAccounts({ licenseId }: { licenseId: string }) {
   const [users, setUsers] = useState<TeamUser[]>([]);
@@ -91,9 +92,11 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
       setCopied(false);
     });
 
-  const canTouch = (u: TeamUser) => canManage && (u.role !== 'direction' || myRole === 'direction');
-  // Rôle modifiable : pas un accès Direction (géré par OptiGroup), pas son propre accès.
-  const canChangeRole = (u: TeamUser) => canManage && u.role !== 'direction' && u.id !== myUserId;
+  // La Direction et les RH gèrent tous les accès de la société, sauf le leur (la base garde
+  // toujours au moins une Direction active).
+  const isMe = (u: TeamUser) => u.id === myUserId;
+  const canTouch = (u: TeamUser) => canManage && !isMe(u);
+  const canChangeRole = canTouch;
 
   return (
     <div className="space-y-4 rounded-xl border bg-card p-4 sm:p-5 md:col-span-2">
@@ -158,6 +161,11 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
                       disabled={busy !== null}
                       onChange={(e) => void run(u.id + ':r', () => setUserRole(u.id, e.target.value).then(() => undefined))}
                     >
+                      {u.role === 'direction' && (
+                        <option value="direction" disabled>
+                          {ROLE_NAMES.direction}
+                        </option>
+                      )}
                       {roles.map((r) => (
                         <option key={r} value={r}>
                           {ROLE_NAMES[r]}
@@ -168,6 +176,7 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
                     <Badge variant="secondary" className="text-[10px]">{ROLE_NAMES[u.role] ?? u.role}</Badge>
                   )}
                   {!u.is_active && <Badge variant="outline" className="text-[10px]">Désactivé</Badge>}
+                  {isMe(u) && <Badge variant="outline" className="text-[10px]">Vous</Badge>}
                   {u.must_change_password && u.is_active && (
                     <Badge variant="outline" className="text-[10px]">Mot de passe provisoire</Badge>
                   )}
@@ -191,6 +200,19 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
                     onClick={() => void run(u.id + ':a', () => setUserActive(u.id, !u.is_active).then(() => undefined))}
                   >
                     {u.is_active ? 'Désactiver' : 'Réactiver'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      if (window.confirm(`Supprimer définitivement l'accès de ${u.display_name || u.email} ?`))
+                        void run(u.id + ':d', () => deleteCompanyUser(u.id).then(() => undefined));
+                    }}
+                  >
+                    Supprimer
                   </Button>
                 </div>
               )}

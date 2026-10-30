@@ -108,6 +108,10 @@ export const resetUserPassword = (companyUserId: string) =>
 export const setUserActive = (companyUserId: string, active: boolean) =>
   unwrap<null>(rpc('company_set_user_active', { p_company_user_id: companyUserId, p_active: active }));
 
+/** Direction ou RH : supprime l'accès d'un collègue. */
+export const deleteCompanyUser = (companyUserId: string) =>
+  unwrap<null>(rpc('company_delete_user', { p_company_user_id: companyUserId }));
+
 /** Direction ou RH : change le rôle d'un collègue (Exploitation, Comptabilité ou RH). */
 export const setUserRole = (companyUserId: string, role: string) =>
   unwrap<null>(rpc('company_set_user_role', { p_company_user_id: companyUserId, p_role: role }));
