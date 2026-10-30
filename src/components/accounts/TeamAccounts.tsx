@@ -9,6 +9,7 @@ import {
   createCompanyUser,
   resetUserPassword,
   setUserActive,
+  setUserRole,
   type TeamUser,
 } from '@/lib/accounts';
 
@@ -22,6 +23,7 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [maxUsers, setMaxUsers] = useState<number | null>(null);
   const [myRole, setMyRole] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ email: '', displayName: '', role: 'exploitation', loginId: '' });
@@ -35,9 +37,15 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
       setUsers(t.users);
       setMaxUsers(t.max_users);
       setMyRole(t.my_role);
+      setMyUserId(t.my_user_id ?? null);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Chargement impossible');
+      const m = e instanceof Error ? e.message : 'Chargement impossible';
+      setError(
+        /Accès refusé|JWT|not authenticated|permission/i.test(m)
+          ? 'Connectez-vous avec votre email (ou identifiant) et votre mot de passe personnel pour gérer les accès de la société.'
+          : m,
+      );
     } finally {
       setLoading(false);
     }
@@ -84,6 +92,8 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
     });
 
   const canTouch = (u: TeamUser) => canManage && (u.role !== 'direction' || myRole === 'direction');
+  // Rôle modifiable : pas un accès Direction (géré par OptiGroup), pas son propre accès.
+  const canChangeRole = (u: TeamUser) => canManage && u.role !== 'direction' && u.id !== myUserId;
 
   return (
     <div className="space-y-4 rounded-xl border bg-card p-4 sm:p-5 md:col-span-2">
@@ -140,7 +150,23 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium">{u.display_name || u.email}</span>
-                  <Badge variant="secondary" className="text-[10px]">{ROLE_NAMES[u.role] ?? u.role}</Badge>
+                  {canChangeRole(u) ? (
+                    <select
+                      aria-label={`Rôle de ${u.display_name || u.email}`}
+                      className="h-7 rounded-md border bg-background px-2 text-xs"
+                      value={u.role}
+                      disabled={busy !== null}
+                      onChange={(e) => void run(u.id + ':r', () => setUserRole(u.id, e.target.value).then(() => undefined))}
+                    >
+                      {roles.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_NAMES[r]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px]">{ROLE_NAMES[u.role] ?? u.role}</Badge>
+                  )}
                   {!u.is_active && <Badge variant="outline" className="text-[10px]">Désactivé</Badge>}
                   {u.must_change_password && u.is_active && (
                     <Badge variant="outline" className="text-[10px]">Mot de passe provisoire</Badge>

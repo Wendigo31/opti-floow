@@ -81,7 +81,7 @@ export async function signInWithPassword(login: string, password: string): Promi
 export const myCompanies = () => unwrap<MyCompany[]>(rpc('my_companies'));
 
 export const companyTeam = (licenseId: string) =>
-  unwrap<{ users: TeamUser[]; max_users: number | null; my_role: string | null }>(
+  unwrap<{ users: TeamUser[]; max_users: number | null; my_role: string | null; my_user_id?: string | null }>(
     rpc('company_team', { p_license_id: licenseId }),
   );
 
@@ -107,6 +107,10 @@ export const resetUserPassword = (companyUserId: string) =>
 
 export const setUserActive = (companyUserId: string, active: boolean) =>
   unwrap<null>(rpc('company_set_user_active', { p_company_user_id: companyUserId, p_active: active }));
+
+/** Direction ou RH : change le rôle d'un collègue (Exploitation, Comptabilité ou RH). */
+export const setUserRole = (companyUserId: string, role: string) =>
+  unwrap<null>(rpc('company_set_user_role', { p_company_user_id: companyUserId, p_role: role }));
 
 /** Remplace le mot de passe provisoire par le mot de passe personnel. */
 export async function changeOwnPassword(password: string): Promise<void> {
