@@ -7,6 +7,8 @@ import { trackPageView, useCentralAnnouncements } from '@/lib/companyAccess';
  * Bandeau des messages envoyés depuis OptiCentral (ex. « Mise à jour ce soir
  * à 22 h ») + enregistrement des onglets ouverts par la société.
  * Identique dans OptiFlow, OptiFret et OptiXpress.
+ * Chaque message reste affiché 60 secondes sur l'appareil, puis disparaît seul
+ * (il peut aussi être fermé avant).
  */
 const STYLES = {
   info: { cls: 'bg-sky-600 text-white', Icon: Info },
@@ -14,51 +16,85 @@ const STYLES = {
   maintenance: { cls: 'bg-red-600 text-white', Icon: Wrench },
 } as const;
 
-const DISMISS_KEY = 'central-banner-dismissed';
+export const ANNOUNCEMENT_SECONDS = 60;
+const SEEN_KEY = 'opti-session-announcements-seen';
 
-function readDismissed(): string[] {
+type Seen = Record<string, number>;
+function readSeen(): Seen {
   try {
-    return JSON.parse(sessionStorage.getItem(DISMISS_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') as Seen;
   } catch {
-    return [];
+    return {};
+  }
+}
+function writeSeen(s: Seen) {
+  try {
+    // On ne garde que les 50 derniers messages vus.
+    const recent = Object.entries(s).sort((a, b) => b[1] - a[1]).slice(0, 50);
+    localStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries(recent)));
+  } catch {
+    /* stockage indisponible : le message reviendra au prochain chargement */
   }
 }
 
 export function CentralBanner({ licenseId }: { licenseId: string | null | undefined }) {
   const location = useLocation();
   const announcements = useCentralAnnouncements(licenseId);
-  const [dismissed, setDismissed] = useState<string[]>(readDismissed);
+  const [seen, setSeen] = useState<Seen>(readSeen);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     trackPageView(licenseId, location.pathname);
   }, [licenseId, location.pathname]);
 
-  const visible = announcements.filter((a) => a.level === 'maintenance' || !dismissed.includes(a.id));
+  // Première apparition de chaque message sur l'appareil : début des 60 secondes.
+  useEffect(() => {
+    const fresh = announcements.filter((a) => !(a.id in seen));
+    if (!fresh.length) return;
+    const t = Date.now();
+    const next = { ...seen, ...Object.fromEntries(fresh.map((a) => [a.id, t])) };
+    setSeen(next);
+    writeSeen(next);
+  }, [announcements, seen]);
+
+  const visible = announcements.filter((a) => {
+    const at = seen[a.id];
+    return at == null || now - at < ANNOUNCEMENT_SECONDS * 1000;
+  });
+
+  useEffect(() => {
+    if (!visible.length) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [visible.length]);
+
   if (visible.length === 0) return null;
 
   const dismiss = (id: string) => {
-    const next = [...dismissed, id];
-    setDismissed(next);
-    try {
-      sessionStorage.setItem(DISMISS_KEY, JSON.stringify(next));
-    } catch {
-      /* stockage indisponible : le bandeau reviendra au prochain chargement */
-    }
+    const next = { ...seen, [id]: 0 };
+    setSeen(next);
+    writeSeen(next);
   };
 
   return (
     <div className="sticky top-0 z-[60]" role="status">
       {visible.map((a) => {
         const s = STYLES[a.level] ?? STYLES.info;
+        const left = Math.max(0, ANNOUNCEMENT_SECONDS - Math.floor((now - (seen[a.id] ?? now)) / 1000));
         return (
-          <div key={a.id} className={`${s.cls} flex items-center gap-2 px-4 py-2 text-sm`}>
+          <div key={a.id} className={`${s.cls} relative flex items-center gap-2 px-4 py-2 text-sm`}>
             <s.Icon className="h-4 w-4 shrink-0" />
             <span className="flex-1">{a.message}</span>
-            {a.level !== 'maintenance' && (
-              <button type="button" onClick={() => dismiss(a.id)} aria-label="Masquer ce message" className="rounded p-1 opacity-80 hover:opacity-100">
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <span className="text-xs opacity-75 tabular-nums" aria-hidden>
+              {left} s
+            </span>
+            <button type="button" onClick={() => dismiss(a.id)} aria-label="Masquer ce message" className="rounded p-1 opacity-80 hover:opacity-100">
+              <X className="h-4 w-4" />
+            </button>
+            <span
+              className="absolute bottom-0 left-0 h-0.5 bg-current opacity-40 transition-[width] duration-1000 ease-linear"
+              style={{ width: `${(left / ANNOUNCEMENT_SECONDS) * 100}%` }}
+            />
           </div>
         );
       })}

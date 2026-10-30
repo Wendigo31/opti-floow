@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { CloudBanner } from '@/components/cloud/CloudStatus';
+import { SupportButton } from '@/components/support/SupportButton';
+import { useLicenseContext } from '@/context/LicenseContext';
 import { useLicense } from '@/hooks/useLicense';
 import { LoadingScreen } from './LoadingScreen';
 import { TutorialDialog } from '../onboarding/TutorialDialog';
@@ -19,6 +21,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const isMobile = useIsMobile();
   const { collapsed } = useSidebarContext();
   const { clearLicense } = useLicense();
+  const { licenseId } = useLicenseContext();
   
   // Tutorial on first session
   const [showTutorial, setShowTutorial] = useState(false);
@@ -78,6 +81,8 @@ function MainLayoutContent({ children }: MainLayoutProps) {
         <TopBar leftOffsetClass={getTopBarLeft()} />
         <main className={`pt-14 transition-all duration-300 ${getMainMargin()}`}>
           <CloudBanner onReconnect={clearLicense} />
+          {/* Pas de volet d'onglets (accueil, pages transversales) : le support reste en bas à gauche. */}
+          {!showSidebar && <SupportButton licenseId={licenseId} app="optiflow" floating />}
           <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
             {children}
           </div>

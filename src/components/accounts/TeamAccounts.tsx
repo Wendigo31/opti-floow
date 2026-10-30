@@ -50,7 +50,8 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
   const canManage = myRole === 'direction' || myRole === 'rh';
   const activeCount = users.filter((u) => u.is_active).length;
   const full = !!maxUsers && maxUsers > 0 && activeCount >= maxUsers;
-  const roles = myRole === 'direction' ? ['direction', 'exploitation', 'comptabilite', 'rh'] : ['exploitation', 'comptabilite', 'rh'];
+  // Les accès Direction sont créés par OptiGroup ; la Direction et les RH créent les autres.
+  const roles = ['exploitation', 'comptabilite', 'rh'];
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
@@ -200,7 +201,8 @@ export function TeamAccounts({ licenseId }: { licenseId: string }) {
           </div>
           <p className="text-xs text-muted-foreground">
             Un mot de passe provisoire est généré : la personne se connecte avec son email (ou son identifiant) et le
-            remplace à sa première connexion.
+            remplace à sa première connexion. Rôles possibles : Exploitation, Comptabilité ou RH (un accès Direction
+            se demande à OptiGroup).
           </p>
           <Button type="submit" disabled={busy !== null || full}>
             {busy === 'create' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -6,6 +6,8 @@ import { useTeam } from '@/hooks/useTeam';
 import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
 import { useSidebarContext } from '@/context/SidebarContext';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
+import { SupportButton } from '@/components/support/SupportButton';
+import { useLicenseContext } from '@/context/LicenseContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory, getCategoryIdForPath } from '@/config/appNavigation';
 
@@ -40,6 +42,7 @@ const FEATURE_LABELS: Record<string, string> = {
 
 export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebarContext();
+  const { licenseId } = useLicenseContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { hasFeature, licenseData } = useLicense();
@@ -184,8 +187,13 @@ export function Sidebar() {
         </div>
       </nav>
 
+      {/* Support : bug, question ou discussion avec un administrateur (identique dans les 3 logiciels) */}
+      <div className="px-4 pt-3 border-t border-sidebar-border">
+        <SupportButton licenseId={licenseId} app="optiflow" collapsed={collapsed} />
+      </div>
+
       {/* Collapse Toggle */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 pt-1">
         <button
           onClick={toggleSidebar}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"

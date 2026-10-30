@@ -3,9 +3,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initThemeMode } from "./lib/themeMode";
+import { recordRecentErrors } from "./lib/support";
 
 // Thème jour / nuit appliqué avant le premier affichage (identique dans les 3 logiciels).
 initThemeMode();
+// Dernières erreurs de la page, jointes à un signalement de bug (Support).
+recordRecentErrors();
 import { captureCompanySlug } from "./lib/companyLink";
 
 // Lien de la société (?societe=…) gardé pour la session.

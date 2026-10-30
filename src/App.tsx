@@ -7,6 +7,7 @@ import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-rou
 import { AppProvider } from "./context/AppContext";
 import { LicenseProvider, useLicenseContext } from "./context/LicenseContext";
 import { installCloudStatus } from "@/lib/cloudStatus";
+import { bindLocalDataToCompany } from "@/lib/localDataScope";
 import { CloudPresenceProvider } from "@/hooks/useCloudPresence";
 import { supabase } from "@/integrations/supabase/client";
 import { CloudDataProvider } from "./context/CloudDataContext";
@@ -64,6 +65,10 @@ function FlowPresence({ children }: { children: ReactNode }) {
   const name =
     [licenseData?.firstName, licenseData?.lastName].filter(Boolean).join(' ') || email.split('@')[0] || 'Utilisateur';
   const role = userRole ?? licenseData?.userRole ?? 'exploitation';
+  // Données de l'appareil d'une autre société (ancien compte) : effacées.
+  useEffect(() => {
+    bindLocalDataToCompany(licenseId);
+  }, [licenseId]);
   const me = useMemo(
     () => (licenseId && email ? { licenseId, email, name, role } : null),
     [licenseId, email, name, role],
