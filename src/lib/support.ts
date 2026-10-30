@@ -79,3 +79,56 @@ export const mySupportThreads = (licenseId: string) => unwrap<SupportThread[]>(r
 export const replySupportThread = (threadId: string, body: string) => unwrap<void>(rpc('support_user_reply', { p_thread_id: threadId, p_body: body }));
 
 export const markSupportRead = (threadId: string) => unwrap<void>(rpc('support_mark_read', { p_thread_id: threadId }));
+
+/* ---------- Sans compte connecté (page de connexion) ---------- */
+
+type GuestRef = { id: string; token: string };
+const GUEST_KEY = 'opti-support-guest';
+const guestRefs = (): GuestRef[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(GUEST_KEY) || '[]');
+    return Array.isArray(v) ? (v as GuestRef[]).slice(-20) : [];
+  } catch {
+    return [];
+  }
+};
+const guestToken = (id: string) => guestRefs().find((r) => r.id === id)?.token ?? '';
+
+/** Demande envoyée depuis la page de connexion : l'appareil garde un jeton pour lire la réponse. */
+export async function createGuestSupportThread(
+  email: string,
+  name: string,
+  kind: SupportKind,
+  subject: string,
+  body: string,
+  context: Record<string, unknown>,
+): Promise<string> {
+  const ref = await unwrap<GuestRef>(
+    rpc('support_guest_create', {
+      p_email: email,
+      p_name: name,
+      p_kind: kind,
+      p_subject: subject,
+      p_body: body,
+      p_page: window.location.pathname,
+      p_context: context,
+    }),
+  );
+  try {
+    localStorage.setItem(GUEST_KEY, JSON.stringify([...guestRefs(), ref].slice(-20)));
+  } catch {
+    /* stockage indisponible : la réponse arrivera par email */
+  }
+  return ref.id;
+}
+
+export const guestSupportThreads = async (): Promise<SupportThread[]> => {
+  const refs = guestRefs();
+  return refs.length ? unwrap<SupportThread[]>(rpc('support_guest_threads', { p_items: refs })) : [];
+};
+
+export const replyGuestSupportThread = (threadId: string, body: string) =>
+  unwrap<void>(rpc('support_guest_reply', { p_thread_id: threadId, p_token: guestToken(threadId), p_body: body }));
+
+export const markGuestSupportRead = (threadId: string) =>
+  unwrap<void>(rpc('support_guest_mark_read', { p_thread_id: threadId, p_token: guestToken(threadId) }));

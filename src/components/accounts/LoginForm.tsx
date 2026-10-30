@@ -3,6 +3,7 @@ import { Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SupportButton } from '@/components/support/SupportButton';
 
 /**
  * Écran de connexion — identique dans OptiFlow, OptiFret et OptiXpress :
@@ -47,6 +48,8 @@ export function LoginForm({
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background p-4">
+      {/* Support et logo OptiGroup, au même endroit qu'une fois connecté (bas gauche). */}
+      <SupportButton licenseId={null} app={appName.toLowerCase()} floating />
       <img src={logo} alt={appName} className="h-24 w-auto max-w-[220px] object-contain sm:h-28" />
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-xl border bg-card p-6 shadow-sm">
         <h1 className="text-center text-lg font-semibold">Connexion à {appName}</h1>
