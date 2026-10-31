@@ -41,9 +41,48 @@
   <meta name="twitter:title" content="OptiFlow - Optimisez votre flotte poids lourds">
   <meta property="og:description" content="Application professionnelle de pilotage de rentabilité pour les entreprises de transport routier. Calculez vos marges en temps réel.">
   <meta name="twitter:description" content="Application professionnelle de pilotage de rentabilité pour les entreprises de transport routier. Calculez vos marges en temps réel.">
-</head>
+    <style>
+      /* Écran de lancement : anneau et symbole du logo animés (voir src/components/LogoLoader.tsx) */
+      #app-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#F7F8FC;transition:opacity .45s ease-out,visibility .45s ease-out}
+      .dark #app-loader{background:#0B1028}
+      #app-loader.fade-out{opacity:0;visibility:hidden}
+      #app-loader .ll-name{margin:0;font:600 15px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px;color:#5B6382;animation:ll-label 2.4s ease-in-out infinite}
+      .dark #app-loader .ll-name{color:#A9B0CC}
+    </style>
+    <script>
+      try{var t=localStorage.getItem('opti-theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}
+    </script>
+  </head>
 
   <body>
+    <div id="app-loader" role="status" aria-label="Chargement de OptiFlow">
+      <svg class="ll-mark" viewBox="0 0 300 300" width="112" height="112" aria-hidden="true"><style>
+.ll-mark{display:block;overflow:visible}
+.ll-ink{fill:#0C2D5E}.ll-inks{stroke:#0C2D5E}
+.dark .ll-ink{fill:#E8ECF7}.dark .ll-inks{stroke:#E8ECF7}
+.ll-track{opacity:.14}
+.ll-ring{stroke-dasharray:100 110;stroke-dashoffset:0;animation:ll-ring 2.4s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes ll-ring{0%{stroke-dashoffset:106}45%,62%{stroke-dashoffset:0}100%{stroke-dashoffset:-106}}
+.ll-float{animation:ll-float 2.4s ease-in-out infinite}
+@keyframes ll-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.ll-draw{stroke-dasharray:100 110;stroke-dashoffset:0;animation:ll-draw 2.4s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes ll-draw{0%,12%{stroke-dashoffset:106}55%,80%{stroke-dashoffset:0}100%{stroke-dashoffset:-106}}
+.ll-head{animation:ll-head 2.4s ease-in-out infinite}
+@keyframes ll-head{0%,45%{opacity:0;transform:translate(-6px,4px)}55%,80%{opacity:1;transform:translate(0,0)}95%,100%{opacity:0}}
+.ll-chev{animation:ll-chev 1.2s ease-in-out infinite}
+@keyframes ll-chev{0%,100%{opacity:.22;transform:translateX(-5px)}45%{opacity:1;transform:translateX(5px)}}
+.ll-go{animation:ll-go 1.2s ease-in-out infinite}
+@keyframes ll-go{0%,100%{transform:translateX(-3px)}50%{transform:translateX(5px)}}
+.ll-speed{animation:ll-speed 1.2s linear infinite}
+@keyframes ll-speed{0%{opacity:0;transform:translateX(12px)}25%{opacity:1}100%{opacity:0;transform:translateX(-18px)}}
+.ll-label{animation:ll-label 2.4s ease-in-out infinite}
+@keyframes ll-label{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .ll-mark *,.ll-label{animation:none!important}
+}
+</style><defs><linearGradient id="llR0-r" gradientUnits="userSpaceOnUse" x1="40" y1="40" x2="260" y2="260"><stop offset="0" stop-color="#18A8A8"></stop><stop offset="0.45" stop-color="#D87818"></stop><stop offset="0.7" stop-color="#2D5F95"></stop><stop offset="1" stop-color="#0B3B7A"></stop></linearGradient></defs><path class="ll-track" d="M43.1,199.9 A118,118 0 1 1 100.1,256.9" fill="none" stroke="url(#llR0-r)" stroke-width="18" stroke-linecap="round"></path><path class="ll-ring" pathLength="100" d="M43.1,199.9 A118,118 0 1 1 100.1,256.9" fill="none" stroke="url(#llR0-r)" stroke-width="18" stroke-linecap="round"></path><path class="ll-chev" style="animation-delay:0s" d="M86,104 L130,150 L86,196" fill="none" stroke="#18A8A8" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"></path><path class="ll-chev" style="animation-delay:0.15s" d="M132,104 L176,150 L132,196" fill="none" stroke="#D87818" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"></path><g class="ll-inks"><path class="ll-chev" style="animation-delay:0.3s" d="M178,104 L222,150 L178,196" fill="none" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>
+      <p class="ll-name">OptiFlow</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

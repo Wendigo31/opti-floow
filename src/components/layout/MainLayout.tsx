@@ -72,7 +72,7 @@ function MainLayoutContent({ children }: MainLayoutProps) {
     <>
       {/* Loading overlay - always render layout underneath to keep hooks stable */}
       {isLoading && (
-        <LoadingScreen onComplete={handleLoadingComplete} minDuration={2500} />
+        <LoadingScreen onComplete={handleLoadingComplete} minDuration={1400} />
       )}
 
       <div className="min-h-screen bg-background">

@@ -23,7 +23,7 @@ import { useLicense } from "./hooks/useLicense";
 import { useSchemaSync } from "./hooks/useSchemaSync";
 import { useRealtimeNotifications } from "./hooks/useRealtimeNotifications";
 import { useDataPrefetch } from "./hooks/useDataPrefetch";
-import { Loader2 } from "lucide-react";
+import { LogoLoader } from '@/components/LogoLoader';
 
 // Lazy-loaded routes for code-splitting (reduces main bundle size)
 const Index = lazy(() => import("./pages/Index"));
@@ -110,21 +110,14 @@ function RealtimeNotificationsWrapper({ children }: { children: React.ReactNode 
 // Loading screen component - extracted to avoid hook issues
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Vérification de la licence...</p>
-      </div>
-    </div>
+    <LogoLoader app="flow" label="Vérification de la licence…" />
   );
 }
 
 // Fallback shown while a lazy route chunk is loading
 function RouteSuspenseFallback() {
   return (
-    <div className="min-h-[40vh] flex items-center justify-center">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-    </div>
+    <LogoLoader app="flow" variant="inline" label={null} />
   );
 }
 

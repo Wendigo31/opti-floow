@@ -54,3 +54,12 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+
+// Écran de lancement (index.html) : retiré en fondu une fois l'application montée.
+const hideAppLoader = () => {
+  const loader = document.getElementById("app-loader");
+  if (!loader) return;
+  loader.classList.add("fade-out");
+  setTimeout(() => loader.remove(), 500);
+};
+setTimeout(hideAppLoader, 600);

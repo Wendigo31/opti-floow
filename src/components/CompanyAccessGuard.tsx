@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { useLicense } from '@/hooks/useLicense';
 import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { canAccessPath } from '@/config/appNavigation';
 import { CompanyContactGate } from '@/components/CompanyContactGate';
 import { CentralBanner } from '@/components/CentralBanner';
 import { ForcedPasswordChange } from '@/components/accounts/ForcedPasswordChange';
+import { LogoLoader } from '@/components/LogoLoader';
 
 /**
  * Même contrôle que dans OptiFret et OptiXpress :
@@ -22,9 +22,7 @@ export function CompanyAccessGuard({ children }: { children: ReactNode }) {
 
   if (licenseId && loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
+      <LogoLoader app="flow" label="Connexion…" />
     );
   }
 
