@@ -52,9 +52,6 @@ export const LOGO_LOADER_CSS = `
 @keyframes ll-speed{0%{opacity:0;transform:translateX(12px)}25%{opacity:1}100%{opacity:0;transform:translateX(-18px)}}
 .ll-label{animation:ll-label 2.4s ease-in-out infinite}
 @keyframes ll-label{0%,100%{opacity:.55}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){
-  .ll-mark *,.ll-label{animation:none!important}
-}
 `;
 
 function Symbol({ app, gid }: { app: LoaderApp; gid: string }) {

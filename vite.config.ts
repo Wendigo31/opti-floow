@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
     // Important: disable PWA service worker for Tauri builds to prevent stale cached UI in the desktop app
     mode !== "tauri" &&
       VitePWA({
+        // Le service worker gardait en cache une ancienne version affichée quelques secondes
+        // (ou durablement) au lancement : il se désinstalle désormais de lui-même chez tout le
+        // monde. L'application reste installable (manifeste conservé).
+        selfDestroying: true,
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
         manifest: {

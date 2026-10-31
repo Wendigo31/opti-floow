@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SupportButton } from '@/components/support/SupportButton';
 import { LogoMarkAnimated, type LoaderApp } from '@/components/LogoLoader';
+import { CentralBanner } from '@/components/CentralBanner';
 
 /**
  * Écran de connexion — identique dans OptiFlow, OptiFret et OptiXpress, aux couleurs de
@@ -164,6 +165,10 @@ export function LoginForm({
 
       {/* Formulaire */}
       <main className="relative flex flex-col items-center justify-center px-4 py-10 sm:px-8">
+        {/* Messages d'OptiCentral (mise à jour, maintenance…), visibles dès la connexion. */}
+        <div className="absolute inset-x-0 top-0">
+          <CentralBanner licenseId={null} />
+        </div>
         {/* Support et logo OptiGroup, au même endroit qu'une fois connecté (bas gauche). */}
         <SupportButton licenseId={null} app={appName.toLowerCase()} floating />
 

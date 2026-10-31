@@ -7,8 +7,8 @@ import { trackPageView, useCentralAnnouncements } from '@/lib/companyAccess';
  * Bandeau des messages envoyés depuis OptiCentral (ex. « Mise à jour ce soir
  * à 22 h ») + enregistrement des onglets ouverts par la société.
  * Identique dans OptiFlow, OptiFret et OptiXpress.
- * Chaque message reste affiché 60 secondes sur l'appareil, puis disparaît seul
- * (il peut aussi être fermé avant).
+ * Chaque message s'affiche à chaque ouverture du logiciel (y compris sur la page de
+ * connexion), 60 secondes, puis disparaît seul (il peut aussi être fermé avant).
  */
 const STYLES = {
   info: { cls: 'bg-sky-600 text-white', Icon: Info },
@@ -22,7 +22,7 @@ const SEEN_KEY = 'opti-session-announcements-seen';
 type Seen = Record<string, number>;
 function readSeen(): Seen {
   try {
-    return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') as Seen;
+    return JSON.parse(sessionStorage.getItem(SEEN_KEY) || '{}') as Seen;
   } catch {
     return {};
   }
@@ -31,7 +31,7 @@ function writeSeen(s: Seen) {
   try {
     // On ne garde que les 50 derniers messages vus.
     const recent = Object.entries(s).sort((a, b) => b[1] - a[1]).slice(0, 50);
-    localStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries(recent)));
+    sessionStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries(recent)));
   } catch {
     /* stockage indisponible : le message reviendra au prochain chargement */
   }
