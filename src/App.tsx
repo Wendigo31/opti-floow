@@ -1,9 +1,9 @@
-import { useEffect, useCallback, useMemo, lazy, Suspense, type ReactNode } from "react";
+import { useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { LicenseProvider, useLicenseContext } from "./context/LicenseContext";
 import { installCloudStatus } from "@/lib/cloudStatus";
@@ -37,7 +37,6 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Forecast = lazy(() => import("./pages/Forecast"));
 const Activation = lazy(() => import("./pages/Activation"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const Admin = lazy(() => import("./pages/Admin"));
 const AIAnalysis = lazy(() => import("./pages/AIAnalysis"));
 const LineMontage = lazy(() => import("./pages/LineMontage"));
 const VehicleReports = lazy(() => import("./pages/VehicleReports"));
@@ -76,26 +75,8 @@ function FlowPresence({ children }: { children: ReactNode }) {
   return <CloudPresenceProvider me={me}>{children}</CloudPresenceProvider>;
 }
 
-// Hook global pour le raccourci admin
-function useGlobalAdminShortcut() {
-  const navigate = useNavigate();
-  
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
-      e.preventDefault();
-      navigate('/admin');
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-}
-
 // Composant wrapper pour le raccourci global et schema sync
 function GlobalShortcuts({ children }: { children: React.ReactNode }) {
-  useGlobalAdminShortcut();
   useSchemaSync(); // Auto-sync schema on startup
   return <>{children}</>;
 }
@@ -172,26 +153,14 @@ function LicensedAppContent() {
   );
 }
 
-// Admin route content
-function AdminContent() {
-  return (
-    <Suspense fallback={<RouteSuspenseFallback />}>
-      <Routes>
-        <Route path="/admin" element={<Admin />} />
-      </Routes>
-    </Suspense>
-  );
-}
-
 function AppRoutes() {
   const { isLicensed, isLoading } = useLicense();
   const location = useLocation();
 
-  const isAdminRoute = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
   const isPresentationRoute = location.pathname === '/presentation';
   // Route d'activation d'invitation : accessible avant toute licence (la
   // personne invitée n'en a jamais saisi une elle-même), donc en dehors du
-  // garde isLicensed ci-dessous, comme /admin et /presentation.
+  // garde isLicensed ci-dessous, comme /presentation.
   const isAcceptInviteRoute = location.pathname === '/accept-invite';
   // Lien public d'acceptation de devis (client, sans compte) : même tier
   // que /accept-invite, en dehors du garde isLicensed ci-dessous.
@@ -199,9 +168,7 @@ function AppRoutes() {
 
   return (
     <AppProvider>
-      {isAdminRoute ? (
-        <AdminContent />
-      ) : isPresentationRoute ? (
+      {isPresentationRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
           <Presentation />
         </Suspense>
