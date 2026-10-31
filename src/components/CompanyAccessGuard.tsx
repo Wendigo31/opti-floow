@@ -5,6 +5,7 @@ import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { canAccessPath } from '@/config/appNavigation';
 import { CompanyContactGate } from '@/components/CompanyContactGate';
 import { CentralBanner } from '@/components/CentralBanner';
+import { CompanyDocumentsBanner } from '@/components/CompanyDocuments';
 import { ForcedPasswordChange } from '@/components/accounts/ForcedPasswordChange';
 import { LogoLoader } from '@/components/LogoLoader';
 
@@ -55,6 +56,7 @@ export function CompanyAccessGuard({ children }: { children: ReactNode }) {
   return (
     <>
       <CentralBanner licenseId={licenseId} />
+      <CompanyDocumentsBanner licenseId={licenseId} />
       {children}
     </>
   );
