@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
-import { CheckCircle2, Eye, EyeOff, Loader2, Lock, LogIn, User } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, LogIn, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SupportButton } from '@/components/support/SupportButton';
 import { LogoMarkAnimated, type LoaderApp } from '@/components/LogoLoader';
 import { CentralBanner } from '@/components/CentralBanner';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Écran de connexion — identique dans OptiFlow, OptiFret et OptiXpress, aux couleurs de
@@ -79,6 +80,10 @@ export function LoginForm({
   const [caps, setCaps] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forgot, setForgot] = useState(false);
+  const [forgotLogin, setForgotLogin] = useState('');
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +214,20 @@ export function LoginForm({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Mot de passe</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgot(true);
+                    setForgotLogin(login);
+                    setForgotSent(false);
+                  }}
+                  className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Mot de passe oublié ?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -249,14 +267,67 @@ export function LoginForm({
             </Button>
           </form>
 
+          {forgot && (
+            <div className="mt-6 space-y-3 rounded-xl border bg-card p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <KeyRound className="h-4 w-4" style={{ color: b.from }} /> Mot de passe oublié
+              </p>
+              {forgotSent ? (
+                <p className="text-sm text-muted-foreground">
+                  <Mail className="mr-1 inline h-4 w-4" />
+                  Si un compte correspond, un <b>code provisoire</b> vient d'être envoyé à son adresse
+                  email (pensez aux courriers indésirables). Connectez-vous avec ce code comme mot de
+                  passe : vous choisirez ensuite votre nouveau mot de passe.
+                </p>
+              ) : (
+                <form
+                  className="space-y-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!forgotLogin.trim()) return;
+                    setForgotBusy(true);
+                    try {
+                      await supabase.functions.invoke('forgot-password', {
+                        body: { login: forgotLogin.trim(), app: appName },
+                      });
+                    } catch {
+                      /* même réponse dans tous les cas */
+                    } finally {
+                      setForgotBusy(false);
+                      setForgotSent(true);
+                    }
+                  }}
+                >
+                  <Input
+                    placeholder="Votre email ou identifiant"
+                    value={forgotLogin}
+                    onChange={(e) => setForgotLogin(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className="h-10"
+                  />
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" disabled={forgotBusy || !forgotLogin.trim()}>
+                      {forgotBusy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Mail className="mr-1.5 h-3.5 w-3.5" />}
+                      Recevoir un code par email
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setForgot(false)}>
+                      Annuler
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 rounded-xl border bg-muted/40 p-3.5 text-xs leading-relaxed text-muted-foreground">
             <p>
               <span className="font-medium text-foreground">Identifiant</span> : la partie de votre email
               avant le @.
             </p>
             <p className="mt-1">
-              <span className="font-medium text-foreground">Pas encore de mot de passe, ou oublié ?</span>{' '}
-              Demandez-en un à votre direction ou à vos RH.
+              <span className="font-medium text-foreground">Pas encore de compte ?</span> Demandez-le à
+              votre direction ou à vos RH.
             </p>
           </div>
           {footer && <div className="mt-4">{footer}</div>}
