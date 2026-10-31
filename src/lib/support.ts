@@ -132,3 +132,56 @@ export const replyGuestSupportThread = (threadId: string, body: string) =>
 
 export const markGuestSupportRead = (threadId: string) =>
   unwrap<void>(rpc('support_guest_mark_read', { p_thread_id: threadId, p_token: guestToken(threadId) }));
+
+/** Gravité d'un bug, affichée dans OptiCentral pour trier les demandes. */
+export const SEVERITY = {
+  bloquant: 'Bloquant — je ne peux plus travailler',
+  genant: 'Gênant — je contourne, mais ça me ralentit',
+  mineur: 'Mineur — détail ou affichage',
+} as const;
+export type Severity = keyof typeof SEVERITY;
+
+export const FREQUENCY = {
+  toujours: 'À chaque fois',
+  parfois: 'De temps en temps',
+  une_fois: 'Une seule fois',
+} as const;
+
+export const QUESTION_TOPICS = [
+  'Utilisation du logiciel',
+  'Compte et accès',
+  'Abonnement et facturation',
+  'Import ou export de données',
+  'Suggestion d’amélioration',
+  'Autre',
+] as const;
+
+/**
+ * Capture d'écran jointe : réduite (1400 px max) et compressée en JPEG pour rester légère.
+ * Renvoie une image data: URL.
+ */
+export async function compressImage(file: Blob, max = 1400, quality = 0.72): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Seules les images sont acceptées');
+  if (file.size > 15 * 1024 * 1024) throw new Error('Image trop lourde (15 Mo max)');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Image illisible'));
+      i.src = url;
+    });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Image illisible');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

@@ -15,6 +15,11 @@ import { captureCompanySlug } from "./lib/companyLink";
 captureCompanySlug();
 import { clearAllCaches } from "./utils/clearAllCaches";
 import { installProductionLogger } from "./utils/productionLogger";
+import {
+  SupportSessionBanner,
+  SupportSessionStart,
+  isSupportSessionPath,
+} from "@/components/supportSession";
 
 // Silence verbose logs in production builds
 installProductionLogger();
@@ -41,18 +46,25 @@ if (isTauri) {
 }
 
 // One-time cache cleanup (version bump forces re-clear)
-const CACHE_VERSION = 'v2';
-const lastCacheVersion = localStorage.getItem('optiflow_cache_version');
+const CACHE_VERSION = "v2";
+const lastCacheVersion = localStorage.getItem("optiflow_cache_version");
 if (lastCacheVersion !== CACHE_VERSION) {
   clearAllCaches();
-  localStorage.setItem('optiflow_cache_version', CACHE_VERSION);
-  console.log('[Cache] Cleared all caches for version', CACHE_VERSION);
+  localStorage.setItem("optiflow_cache_version", CACHE_VERSION);
+  console.log("[Cache] Cleared all caches for version", CACHE_VERSION);
 }
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    {isSupportSessionPath() ? (
+      <SupportSessionStart app="flow" />
+    ) : (
+      <>
+        <SupportSessionBanner />
+        <App />
+      </>
+    )}
+  </React.StrictMode>,
 );
 
 // Écran de lancement (index.html) : retiré en fondu une fois l'application montée.
