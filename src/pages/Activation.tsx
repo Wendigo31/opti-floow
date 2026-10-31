@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLicense } from '@/hooks/useLicense';
-import optiflowLogo from '@/assets/optiflow-logo.svg';
+import optiflowLogo from '@/assets/optiflow-logo-full.svg';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LegalTabs from '@/components/settings/LegalTabs';

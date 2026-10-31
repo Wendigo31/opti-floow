@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import optiflowLogo from '@/assets/optiflow-logo.svg';
+import optiflowLogo from '@/assets/optiflow-logo-full.svg';
 
 const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 const dateFr = (iso: string) => new Date(iso + (iso.length === 10 ? 'T00:00' : '')).toLocaleDateString('fr-FR');
