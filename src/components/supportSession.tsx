@@ -19,8 +19,13 @@ const DURATION_MS = 2 * 60 * 60 * 1000;
 
 type Marker = { email: string; admin: string | null; until: number };
 
+/**
+ * Lien d'OptiCentral : « /#support-session=<jeton> » (page d'accueil, marche quel que soit le
+ * routeur et l'hébergement) ; l'ancienne forme « /support-session#t=<jeton> » reste acceptée.
+ */
 export const isSupportSessionPath = () =>
-  typeof window !== 'undefined' && window.location.pathname === '/support-session';
+  typeof window !== 'undefined' &&
+  (window.location.pathname === '/support-session' || window.location.hash.startsWith('#support-session='));
 
 function readMarker(): Marker | null {
   try {
@@ -36,9 +41,10 @@ export function SupportSessionStart({ app }: { app: LoaderApp }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.hash.slice(1)).get('t') ?? '';
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const token = params.get('support-session') ?? params.get('t') ?? '';
     // Le jeton ne doit pas rester dans l'historique ni dans la barre d'adresse.
-    window.history.replaceState(null, '', '/support-session');
+    window.history.replaceState(null, '', '/');
     if (!/^[0-9a-f]{64}$/.test(token)) {
       setError('Lien de session invalide. Relancez « Ouvrir sa session » depuis OptiCentral.');
       return;
@@ -51,7 +57,18 @@ export function SupportSessionStart({ app }: { app: LoaderApp }) {
           body: { token },
         });
         if (fnError || !data?.token_hash) {
-          throw new Error(data?.error || 'Lien expiré ou déjà utilisé.');
+          // Réponse d'erreur de la fonction (lien expiré…) ou fonction absente / injoignable.
+          let detail: string | null = data?.error ?? null;
+          const ctx = (fnError as { context?: Response } | null)?.context;
+          if (!detail && ctx && typeof ctx.json === 'function') {
+            detail = await ctx.json().then((b: { error?: string }) => b?.error ?? null).catch(() => null);
+          }
+          throw new Error(
+            detail ||
+              (fnError
+                ? `Service de session support indisponible (${fnError.message}).`
+                : 'Lien expiré ou déjà utilisé.'),
+          );
         }
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: data.token_hash,
