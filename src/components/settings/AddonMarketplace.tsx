@@ -17,6 +17,7 @@ interface Addon {
   name: string;
   description: string;
   price: number;
+  /** Ancien identifiant Stripe, inutilisé (facturation par prélèvement mensuel). */
   priceId: string;
   icon: React.ElementType;
   category: 'feature' | 'capacity';
@@ -73,31 +74,8 @@ export function AddonMarketplace() {
   const [cart, setCart] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [activating, setActivating] = useState(false);
+  const activating = false;
   const [activeAddons, setActiveAddons] = useState<string[]>([]);
-
-  // Check for successful return from Stripe
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
-    const addonSuccess = params.get('addon_success');
-
-    if (addonSuccess === 'true' && sessionId && licenseId) {
-      activateAddons(sessionId);
-      // Clean URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('session_id');
-      url.searchParams.delete('addon_success');
-      window.history.replaceState({}, '', url.pathname + url.search);
-    }
-
-    if (params.get('addon_cancelled') === 'true') {
-      toast.error('Paiement annulé');
-      const url = new URL(window.location.href);
-      url.searchParams.delete('addon_cancelled');
-      window.history.replaceState({}, '', url.pathname + url.search);
-    }
-  }, [licenseId]);
 
   // Fetch active addons
   useEffect(() => {
@@ -115,28 +93,6 @@ export function AddonMarketplace() {
     fetchActiveAddons();
   }, [licenseId]);
 
-  const activateAddons = async (sessionId: string) => {
-    setActivating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('addon-checkout', {
-        body: {
-          action: 'activate',
-          license_id: licenseId,
-          session_id: sessionId,
-        },
-      });
-
-      if (error) throw new Error(error.message);
-      if (data?.success) {
-        setShowSuccess(true);
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'activation");
-    } finally {
-      setActivating(false);
-    }
-  };
-
   const toggleCart = (addonId: string) => {
     setCart(prev => 
       prev.includes(addonId) 
@@ -150,32 +106,24 @@ export function AddonMarketplace() {
     return sum + (addon?.price || 0);
   }, 0);
 
+  /**
+   * Plus de paiement en ligne : la demande part à OptiGroup (OptiCentral → Demandes) ; une fois
+   * acceptée, les modules sont activés et ajoutés au prélèvement mensuel suivant.
+   */
   const handleCheckout = async () => {
-    if (!cart.length || !licenseId || !licenseData?.email) return;
-
+    if (!cart.length || !licenseId) return;
     setLoading(true);
     try {
-      const items = cart.map(id => {
-        const addon = ADDONS.find(a => a.id === id)!;
-        return { addon_id: id, price_id: addon.priceId };
+      const chosen = cart.map((id) => ADDONS.find((a) => a.id === id)!).filter(Boolean);
+      const { error } = await supabase.rpc('create_access_request', {
+        p_requested_features: chosen.map((a) => `addon:${a.id}`),
+        p_message: `Modules demandés : ${chosen.map((a) => `${a.name} (${a.price.toFixed(2)} €/mois)`).join(', ')}`,
       });
-
-      const { data, error } = await supabase.functions.invoke('addon-checkout', {
-        body: {
-          action: 'checkout',
-          license_id: licenseId,
-          email: licenseData.email,
-          items,
-          origin_url: window.location.origin,
-        },
-      });
-
       if (error) throw new Error(error.message);
-      if (data?.url) {
-        window.location.href = data.url;
-      }
+      setCart([]);
+      setShowSuccess(true);
     } catch (err: any) {
-      toast.error(err.message || 'Erreur lors du paiement');
+      toast.error(err.message || "Erreur lors de l'envoi de la demande");
     } finally {
       setLoading(false);
     }
@@ -203,7 +151,7 @@ export function AddonMarketplace() {
             ) : (
               <ShoppingCart className="w-4 h-4 mr-2" />
             )}
-            Payer {cartTotal.toFixed(2)}€/mois ({cart.length})
+            Demander ({cartTotal.toFixed(2)} €/mois, {cart.length})
           </Button>
         )}
       </div>
@@ -338,7 +286,7 @@ export function AddonMarketplace() {
                 <p className="text-xs text-muted-foreground">/mois TTC</p>
               </div>
               <Button variant="gradient" size="lg" onClick={handleCheckout} disabled={loading}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Payer maintenant'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Envoyer la demande'}
               </Button>
             </div>
           </CardContent>
@@ -351,16 +299,16 @@ export function AddonMarketplace() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="w-5 h-5 text-success" />
-              Modules activés avec succès !
+              Demande envoyée à OptiGroup
             </DialogTitle>
             <DialogDescription>
-              Vos nouveaux modules ont été ajoutés à votre licence. Veuillez rafraîchir la page pour que les changements prennent effet.
+              OptiGroup active les modules demandés et les ajoute à votre prochain prélèvement mensuel. Vous verrez la réponse dans Paramètres, et les modules apparaîtront après un rafraîchissement.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="gradient" onClick={() => window.location.reload()}>
               <RefreshCw className="w-4 h-4 mr-2" />
-              Rafraîchir maintenant
+              Fermer et rafraîchir
             </Button>
           </DialogFooter>
         </DialogContent>
