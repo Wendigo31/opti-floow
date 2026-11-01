@@ -57,7 +57,7 @@ import { uniqueChannelName } from '@/lib/realtimeChannel';
    // Charges
    charges: FixedCharge[];
    chargesLoading: boolean;
-   createCharge: (charge: FixedCharge) => Promise<boolean>;
+   createCharge: (charge: FixedCharge, opts?: { silent?: boolean }) => Promise<boolean>;
    updateCharge: (charge: FixedCharge) => Promise<boolean>;
    deleteCharge: (id: string) => Promise<boolean>;
  

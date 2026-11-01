@@ -137,7 +137,7 @@ export function useCloudCharges() {
     }
   }, [licenseId, authUserId, fetchCharges]);
 
-  const createCharge = useCallback(async (charge: FixedCharge): Promise<boolean> => {
+  const createCharge = useCallback(async (charge: FixedCharge, opts?: { silent?: boolean }): Promise<boolean> => {
     try {
       if (!authUserId || !licenseId) {
         if (!contextLoading) {
@@ -167,7 +167,7 @@ export function useCloudCharges() {
         setCachedCharges(updated);
         return updated;
       });
-      toast.success('Charge ajoutée');
+      if (!opts?.silent) toast.success('Charge ajoutée');
       return true;
     } catch (error) {
       console.error('Error creating charge:', error);

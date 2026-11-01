@@ -17,7 +17,10 @@ import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { DataOwnershipFilter, type OwnershipFilter } from '@/components/shared/DataOwnershipFilter';
 import { TooltipProvider } from '@/components/ui/tooltip';
- import { ImportDriversDialog } from '@/components/drivers/ImportDriversDialog';
+ import { DataImportDialog } from '@/components/import/DataImportDialog';
+import { DRIVER_FIELDS, DRIVER_TEMPLATE_EXAMPLES, DRIVER_TEMPLATE_HELP, toParsedDrivers } from '@/lib/driverImport';
+import { convertToDrivers } from '@/utils/driversExcelImport';
+import type { ImportRow } from '@/lib/importCore';
  import { DriverImportProgress, type DriverImportProgressState } from '@/components/drivers/DriverImportProgress';
  import type { ExtendedParsedDriver } from '@/utils/driversExcelImport';
  import { useCloudDrivers } from '@/hooks/useCloudDrivers';
@@ -408,6 +411,22 @@ export default function Drivers() {
   const dismissImportProgress = useCallback(() => {
     setImportProgress(p => ({ ...p, active: false }));
   }, []);
+
+  // Import Excel (fichier libre ou modèle) : sans doublon de nom, puis création en lot.
+  const importDriverRows = (rows: ImportRow[]) => {
+    const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const known = new Set(
+      [...cloudCdiDrivers, ...cloudCddDrivers, ...cloudInterimDrivers, ...cloudAutreDrivers, ...cloudJokerDrivers].map((d) => norm((d as Driver).name || '')),
+    );
+    const parsed = toParsedDrivers(rows).filter((d) => {
+      const k = norm(d.name);
+      if (known.has(k)) return false;
+      known.add(k);
+      return true;
+    });
+    if (parsed.length) handleImportDrivers(convertToDrivers(parsed));
+    return Promise.resolve({ created: parsed.length, skipped: rows.length - parsed.length });
+  };
 
   const handleImportDrivers = useCallback((importedDrivers: ExtendedParsedDriver[]) => {
     console.log('[Drivers] handleImportDrivers called with', importedDrivers.length, 'drivers');
@@ -1096,10 +1115,16 @@ export default function Drivers() {
         </TabsContent>
       </Tabs>
        
-       <ImportDriversDialog
+       <DataImportDialog
          open={isImportDialogOpen}
          onOpenChange={setIsImportDialogOpen}
-         onImport={handleImportDrivers}
+         title="Importer des conducteurs"
+         description="Votre fichier Excel ou CSV, quelle que soit sa forme : les colonnes sont reconnues automatiquement. Vous pouvez aussi partir du modèle."
+         fields={DRIVER_FIELDS}
+         templateName="modele-conducteurs-optiflow"
+         templateExamples={DRIVER_TEMPLATE_EXAMPLES}
+         templateHelp={DRIVER_TEMPLATE_HELP}
+         onImport={async (rows: ImportRow[]) => importDriverRows(rows)}
        />
        
        <DriverAssignmentDialog

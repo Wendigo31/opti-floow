@@ -11,7 +11,9 @@ import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useNavigate } from 'react-router-dom';
 import type { FixedCharge } from '@/types';
 import { cn } from '@/lib/utils';
-import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
+import { DataImportDialog } from '@/components/import/DataImportDialog';
+import type { ImportRow } from '@/lib/importCore';
+import { CHARGE_FIELDS, CHARGE_TEMPLATE_EXAMPLES, CHARGE_TEMPLATE_HELP, chargeKey, toCharges, type ChargeKind } from '@/lib/chargeImport';
 import { toast } from 'sonner';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { ChargePresetsDialog } from '@/components/charges/ChargePresetsDialog';
@@ -189,21 +191,33 @@ export default function Charges() {
     void createCloudCharge(duplicatedCharge);
   };
 
-  const handleImportCharges = async (importedCharges: Partial<FixedCharge>[]) => {
-    // Create charges one by one in cloud
-    for (let index = 0; index < importedCharges.length; index++) {
-      const c = importedCharges[index];
-      const newCharge: FixedCharge = {
+  // Import Excel : charges reconnues dans n'importe quel tableau, sans doublon de nom.
+  const handleImportCharges = async (rows: ImportRow[], columns: Record<string, string | undefined>) => {
+    const CAT: Record<ChargeKind, FixedCharge['category']> = {
+      insurance: 'insurance', leasing: 'leasing', office: 'administrative', maintenance: 'maintenance',
+      personnel: 'other', vehicle: 'other', other: 'other',
+    };
+    const known = new Set(charges.map((c) => chargeKey(c.name)));
+    const list = toCharges(rows, columns);
+    let created = 0;
+    const errors: string[] = [];
+    for (let index = 0; index < list.length; index++) {
+      const c = list[index];
+      const k = chargeKey(c.name);
+      if (known.has(k)) continue;
+      known.add(k);
+      const ok = await createCloudCharge({
         id: `imported_${Date.now()}_${index}`,
-        name: c.name || 'Charge importée',
-        amount: c.amount || 0,
-        isHT: c.isHT ?? false,
-        periodicity: (c.periodicity || 'monthly') as 'daily' | 'monthly' | 'yearly',
-        category: (c.category || 'other') as FixedCharge['category'],
-      };
-      await createCloudCharge(newCharge);
+        name: c.name,
+        amount: c.amount,
+        isHT: c.taxMode === 'ht',
+        periodicity: c.period,
+        category: CAT[c.kind],
+      }, { silent: true });
+      if (ok) created++;
+      else errors.push(`${c.name} : non enregistrée`);
     }
-    toast.success(`${importedCharges.length} charge(s) importée(s)`);
+    return { created, skipped: list.length - created - errors.length, errors };
   };
 
   const renderForm = () => (
@@ -473,11 +487,15 @@ export default function Charges() {
         onOpenChange={setPresetsDialogOpen}
       />
 
-      <ExcelImportDialog
+      <DataImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        type="charges"
-        onImport={handleImportCharges}
+        title="Importer des charges"
+        fields={CHARGE_FIELDS}
+        templateName="modele-charges-optiflow"
+        templateExamples={CHARGE_TEMPLATE_EXAMPLES}
+        templateHelp={CHARGE_TEMPLATE_HELP}
+        onImport={(rows, ctx) => handleImportCharges(rows, ctx.columns)}
       />
       {/* Summary Card */}
       <div className="glass-card p-6 opacity-0 animate-slide-up" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
