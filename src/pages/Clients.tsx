@@ -25,8 +25,15 @@ import { MergeDialog } from '@/components/shared/MergeDialog';
 import { DuplicateDetectionBanner } from '@/components/shared/DuplicateDetectionBanner';
 import { toast as sonnerToast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Tags } from 'lucide-react';
+import { useLicenseContext } from '@/context/LicenseContext';
+import { useRateCards } from '@/hooks/useRateCards';
+import { RateCardDialog } from '@/components/pricing/RateCardDialog';
 
 export default function Clients() {
+  const { licenseId: rcLicenseId } = useLicenseContext();
+  const rateCards = useRateCards(rcLicenseId);
+  const [pricingClient, setPricingClient] = useState<ClientWithCreator | null>(null);
   const { toast } = useToast();
   
   // Use the synced clients hook instead of local storage
@@ -489,6 +496,9 @@ export default function Clients() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setDetailClient(client); setDetailOpen(true); }}>
                               <Eye className="w-4 h-4" />
                             </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPricingClient(client)} title="Grille tarifaire" aria-label={`Grille tarifaire de ${client.name}`}>
+                              <Tags className={`w-4 h-4 ${rateCards.cards.get(client.id) ? 'text-primary' : ''}`} />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(client)}>
                               <Edit2 className="w-4 h-4" />
                             </Button>
@@ -530,6 +540,9 @@ export default function Clients() {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => { setDetailClient(client); setDetailOpen(true); }}>
                             <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setPricingClient(client)} title="Grille tarifaire" aria-label={`Grille tarifaire de ${client.name}`}>
+                            <Tags className={`w-4 h-4 ${rateCards.cards.get(client.id) ? 'text-primary' : ''}`} />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(client)}>
                             <Edit2 className="w-4 h-4" />
@@ -609,6 +622,23 @@ export default function Clients() {
         onMerge={handleMergeClients}
         allItems={clients.map(c => ({ id: c.id, name: c.name, extra: c.company || c.city || '' }))}
       />
+      {pricingClient && (
+        <RateCardDialog
+          open={!!pricingClient}
+          onOpenChange={(o) => !o && setPricingClient(null)}
+          clientName={pricingClient.name}
+          card={rateCards.cards.get(pricingClient.id)}
+          bases={['tour', 'km', 'stop', 'hour', 'zone', 'pallet']}
+          onSave={async (card) => {
+            await rateCards.save(pricingClient.id, card);
+            sonnerToast.success('Grille tarifaire enregistrée');
+          }}
+          onDelete={async () => {
+            await rateCards.remove(pricingClient.id);
+            sonnerToast.success('Grille tarifaire supprimée');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -13,6 +13,9 @@ import { useCloudTrailers } from '@/hooks/useCloudTrailers';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useApp } from '@/context/AppContext';
 import { estimateQuote } from '@/domain/quotes/quoteEstimate';
+import { useLicenseContext } from '@/context/LicenseContext';
+import { useRateCards } from '@/hooks/useRateCards';
+import { RateCardSuggestion } from '@/components/pricing/RateCardSuggestion';
 
 export interface QuoteCalculatorInitial {
   origin?: string;
@@ -53,6 +56,11 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
   const [validUntil, setValidUntil] = useState('');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [saving, setSaving] = useState(false);
+  // Prix imposé par la grille tarifaire du client (sinon : coût de revient + marge).
+  const [gridPrice, setGridPrice] = useState<number | null>(null);
+  const { licenseId } = useLicenseContext();
+  const { cards } = useRateCards(licenseId);
+  const card = clientId ? cards.get(clientId) : undefined;
 
   // Données du client : adresse de départ par défaut.
   useEffect(() => {
@@ -69,6 +77,11 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
     selectedTrailer: trailers.find((t) => t.id === trailerId) ?? null,
     charges, settings, appVehicleParams,
   }, margin, tva), [distance, tolls, drivers, driverIds, vehicles, vehicleId, trailers, trailerId, charges, settings, appVehicleParams, margin, tva]);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const priceHT = gridPrice ?? est.priceHT;
+  const priceTTC = gridPrice != null ? r2(gridPrice * (1 + tva / 100)) : est.priceTTC;
+  const marginAmount = r2(priceHT - est.cost.totalCost);
+  const marginPct = est.cost.totalCost > 0 ? r2((marginAmount / est.cost.totalCost) * 100) : 0;
 
   const toggleDriver = (id: string) =>
     setDriverIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -81,10 +94,10 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
       destination_address: destination,
       distance_km: distance,
       total_cost: Math.round(est.cost.totalCost * 100) / 100,
-      margin_percent: margin,
+      margin_percent: gridPrice != null ? marginPct : margin,
       tva_rate: tva,
-      price_ht: est.priceHT,
-      price_ttc: est.priceTTC,
+      price_ht: priceHT,
+      price_ttc: priceTTC,
       valid_until: validUntil || null,
       notes: notes || null,
       status: 'draft',
@@ -132,7 +145,7 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Marge (%)</Label><Input type="number" value={margin} onChange={(e) => setMargin(Number(e.target.value))} /></div>
+          <div><Label>Marge (%)</Label><Input type="number" value={margin} onChange={(e) => { setGridPrice(null); setMargin(Number(e.target.value)); }} /></div>
           <div><Label>TVA (%)</Label><Input type="number" value={tva} onChange={(e) => setTva(Number(e.target.value))} /></div>
           <div className="col-span-2"><Label>Valable jusqu'au</Label><Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} /></div>
         </div>
@@ -155,10 +168,21 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
           <div key={l} className="flex justify-between"><span className="text-muted-foreground">{l}</span><span>{eur(v)}</span></div>
         ))}
         <div className="flex justify-between border-t pt-2 font-medium"><span>Coût de revient</span><span>{eur(est.cost.totalCost)}</span></div>
-        <div className="flex justify-between"><span>Marge ({margin} %)</span><span>{eur(est.marginAmount)}</span></div>
-        <div className="flex justify-between font-semibold text-foreground"><span>Prix HT</span><span>{eur(est.priceHT)}</span></div>
-        <div className="flex justify-between"><span>TVA ({tva} %)</span><span>{eur(est.tvaAmount)}</span></div>
-        <div className="flex justify-between text-base font-bold text-foreground"><span>Prix TTC</span><span>{eur(est.priceTTC)}</span></div>
+        <div className={`flex justify-between ${marginAmount < 0 ? 'text-destructive' : ''}`}><span>Marge ({gridPrice != null ? marginPct : margin} %)</span><span>{eur(marginAmount)}</span></div>
+        <div className="flex justify-between font-semibold text-foreground">
+          <span>Prix HT{gridPrice != null && <span className="ml-1 text-xs font-normal text-primary">(grille tarifaire)</span>}</span>
+          <span>{eur(priceHT)}</span>
+        </div>
+        <div className="flex justify-between"><span>TVA ({tva} %)</span><span>{eur(r2(priceTTC - priceHT))}</span></div>
+        <div className="flex justify-between text-base font-bold text-foreground"><span>Prix TTC</span><span>{eur(priceTTC)}</span></div>
+        {gridPrice != null && <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setGridPrice(null)}>Revenir au prix calculé (coût + marge)</button>}
+        {card && (
+          <RateCardSuggestion
+            card={card}
+            query={{ km: distance || null, destination, tours: 1 }}
+            onApply={(amount) => setGridPrice(amount)}
+          />
+        )}
         <Button className="w-full" onClick={save} disabled={saving || !clientId || !origin || !destination || distance <= 0}>
           <Save className="mr-2 h-4 w-4" />Enregistrer le devis
         </Button>
