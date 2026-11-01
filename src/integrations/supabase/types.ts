@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -226,6 +226,68 @@ export type Database = {
           signature?: string | null
           updated_at?: string
           version?: string
+        }
+        Relationships: []
+      }
+      central_announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          level: string
+          license_id: string | null
+          message: string
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          level?: string
+          license_id?: string | null
+          message: string
+          starts_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          level?: string
+          license_id?: string | null
+          message?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "central_announcements_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      central_bridge: {
+        Row: {
+          config: Json
+          id: number
+          secret_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          id?: number
+          secret_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          id?: number
+          secret_hash?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -487,6 +549,74 @@ export type Database = {
           },
         ]
       }
+      company_documents: {
+        Row: {
+          ai_status: string
+          data_url: string
+          expires_on: string | null
+          extracted: Json
+          file_name: string | null
+          id: string
+          issued_on: string | null
+          issues: string[]
+          kind: string
+          license_id: string
+          mime: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          ai_status?: string
+          data_url: string
+          expires_on?: string | null
+          extracted?: Json
+          file_name?: string | null
+          id?: string
+          issued_on?: string | null
+          issues?: string[]
+          kind: string
+          license_id: string
+          mime: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          ai_status?: string
+          data_url?: string
+          expires_on?: string | null
+          extracted?: Json
+          file_name?: string | null
+          id?: string
+          issued_on?: string | null
+          issues?: string[]
+          kind?: string
+          license_id?: string
+          mime?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_documents_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_invitations: {
         Row: {
           accepted_at: string | null
@@ -638,6 +768,8 @@ export type Database = {
         Row: {
           accepted_at: string | null
           created_at: string | null
+          created_by: string | null
+          created_via: string | null
           display_name: string | null
           email: string
           id: string
@@ -646,18 +778,18 @@ export type Database = {
           is_active: boolean | null
           last_activity_at: string | null
           license_id: string
+          login_id: string | null
+          must_change_password: boolean
+          password_set_at: string | null
           role: string
           updated_at: string | null
           user_id: string | null
-          must_change_password: boolean
-          login_id: string | null
-          password_set_at: string | null
-          created_via: string | null
-          created_by: string | null
         }
         Insert: {
           accepted_at?: string | null
           created_at?: string | null
+          created_by?: string | null
+          created_via?: string | null
           display_name?: string | null
           email: string
           id?: string
@@ -666,18 +798,18 @@ export type Database = {
           is_active?: boolean | null
           last_activity_at?: string | null
           license_id: string
+          login_id?: string | null
+          must_change_password?: boolean
+          password_set_at?: string | null
           role?: string
           updated_at?: string | null
           user_id?: string | null
-          must_change_password?: boolean
-          login_id?: string | null
-          password_set_at?: string | null
-          created_via?: string | null
-          created_by?: string | null
         }
         Update: {
           accepted_at?: string | null
           created_at?: string | null
+          created_by?: string | null
+          created_via?: string | null
           display_name?: string | null
           email?: string
           id?: string
@@ -686,14 +818,12 @@ export type Database = {
           is_active?: boolean | null
           last_activity_at?: string | null
           license_id?: string
+          login_id?: string | null
+          must_change_password?: boolean
+          password_set_at?: string | null
           role?: string
           updated_at?: string | null
           user_id?: string | null
-          must_change_password?: boolean
-          login_id?: string | null
-          password_set_at?: string | null
-          created_via?: string | null
-          created_by?: string | null
         }
         Relationships: [
           {
@@ -919,6 +1049,7 @@ export type Database = {
           auto_pricing: boolean | null
           auto_pricing_basic: boolean | null
           basic_calculator: boolean | null
+          btn_ai_optimize: boolean | null
           client_analysis: boolean | null
           client_analysis_basic: boolean | null
           cost_analysis: boolean | null
@@ -944,6 +1075,10 @@ export type Database = {
           multi_agency: boolean | null
           multi_drivers: boolean | null
           multi_users: boolean | null
+          page_ai_analysis: boolean | null
+          page_forecast: boolean | null
+          page_toxic_clients: boolean | null
+          page_vehicle_reports: boolean | null
           pdf_export_pro: boolean | null
           saved_tours: boolean | null
           smart_quotes: boolean | null
@@ -958,6 +1093,7 @@ export type Database = {
           auto_pricing?: boolean | null
           auto_pricing_basic?: boolean | null
           basic_calculator?: boolean | null
+          btn_ai_optimize?: boolean | null
           client_analysis?: boolean | null
           client_analysis_basic?: boolean | null
           cost_analysis?: boolean | null
@@ -983,6 +1119,10 @@ export type Database = {
           multi_agency?: boolean | null
           multi_drivers?: boolean | null
           multi_users?: boolean | null
+          page_ai_analysis?: boolean | null
+          page_forecast?: boolean | null
+          page_toxic_clients?: boolean | null
+          page_vehicle_reports?: boolean | null
           pdf_export_pro?: boolean | null
           saved_tours?: boolean | null
           smart_quotes?: boolean | null
@@ -997,6 +1137,7 @@ export type Database = {
           auto_pricing?: boolean | null
           auto_pricing_basic?: boolean | null
           basic_calculator?: boolean | null
+          btn_ai_optimize?: boolean | null
           client_analysis?: boolean | null
           client_analysis_basic?: boolean | null
           cost_analysis?: boolean | null
@@ -1022,6 +1163,10 @@ export type Database = {
           multi_agency?: boolean | null
           multi_drivers?: boolean | null
           multi_users?: boolean | null
+          page_ai_analysis?: boolean | null
+          page_forecast?: boolean | null
+          page_toxic_clients?: boolean | null
+          page_vehicle_reports?: boolean | null
           pdf_export_pro?: boolean | null
           saved_tours?: boolean | null
           smart_quotes?: boolean | null
@@ -1048,26 +1193,36 @@ export type Database = {
           base_monthly_price: number | null
           billing_period: string | null
           city: string | null
+          company_email: string | null
           company_identifier: string | null
           company_name: string | null
+          company_phone: string | null
           company_status: string | null
+          contact_completed_at: string | null
           created_at: string
           current_period_end: string | null
           email: string
           employee_count: number | null
           first_name: string | null
+          hidden_pages: string[]
           id: string
           is_active: boolean
           last_name: string | null
           last_stripe_sync_at: string | null
           last_used_at: string | null
+          legal_form: string | null
+          licence_copies: number | null
+          licence_copies_updated_at: string | null
           license_code: string
+          manager_name: string | null
           max_clients: number | null
           max_daily_charges: number | null
           max_drivers: number | null
           max_monthly_charges: number | null
           max_users: number | null
           max_yearly_charges: number | null
+          naf_code: string | null
+          naf_label: string | null
           next_billing_date: string | null
           notes: string | null
           plan_type: string | null
@@ -1077,9 +1232,12 @@ export type Database = {
           show_license_info: boolean | null
           show_user_info: boolean | null
           siren: string | null
+          siret: string | null
+          slug: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          vat_number: string | null
         }
         Insert: {
           activated_at?: string | null
@@ -1088,26 +1246,36 @@ export type Database = {
           base_monthly_price?: number | null
           billing_period?: string | null
           city?: string | null
+          company_email?: string | null
           company_identifier?: string | null
           company_name?: string | null
+          company_phone?: string | null
           company_status?: string | null
+          contact_completed_at?: string | null
           created_at?: string
           current_period_end?: string | null
           email: string
           employee_count?: number | null
           first_name?: string | null
+          hidden_pages?: string[]
           id?: string
           is_active?: boolean
           last_name?: string | null
           last_stripe_sync_at?: string | null
           last_used_at?: string | null
+          legal_form?: string | null
+          licence_copies?: number | null
+          licence_copies_updated_at?: string | null
           license_code: string
+          manager_name?: string | null
           max_clients?: number | null
           max_daily_charges?: number | null
           max_drivers?: number | null
           max_monthly_charges?: number | null
           max_users?: number | null
           max_yearly_charges?: number | null
+          naf_code?: string | null
+          naf_label?: string | null
           next_billing_date?: string | null
           notes?: string | null
           plan_type?: string | null
@@ -1117,9 +1285,12 @@ export type Database = {
           show_license_info?: boolean | null
           show_user_info?: boolean | null
           siren?: string | null
+          siret?: string | null
+          slug?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          vat_number?: string | null
         }
         Update: {
           activated_at?: string | null
@@ -1128,26 +1299,36 @@ export type Database = {
           base_monthly_price?: number | null
           billing_period?: string | null
           city?: string | null
+          company_email?: string | null
           company_identifier?: string | null
           company_name?: string | null
+          company_phone?: string | null
           company_status?: string | null
+          contact_completed_at?: string | null
           created_at?: string
           current_period_end?: string | null
           email?: string
           employee_count?: number | null
           first_name?: string | null
+          hidden_pages?: string[]
           id?: string
           is_active?: boolean
           last_name?: string | null
           last_stripe_sync_at?: string | null
           last_used_at?: string | null
+          legal_form?: string | null
+          licence_copies?: number | null
+          licence_copies_updated_at?: string | null
           license_code?: string
+          manager_name?: string | null
           max_clients?: number | null
           max_daily_charges?: number | null
           max_drivers?: number | null
           max_monthly_charges?: number | null
           max_users?: number | null
           max_yearly_charges?: number | null
+          naf_code?: string | null
+          naf_label?: string | null
           next_billing_date?: string | null
           notes?: string | null
           plan_type?: string | null
@@ -1157,9 +1338,12 @@ export type Database = {
           show_license_info?: boolean | null
           show_user_info?: boolean | null
           siren?: string | null
+          siret?: string | null
+          slug?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          vat_number?: string | null
         }
         Relationships: []
       }
@@ -1249,6 +1433,56 @@ export type Database = {
           read_at?: string | null
           recipient_user_id?: string
           title?: string
+        }
+        Relationships: []
+      }
+      page_usage: {
+        Row: {
+          first_visited_at: string
+          last_visited_at: string
+          license_id: string
+          path: string
+          visits: number
+        }
+        Insert: {
+          first_visited_at?: string
+          last_visited_at?: string
+          license_id: string
+          path: string
+          visits?: number
+        }
+        Update: {
+          first_visited_at?: string
+          last_visited_at?: string
+          license_id?: string
+          path?: string
+          visits?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_usage_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_reset_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
         }
         Relationships: []
       }
@@ -1416,6 +1650,72 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      quote_acceptance_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          license_id: string | null
+          quote_id: string
+          refusal_comment: string | null
+          responded_at: string | null
+          response: string | null
+          response_ip: string | null
+          response_user_agent: string | null
+          sent_to_email: string | null
+          signed_name: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          license_id?: string | null
+          quote_id: string
+          refusal_comment?: string | null
+          responded_at?: string | null
+          response?: string | null
+          response_ip?: string | null
+          response_user_agent?: string | null
+          sent_to_email?: string | null
+          signed_name?: string | null
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          license_id?: string | null
+          quote_id?: string
+          refusal_comment?: string | null
+          responded_at?: string | null
+          response?: string | null
+          response_ip?: string | null
+          response_user_agent?: string | null
+          sent_to_email?: string | null
+          signed_name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_acceptance_links_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_acceptance_links_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotes: {
         Row: {
@@ -1741,6 +2041,148 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "search_history_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          author: string | null
+          body: string
+          created_at: string
+          from_admin: boolean
+          id: string
+          thread_id: string
+        }
+        Insert: {
+          author?: string | null
+          body: string
+          created_at?: string
+          from_admin?: boolean
+          id?: string
+          thread_id: string
+        }
+        Update: {
+          author?: string | null
+          body?: string
+          created_at?: string
+          from_admin?: boolean
+          id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "support_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_sessions: {
+        Row: {
+          admin_email: string | null
+          auth_user_id: string
+          claimed_at: string | null
+          company_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          license_id: string | null
+          reason: string | null
+          token_hash: string
+        }
+        Insert: {
+          admin_email?: string | null
+          auth_user_id: string
+          claimed_at?: string | null
+          company_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          license_id?: string | null
+          reason?: string | null
+          token_hash: string
+        }
+        Update: {
+          admin_email?: string | null
+          auth_user_id?: string
+          claimed_at?: string | null
+          company_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          license_id?: string | null
+          reason?: string | null
+          token_hash?: string
+        }
+        Relationships: []
+      }
+      support_threads: {
+        Row: {
+          auth_user_id: string | null
+          author_email: string | null
+          author_name: string | null
+          company_user_id: string | null
+          context: Json
+          created_at: string
+          guest_token: string | null
+          id: string
+          kind: string
+          last_message_at: string
+          license_id: string | null
+          page: string | null
+          status: string
+          subject: string
+          unread_admin: boolean
+          unread_user: boolean
+        }
+        Insert: {
+          auth_user_id?: string | null
+          author_email?: string | null
+          author_name?: string | null
+          company_user_id?: string | null
+          context?: Json
+          created_at?: string
+          guest_token?: string | null
+          id?: string
+          kind?: string
+          last_message_at?: string
+          license_id?: string | null
+          page?: string | null
+          status?: string
+          subject: string
+          unread_admin?: boolean
+          unread_user?: boolean
+        }
+        Update: {
+          auth_user_id?: string | null
+          author_email?: string | null
+          author_name?: string | null
+          company_user_id?: string | null
+          context?: Json
+          created_at?: string
+          guest_token?: string | null
+          id?: string
+          kind?: string
+          last_message_at?: string
+          license_id?: string | null
+          page?: string | null
+          status?: string
+          subject?: string
+          unread_admin?: boolean
+          unread_user?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_threads_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
@@ -2369,6 +2811,61 @@ export type Database = {
       }
     }
     Functions: {
+      _auth_set_password: {
+        Args: { p_email: string; p_password: string }
+        Returns: string
+      }
+      _central_child_links: {
+        Args: never
+        Returns: {
+          cascades: boolean
+          child: string
+          col: string
+          parent: string
+          pcol: string
+        }[]
+      }
+      _central_code: { Args: { p_chars: string }; Returns: string }
+      _central_fields: {
+        Args: { p_deny: string[]; p_table: string }
+        Returns: Json
+      }
+      _central_log: {
+        Args: {
+          cfg: Json
+          p_action: string
+          p_actor: string
+          p_details: Json
+          p_target: string
+        }
+        Returns: undefined
+      }
+      _central_patch: {
+        Args: {
+          p_deny: string[]
+          p_id: string
+          p_patch: Json
+          p_table: string
+          p_where_col: string
+        }
+        Returns: number
+      }
+      _company_doc_valid_until: {
+        Args: { p_expires: string; p_issued: string; p_kind: string }
+        Returns: string
+      }
+      _company_temp_password: {
+        Args: { p_company_user_id: string }
+        Returns: string
+      }
+      _is_last_direction: {
+        Args: { p_company_user_id: string }
+        Returns: boolean
+      }
+      _my_role_in: { Args: { p_license_id: string }; Returns: string }
+      _plan_cfg: { Args: never; Returns: Json }
+      _team_guard: { Args: { p_company_user_id: string }; Returns: string }
+      active_announcements: { Args: { p_license_id: string }; Returns: Json }
       admin_add_company_user: {
         Args: {
           p_display_name?: string
@@ -2390,6 +2887,10 @@ export type Database = {
         Args: { p_role: string; p_user_id: string }
         Returns: boolean
       }
+      apply_plan_features: {
+        Args: { p_license_id: string }
+        Returns: undefined
+      }
       can_view_client_sensitive_data: {
         Args: { p_license_id: string }
         Returns: boolean
@@ -2402,7 +2903,80 @@ export type Database = {
         Args: { p_license_id: string }
         Returns: boolean
       }
+      central_admin: {
+        Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      central_admin_ext: {
+        Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      central_autosuspend: { Args: never; Returns: number }
+      central_delete_account: {
+        Args: { p_payload: Json; p_secret: string }
+        Returns: Json
+      }
+      central_documents: {
+        Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      central_support_session: {
+        Args: { p_payload: Json; p_secret: string }
+        Returns: Json
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      company_access: { Args: { p_license_id: string }; Returns: Json }
+      company_create_user: {
+        Args: {
+          p_display_name: string
+          p_email: string
+          p_license_id: string
+          p_login_id?: string
+          p_role: string
+        }
+        Returns: Json
+      }
+      company_delete_user: {
+        Args: { p_company_user_id: string }
+        Returns: undefined
+      }
+      company_document_can_upload: {
+        Args: { p_license_id: string }
+        Returns: boolean
+      }
+      company_documents_status: {
+        Args: { p_license_id: string }
+        Returns: Json
+      }
+      company_password_changed: { Args: never; Returns: undefined }
+      company_reset_user_password: {
+        Args: { p_company_user_id: string }
+        Returns: string
+      }
+      company_set_user_active: {
+        Args: { p_active: boolean; p_company_user_id: string }
+        Returns: undefined
+      }
+      company_set_user_role: {
+        Args: { p_company_user_id: string; p_role: string }
+        Returns: undefined
+      }
+      company_slugify: { Args: { p_label: string }; Returns: string }
+      company_team: { Args: { p_license_id: string }; Returns: Json }
+      company_unique_slug: {
+        Args: { p_base: string; p_exclude?: string }
+        Returns: string
+      }
+      complete_company_contact: {
+        Args: {
+          p_code?: string
+          p_email: string
+          p_license_id: string
+          p_phone: string
+          p_user_email?: string
+        }
+        Returns: Json
+      }
       create_access_request: {
         Args: { p_message?: string; p_requested_features: string[] }
         Returns: string
@@ -2411,6 +2985,8 @@ export type Database = {
         Args: { p_license_id: string; p_local_id: string }
         Returns: boolean
       }
+      flow_license_payload: { Args: { p_license_id: string }; Returns: Json }
+      forgot_password_issue: { Args: { p_login: string }; Returns: Json }
       get_company_members_safe: {
         Args: never
         Returns: {
@@ -2590,6 +3166,10 @@ export type Database = {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_company_financial: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_company_member: {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
@@ -2598,12 +3178,18 @@ export type Database = {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_company_rh: {
+        Args: { p_license_id: string; p_user_id: string }
+        Returns: boolean
+      }
       license_has_members: { Args: { p_license_id: string }; Returns: boolean }
       link_user_to_company: {
         Args: { p_company_user_id: string; p_user_id: string }
         Returns: boolean
       }
+      my_companies: { Args: never; Returns: Json }
       pick_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
+      plan_features_of: { Args: { p_license_id: string }; Returns: Json }
       process_access_request: {
         Args: {
           p_comment?: string
@@ -2613,7 +3199,58 @@ export type Database = {
         }
         Returns: boolean
       }
+      resolve_company_link: {
+        Args: { p_query: string }
+        Returns: {
+          name: string
+          slug: string
+        }[]
+      }
+      resolve_login: { Args: { p_login: string }; Returns: string }
       strip_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
+      support_create: {
+        Args: {
+          p_body: string
+          p_context?: Json
+          p_kind: string
+          p_license_id: string
+          p_page?: string
+          p_subject: string
+        }
+        Returns: string
+      }
+      support_guest_create: {
+        Args: {
+          p_body: string
+          p_context?: Json
+          p_email: string
+          p_kind: string
+          p_name: string
+          p_page?: string
+          p_subject: string
+        }
+        Returns: Json
+      }
+      support_guest_mark_read: {
+        Args: { p_thread_id: string; p_token: string }
+        Returns: undefined
+      }
+      support_guest_reply: {
+        Args: { p_body: string; p_thread_id: string; p_token: string }
+        Returns: undefined
+      }
+      support_guest_threads: { Args: { p_items: Json }; Returns: Json }
+      support_mark_read: { Args: { p_thread_id: string }; Returns: undefined }
+      support_my_threads: { Args: { p_license_id: string }; Returns: Json }
+      support_session_claim: { Args: { p_token: string }; Returns: Json }
+      support_user_reply: {
+        Args: { p_body: string; p_thread_id: string }
+        Returns: undefined
+      }
+      track_page_view: {
+        Args: { p_license_id: string; p_path: string }
+        Returns: undefined
+      }
       update_user_activity: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
