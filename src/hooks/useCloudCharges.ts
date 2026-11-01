@@ -216,6 +216,10 @@ export function useCloudCharges() {
   }, [licenseId, contextLoading]);
 
   const deleteCharge = useCallback(async (id: string): Promise<boolean> => {
+    if (id === 'optigroup-abonnement') {
+      toast.info("L'abonnement OptiGroup reste dans vos charges fixes : il est mis à jour automatiquement.");
+      return false;
+    }
     try {
       if (!licenseId) {
         if (!contextLoading) {

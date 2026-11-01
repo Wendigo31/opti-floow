@@ -110,11 +110,13 @@ export default function Charges() {
   const dailyCharges = charges.filter(c => c.periodicity === 'daily');
   const monthlyCharges = charges.filter(c => c.periodicity === 'monthly');
   const yearlyCharges = charges.filter(c => c.periodicity === 'yearly');
+  // L'abonnement OptiGroup (ajouté d'office) ne compte pas dans les limites du forfait.
+  const userCount = (list: FixedCharge[]) => list.filter(c => !c.system).length;
 
   // Check limits per periodicity
-  const canAddDaily = checkLimit('maxDailyCharges', dailyCharges.length);
-  const canAddMonthly = checkLimit('maxMonthlyCharges', monthlyCharges.length);
-  const canAddYearly = checkLimit('maxYearlyCharges', yearlyCharges.length);
+  const canAddDaily = checkLimit('maxDailyCharges', userCount(dailyCharges));
+  const canAddMonthly = checkLimit('maxMonthlyCharges', userCount(monthlyCharges));
+  const canAddYearly = checkLimit('maxYearlyCharges', userCount(yearlyCharges));
 
   const handleAdd = (periodicity: 'daily' | 'monthly' | 'yearly') => {
     // Check limits before allowing add
@@ -294,6 +296,11 @@ export default function Charges() {
                   </p>
                 </div>
               </div>
+              {charge.system ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground" title="Votre forfait OptiGroup, compté d'office et mis à jour automatiquement">
+                  <Lock className="w-3 h-3" /> Inclus d'office
+                </span>
+              ) : (
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDuplicate(charge)} title="Dupliquer">
                   <Copy className="w-3.5 h-3.5" />
@@ -305,6 +312,7 @@ export default function Charges() {
                   <Trash2 className="w-3.5 h-3.5 text-destructive" />
                 </Button>
               </div>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -340,7 +348,7 @@ export default function Charges() {
     const dailyTotalHT = chargesList.reduce((sum, c) => sum + getDailyAmountHT(c), 0);
     
     const limitKey = periodicity === 'daily' ? 'maxDailyCharges' : periodicity === 'monthly' ? 'maxMonthlyCharges' : 'maxYearlyCharges';
-    const canAdd = checkLimit(limitKey, chargesList.length);
+    const canAdd = checkLimit(limitKey, userCount(chargesList));
     const maxLimit = limits[limitKey];
     
     return (

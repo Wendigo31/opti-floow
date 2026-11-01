@@ -35,7 +35,9 @@ interface ChargePresetsDialogProps {
 }
 
 export function ChargePresetsDialog({ open, onOpenChange }: ChargePresetsDialogProps) {
-  const { charges, createCharge, deleteCharge } = useCloudCharges();
+  const { charges: allCharges, createCharge, deleteCharge } = useCloudCharges();
+  // L'abonnement OptiGroup n'entre jamais dans un modèle et n'est jamais remplacé.
+  const charges = allCharges.filter((c) => !c.system);
   const { presets, loading, createPreset, updatePreset, deletePreset, duplicatePreset } = useChargePresets();
   
   const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');

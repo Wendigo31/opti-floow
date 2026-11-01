@@ -52,6 +52,8 @@ export interface FixedCharge {
   isHT: boolean; // true = HT, false = TTC
   periodicity: 'daily' | 'monthly' | 'yearly';
   category: 'insurance' | 'leasing' | 'administrative' | 'maintenance' | 'other';
+  /** Abonnement OptiGroup : ajouté d'office, verrouillé (géré par la base). */
+  system?: boolean;
 }
 
 export interface TripCalculation {
