@@ -33,6 +33,7 @@ const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
 const Charges = lazy(() => import("./pages/Charges"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const Pallets = lazy(() => import("./pages/Pallets"));
 const Clients = lazy(() => import("./pages/Clients"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Forecast = lazy(() => import("./pages/Forecast"));
@@ -128,6 +129,7 @@ function LicensedAppContent() {
                   <Route path="/vehicles" element={<Vehicles />} />
                   <Route path="/charges" element={<Charges />} />
                   <Route path="/invoices" element={<Invoices />} />
+                  <Route path="/pallets" element={<Pallets />} />
                   {/* Pricing page removed */}
                   
                   <Route path="/ai-analysis" element={<AIAnalysis />} />

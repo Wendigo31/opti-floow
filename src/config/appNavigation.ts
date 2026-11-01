@@ -85,7 +85,7 @@ const P = {
   planning: { to: '/planning', icon: CalendarDays, label: 'Planning' },
   tours: { to: '/tours', icon: Route, label: 'Tournées', requiredFeature: 'page_tours', userFeatureKey: 'page_tours' },
   lineMontage: { to: '/line-montage', icon: Layers, label: 'Création de ligne' },
-  clients: { to: '/clients', icon: UserCircle, label: 'Clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },
+  clients: { to: '/clients', icon: UserCircle, label: 'Clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },  pallets: { to: '/pallets', icon: Boxes, label: 'Palettes', userFeatureKey: 'page_clients' },
   vehicles: { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
   itinerary: { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
   aiAnalysis: { to: '/ai-analysis', icon: Sparkles, label: 'Analyse par IA', requiredFeature: 'page_ai_analysis' },
@@ -111,7 +111,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
     // Planifier (Planning) → monter une ligne → gérer les tournées → calculer un trajet →
     // consulter l'historique → données de référence (clients/véhicules/conducteurs).
     // Pas d'onglet Paramètres ici : l'écrou en haut à droite de l'app y donne déjà accès.
-    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.vehicles, P.drivers],
+    pages: [P.planning, P.tours, P.lineMontage, P.itinerary, P.calculator, P.history, P.clients, P.pallets, P.vehicles, P.drivers],
   },
   {
     id: 'geoloc', label: 'Géoloc', icon: MapPinned,
