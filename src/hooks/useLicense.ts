@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { signInWithPassword } from '@/lib/accounts';
+import { signInWithPassword, myCompanies, type MyCompany } from '@/lib/accounts';
 import type { LicenseFeatures } from '@/types/features';
 
 // Flag to prevent re-validation loops
@@ -769,6 +769,17 @@ export function useLicense(): UseLicenseReturn {
   const loginWithPassword = useCallback(async (login: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const companies = await signInWithPassword(login, password);
+      return await adoptCompanies(companies);
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Connexion impossible' };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Charge la licence à partir d'une session déjà ouverte (connexion par mot de passe,
+  // ou session support ouverte depuis OptiCentral).
+  const adoptCompanies = async (companies: MyCompany[]): Promise<{ success: boolean; error?: string }> => {
+    try {
       const target = companies.find((c) => c.license_active) ?? companies[0];
       const { data, error } = await (supabase as unknown as {
         rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -832,7 +843,24 @@ export function useLicense(): UseLicenseReturn {
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : 'Connexion impossible' };
     }
-  }, []);
+  };
+
+  // Audit final (nov. 2026) : « Ouvrir sa session » depuis OptiCentral ouvre une session
+  // Supabase mais aucune licence n'était chargée — le support restait sur l'écran de
+  // connexion. On adopte la session existante une fois, quand le marqueur support est là.
+  const supportAdoptedRef = useRef(false);
+  useEffect(() => {
+    if (isLicensed || supportAdoptedRef.current) return;
+    if (!localStorage.getItem('opti-support-session')) return;
+    supportAdoptedRef.current = true;
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      const companies = await myCompanies().catch(() => [] as MyCompany[]);
+      if (companies.length) await adoptCompanies(companies);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLicensed]);
 
   const markPasswordChanged = useCallback(() => {
     setLicenseData((prev) => {
