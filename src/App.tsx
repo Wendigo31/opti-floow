@@ -54,6 +54,8 @@ const PricingExport = lazy(() => import("./pages/PricingExport"));
 const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const AcceptQuote = lazy(() => import("./pages/AcceptQuote"));
+// Application conducteur (lien personnel, sans connexion).
+const DriverDay = lazy(() => import("./pages/DriverDay"));
 const queryClient = new QueryClient();
 // Indicateur du cloud, hors ligne et session : identiques dans les 3 logiciels.
 installCloudStatus(queryClient, supabase);
@@ -169,6 +171,8 @@ function AppRoutes() {
   // Lien public d'acceptation de devis (client, sans compte) : même tier
   // que /accept-invite, en dehors du garde isLicensed ci-dessous.
   const isAcceptQuoteRoute = location.pathname === '/accepter-devis';
+  // Application conducteur : lien personnel /conducteur?token=..., sans licence.
+  const isDriverRoute = location.pathname === '/conducteur';
 
   return (
     <AppProvider>
@@ -183,6 +187,10 @@ function AppRoutes() {
       ) : isAcceptQuoteRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
           <AcceptQuote />
+        </Suspense>
+      ) : isDriverRoute ? (
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <DriverDay />
         </Suspense>
       ) : isLoading ? (
         <LoadingScreen />
@@ -207,6 +215,7 @@ function AppContent() {
     pathname === '/presentation' ? '/presentation' :
     pathname === '/accept-invite' ? `/accept-invite${search}` :
     pathname === '/accepter-devis' ? `/accepter-devis${search}` :
+    pathname === '/conducteur' ? `/conducteur${search}` :
     '/';
 
   return (

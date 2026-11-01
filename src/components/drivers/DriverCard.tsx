@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Smartphone } from 'lucide-react';
+import { DriverLinkDialog } from '@/components/drivers/DriverLinkDialog';
 import { User, Users2, Edit2, Trash2, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -58,6 +60,7 @@ export function DriverCard({
   driverInfo,
   isOwn,
 }: DriverCardProps) {
+  const [linkOpen, setLinkOpen] = useState(false);
   const isInterim = driverType === 'interim';
   const isShared = !!driverInfo?.licenseId;
   const documentsNeedingAttention = getDocumentsNeedingAttention(driver.documents);
@@ -147,6 +150,13 @@ export function DriverCard({
               </div>
             </div>
             <div className="flex gap-2">
+              <Button size="icon" variant="ghost" title="Application conducteur" aria-label={`Application conducteur de ${driver.name}`} onClick={(e) => { e.stopPropagation(); setLinkOpen(true); }}>
+                <Smartphone className="w-4 h-4" />
+              </Button>
+              {/* Les clics dans la fenêtre (portail React) ne doivent pas sélectionner la carte. */}
+              <span className="contents" onClick={(e) => e.stopPropagation()}>
+                <DriverLinkDialog driverId={driver.id} driverName={driver.name} phone={(driver as { phone?: string }).phone} open={linkOpen} onOpenChange={setLinkOpen} />
+              </span>
               <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onEdit(driver, driverType === 'interim'); }}>
                 <Edit2 className="w-4 h-4" />
               </Button>
