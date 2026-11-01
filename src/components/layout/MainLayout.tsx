@@ -7,7 +7,7 @@ import { SupportButton } from '@/components/support/SupportButton';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { useLicense } from '@/hooks/useLicense';
 import { LoadingScreen } from './LoadingScreen';
-import { TutorialDialog } from '../onboarding/TutorialDialog';
+import { TutorialDialog, TUTORIAL_SEEN_KEY } from '../onboarding/TutorialDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarProvider, useSidebarContext } from '@/context/SidebarContext';
 import { getCategoryIdForPath } from '@/config/appNavigation';
@@ -33,10 +33,9 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   const handleLoadingComplete = useCallback(() => {
     setIsLoading(false);
     // Show tutorial if never seen
-    const seen = localStorage.getItem('optiflow_tutorial_seen');
+    const seen = localStorage.getItem(TUTORIAL_SEEN_KEY);
     if (!seen) {
       setShowTutorial(true);
-      localStorage.setItem('optiflow_tutorial_seen', 'true');
     }
   }, []);
 
