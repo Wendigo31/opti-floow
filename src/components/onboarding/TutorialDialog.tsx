@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
   Boxes, MapPinned, Warehouse, Users, Gavel, Building2, TrendingUp,
@@ -132,7 +132,7 @@ export function TutorialDialog({ open, onOpenChange }: TutorialDialogProps) {
           </p>
 
           {/* Title */}
-          <h2 className="text-xl font-bold text-foreground mb-3">{current.title}</h2>
+          <DialogTitle className="text-xl font-bold text-foreground mb-3">{current.title}</DialogTitle>
 
           {/* Description */}
           <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">

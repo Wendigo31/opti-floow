@@ -53,9 +53,12 @@ export function FlowInvoiceDialog({
   const { licenseId } = useLicenseContext();
   const { cards } = useRateCards(licenseId);
   const lastMonth = useMemo(() => {
+    // Mois précédent en heure locale (pas toISOString : le 1er du mois à minuit
+    // donnait le mois d'avant en UTC, et le 31 sautait un mois).
     const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().slice(0, 7);
+    const y = d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+    const m = d.getMonth() === 0 ? 12 : d.getMonth();
+    return `${y}-${String(m).padStart(2, '0')}`;
   }, []);
 
   const [clientId, setClientId] = useState('');
@@ -167,7 +170,11 @@ export function FlowInvoiceDialog({
               {work.isLoading ? (
                 <p className="text-sm text-muted-foreground">Chargement…</p>
               ) : !available.length ? (
-                <p className="text-sm text-muted-foreground">Aucune tournée ni trajet à facturer pour ce client ce mois-ci.</p>
+                <p className="text-sm text-muted-foreground">
+                  {(work.data?.length ?? 0) > 0
+                    ? `Les ${work.data?.length} prestation(s) de ce mois sont déjà sur une autre facture. Pour refacturer, créez d'abord un avoir total sur celle-ci.`
+                    : 'Aucune tournée ni trajet à facturer pour ce client ce mois-ci.'}
+                </p>
               ) : (
                 <>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
