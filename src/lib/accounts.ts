@@ -75,6 +75,12 @@ export async function signInWithPassword(login: string, password: string): Promi
     await supabase.auth.signOut();
     throw new Error("Ce compte n'a accès à aucune société. Contactez votre direction.");
   }
+  // Société suspendue depuis OptiCentral : le dire, au lieu de revenir en silence à l'écran
+  // de connexion (audit final, nov. 2026).
+  if (!companies.some((c) => c.license_active !== false)) {
+    await supabase.auth.signOut();
+    throw new Error("L'accès de votre société est suspendu. Contactez OptiGroup : support@opti-group.fr");
+  }
   return companies;
 }
 
