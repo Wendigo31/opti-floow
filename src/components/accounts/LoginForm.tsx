@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { readLoginHint } from '@/lib/loginHint';
 import { CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, LogIn, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +75,7 @@ export function LoginForm({
 }) {
   const app = appKey(appName);
   const b = BRAND[app];
-  const [login, setLogin] = useState('');
+  const [login, setLogin] = useState(() => readLoginHint());
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [caps, setCaps] = useState(false);
