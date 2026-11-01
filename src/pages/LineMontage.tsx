@@ -1,10 +1,20 @@
-import { Layers, Sparkles } from 'lucide-react';
+import { Layers, Lock } from 'lucide-react';
 import { FeatureGate } from '@/components/license/FeatureGate';
 import { LineMontageTab } from '@/components/ai/LineMontageTab';
 
 export default function LineMontage() {
   return (
-    <FeatureGate feature="ai_optimization" showLockedIndicator={true}>
+    <FeatureGate
+      feature="ai_optimization"
+      showLockedIndicator={true}
+      fallback={
+        <div className="max-w-lg mx-auto mt-16 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto"><Lock className="w-6 h-6 text-muted-foreground" /></div>
+          <h1 className="text-xl font-semibold">Création de ligne</h1>
+          <p className="text-muted-foreground">Le montage de lignes assisté par IA n'est pas inclus dans votre forfait. Contactez OptiGroup pour l'activer.</p>
+        </div>
+      }
+    >
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">

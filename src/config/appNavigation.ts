@@ -84,7 +84,7 @@ export interface NavCategoryConfig {
 const P = {
   planning: { to: '/planning', icon: CalendarDays, label: 'Planning' },
   tours: { to: '/tours', icon: Route, label: 'Tournées', requiredFeature: 'page_tours', userFeatureKey: 'page_tours' },
-  lineMontage: { to: '/line-montage', icon: Layers, label: 'Création de ligne' },
+  lineMontage: { to: '/line-montage', icon: Layers, label: 'Création de ligne', requiredFeature: 'ai_optimization' },
   clients: { to: '/clients', icon: UserCircle, label: 'Clients', requiredFeature: 'page_clients', userFeatureKey: 'page_clients' },  pallets: { to: '/pallets', icon: Boxes, label: 'Palettes', userFeatureKey: 'page_clients' },
   vehicles: { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
   itinerary: { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },

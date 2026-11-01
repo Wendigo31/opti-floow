@@ -25,7 +25,7 @@ const STATUSES: Record<string, string> = {
   rejected: 'Perdu',
 };
 
-const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+const eur = (n: number | null | undefined) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }));
 
 const emptyForm = {
   client_id: '', tour_id: '', origin_address: '', destination_address: '',
@@ -171,8 +171,8 @@ export default function Tenders() {
               <CardContent className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <div className="space-x-3">
                   <span>{Math.round(q.distance_km)} km</span>
-                  <span>Coût {eur(q.total_cost)}</span>
-                  <span className="font-semibold text-foreground">{eur(q.price_ht)} HT</span>
+                  {q.total_cost != null && <span>Coût {eur(q.total_cost)}</span>}
+                  {q.price_ht != null && <span className="font-semibold text-foreground">{eur(q.price_ht)} HT</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   {q.status !== 'accepted' && q.status !== 'rejected' && (

@@ -27,7 +27,7 @@ export interface QuoteCalculatorInitial {
   notes?: string;
 }
 
-const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+const eur = (n: number | null | undefined) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }));
 const NONE = '__none__';
 
 /** Calcule et enregistre un devis client directement, sans créer de tournée. */
