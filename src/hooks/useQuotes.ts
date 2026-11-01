@@ -75,17 +75,29 @@ export function useQuotes() {
   const fetchQuotesRef = useRef<() => Promise<void>>();
   useEffect(() => { fetchQuotesRef.current = fetchQuotes; }, [fetchQuotes]);
 
+  // Numéro « DEV-AAMM-NNNN » : le préfixe du mois seul (le suivant est calculé à la
+  // création, à partir des devis existants de la société).
   const generateQuoteNumber = (): string => {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `DEV-${year}${month}-${random}`;
+    return `DEV-${year}${month}-0001`;
+  };
+
+  // Audit final (nov. 2026) : numéros suivis (0001, 0002…) au lieu d'un tirage au
+  // hasard, qui donnait « DEV-2611-0040 » au premier devis et pouvait se répéter.
+  const nextQuoteNumber = async (): Promise<string> => {
+    const prefix = generateQuoteNumber().slice(0, -4);
+    const { data } = await supabase
+      .from('quotes')
+      .select('quote_number')
+      .eq('license_id', licenseId!)
+      .like('quote_number', `${prefix}%`);
+    const max = (data ?? []).reduce((m, q) => Math.max(m, parseInt(String(q.quote_number).slice(prefix.length), 10) || 0), 0);
+    return `${prefix}${String(max + 1).padStart(4, '0')}`;
   };
 
   const createQuote = useCallback(async (input: Omit<LocalQuote, 'id' | 'quote_number' | 'created_at' | 'updated_at'>): Promise<LocalQuote | null> => {
-    const quoteNumber = generateQuoteNumber();
-
     try {
       if (!authUserId || !licenseId) {
         if (!contextLoading) {
@@ -93,6 +105,7 @@ export function useQuotes() {
         }
         return null;
       }
+      const quoteNumber = await nextQuoteNumber();
 
       const { data, error } = await supabase
         .from('quotes')

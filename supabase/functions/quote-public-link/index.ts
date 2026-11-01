@@ -207,7 +207,11 @@ async function handleGenerate(req: Request, body: Record<string, unknown>): Prom
     });
   } catch (emailError) {
     console.error("[quote-public-link] Error sending quote email:", emailError);
-    return jsonResponse({ success: true, warning: "Lien créé mais l'email n'a pas pu être envoyé" });
+    // Le lien reste utilisable : on le renvoie pour que l'utilisateur le transmette lui-même.
+    if (quote.status === "draft") {
+      await supabase.from("quotes").update({ status: "sent", updated_at: new Date().toISOString() }).eq("id", quote.id);
+    }
+    return jsonResponse({ success: true, warning: "Lien créé mais l'email n'a pas pu être envoyé : il a été copié, transmettez-le au client.", acceptUrl });
   }
 
   // Si le devis était encore en brouillon, l'envoi du lien le fait passer à
@@ -217,7 +221,7 @@ async function handleGenerate(req: Request, body: Record<string, unknown>): Prom
     await supabase.from("quotes").update({ status: "sent", updated_at: new Date().toISOString() }).eq("id", quote.id);
   }
 
-  return jsonResponse({ success: true, expiresAt: expiresAt.toISOString() });
+  return jsonResponse({ success: true, expiresAt: expiresAt.toISOString(), acceptUrl });
 }
 
 // ---------------------------------------------------------------------------

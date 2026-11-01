@@ -63,7 +63,9 @@ export default function Tenders() {
         return;
       }
       if (data.warning) {
-        toast.warning(data.warning);
+        // Email non parti : on copie le lien pour que l'utilisateur l'envoie lui-même.
+        if (data.acceptUrl) await navigator.clipboard?.writeText(data.acceptUrl).catch(() => {});
+        toast.warning(data.warning, data.acceptUrl ? { description: data.acceptUrl, duration: 15000 } : undefined);
       } else {
         toast.success('Lien envoyé au client par email');
       }
