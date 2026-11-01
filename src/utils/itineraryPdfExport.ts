@@ -1,3 +1,4 @@
+import '@/lib/jspdfFrenchSpaces';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { PDF_COLORS, PDF_LAYOUT, formatCurrencyDetailed } from './pdfHelpers';

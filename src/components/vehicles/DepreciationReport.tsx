@@ -1,3 +1,4 @@
+import '@/lib/jspdfFrenchSpaces';
 import { useState, useMemo } from 'react';
 import {
   TrendingDown,

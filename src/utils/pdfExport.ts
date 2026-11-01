@@ -1,3 +1,4 @@
+import '@/lib/jspdfFrenchSpaces';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { CostBreakdown, TripCalculation, VehicleParams } from '@/types';

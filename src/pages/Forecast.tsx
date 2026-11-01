@@ -1,3 +1,4 @@
+import '@/lib/jspdfFrenchSpaces';
 import { useState, useMemo, useCallback } from 'react';
 import { TrendingUp, Calendar, Download, Filter, BarChart3, Truck, Building2, CalendarDays, Edit3, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
