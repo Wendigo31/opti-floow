@@ -88,12 +88,11 @@ export function useQuotes() {
   // hasard, qui donnait « DEV-2611-0040 » au premier devis et pouvait se répéter.
   const nextQuoteNumber = async (): Promise<string> => {
     const prefix = generateQuoteNumber().slice(0, -4);
-    const { data } = await supabase
-      .from('quotes')
-      .select('quote_number')
-      .eq('license_id', licenseId!)
-      .like('quote_number', `${prefix}%`);
-    const max = (data ?? []).reduce((m, q) => Math.max(m, parseInt(String(q.quote_number).slice(prefix.length), 10) || 0), 0);
+    // Lecture via get_quotes_masked (règle du projet : pas de lecture directe de « quotes »).
+    const { data } = await supabase.rpc('get_quotes_masked');
+    const max = ((data ?? []) as { quote_number: string | null }[])
+      .filter((q) => q.quote_number?.startsWith(prefix))
+      .reduce((m, q) => Math.max(m, parseInt(String(q.quote_number).slice(prefix.length), 10) || 0), 0);
     return `${prefix}${String(max + 1).padStart(4, '0')}`;
   };
 
