@@ -9,6 +9,7 @@ import { useVisibleNavigation } from '@/hooks/useVisibleNavigation';
 const PAGE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   '/planning': lazy(() => import('./Planning')),
   '/tours': lazy(() => import('./Tours')),
+  '/invoices': lazy(() => import('./Invoices')),
   '/line-montage': lazy(() => import('./LineMontage')),
   '/clients': lazy(() => import('./Clients')),
   '/vehicles': lazy(() => import('./Vehicles')),
