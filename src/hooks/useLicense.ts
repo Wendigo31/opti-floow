@@ -867,6 +867,15 @@ export function useLicense(): UseLicenseReturn {
       if (!prev) return prev;
       const next = { ...prev, mustChangePassword: false };
       localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(next));
+      // Le cache (relu à chaque rechargement ou changement de session pendant 2 min)
+      // gardait « mot de passe provisoire » : la page de changement revenait en boucle.
+      try {
+        const cached = localStorage.getItem(LICENSE_CACHE_KEY);
+        if (cached) {
+          const c = JSON.parse(cached) as CachedLicense;
+          localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ ...c, data: { ...c.data, mustChangePassword: false } }));
+        }
+      } catch { /* cache illisible : il sera recréé */ }
       broadcastLicenseUpdate(next);
       return next;
     });

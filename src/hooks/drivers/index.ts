@@ -19,6 +19,10 @@ export function useCloudDrivers() {
   const [loading, setLoading] = useState(false);
 
   const fetchInProgressRef = useRef(false);
+  // Le cache change à chaque lecture réussie : le garder hors des dépendances de
+  // fetchDrivers, sinon chaque lecture en relançait une autre (requêtes en boucle).
+  const cacheRef = useRef(cache);
+  useEffect(() => { cacheRef.current = cache; }, [cache]);
   const authUserIdRef = useRef<string | null>(authUserId);
   const licenseIdRef = useRef<string | null>(licenseId);
 
@@ -43,9 +47,9 @@ export function useCloudDrivers() {
     }
 
     if (!lid || !uid) {
-      setCdiDrivers(cache.cdi);
-      setCddDrivers(cache.cdd);
-      setInterimDrivers(cache.interim);
+      setCdiDrivers(cacheRef.current.cdi);
+      setCddDrivers(cacheRef.current.cdd);
+      setInterimDrivers(cacheRef.current.interim);
       return;
     }
 
@@ -94,14 +98,14 @@ export function useCloudDrivers() {
     } catch (error) {
       console.error('[useCloudDrivers] fetchDrivers error:', error);
       // Fallback to cache on error
-      setCdiDrivers(cache.cdi);
-      setCddDrivers(cache.cdd);
-      setInterimDrivers(cache.interim);
+      setCdiDrivers(cacheRef.current.cdi);
+      setCddDrivers(cacheRef.current.cdd);
+      setInterimDrivers(cacheRef.current.interim);
     } finally {
       setLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, [licenseId, authUserId, cache, persistCache]);
+  }, [licenseId, authUserId, persistCache]);
 
   const fetchDriversRef = useRef(fetchDrivers);
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
