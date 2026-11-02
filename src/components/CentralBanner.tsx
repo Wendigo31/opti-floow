@@ -77,12 +77,12 @@ export function CentralBanner({ licenseId }: { licenseId: string | null | undefi
   };
 
   return (
-    <div className="sticky top-0 z-[60]" role="status">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4" role="status">
       {visible.map((a) => {
         const s = STYLES[a.level] ?? STYLES.info;
         const left = Math.max(0, ANNOUNCEMENT_SECONDS - Math.floor((now - (seen[a.id] ?? now)) / 1000));
         return (
-          <div key={a.id} className={`${s.cls} relative flex items-center gap-2 px-4 py-2 text-sm`}>
+          <div key={a.id} className={`${s.cls} pointer-events-auto relative flex w-full max-w-2xl items-center gap-2 overflow-hidden rounded-lg px-4 py-2 text-sm shadow-lg`}>
             <s.Icon className="h-4 w-4 shrink-0" />
             <span className="flex-1">{a.message}</span>
             <span className="text-xs opacity-75 tabular-nums" aria-hidden>

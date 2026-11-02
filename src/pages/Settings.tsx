@@ -294,7 +294,7 @@ export default function Settings() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-foreground">Visite guidée</p>
-                    <p className="text-sm text-muted-foreground">Redécouvrez les 7 espaces d'OptiFlow</p>
+                    <p className="text-sm text-muted-foreground">Revoyez vos espaces et les nouveautés, pas à pas</p>
                   </div>
                   <Button
                     variant="outline"

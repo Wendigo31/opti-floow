@@ -186,7 +186,7 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
                 title="Paramètres"
                 asChild
               >
-                <Link to="/settings">
+                <Link to="/settings" aria-label="Paramètres">
                   <Settings className="h-4 w-4" />
                 </Link>
               </Button>
