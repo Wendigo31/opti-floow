@@ -1,3 +1,4 @@
+import { useCanManage } from '@/hooks/useUserFeatureOverrides';
 import { useState, useMemo, lazy, Suspense, useRef, useCallback, useEffect } from 'react';
 import { 
   Truck, 
@@ -110,6 +111,7 @@ function LockedFeatureOverlay({ featureName, onUpgrade }: { featureName: string;
 }
 
 export default function Vehicles() {
+  const { canManage, deny } = useCanManage('vehicles');
   const navigate = useNavigate();
   const { vehicle: vehicleParams, setCharges } = useApp();
   const { hasFeature, planType } = useLicense();
@@ -157,6 +159,8 @@ export default function Vehicles() {
   };
 
   const handleAdd = () => {
+
+    if (!canManage) { deny(); return; }
     setIsAdding(true);
     setFormData({
       ...defaultVehicle,
@@ -307,6 +311,8 @@ export default function Vehicles() {
   };
 
   const handleSave = async () => {
+
+    if (!canManage) { deny(); return; }
     if (isAdding) {
       const now = new Date().toISOString();
       const newVehicle: Vehicle = {
@@ -370,6 +376,8 @@ export default function Vehicles() {
   };
 
   const handleDelete = async (id: string) => {
+
+    if (!canManage) { deny(); return; }
     // Confirmation avant suppression, comme pour les clients (Clients.tsx) et les
     // conducteurs (Drivers.tsx) : sans ce garde-fou, un simple clic sur l'icône
     // corbeille supprimait un véhicule de façon définitive et instantanée, sans
@@ -399,6 +407,8 @@ export default function Vehicles() {
   };
 
   const handleBulkDeleteVehicles = async () => {
+
+    if (!canManage) { deny(); return; }
     if (selectedVehicleIds.size === 0) return;
     // Même garde-fou que la suppression unitaire : une suppression groupée est
     // encore plus risquée en cas de mauvaise sélection.
@@ -414,6 +424,8 @@ export default function Vehicles() {
   };
 
   const handleDuplicateVehicles = async () => {
+
+    if (!canManage) { deny(); return; }
     if (selectedVehicleIds.size === 0) return;
     setBulkDuplicating(true);
     const toDuplicate = vehicles.filter(v => selectedVehicleIds.has(v.id));
@@ -621,6 +633,8 @@ export default function Vehicles() {
   };
 
   const handleSaveTrailer = async (trailer: Trailer) => {
+
+    if (!canManage) { deny(); return; }
     if (editingTrailer) {
       const success = await updateTrailer(trailer);
       if (success) {
@@ -641,6 +655,8 @@ export default function Vehicles() {
   };
 
   const handleDeleteTrailer = async (id: string) => {
+
+    if (!canManage) { deny(); return; }
     // Même garde-fou que pour les véhicules : suppression définitive sans confirmation
     // sinon.
     if (!window.confirm('Supprimer cette remorque ?')) return;
@@ -1000,6 +1016,7 @@ export default function Vehicles() {
 
   // Import both vehicles and trailers from Excel
   const handleFleetImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canManage) { deny(); return; }
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -1250,8 +1267,8 @@ export default function Vehicles() {
           )}
 
           {/* Search, Filter and Actions */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher par plaque, nom, marque..."
@@ -1278,7 +1295,7 @@ export default function Vehicles() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div className="flex border border-border rounded-md">
                 <Button
                   variant={vehicleViewMode === 'grid' ? 'secondary' : 'ghost'}

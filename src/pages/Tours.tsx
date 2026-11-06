@@ -1,3 +1,4 @@
+import { useCanManage } from '@/hooks/useUserFeatureOverrides';
 import { TruckGpsDialog } from '@/components/gps/TruckGpsDialog';
 import { Navigation } from 'lucide-react';
 import '@/lib/jspdfFrenchSpaces';
@@ -80,6 +81,7 @@ import { ExcelImportDialog } from '@/components/import/ExcelImportDialog';
 import type { ToursExcelLookups } from '@/utils/excelImport';
 
 export default function Tours() {
+  const { canManage, deny } = useCanManage('tours');
   const { tours, loading, fetchTours, deleteTour, toggleFavorite, saveTour, updateTour } = useSavedTours();
   const { planType } = useLicense();
   const { getTourInfo, isOwnData, isCompanyMember, currentUserId } = useCompanyData();
@@ -109,6 +111,8 @@ export default function Tours() {
   }), [vehicles, clients, allDrivers]);
 
   const handleImportTours = async (data: Partial<SavedTour>[]) => {
+
+    if (!canManage) { deny(); return; }
     let imported = 0;
     for (const row of data) {
       const ok = await saveTour({
@@ -170,6 +174,8 @@ export default function Tours() {
   };
 
   const handleBulkDelete = async () => {
+
+    if (!canManage) { deny(); return; }
     if (checkedIds.size === 0) return;
     if (!confirm(`Supprimer ${checkedIds.size} tournée(s) ?`)) return;
     for (const id of checkedIds) {
@@ -180,6 +186,8 @@ export default function Tours() {
   };
 
   const handleDuplicate = async () => {
+
+    if (!canManage) { deny(); return; }
     if (checkedIds.size === 0) return;
     const toDuplicate = tours.filter(t => checkedIds.has(t.id));
     for (const tour of toDuplicate) {
@@ -490,7 +498,7 @@ export default function Tours() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
             <Route className="w-6 h-6 text-primary" />
@@ -875,7 +883,7 @@ export default function Tours() {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => deleteTour(tour.id)}
+                              onClick={() => (canManage ? deleteTour(tour.id) : deny())}
                               className="bg-destructive text-destructive-foreground"
                             >
                               Supprimer

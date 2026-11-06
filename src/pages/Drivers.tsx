@@ -1,3 +1,4 @@
+import { useCanManage } from '@/hooks/useUserFeatureOverrides';
 import { useState, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Edit2, User, Check, X, Lock, Sparkles, Clock, Users2, Search, Upload, LayoutGrid, List, ArrowUpDown, CheckSquare, Square, UserPlus, Phone, Loader2, AlertTriangle, Merge, Copy, CalendarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { DriverCategoryTab } from '@/components/drivers/DriverCategoryTab';
 import { PAY_FIELDS, type DriverContractType, type ExtendedDriver } from '@/types/driver';
 
 export default function Drivers() {
+  const { canManage, deny } = useCanManage('drivers');
   // Use cloud drivers for shared data sync
   const { 
     cdiDrivers: cloudCdiDrivers, 
@@ -136,6 +138,7 @@ export default function Drivers() {
 
   // Handle bulk delete
   const handleBulkDelete = async () => {
+    if (!canManage) { deny(); return; }
     if (checkedDriverIds.size === 0) return;
     
     const confirmed = window.confirm(
@@ -181,6 +184,8 @@ export default function Drivers() {
   };
 
   const handleDuplicate = async () => {
+
+    if (!canManage) { deny(); return; }
     if (checkedDriverIds.size === 0) return;
     const driverIds = Array.from(checkedDriverIds);
     for (const driverId of driverIds) {
@@ -280,6 +285,8 @@ export default function Drivers() {
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
   const handleAdd = () => {
+
+    if (!canManage) { deny(); return; }
     setIsAdding(true);
     const currentType = activeTab === 'autre' ? 'autre' : activeTab === 'interim' ? 'interim' : activeTab === 'cdd' ? 'cdd' : 'cdi';
     setFormContractType(currentType);
@@ -318,6 +325,8 @@ export default function Drivers() {
   };
 
   const handleSave = async () => {
+
+    if (!canManage) { deny(); return; }
     const isInterim = formContractType === 'interim';
     const isAutre = formContractType === 'autre';
     
@@ -376,6 +385,8 @@ export default function Drivers() {
   };
 
   const handleDelete = async (id: string, driverType: 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker') => {
+
+    if (!canManage) { deny(); return; }
     await deleteCloudDriver(id, driverType);
   };
 
@@ -429,6 +440,8 @@ export default function Drivers() {
   };
 
   const handleImportDrivers = useCallback((importedDrivers: ExtendedParsedDriver[]) => {
+
+    if (!canManage) { deny(); return; }
     console.log('[Drivers] handleImportDrivers called with', importedDrivers.length, 'drivers');
 
     // Convert all drivers first
@@ -506,7 +519,7 @@ export default function Drivers() {
         }));
       }
     })();
-  }, [createDriversBatch, fetchDrivers]);
+  }, [createDriversBatch, fetchDrivers, canManage, deny]);
  
   // Cast cloud drivers to ExtendedDriver for UI
   const cdiDrivers = cloudCdiDrivers as ExtendedDriver[];
@@ -711,7 +724,7 @@ export default function Drivers() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isUnlimited('maxDrivers') && !canAddDriver && (
             <Button variant="outline" size="sm" onClick={() => navigate('/pricing')} className="gap-2">
               <Sparkles className="w-4 h-4" />
@@ -789,7 +802,7 @@ export default function Drivers() {
               Annuler
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={selectAllVisible}>
               <CheckSquare className="w-4 h-4 mr-2" />
               Tout sélectionner
@@ -827,7 +840,7 @@ export default function Drivers() {
 
       {/* Tabs CDI / Intérim */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cdi' | 'cdd' | 'interim' | 'autre' | 'joker' | 'uncreated' | 'absences')}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
           <TabsList>
             <TabsTrigger value="cdi" className="gap-2">
               <User className="w-4 h-4" />

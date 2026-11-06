@@ -494,7 +494,7 @@ export function OptiSettingsPage(props: OptiSettingsPageProps) {
       )}
 
       <TabsContent value="general" className="mt-0">
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
           <CompanyCard company={props.company} appName={props.appName} />
           <div className="space-y-5">
             {s && <MeCard s={s} />}
@@ -505,7 +505,7 @@ export function OptiSettingsPage(props: OptiSettingsPageProps) {
       </TabsContent>
 
       <TabsContent value="app" className="mt-0 space-y-5">
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
           {props.notifications ?? (s && <NotifyCard s={s} onChange={(v) => setS({ ...s, member: { ...s.member, notify_team_changes: v } })} />)}
           {props.onReplayTutorial && (
             <Card>
@@ -524,14 +524,14 @@ export function OptiSettingsPage(props: OptiSettingsPageProps) {
       </TabsContent>
 
       <TabsContent value="file" className="mt-0">
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
           <ExportCard app={props.app} isDirection={isDirection} />
           <RgpdCard />
         </div>
       </TabsContent>
 
       <TabsContent value="legal" className="mt-0">
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
           <div className="space-y-5">
             <LegalCard />
             <VersionCard appName={props.appName} changelog={props.changelog} />

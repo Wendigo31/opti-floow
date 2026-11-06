@@ -67,7 +67,9 @@ export interface NavPageConfig {
   /** Feature flag d'entreprise (admin). */
   requiredFeature?: FeatureKey;
   /** Restriction individuelle (par utilisateur). */
-  userFeatureKey?: UserFeatureKey;
+  userFeatureKey?: UserFeatureKey;
+  /** Droits supplémentaires exigés (ex. « Voir les marges »), réglés par la Direction dans Équipe. */
+  userFeatureKeys?: UserFeatureKey[];
   /** Visible uniquement par ces rôles métier (absent = tous les rôles). */
   allowedRoles?: TeamRole[];
 }
@@ -89,17 +91,17 @@ const P = {
   vehicles: { to: '/vehicles', icon: Truck, label: 'Véhicules', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles' },
   itinerary: { to: '/itinerary', icon: Navigation, label: 'Itinéraire', requiredFeature: 'page_itinerary', userFeatureKey: 'page_itinerary' },
   aiAnalysis: { to: '/ai-analysis', icon: Sparkles, label: 'Analyse par IA', requiredFeature: 'page_ai_analysis' },
-  charges: { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', allowedRoles: ['direction', 'comptabilite'] },
+  charges: { to: '/charges', icon: Building2, label: 'Charges fixes', requiredFeature: 'page_charges', userFeatureKey: 'page_charges', userFeatureKeys: ['view_costs'], allowedRoles: ['direction', 'comptabilite'] },
   drivers: { to: '/drivers', icon: Users, label: 'Conducteurs', requiredFeature: 'page_drivers', userFeatureKey: 'page_drivers' },
   team: { to: '/team', icon: UsersRound, label: 'Équipe', allowedRoles: ['direction', 'rh'] },
   restrictions: { to: '/my-restrictions', icon: ShieldCheck, label: 'Mes accès' },
   calculator: { to: '/calculator', icon: Calculator, label: 'Calculateur', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
-  dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard', allowedRoles: ['direction', 'comptabilite'] },
-  forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', allowedRoles: ['direction', 'comptabilite'] },
+  dashboard: { to: '/dashboard', icon: BarChart3, label: 'Analyse', requiredFeature: 'page_dashboard', userFeatureKey: 'page_dashboard', userFeatureKeys: ['view_margins'], allowedRoles: ['direction', 'comptabilite'] },
+  forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', userFeatureKey: 'page_forecast', userFeatureKeys: ['view_profits'], allowedRoles: ['direction', 'comptabilite'] },
   vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
   history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
   install: { to: '/install', icon: Download, label: "Installer l'application" },
-  tenders: { to: '/tenders', icon: FileText, label: 'Devis par client' },  invoices: { to: '/invoices', icon: Receipt, label: 'Factures', allowedRoles: ['direction', 'comptabilite'] },
+  tenders: { to: '/tenders', icon: FileText, label: 'Devis par client', userFeatureKeys: ['view_pricing'] },  invoices: { to: '/invoices', icon: Receipt, label: 'Factures', userFeatureKeys: ['view_pricing'], allowedRoles: ['direction', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 } satisfies Record<string, NavPageConfig>;
 
@@ -179,7 +181,8 @@ function isRoleAllowed(allowedRoles: TeamRole[] | undefined, ctx: NavAccessConte
 export function canSeeNavPage(page: NavPageConfig, ctx: NavAccessContext): boolean {
   if (ctx.hiddenPaths?.includes(page.to)) return false;
   if (page.requiredFeature && !ctx.hasFeature(page.requiredFeature)) return false;
-  if (page.userFeatureKey && !ctx.canAccessUserFeature(page.userFeatureKey)) return false;
+  if (page.userFeatureKey && !ctx.canAccessUserFeature(page.userFeatureKey)) return false;
+  if (page.userFeatureKeys?.some((k) => !ctx.canAccessUserFeature(k))) return false;
   if (!isRoleAllowed(page.allowedRoles, ctx)) return false;
   return true;
 }

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -163,4 +164,18 @@ export function useUserFeatureOverrides(): UseUserFeatureOverridesReturn {
     canCrud,
     refreshOverrides: fetchOverrides,
   };
+}
+
+/**
+ * Droit de créer / modifier / supprimer (réglage « Gérer … » de la Direction dans Équipe).
+ * Avant nov. 2026 ce réglage était enregistré mais jamais appliqué.
+ */
+export function useCanManage(entity: 'vehicles' | 'drivers' | 'clients' | 'tours') {
+  const { canAccess, isLoading } = useUserFeatureOverrides();
+  const allowed = isLoading ? true : canAccess(`crud_${entity}` as FeatureKey);
+  const LABEL = { vehicles: 'les véhicules', drivers: 'les conducteurs', clients: 'les clients', tours: 'les tournées' } as const;
+  const deny = useCallback(() => {
+    toast.error(`Votre compte ne permet pas de modifier ${LABEL[entity]}`, { description: 'Réglage fait par la Direction (Équipe › Permissions).' });
+  }, [entity]);
+  return { canManage: allowed, deny };
 }

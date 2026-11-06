@@ -1,3 +1,4 @@
+import { useCanManage } from '@/hooks/useUserFeatureOverrides';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ import { useRateCards } from '@/hooks/useRateCards';
 import { RateCardDialog } from '@/components/pricing/RateCardDialog';
 
 export default function Clients() {
+  const { canManage, deny } = useCanManage('clients');
   const { licenseId: rcLicenseId } = useLicenseContext();
   const rateCards = useRateCards(rcLicenseId);
   const [pricingClient, setPricingClient] = useState<ClientWithCreator | null>(null);
@@ -59,6 +61,8 @@ export default function Clients() {
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
+
+    if (!canManage) { deny(); return; }
     e.preventDefault();
 
     if (editingClient) {
@@ -83,11 +87,15 @@ export default function Clients() {
   };
 
   const handleDelete = async (id: string) => {
+
+    if (!canManage) { deny(); return; }
     if (!confirm('Supprimer ce client ?')) return;
     await deleteClient(id);
   };
 
   const handleBulkDelete = async () => {
+
+    if (!canManage) { deny(); return; }
     if (checkedIds.size === 0) return;
     if (!confirm(`Supprimer ${checkedIds.size} client(s) ?`)) return;
     for (const id of checkedIds) {
@@ -98,6 +106,8 @@ export default function Clients() {
   };
 
   const handleDuplicate = async () => {
+
+    if (!canManage) { deny(); return; }
     if (checkedIds.size === 0) return;
     const toDuplicate = clients.filter(c => checkedIds.has(c.id));
     for (const client of toDuplicate) {
@@ -225,6 +235,8 @@ export default function Clients() {
     siret?: string;
     notes?: string;
   }>) => {
+
+    if (!canManage) { deny(); return; }
     for (const client of clients) {
       await createClient({
         name: client.name,
@@ -247,7 +259,7 @@ export default function Clients() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des clients</h1>
           <p className="text-muted-foreground">Gérez votre portefeuille clients</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Importer Excel
