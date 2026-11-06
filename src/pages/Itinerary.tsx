@@ -116,12 +116,30 @@ export default function Itinerary() {
   const [addressSelectorStopId, setAddressSelectorStopId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'route' | 'options'>('route');
   const [selectedTrailerId, setSelectedTrailerId] = useState<string | null>(null);
-  const [transportMode, setTransportMode] = useState<'truck' | 'car'>('truck');
+  // Logiciel poids lourd : l'itinéraire est toujours calculé pour un camion (plus de mode voiture).
+  const transportMode = 'truck' as const;
   
   const selectedVehicle = useMemo(() => 
     allVehicles.find(v => v.id === selectedVehicleId) || null,
   [allVehicles, selectedVehicleId]);
   
+  // Gabarit envoyé au calcul d'itinéraire : celui du véhicule choisi s'il est renseigné
+  // (porteur, tracteur…), sinon un semi-remorque 44 t. Jamais un gabarit allégé.
+  const truckSpecs = useMemo(() => {
+    const v = selectedVehicle;
+    const ok = (n: unknown, min: number, max: number) => typeof n === 'number' && n >= min && n <= max;
+    const weight = v && ok(v.weight, 3500, 60000) ? v.weight : SEMI_TRAILER_SPECS.weight;
+    const axles = v && ok(v.axles, 2, 9) ? v.axles : SEMI_TRAILER_SPECS.axles;
+    return {
+      weight,
+      axles,
+      height: v && ok(v.height, 2, 4.5) ? v.height : SEMI_TRAILER_SPECS.height,
+      length: v && ok(v.length, 4, 25.25) ? v.length : SEMI_TRAILER_SPECS.length,
+      width: v && ok(v.width, 1.8, 2.6) ? v.width : SEMI_TRAILER_SPECS.width,
+      axleWeight: Math.min(SEMI_TRAILER_SPECS.axleWeight, Math.round(weight / axles) + 1500),
+    };
+  }, [selectedVehicle]);
+
   const vehicleCostBreakdown = useMemo(() => {
     if (!selectedVehicle) return null;
     return calculateVehicleCosts(selectedVehicle, {
@@ -427,11 +445,12 @@ export default function Itinerary() {
         body: {
           waypoints,
           transportMode,
-          vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500,
-          vehicleHeight: SEMI_TRAILER_SPECS.height,
-          vehicleLength: SEMI_TRAILER_SPECS.length,
-          vehicleWidth: SEMI_TRAILER_SPECS.width,
-          vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500,
+          vehicleWeight: truckSpecs.weight,
+          vehicleHeight: truckSpecs.height,
+          vehicleLength: truckSpecs.length,
+          vehicleWidth: truckSpecs.width,
+          vehicleAxleWeight: truckSpecs.axleWeight,
+          vehicleAxles: truckSpecs.axles,
           avoidHighways,
         },
       }),
@@ -451,7 +470,7 @@ export default function Itinerary() {
     if (!avoidHighways && tollCost === 0) {
       try {
         const { data: tollData } = await supabase.functions.invoke('tomtom-tolls', {
-          body: { waypoints, distanceKm, vehicleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.weight : 7500, vehicleAxleWeight: avoidWeightRestrictions ? SEMI_TRAILER_SPECS.axleWeight : 3500, avoidHighways },
+          body: { waypoints, distanceKm, vehicleWeight: truckSpecs.weight, vehicleAxleWeight: truckSpecs.axleWeight, avoidHighways },
         });
         if (tollData?.tollCost) tollCost = tollData.tollCost;
         else {
@@ -761,8 +780,7 @@ export default function Itinerary() {
               trailers={trailers}
               selectedVehicle={selectedVehicle}
               vehicleCostBreakdown={vehicleCostBreakdown}
-              transportMode={transportMode}
-              setTransportMode={setTransportMode}
+              truckSpecs={truckSpecs}
               clearResults={clearResults}
               handleCalculateRoutes={handleCalculateRoutes}
               loading={loading}

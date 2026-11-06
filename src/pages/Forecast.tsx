@@ -1,3 +1,4 @@
+import { currentTargetMargin } from '@/components/opti-settings/targetMargin';
 import '@/lib/jspdfFrenchSpaces';
 import { useState, useMemo, useCallback } from 'react';
 import { TrendingUp, Calendar, Download, Filter, BarChart3, Truck, Building2, CalendarDays, Edit3, Lock } from 'lucide-react';
@@ -459,7 +460,7 @@ export default function Forecast() {
                     <td className={cn("py-3 px-4 text-right font-medium", row.profit >= 0 ? "text-success" : "text-destructive")}>
                       {formatCurrency(row.profit)}
                     </td>
-                    <td className={cn("py-3 px-4 text-right", row.margin >= 15 ? "text-success" : row.margin >= 5 ? "text-warning" : "text-destructive")}>
+                    <td className={cn("py-3 px-4 text-right", row.margin >= currentTargetMargin() ? "text-success" : row.margin >= currentTargetMargin() / 3 ? "text-warning" : "text-destructive")}>
                       {row.margin.toFixed(1)}%
                     </td>
                   </tr>
@@ -475,7 +476,7 @@ export default function Forecast() {
                   <td className={cn("py-3 px-4 text-right", totals.profit >= 0 ? "text-success" : "text-destructive")}>
                     {formatCurrency(totals.profit)}
                   </td>
-                  <td className={cn("py-3 px-4 text-right", avgMargin >= 15 ? "text-success" : avgMargin >= 5 ? "text-warning" : "text-destructive")}>
+                  <td className={cn("py-3 px-4 text-right", avgMargin >= currentTargetMargin() ? "text-success" : avgMargin >= currentTargetMargin() / 3 ? "text-warning" : "text-destructive")}>
                     {avgMargin.toFixed(1)}%
                   </td>
                 </tr>

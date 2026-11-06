@@ -1,3 +1,4 @@
+import { currentTargetMargin } from '@/components/opti-settings/targetMargin';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -453,7 +454,7 @@ export function ToxicClientsAnalysis() {
                       <td className="py-3 px-4 text-right">
                         <span className={cn(
                           "font-medium",
-                          analysis.profitMargin >= 15 ? "text-success" : 
+                          analysis.profitMargin >= currentTargetMargin() ? "text-success" : 
                           analysis.profitMargin >= 0 ? "text-warning" : "text-destructive"
                         )}>
                           {analysis.profitMargin.toFixed(1)}%

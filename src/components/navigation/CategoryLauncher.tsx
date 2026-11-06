@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { useLicense } from '@/hooks/useLicense';
 import { useTeam } from '@/hooks/useTeam';
 import { useUserFeatureOverrides } from '@/hooks/useUserFeatureOverrides';
-import { getVisibleNavCategories, type NavCategoryId } from '@/config/appNavigation';
+import { type NavCategoryId } from '@/config/appNavigation';
+import { useVisibleNavigation } from '@/hooks/useVisibleNavigation';
 
 /**
  * Lanceur d'accueil : 5 icônes de catégories métier qui réorganisent les
@@ -22,7 +23,8 @@ export function CategoryLauncher() {
   const { isDirection, currentUserRole: role } = useTeam();
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
-  const categories = getVisibleNavCategories({ hasFeature, canAccessUserFeature, isDirection, role });
+  // Même calcul que le menu et le contrôle des routes, onglets masqués depuis OptiCentral compris.
+  const categories = useVisibleNavigation();
   const [selected, setSelected] = useState<NavCategoryId | null>(null);
 
   const selectedCategory = categories.find((c) => c.id === selected) ?? null;

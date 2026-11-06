@@ -1,5 +1,6 @@
 import { Route, Zap, Eye, EyeOff, RefreshCw, Loader2, Percent, CalendarDays } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { TargetMarginControl, useTargetMargin } from '@/components/opti-settings/targetMargin';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
@@ -36,6 +37,7 @@ export function CalculatorTripPricingSection({
   canUseAutoMode,
 }: CalculatorTripPricingSectionProps) {
   const { trip, setTrip, vehicle, setVehicle, settings, setSettings } = useApp();
+  const [, setSavedTarget] = useTargetMargin(trip.targetMargin);
   const { fetchAdBluePrice, loading: fuelLoading, fuelTypeLabels } = useFuelPrice();
 
   return (
@@ -353,22 +355,16 @@ export function CalculatorTripPricingSection({
               </div>
             </>
           )}
-          {trip.pricingMode === 'auto' && (
-            <div className="space-y-1">
-              <Label htmlFor="targetMargin" className="text-xs flex items-center gap-1">
-                <Percent className="w-3 h-3" />
-                Marge cible (%)
-              </Label>
-              <Input
-                id="targetMargin"
-                type="number"
-                step="1"
-                value={trip.targetMargin}
-                onChange={e => setTrip({ ...trip, targetMargin: parseFloat(e.target.value) || 0 })}
-                className="h-9"
-              />
-            </div>
-          )}
+          {/* Marge visée choisie au moment du calcul (tous les modes de prix) ; gardée pour les prochains calculs. */}
+          <div className="space-y-1 sm:col-span-2">
+            <span className="text-xs flex items-center gap-1 text-muted-foreground">
+              <Percent className="w-3 h-3" /> {trip.pricingMode === 'auto' ? 'Le prix conseillé applique cette marge' : 'Comparée à la marge obtenue'}
+            </span>
+            <TargetMarginControl
+              value={trip.targetMargin}
+              onChange={(v) => { setTrip({ ...trip, targetMargin: v }); setSavedTarget(v); }}
+            />
+          </div>
           <div className="space-y-1">
             <Label htmlFor="workingDays" className="text-xs text-muted-foreground flex items-center gap-1">
               <CalendarDays className="w-3 h-3" />

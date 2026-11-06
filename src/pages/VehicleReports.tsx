@@ -1,3 +1,4 @@
+import { currentTargetMargin } from '@/components/opti-settings/targetMargin';
 import { useMemo, useState } from 'react';
 import { 
   Truck, 
@@ -423,7 +424,7 @@ export default function VehicleReports() {
               </div>
               <p className={cn(
                 "text-2xl font-bold",
-                globalStats.avgProfitMargin >= 15 ? "text-success" : 
+                globalStats.avgProfitMargin >= currentTargetMargin() ? "text-success" : 
                 globalStats.avgProfitMargin >= 0 ? "text-warning" : "text-destructive"
               )}>
                 {globalStats.avgProfitMargin.toFixed(1)}%
@@ -561,7 +562,7 @@ export default function VehicleReports() {
                         <p className="text-muted-foreground">Marge</p>
                         <p className={cn(
                           "font-bold",
-                          stat.profitMargin >= 15 ? "text-success" : 
+                          stat.profitMargin >= currentTargetMargin() ? "text-success" : 
                           stat.profitMargin >= 0 ? "text-warning" : "text-destructive"
                         )}>
                           {stat.profitMargin.toFixed(1)}%
@@ -878,7 +879,7 @@ export default function VehicleReports() {
                             <td className="py-3 px-4 text-right">
                               <span className={cn(
                                 "font-medium",
-                                stat.profitMargin >= 15 ? "text-success" : 
+                                stat.profitMargin >= currentTargetMargin() ? "text-success" : 
                                 stat.profitMargin >= 0 ? "text-warning" : "text-destructive"
                               )}>
                                 {stat.profitMargin.toFixed(1)}%

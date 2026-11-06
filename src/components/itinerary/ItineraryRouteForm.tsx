@@ -69,8 +69,8 @@ interface ItineraryRouteFormProps {
   selectedVehicle: Vehicle | null;
   vehicleCostBreakdown: VehicleCostBreakdown | null;
 
-  transportMode: 'truck' | 'car';
-  setTransportMode: (mode: 'truck' | 'car') => void;
+  /** Gabarit poids lourd utilisé pour le calcul (véhicule choisi ou semi 44 t). */
+  truckSpecs: { weight: number; height: number; length: number; width: number; axles: number };
   clearResults: () => void;
 
   handleCalculateRoutes: () => void | Promise<void>;
@@ -119,8 +119,7 @@ export function ItineraryRouteForm({
   trailers,
   selectedVehicle,
   vehicleCostBreakdown,
-  transportMode,
-  setTransportMode,
+  truckSpecs,
   clearResults,
   handleCalculateRoutes,
   loading,
@@ -282,32 +281,13 @@ export function ItineraryRouteForm({
         )}
       </div>
 
-      {/* Transport mode selector */}
-      <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl border border-border/40">
-        <button
-          type="button"
-          onClick={() => { setTransportMode('truck'); clearResults(); }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
-            transportMode === 'truck'
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Truck className="w-4 h-4" /> Camion
-        </button>
-        <button
-          type="button"
-          onClick={() => { setTransportMode('car'); clearResults(); }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 h-10 rounded-lg text-sm font-medium transition-all",
-            transportMode === 'car'
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Car className="w-4 h-4" /> Voiture
-        </button>
+      {/* Gabarit poids lourd : l'itinéraire évite ponts bas, routes interdites et limites de tonnage */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/40 bg-muted/40 text-sm">
+        <Truck className="w-4 h-4 text-primary shrink-0" />
+        <span className="font-medium">Poids lourd</span>
+        <span className="text-muted-foreground truncate">
+          {Math.round(truckSpecs.weight / 100) / 10} t · {truckSpecs.axles} essieux · h {truckSpecs.height.toLocaleString('fr-FR')} m · L {truckSpecs.length.toLocaleString('fr-FR')} m
+        </span>
       </div>
 
       {/* Calculate Button */}

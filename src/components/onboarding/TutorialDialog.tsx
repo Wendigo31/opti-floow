@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { markTutorialSeen } from '@/components/opti-settings/tutorialSeen';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronLeft, Sparkles, CheckCircle2, FileSpreadsheet, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -142,7 +143,7 @@ export function TutorialDialog({ open, onOpenChange }: TutorialDialogProps) {
 
   const close = () => {
     // Marqué « vu » à la fermeture : un rechargement pendant le tutoriel le rouvre.
-    try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* stockage indisponible */ }
+    markTutorialSeen(TUTORIAL_SEEN_KEY);
     onOpenChange(false);
     setStep(0);
   };

@@ -58,6 +58,8 @@ interface LicenseData {
   mustChangePassword?: boolean;
   /** Forfait de la société : start (Essentiel), pro, enterprise (Entreprise). */
   planName?: string | null;
+  /** Contenu de chaque forfait (OptiCentral) : dit quel forfait inclut une option bloquée. */
+  planFeatures?: Record<string, Record<string, unknown>> | null;
 }
 // Cached license with offline support
 interface CachedLicense {
@@ -290,6 +292,25 @@ const safeReadStoredLicense = (): LicenseData | null => {
     return null;
   }
 };
+
+// Synchronisation avec la base (forfait et options décidés dans OptiCentral) : une seule
+// à la fois pour toutes les instances du hook, au plus une par minute.
+let lastServerSync = 0;
+let serverSyncRunning = false;
+type FlowPayload = {
+  license: Record<string, unknown>;
+  features: Partial<LicenseFeatures>;
+  plans?: Record<string, Record<string, unknown>>;
+  company_user: { id: string; role: string; email: string; must_change_password: boolean };
+  overrides: UserFeatureOverride[];
+};
+
+async function fetchFlowPayload(licenseId: string): Promise<FlowPayload | null> {
+  const { data, error } = await (supabase as unknown as {
+    rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc('flow_license_payload', { p_license_id: licenseId });
+  return error || !data ? null : (data as FlowPayload);
+}
 
 const broadcastLicenseUpdate = (data: LicenseData | null) => {
   try {
@@ -788,12 +809,7 @@ export function useLicense(): UseLicenseReturn {
         await supabase.auth.signOut();
         return { success: false, error: error?.message || 'Licence introuvable' };
       }
-      const d = data as {
-        license: Record<string, unknown>;
-        features: Partial<LicenseFeatures>;
-        company_user: { id: string; role: string; email: string; must_change_password: boolean };
-        overrides: UserFeatureOverride[];
-      };
+      const d = data as FlowPayload;
       const lic = d.license;
       const str = (k: string) => (lic[k] == null ? undefined : String(lic[k]));
       const num = (k: string) => (lic[k] == null ? null : Number(lic[k]));
@@ -806,6 +822,7 @@ export function useLicense(): UseLicenseReturn {
         lastName: str('lastName'),
         companyName: str('companyName'),
         planName: str('planName') ?? null,
+        planFeatures: d.plans ?? null,
         siren: str('siren'),
         companyStatus: str('companyStatus'),
         employeeCount: lic['employeeCount'] == null ? undefined : Number(lic['employeeCount']),
@@ -860,6 +877,67 @@ export function useLicense(): UseLicenseReturn {
       if (companies.length) await adoptCompanies(companies);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLicensed]);
+
+  // Forfait, options et droits à jour sans se reconnecter : une option activée (ou retirée)
+  // dans OptiCentral, ou un droit changé par la Direction, s'applique au démarrage, au
+  // retour sur l'application et toutes les 3 minutes.
+  useEffect(() => {
+    if (!isLicensed) return;
+    const sync = async (force = false) => {
+      if (serverSyncRunning || (!force && Date.now() - lastServerSync < 60_000) || !checkOnline()) return;
+      serverSyncRunning = true;
+      try {
+        const { data: s } = await supabase.auth.getSession();
+        if (!s.session) return;
+        const current = safeReadStoredLicense();
+        if (!current) return;
+        const companies = await myCompanies().catch(() => [] as MyCompany[]);
+        const target = companies.find((c) => c.code === current.code) ?? companies.find((c) => c.license_active) ?? companies[0];
+        if (!target) return;
+        const d = await fetchFlowPayload(target.license_id);
+        if (!d) return;
+        lastServerSync = Date.now();
+        const lic = d.license;
+        const next: LicenseData = {
+          ...current,
+          planName: lic['planName'] == null ? current.planName ?? null : String(lic['planName']),
+          planFeatures: d.plans ?? current.planFeatures ?? null,
+          customFeatures: d.features,
+          userFeatureOverrides: d.overrides.length ? d.overrides : null,
+          userRole: d.company_user.role,
+          companyUserId: d.company_user.id,
+          maxDrivers: lic['maxDrivers'] == null ? null : Number(lic['maxDrivers']),
+          maxClients: lic['maxClients'] == null ? null : Number(lic['maxClients']),
+        };
+        if (JSON.stringify(next) === JSON.stringify(current)) return;
+        localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(next));
+        try {
+          const cached = localStorage.getItem(LICENSE_CACHE_KEY);
+          if (cached) {
+            const c = JSON.parse(cached) as CachedLicense;
+            localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ ...c, data: next }));
+          }
+        } catch { /* cache illisible : ignoré */ }
+        setLicenseData(next);
+        broadcastLicenseUpdate(next);
+      } catch (e) {
+        console.warn('[useLicense] synchronisation du forfait impossible', e);
+      } finally {
+        serverSyncRunning = false;
+      }
+    };
+    void sync();
+    const onFocus = () => void sync();
+    const onVisible = () => { if (document.visibilityState === 'visible') void sync(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(() => void sync(true), 3 * 60_000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
   }, [isLicensed]);
 
   const markPasswordChanged = useCallback(() => {

@@ -9,6 +9,7 @@ import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory } from '@/config/appNavigation';
 
 export function MobileNav() {
@@ -22,7 +23,8 @@ export function MobileNav() {
   const { isDirection, currentUserRole: role } = useTeam();
   const { canAccess: canAccessUserFeature } = useUserFeatureOverrides();
 
-  const accessCtx = { hasFeature, canAccessUserFeature, isDirection, role };
+  // Onglets masqués depuis OptiCentral compris.
+  const { ctx: accessCtx } = useNavAccessContext();
 
   const handleNavClick = () => {
     setOpen(false);

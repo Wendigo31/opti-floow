@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { markTutorialSeen, shouldShowTutorial } from '@/components/opti-settings/tutorialSeen';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { CloudBanner } from '@/components/cloud/CloudStatus';
@@ -32,11 +33,13 @@ function MainLayoutContent({ children }: MainLayoutProps) {
   // d'accueil réel.
   const handleLoadingComplete = useCallback(() => {
     setIsLoading(false);
-    // Show tutorial if never seen
-    const seen = localStorage.getItem(TUTORIAL_SEEN_KEY);
-    if (!seen) {
+    // Tutoriel au tout premier lancement seulement : « déjà vu » lu dans le
+    // navigateur ET sur le compte (il ne revient plus à chaque session).
+    void shouldShowTutorial(TUTORIAL_SEEN_KEY).then((show) => {
+      if (!show) return;
       setShowTutorial(true);
-    }
+      markTutorialSeen(TUTORIAL_SEEN_KEY);
+    });
   }, []);
 
   // Permet de relancer le tutoriel à la demande (bouton dans Paramètres), sans

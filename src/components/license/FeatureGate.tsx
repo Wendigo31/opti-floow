@@ -201,6 +201,42 @@ const PLAN_ICONS: Record<PlanType, typeof Sparkles> = {
   optiflow: Crown,
 };
 
+// Forfaits réels de la société (OptiCentral). « optiflow » n'est qu'une étiquette interne.
+const PLAN_ORDER = ['start', 'pro', 'enterprise'] as const;
+const PLAN_NAMES: Record<string, string> = { start: 'Essentiel', pro: 'Pro', enterprise: 'Entreprise' };
+
+/** Nom affiché d'un forfait (start / pro / enterprise). */
+export function planDisplayName(plan: string | null | undefined): string | null {
+  return plan ? PLAN_NAMES[plan] ?? plan : null;
+}
+
+/**
+ * Pourquoi une option est bloquée, avec le vrai forfait de la société :
+ * - retirée à ce compte par la Direction ;
+ * - incluse dans un forfait supérieur (dit lequel) ;
+ * - sinon, non activée pour la société (OptiCentral).
+ */
+export function lockReason(
+  feature: string,
+  licenseData: { planName?: string | null; planFeatures?: Record<string, Record<string, unknown>> | null; userFeatureOverrides?: { feature_key: string; enabled: boolean }[] | null } | null | undefined,
+): { short: string; long: string } {
+  if (licenseData?.userFeatureOverrides?.some((o) => o.feature_key === feature && !o.enabled)) {
+    return { short: 'Désactivé pour votre compte', long: 'La Direction de votre société a désactivé cette option pour votre compte.' };
+  }
+  const current = licenseData?.planName ?? null;
+  const plans = licenseData?.planFeatures ?? null;
+  const includedIn = plans ? PLAN_ORDER.find((p) => plans[p]?.[feature] === true) : undefined;
+  const rank = (p: string | null | undefined) => PLAN_ORDER.indexOf((p ?? '') as (typeof PLAN_ORDER)[number]);
+  if (includedIn && rank(includedIn) > rank(current)) {
+    const mine = planDisplayName(current);
+    return {
+      short: `Forfait ${PLAN_NAMES[includedIn]}`,
+      long: `Option incluse dans le forfait ${PLAN_NAMES[includedIn]}${mine ? ` (votre forfait : ${mine})` : ''}. Contactez OptiGroup pour l'ajouter.`,
+    };
+  }
+  return { short: 'Option non activée', long: "Option non activée pour votre société. Contactez OptiGroup pour l'activer." };
+}
+
 export function FeatureGate({ 
   feature, 
   children, 
@@ -210,7 +246,7 @@ export function FeatureGate({
   mode = 'hide',
   className
 }: FeatureGateProps) {
-  const { hasFeature, planType, isLoading } = useLicense();
+  const { hasFeature, isLoading, licenseData } = useLicense();
   const navigate = useNavigate();
 
   // CRITICAL: During license loading, allow children to render to avoid UI "flash of locked".
@@ -223,10 +259,9 @@ export function FeatureGate({
     return <>{children}</>;
   }
 
-  const requiredPlan = REQUIRED_PLAN[feature];
   const featureLabel = FEATURE_LABELS[feature];
-  const planLabel = PLAN_LABELS[requiredPlan];
-  const PlanIcon = PLAN_ICONS[requiredPlan];
+  const reason = lockReason(feature, licenseData);
+  const PlanIcon = Crown;
 
   // Mode: tooltip - show children with a tooltip indicating locked
   if (mode === 'tooltip') {
@@ -241,7 +276,7 @@ export function FeatureGate({
           <TooltipContent>
             <div className="flex items-center gap-2">
               <Lock className="w-3 h-3" />
-              <span>Forfait {planLabel} requis</span>
+              <span>{reason.long}</span>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -261,7 +296,7 @@ export function FeatureGate({
           className="absolute top-2 right-2 gap-1 text-xs"
         >
           <Lock className="w-3 h-3" />
-          {requiredPlan.toUpperCase()}
+          {reason.short}
         </Badge>
       </div>
     );
@@ -284,8 +319,9 @@ export function FeatureGate({
             </p>
             <Badge variant="outline" className="gap-1">
               <PlanIcon className="w-3 h-3" />
-              {planLabel}
+              {reason.short}
             </Badge>
+            <p className="text-xs text-muted-foreground max-w-xs">{reason.long}</p>
           </div>
         </div>
       </div>

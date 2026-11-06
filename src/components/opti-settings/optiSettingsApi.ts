@@ -20,7 +20,7 @@ export interface OptiSettings {
   vat_updated_at: string | null;
   me: { id: string; name: string; email: string; role: string };
   can_edit_company: boolean;
-  member: { notify_team_changes: boolean };
+  member: { notify_team_changes: boolean; tutorial_seen?: string | null };
 }
 
 export interface TeamActivity {

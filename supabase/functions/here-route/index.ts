@@ -95,6 +95,7 @@ serve(async (req) => {
       vehicleLength = 16.5,
       vehicleWidth = 2.55,
       vehicleAxleWeight = 11500,
+      vehicleAxles = 5,
       avoidTolls = false,
       avoidHighways = false,
     } = await req.json();
@@ -113,7 +114,10 @@ serve(async (req) => {
     if (avoidTolls) avoidFeatures.push('tollRoad');
     if (avoidHighways) avoidFeatures.push('controlledAccessHighway');
 
-    const mode = transportMode === 'car' ? 'car' : 'truck';
+    // OptiFlow est un logiciel poids lourd : toujours un itinéraire camion (le mode voiture
+    // a été retiré ; un ancien client qui l'enverrait reçoit quand même un trajet camion).
+    void transportMode;
+    const mode = 'truck';
     const params = new URLSearchParams({
       transportMode: mode,
       origin,
@@ -129,7 +133,7 @@ serve(async (req) => {
       params.append('truck[length]', String(Math.round(vehicleLength * 100)));
       params.append('truck[width]', String(Math.round(vehicleWidth * 100)));
       params.append('truck[weightPerAxle]', String(vehicleAxleWeight));
-      params.append('truck[axleCount]', '5');
+      params.append('truck[axleCount]', String(Math.min(Math.max(Math.round(Number(vehicleAxles) || 5), 2), 9)));
     }
     if (avoidFeatures.length > 0) {
       params.append('avoid[features]', avoidFeatures.join(','));

@@ -44,6 +44,7 @@
  const PRESERVE_KEYS = [
    'optiflow_cache_version',   // écrite juste après l'appel, ne doit pas être effacée entre-temps
    'optiflow_tutorial_seen',   // ne doit s'afficher qu'une seule fois, jamais à cause d'une MAJ
+   'optiflow_tutorial_v2_seen', // clé actuelle du tutoriel (l'ancienne ligne ne la protégeait pas)
    'optiflow_notification_prefs', // préférences de notifications choisies par l'utilisateur
    'optiflow_current_version', // sert à détecter les nouvelles versions pour la bannière "nouveautés"
  ];

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCompanyVatRate } from '@/components/opti-settings/useCompanyVat';
+import { useTargetMargin } from '@/components/opti-settings/targetMargin';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +53,8 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
   const [vehicleId, setVehicleId] = useState(initial?.vehicleId || NONE);
   const [trailerId, setTrailerId] = useState(NONE);
   const [driverIds, setDriverIds] = useState<string[]>(initial?.driverIds ?? []);
-  const [margin, setMargin] = useState(15);
+  // Marge visée : dernier choix de la personne (partagé avec le calculateur), modifiable ici.
+  const [margin, setMargin] = useTargetMargin(15);
   const companyVat = useCompanyVatRate(settings.tvaRate || 20);
   const [tva, setTva] = useState(settings.tvaRate || 20);
   useEffect(() => setTva(companyVat), [companyVat]);

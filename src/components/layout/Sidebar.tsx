@@ -9,6 +9,7 @@ import optiflowLogo from '@/assets/optiflow-logo.svg';
 import { SupportButton } from '@/components/support/SupportButton';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNavAccessContext } from '@/hooks/useVisibleNavigation';
 import { NAV_CATEGORIES, canSeeNavPage, canSeeNavCategory, getCategoryIdForPath } from '@/config/appNavigation';
 
 // Feature labels for the "restricted features" tooltip
@@ -63,7 +64,8 @@ export function Sidebar() {
     );
   };
 
-  const accessCtx = { hasFeature, canAccessUserFeature, isDirection, role };
+  // Onglets masqués depuis OptiCentral compris (ils restaient affichés ici).
+  const { ctx: accessCtx } = useNavAccessContext();
 
   // La barre latérale n'apparaît que dans un espace (catégorie) sélectionné,
   // et uniquement si ce rôle y a accès — elle disparaît sur l'accueil, les

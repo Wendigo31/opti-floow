@@ -1,3 +1,4 @@
+import { currentTargetMargin } from '@/components/opti-settings/targetMargin';
 import { useEffect } from 'react';
 import { 
   Calculator, 
@@ -168,7 +169,7 @@ export default function Home() {
                 </div>
                 <p className={cn(
                   "text-2xl font-bold",
-                  avgMargin >= 15 ? "text-green-500" : avgMargin >= 0 ? "text-amber-500" : "text-destructive"
+                  avgMargin >= currentTargetMargin() ? "text-green-500" : avgMargin >= 0 ? "text-amber-500" : "text-destructive"
                 )}>
                   {avgMargin.toFixed(1)}%
                 </p>
@@ -220,8 +221,8 @@ export default function Home() {
                       </div>
                       <div className="text-right ml-4">
                         <Badge 
-                          variant={(tour.profit_margin || 0) >= 15 ? 'default' : 'destructive'}
-                          className={(tour.profit_margin || 0) >= 15 ? 'bg-green-500/20 text-green-500' : ''}
+                          variant={(tour.profit_margin || 0) >= currentTargetMargin() ? 'default' : 'destructive'}
+                          className={(tour.profit_margin || 0) >= currentTargetMargin() ? 'bg-green-500/20 text-green-500' : ''}
                         >
                           {(tour.profit_margin || 0).toFixed(1)}%
                         </Badge>
