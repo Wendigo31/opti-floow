@@ -12,6 +12,23 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.4.0',
+    date: '2026-11-06',
+    title: 'GPS poids lourd, planning et forfaits',
+    changes: [
+      "GPS poids lourd intégré : un clic depuis une ligne du planning, une tournée ou un itinéraire, guidage vocal vers le chargement puis la livraison, au gabarit du véhicule",
+      "Planning : un clic sur un jour change le conducteur du jour ; un clic sur une ligne la modifie sans quitter le planning",
+      "Planning : lier une tournée reprend son conducteur et son véhicule ; changer le conducteur d'une tournée met à jour le planning à venir",
+      "Itinéraire : poids lourd uniquement (plus de mode voiture), avec les dimensions du véhicule choisi",
+      "Marge visée choisie au moment du calcul (calculateur, devis, analyses) ; les Paramètres ne donnent que la valeur de départ",
+      "Forfaits : le forfait réel de la société est appliqué, avec un message exact quand une option est réservée à un autre forfait ; Création de ligne incluse dès Pro",
+      "Une option activée depuis OptiCentral s'applique, sans avoir à se reconnecter",
+      "Les droits réglés par la Direction (pages, données financières, gestion des véhicules, conducteurs, clients et tournées) sont appliqués",
+      "Le tutoriel ne s'affiche plus qu'au premier lancement (et à la demande dans Paramètres)",
+      "Affichage corrigé dans les petites fenêtres : boutons et onglets ne sont plus coupés",
+    ],
+  },
+  {
     version: '2.3.0',
     date: '2026-11-02',
     title: 'Paramètres refondus',
