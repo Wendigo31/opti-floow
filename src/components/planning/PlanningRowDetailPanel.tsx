@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle, Sparkles, Loader2, Phone, Mail } from 'lucide-react';
+import { TruckGpsDialog } from '@/components/gps/TruckGpsDialog';
+import { Navigation, Save, Copy, FileText, MapPin, Clock, UserPlus, Plus, Trash2, X, Link2, AlertTriangle, Sparkles, Loader2, Phone, Mail } from 'lucide-react';
 import { DriverSearchSelect } from '@/components/planning/DriverSearchSelect';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +74,7 @@ export function PlanningRowDetailPanel({
   const [clientId, setClientId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
+  const [gpsOpen, setGpsOpen] = useState(false);
   const [sectorManager, setSectorManager] = useState('');
   const [startTime, setStartTime] = useState('');
   const [originAddress, setOriginAddress] = useState('');
@@ -608,7 +610,17 @@ export function PlanningRowDetailPanel({
           </div>
         </div>
 
-        <SheetFooter className="mt-6 flex gap-2">
+        <SheetFooter className="mt-6 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1"
+            disabled={!originAddress.trim() && !destinationAddress.trim()}
+            title={!originAddress.trim() && !destinationAddress.trim() ? 'Renseignez l’adresse de départ ou d’arrivée' : 'Guidage camion vers le chargement puis la livraison'}
+            onClick={() => setGpsOpen(true)}
+          >
+            <Navigation className="h-3 w-3" /> GPS poids lourd
+          </Button>
           <Button variant="outline" size="sm" onClick={generateDriverText} className="gap-1">
             <Copy className="h-3 w-3" /> Générer texte conducteur
           </Button>
@@ -617,6 +629,20 @@ export function PlanningRowDetailPanel({
           </Button>
         </SheetFooter>
       </SheetContent>
+      <TruckGpsDialog
+        open={gpsOpen}
+        onOpenChange={setGpsOpen}
+        title={tourName}
+        stops={[
+          { label: 'Chargement', address: originAddress },
+          ...stops.filter(st => st.address.trim()).map((st, i) => ({ label: st.label || `Étape ${i + 1}`, address: st.address })),
+          { label: 'Livraison', address: destinationAddress },
+        ].filter(st => st.address.trim())}
+        truck={(() => {
+          const v = vehicles.find(vh => vh.id === vehicleId);
+          return v ? { weight: v.weight, height: v.height, length: v.length, width: v.width, axles: v.axles } : null;
+        })()}
+      />
     </Sheet>
   );
 }

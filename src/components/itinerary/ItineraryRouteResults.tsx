@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { Navigation } from 'lucide-react';
+import { TruckGpsDialog } from '@/components/gps/TruckGpsDialog';
 import {
   Route,
   Zap,
@@ -28,6 +31,10 @@ interface ItineraryRouteResultsProps {
 
   // Props forwarded verbatim to <RouteItineraryListing />
   originAddress: string;
+  /** Gabarit du camion pour le GPS (véhicule choisi). */
+  truckSpecs?: { weight: number; height: number; length: number; width: number; axles: number } | null;
+  originPosition?: { lat: number; lon: number } | null;
+  destinationPosition?: { lat: number; lon: number } | null;
   destinationAddress: string;
   stops: Waypoint[];
   transportMode: 'truck' | 'car';
@@ -53,12 +60,16 @@ export function ItineraryRouteResults({
   formatCurrency,
   formatDuration,
   originAddress,
+  truckSpecs = null,
   destinationAddress,
   stops,
   transportMode,
   vehicleName,
   clientName,
+  originPosition = null,
+  destinationPosition = null,
 }: ItineraryRouteResultsProps) {
+  const [gpsOpen, setGpsOpen] = useState(false);
   if (!hasResults) return null;
 
   return (
@@ -228,6 +239,26 @@ export function ItineraryRouteResults({
             </p>
           )}
         </div>
+      )}
+
+      {/* GPS poids lourd : guidage depuis la position du camion vers les adresses saisies */}
+      {displayedRoute && (
+        <>
+          <Button className="w-full gap-2 h-11" onClick={() => setGpsOpen(true)}>
+            <Navigation className="w-4 h-4" /> Lancer le GPS poids lourd
+          </Button>
+          <TruckGpsDialog
+            open={gpsOpen}
+            onOpenChange={setGpsOpen}
+            title={vehicleName ?? undefined}
+            truck={truckSpecs}
+            stops={[
+              { label: 'Chargement', address: originAddress, lat: originPosition?.lat, lon: originPosition?.lon },
+              ...stops.filter((w) => w.address.trim()).map((w, i) => ({ label: `Étape ${i + 1}`, address: w.address, lat: w.position?.lat, lon: w.position?.lon })),
+              { label: 'Livraison', address: destinationAddress, lat: destinationPosition?.lat, lon: destinationPosition?.lon },
+            ].filter((w) => w.address.trim())}
+          />
+        </>
       )}
 
       {/* Detailed listing + line proposal for the currently selected route */}

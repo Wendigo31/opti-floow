@@ -96,6 +96,8 @@ serve(async (req) => {
       vehicleWidth = 2.55,
       vehicleAxleWeight = 11500,
       vehicleAxles = 5,
+      // GPS poids lourd : renvoie aussi les manœuvres (texte, distance, position sur le tracé).
+      withInstructions = false,
       avoidTolls = false,
       avoidHighways = false,
     } = await req.json();
@@ -122,7 +124,7 @@ serve(async (req) => {
       transportMode: mode,
       origin,
       destination,
-      return: 'polyline,summary,tolls,actions',
+      return: withInstructions ? 'polyline,summary,tolls,actions,instructions' : 'polyline,summary,tolls,actions',
       apiKey: HERE_API_KEY,
       currency: 'EUR',
       lang: 'fr-FR',
@@ -162,8 +164,10 @@ serve(async (req) => {
     let totalDuration = 0; // seconds
     let totalToll = 0; // EUR
     const coordinates: [number, number][] = [];
+    const steps: { instruction: string; action: string; direction?: string; lengthM: number; durationS: number; index: number }[] = [];
 
     for (const section of route.sections) {
+      const base = coordinates.length;
       totalDistance += section.summary?.length ?? 0;
       totalDuration += section.summary?.duration ?? 0;
       if (section.tolls) {
@@ -177,6 +181,18 @@ serve(async (req) => {
         try {
           const coords = decodeHerePolyline(section.polyline);
           coordinates.push(...coords);
+          if (withInstructions && Array.isArray(section.actions)) {
+            for (const a of section.actions) {
+              steps.push({
+                instruction: String(a.instruction ?? ''),
+                action: String(a.action ?? ''),
+                direction: a.direction ? String(a.direction) : undefined,
+                lengthM: Number(a.length ?? 0),
+                durationS: Number(a.duration ?? 0),
+                index: base + Number(a.offset ?? 0),
+              });
+            }
+          }
         } catch (e) {
           console.error('Polyline decode error:', e);
         }
@@ -188,6 +204,7 @@ serve(async (req) => {
       durationHours: Math.round((totalDuration / 3600) * 100) / 100,
       tollCost: Math.round(totalToll * 100) / 100,
       coordinates,
+      ...(withInstructions ? { steps } : {}),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -1,3 +1,5 @@
+import { TruckGpsDialog } from '@/components/gps/TruckGpsDialog';
+import { Navigation } from 'lucide-react';
 import '@/lib/jspdfFrenchSpaces';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -96,6 +98,7 @@ export default function Tours() {
 
   // ── Import Excel de trajets/missions, comme sur Charges fixes/Véhicules ──
   const [importToursOpen, setImportToursOpen] = useState(false);
+  const [gpsTour, setGpsTour] = useState<SavedTour | null>(null);
   const toursExcelLookups: ToursExcelLookups = useMemo(() => ({
     vehicles: vehicles.map(v => ({ id: v.id, name: v.name })),
     clients: clients.map(c => ({ id: c.id, name: c.name })),
@@ -812,6 +815,16 @@ export default function Tours() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        title="GPS poids lourd : guidage vers le chargement puis la livraison"
+                        aria-label="GPS poids lourd"
+                        onClick={() => setGpsTour(tour)}
+                      >
+                        <Navigation className="w-4 h-4" />
+                      </Button>
                       <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
                         <Button
                           variant="ghost"
@@ -1017,6 +1030,17 @@ export default function Tours() {
         type="tours"
         tourLookups={toursExcelLookups}
         onImport={(data) => handleImportTours(data as Partial<SavedTour>[])}
+      />
+      <TruckGpsDialog
+        open={!!gpsTour}
+        onOpenChange={(o) => { if (!o) setGpsTour(null); }}
+        title={gpsTour?.name}
+        truck={gpsTour?.vehicle_data ? { weight: gpsTour.vehicle_data.weight, height: gpsTour.vehicle_data.height, length: gpsTour.vehicle_data.length, width: gpsTour.vehicle_data.width, axles: gpsTour.vehicle_data.axles } : null}
+        stops={gpsTour ? [
+          { label: 'Chargement', address: gpsTour.origin_address || '' },
+          ...((gpsTour.stops as { address?: string; label?: string }[] | null) ?? []).filter((st) => st?.address?.trim()).map((st, i) => ({ label: st.label || `Étape ${i + 1}`, address: st.address as string })),
+          { label: 'Livraison', address: gpsTour.destination_address || '' },
+        ].filter((st) => st.address.trim()) : []}
       />
     </div>
   );

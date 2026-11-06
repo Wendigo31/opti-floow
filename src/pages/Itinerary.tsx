@@ -802,6 +802,9 @@ export default function Itinerary() {
               destinationAddress={destinationAddress}
               stops={stops}
               transportMode={transportMode}
+              truckSpecs={truckSpecs}
+              originPosition={originPosition}
+              destinationPosition={destinationPosition}
               vehicleName={selectedVehicle?.name || null}
               clientName={clients.find(c => c.id === selectedClientId)?.name || null}
             />
