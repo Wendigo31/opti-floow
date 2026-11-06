@@ -64,76 +64,6 @@ export function getEffectiveFeatures(planType: string, customFeatures: Record<st
   return merged;
 }
 
-// Verify admin JWT token
-export const verifyAdminToken = async (token: string): Promise<{ valid: boolean; payload?: any }> => {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.log('[validate-license] JWT: invalid format (not 3 parts)');
-      return { valid: false };
-    }
-    const [headerB64, payloadB64, signatureB64] = parts;
-    const data = `${headerB64}.${payloadB64}`;
-    const encoder = new TextEncoder();
-    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
-    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
-    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
-    const secret = (Deno.env.get('ADMIN_JWT_SECRET') ?? '').trim() || (Deno.env.get('ADMIN_SECRET_CODE') ?? '').trim();
-    if (!secret) {
-      console.error('[validate-license] ADMIN_SECRET_CODE not configured');
-      return { valid: false };
-    }
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-    const signatureStr = signatureB64.replace(/-/g, '+').replace(/_/g, '/');
-    const signaturePadded = signatureStr + '='.repeat((4 - signatureStr.length % 4) % 4);
-    const signature = Uint8Array.from(atob(signaturePadded), c => c.charCodeAt(0));
-    const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(data));
-    if (!isValid) {
-      console.log('[validate-license] JWT: signature verification failed');
-      return { valid: false };
-    }
-    const payloadStr = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
-    const payloadPadded = payloadStr + '='.repeat((4 - payloadStr.length % 4) % 4);
-    const payload = JSON.parse(atob(payloadPadded));
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      console.log('[validate-license] JWT: token expired', { exp: payload.exp, now });
-      return { valid: false };
-    }
-    if (payload.role !== 'admin') {
-      console.log('[validate-license] JWT: invalid role', payload.role);
-      return { valid: false };
-    }
-    console.log('[validate-license] JWT: verification successful for', payload.email);
-    return { valid: true, payload };
-  } catch (error) {
-    console.error('[validate-license] JWT verification error:', error);
-    return { valid: false };
-  }
-};
-
-// Verify admin authorization via a signed, verified admin JWT.
-// SECURITY: do NOT add a fallback that trusts a caller-supplied email/identifier
-// without verifying a secret against it — this endpoint is a public HTTP function,
-// reachable directly (not only through the app UI), so any unverified identity
-// check is a full admin-bypass for anyone who can guess or discover that identifier.
-export const verifyAdminAuth = async (body: any, authHeader?: string | null): Promise<{ authorized: boolean; email?: string }> => {
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    const result = await verifyAdminToken(token);
-    if (result.valid && result.payload) {
-      return { authorized: true, email: result.payload.email };
-    }
-  }
-  if (body.adminToken) {
-    const result = await verifyAdminToken(body.adminToken);
-    if (result.valid && result.payload) {
-      return { authorized: true, email: result.payload.email };
-    }
-  }
-  return { authorized: false };
-};
-
 // Rate limiting helper
 export const checkRateLimit = async (
   supabase: any,
@@ -178,39 +108,6 @@ export const checkRateLimit = async (
   }).eq('id', existing.id);
   return { allowed: true };
 };
-
-// Log admin action
-export const logAdminAction = async (
-  supabase: any, adminEmail: string, action: string,
-  targetId: string | null, details: object, ipAddress: string
-): Promise<void> => {
-  try {
-    await supabase.from('admin_audit_log').insert({
-      admin_email: adminEmail, action, target_id: targetId, details, ip_address: ipAddress,
-    });
-  } catch (error) {
-    console.error('[validate-license] Failed to log admin action:', error);
-  }
-};
-
-// Map legacy roles to the 4 real business roles (direction/exploitation/comptabilite/rh).
-// SYNCHRONIZED WITH: src/config/rolePermissions.ts normalizeRole() — keep both in sync.
-// 'membre' n'est plus une valeur valide depuis la migration 20261010150000 (contrainte
-// CHECK resserrée côté company_users) : un fallback vers 'membre' ferait échouer
-// l'INSERT ci-dessous avec une violation de contrainte au lieu de créer un compte.
-export const mapToValidRole = (role: string | null | undefined): 'direction' | 'exploitation' | 'comptabilite' | 'rh' => {
-  const normalizedRole = (role || '').toLowerCase().trim();
-  switch (normalizedRole) {
-    case 'owner': case 'direction': return 'direction';
-    case 'comptabilite': return 'comptabilite';
-    case 'rh': return 'rh';
-    case 'admin': case 'exploitation': return 'exploitation';
-    case 'member': case 'membre': default: return 'exploitation';
-  }
-};
-
-// Default max_users for plan
-export const getDefaultMaxUsersForPlan = (_planType?: string): number => 999;
 
 // Create service role supabase client
 export function createServiceClient() {

@@ -5,85 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// JWT verification for admin authentication
-async function verifyAdminToken(token: string): Promise<{ valid: boolean; payload?: any }> {
-  try {
-    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
-    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
-    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
-    const adminSecret = Deno.env.get('ADMIN_JWT_SECRET') || Deno.env.get('ADMIN_SECRET_CODE');
-    if (!adminSecret) {
-      console.error('[manage-updates] ADMIN_SECRET_CODE not configured');
-      return { valid: false };
-    }
-
-    // Decode JWT parts
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return { valid: false };
-    }
-
-    const headerB64 = parts[0];
-    const payloadB64 = parts[1];
-    const signatureB64 = parts[2];
-
-    // Decode payload
-    const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
-    const payload = JSON.parse(payloadJson);
-
-    // Check expiration
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      console.log('[manage-updates] Token expired');
-      return { valid: false };
-    }
-
-    // Verify signature
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(adminSecret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign', 'verify']
-    );
-
-    const signatureInput = `${headerB64}.${payloadB64}`;
-    const signatureToVerify = Uint8Array.from(
-      atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')),
-      c => c.charCodeAt(0)
-    );
-
-    const isValid = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      signatureToVerify,
-      encoder.encode(signatureInput)
-    );
-
-    return { valid: isValid, payload: isValid ? payload : undefined };
-  } catch (error) {
-    console.error('[manage-updates] Token verification error:', error);
-    return { valid: false };
-  }
-}
-
-// Extract admin token from request
-function extractAdminToken(req: Request, body: any): string | null {
-  // Check Authorization header first
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  
-  // Check body for adminToken
-  if (body?.adminToken) {
-    return body.adminToken;
-  }
-  
-  return null;
-}
-
-// Actions that require admin authentication
+// Anciennes actions d'administration (fermées)
 const ADMIN_REQUIRED_ACTIONS = ['create', 'update', 'toggle-active', 'delete'];
 
 // Actions that are public (no auth required)
@@ -101,33 +23,17 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { action, updateId, version, releaseNotes, downloadUrl, signature, platform, isActive } = body;
+    const { action, updateId } = body;
 
     console.log(`[manage-updates] Action: ${action}`);
 
-    // Check if admin authentication is required
+    // Publication des mises à jour : l'ancien panneau d'administration est supprimé
+    // (administration dans OptiCentral). Seules la lecture et le compteur restent ouverts.
     if (ADMIN_REQUIRED_ACTIONS.includes(action)) {
-      const adminToken = extractAdminToken(req, body);
-      
-      if (!adminToken) {
-        console.log('[manage-updates] Admin action attempted without token');
-        return new Response(
-          JSON.stringify({ success: false, error: 'Admin authentication required' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const { valid, payload } = await verifyAdminToken(adminToken);
-      
-      if (!valid) {
-        console.log('[manage-updates] Invalid admin token');
-        return new Response(
-          JSON.stringify({ success: false, error: 'Invalid or expired admin token' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log(`[manage-updates] Admin authenticated for action: ${action}`);
+      return new Response(
+        JSON.stringify({ success: false, error: "L'administration se fait depuis OptiCentral" }),
+        { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     switch (action) {
@@ -215,94 +121,6 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, newCount: currentCount + 1 }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'create': {
-        const { data, error } = await supabase
-          .from('app_updates')
-          .insert({
-            version,
-            release_notes: releaseNotes,
-            download_url: downloadUrl,
-            signature,
-            platform: platform || 'windows-x86_64',
-            is_active: false,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[manage-updates] Error creating update:', error);
-          throw error;
-        }
-
-        console.log(`[manage-updates] Created update: ${version}`);
-        return new Response(
-          JSON.stringify({ success: true, update: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'update': {
-        const { data, error } = await supabase
-          .from('app_updates')
-          .update({
-            version,
-            release_notes: releaseNotes,
-            download_url: downloadUrl,
-            signature,
-            platform,
-          })
-          .eq('id', updateId)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[manage-updates] Error updating:', error);
-          throw error;
-        }
-
-        console.log(`[manage-updates] Updated: ${version}`);
-        return new Response(
-          JSON.stringify({ success: true, update: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'toggle-active': {
-        const { error } = await supabase
-          .from('app_updates')
-          .update({ is_active: isActive })
-          .eq('id', updateId);
-
-        if (error) {
-          console.error('[manage-updates] Error toggling active:', error);
-          throw error;
-        }
-
-        console.log(`[manage-updates] Toggled active: ${updateId} -> ${isActive}`);
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'delete': {
-        const { error } = await supabase
-          .from('app_updates')
-          .delete()
-          .eq('id', updateId);
-
-        if (error) {
-          console.error('[manage-updates] Error deleting:', error);
-          throw error;
-        }
-
-        console.log(`[manage-updates] Deleted: ${updateId}`);
-        return new Response(
-          JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

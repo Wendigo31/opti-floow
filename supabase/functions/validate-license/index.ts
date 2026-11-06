@@ -1,18 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { corsHeaders, createServiceClient, getClientIp, errorResponse } from "./shared.ts";
-import { handleAdminAction } from "./admin.ts";
+import { handleSyncCompany } from "./sync.ts";
 import { handleCheck } from "./check.ts";
 import { handleValidate } from "./validate.ts";
 
-// Admin actions handled by admin.ts
-const ADMIN_ACTIONS = new Set([
+// Anciennes actions du panneau d'administration : l'administration se fait désormais depuis
+// OptiCentral (pont central_admin de la base). Elles sont fermées.
+const REMOVED_ADMIN_ACTIONS = new Set([
   "list-all", "detect-duplicates", "merge-companies", "toggle-status",
   "update-plan", "create-license", "delete-license", "update-license",
   "get-company-data", "update-limits", "update-features", "update-visibility",
   "get-login-history", "get-user-stats", "get-user-details",
   "get-addons", "update-addons", "admin-update-addons", "admin-get-addons",
-  "get-audit-logs", "sync-company",
-  "list-access-requests", "process-access-request",
+  "get-audit-logs", "list-access-requests", "process-access-request",
 ]);
 
 serve(async (req: Request): Promise<Response> => {
@@ -25,13 +25,16 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const supabase = createServiceClient();
     const clientIp = getClientIp(req);
-    const authHeader = req.headers.get('authorization');
     const body = await req.json();
     const action = body.action || "validate";
 
-    // Route to admin module
-    if (ADMIN_ACTIONS.has(action)) {
-      return handleAdminAction(action, body, supabase, authHeader, clientIp);
+    if (REMOVED_ADMIN_ACTIONS.has(action)) {
+      return errorResponse("L'administration se fait depuis OptiCentral", 410);
+    }
+
+    // Synchronisation de la société (Paramètres)
+    if (action === "sync-company") {
+      return handleSyncCompany(body, supabase);
     }
 
     // Route to check module

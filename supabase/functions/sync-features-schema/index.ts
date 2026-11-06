@@ -60,56 +60,6 @@ const FEATURE_SCHEMA = {
   default_integer: null,
 };
 
-// Verify admin JWT token
-const verifyAdminToken = async (token: string): Promise<{ valid: boolean; payload?: any }> => {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return { valid: false };
-    
-    const [headerB64, payloadB64, signatureB64] = parts;
-    const data = `${headerB64}.${payloadB64}`;
-    
-    const encoder = new TextEncoder();
-    // ADMIN_JWT_SECRET est un secret dédié à la signature des jetons, distinct
-    // du mot de passe du panneau admin (ADMIN_SECRET_CODE) — tant qu'il n'est
-    // pas configuré côté Supabase, on retombe sur l'ancien comportement.
-    const secret = Deno.env.get('ADMIN_JWT_SECRET') || Deno.env.get('ADMIN_SECRET_CODE') || '';
-
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
-    
-    const signatureStr = signatureB64.replace(/-/g, '+').replace(/_/g, '/');
-    const signaturePadded = signatureStr + '='.repeat((4 - signatureStr.length % 4) % 4);
-    const signature = Uint8Array.from(atob(signaturePadded), c => c.charCodeAt(0));
-    
-    const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(data));
-    
-    if (!isValid) return { valid: false };
-    
-    const payloadStr = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
-    const payloadPadded = payloadStr + '='.repeat((4 - payloadStr.length % 4) % 4);
-    const payload = JSON.parse(atob(payloadPadded));
-    
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      return { valid: false };
-    }
-    
-    if (payload.role !== 'admin') {
-      return { valid: false };
-    }
-    
-    return { valid: true, payload };
-  } catch (error) {
-    console.error('[sync-features-schema] JWT verification error:', error);
-    return { valid: false };
-  }
-};
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("[sync-features-schema] Function called");
@@ -125,7 +75,6 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify admin authorization
-    const authHeader = req.headers.get('authorization');
     let body: any = {};
     
     try {
@@ -136,35 +85,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     const action = body.action || "check";
 
-    // Check authorization from token
-    let isAuthorized = false;
-    let adminEmail = 'system';
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const result = await verifyAdminToken(token);
-      if (result.valid && result.payload) {
-        isAuthorized = true;
-        adminEmail = result.payload.email || 'admin';
-      }
-    }
-
-    if (body.adminToken) {
-      const result = await verifyAdminToken(body.adminToken);
-      if (result.valid && result.payload) {
-        isAuthorized = true;
-        adminEmail = result.payload.email || 'admin';
-      }
-    }
-
-    // For 'check' action, allow without auth (read-only)
-    // For 'sync' action, require admin auth
-    if (action === "sync" && !isAuthorized) {
+    // La synchronisation du schéma était réservée à l'ancien panneau d'administration,
+    // supprimé (administration dans OptiCentral) : seule la vérification reste ouverte.
+    if (action === "sync") {
       return new Response(
-        JSON.stringify({ success: false, error: "Accès non autorisé" }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ success: false, error: "L'administration se fait depuis OptiCentral" }),
+        { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    const adminEmail = 'system';
 
     // Get current columns in license_features table
     const { data: columns, error: columnsError } = await supabase.rpc('get_table_columns', {
