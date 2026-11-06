@@ -117,19 +117,22 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2, AlertTriangle } f
    };
  
   const loadFromSavedTour = (tour: SavedTour) => {
+    // Conducteurs de la tournée reconnus parmi ceux de la société (sinon champ vide, à choisir ici).
+    const known = (tour.driver_ids || []).filter(id => drivers.some(d => d.id === id));
     setFormData(prev => ({
       ...prev,
       tour_name: tour.name,
       client_id: tour.client_id || null,
-      driver_id: tour.driver_ids?.[0] || null,
+      driver_id: known[0] || prev.driver_id || null,
+      saved_tour_id: tour.id,
       vehicle_id: tour.vehicle_id || prev.vehicle_id,
       origin_address: tour.origin_address || null,
       destination_address: tour.destination_address || null,
       notes: tour.notes || null,
-      relay_driver_id: tour.driver_ids?.[1] || null,
+      relay_driver_id: known[1] || null,
     }));
     
-    if (tour.driver_ids && tour.driver_ids.length > 1) {
+    if (known.length > 1) {
       setShowRelay(true);
     }
     
@@ -379,6 +382,11 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2, AlertTriangle } f
                    ))}
                  </SelectContent>
                </Select>
+               {!formData.driver_id && (
+                 <p className="text-xs text-muted-foreground mt-1">
+                   Sans conducteur, les jours apparaîtront en rouge dans le planning : un clic sur un jour permet d'en choisir un.
+                 </p>
+               )}
                {driverAbsenceConflicts.length > 0 && (
                  <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1">
                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Sheet,
   SheetContent,
@@ -86,6 +87,7 @@ export function PlanningRowDetailPanel({
 
   // Tournées réelles disponibles pour lier cette mission (alimente le Prévisionnel).
   const { tours: savedTours, loading: loadingSavedTours } = useSavedTours();
+  const navigate = useNavigate();
 
   // Absences conducteur en conflit avec les dates concrètes de cette traction
   // — purement informatif, n'empêche pas l'enregistrement.
@@ -157,8 +159,12 @@ export function PlanningRowDetailPanel({
     };
 
     let success = true;
+    // Le titulaire remplace l'ancien titulaire (et les jours sans conducteur), mais pas les
+    // remplaçants choisis jour par jour dans le planning.
+    const previousHolder = first.driver_id || null;
     for (const entry of entries) {
-      const ok = await onUpdateEntry(entry.id, updates);
+      const keepsReplacement = entry.driver_id && entry.driver_id !== previousHolder;
+      const ok = await onUpdateEntry(entry.id, keepsReplacement ? { ...updates, driver_id: entry.driver_id } : updates);
       if (!ok) success = false;
     }
 
@@ -296,9 +302,15 @@ export function PlanningRowDetailPanel({
             🚚 {tourName || 'Ligne sans nom'}
             <Badge variant="secondary" className="text-xs">{entries.length} jours</Badge>
             {savedTourId && (
-              <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
-                <Link2 className="h-3 w-3" /> Tournée liée
-              </Badge>
+              <button
+                type="button"
+                onClick={() => navigate(`/tours?openTour=${savedTourId}`)}
+                title="Ouvrir la tournée enregistrée (tarif, ordre de mission)"
+              >
+                <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30 hover:bg-primary/10">
+                  <Link2 className="h-3 w-3" /> Voir la tournée
+                </Badge>
+              </button>
             )}
           </SheetTitle>
         </SheetHeader>
@@ -316,7 +328,17 @@ export function PlanningRowDetailPanel({
             <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Tournée liée (Prévisionnel)</Label>
             <Select
               value={savedTourId || '_none'}
-              onValueChange={v => setSavedTourId(v === '_none' ? '' : v)}
+              onValueChange={v => {
+                const id = v === '_none' ? '' : v;
+                setSavedTourId(id);
+                // Lier une tournée reprend son conducteur et son véhicule si la ligne n'en a pas encore :
+                // plus besoin de repasser par « Tournées » pour mettre un conducteur.
+                const t = savedTours.find(x => x.id === id);
+                const tourDriver = t?.driver_ids?.find(d => drivers.some(dr => dr.id === d));
+                if (t && !driverId && tourDriver) setDriverId(tourDriver);
+                if (t && !vehicleId && t.vehicle_id && vehicles.some(vh => vh.id === t.vehicle_id)) setVehicleId(t.vehicle_id);
+                if (t && !clientId && t.client_id) setClientId(t.client_id);
+              }}
               disabled={loadingSavedTours}
             >
               <SelectTrigger><SelectValue placeholder="Aucune tournée liée" /></SelectTrigger>

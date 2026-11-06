@@ -24,6 +24,8 @@ import { useLicenseContext, getLicenseId } from '@/context/LicenseContext';
 import { cn } from '@/lib/utils';
 import { usePlanningImport } from '@/context/PlanningImportContext';
 import { UncreatedDriversBanner } from '@/components/planning/UncreatedDriversBanner';
+import { PlanningDayCellEditor } from '@/components/planning/PlanningDayCellEditor';
+import type { Driver } from '@/types';
 
 const DAY_COLUMNS = [
   { label: 'Lundi', idx: 0 },
@@ -59,9 +61,12 @@ interface VirtualizedGridProps {
   getClientName: (id: string | null) => string | null;
   getGroupEntryForDay: (group: TractionGroup, date: Date) => PlanningEntry | undefined;
   handleRowClick: (group: TractionGroup) => void;
+  drivers: Driver[];
+  onSetDay: (group: TractionGroup, date: Date, driverId: string | null, note: string | null) => Promise<boolean>;
+  onRemoveDay: (entry: PlanningEntry) => Promise<boolean>;
 }
 
-function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClientName, getGroupEntryForDay, handleRowClick }: VirtualizedGridProps) {
+function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClientName, getGroupEntryForDay, handleRowClick, drivers, onSetDay, onRemoveDay }: VirtualizedGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(600);
@@ -126,7 +131,7 @@ function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClient
                 <div
                   key={gi}
                   className={cn(
-                    "grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-accent/40 transition-colors",
+                    "group grid grid-cols-[140px_140px_160px_140px_repeat(7,1fr)] border-b last:border-b-0 cursor-pointer hover:bg-accent/40 transition-colors",
                     gi % 2 === 1 && "bg-muted/30"
                   )}
                   style={{ height: ROW_HEIGHT }}
@@ -202,14 +207,24 @@ function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClient
                       ? 'bg-gray-100 dark:bg-gray-900/40'
                       : '';
 
+                    const cellClass = cn(
+                      "p-1.5 border-r last:border-r-0 flex items-center justify-center w-full h-full hover:ring-2 hover:ring-inset hover:ring-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                      isToday && "bg-primary/5",
+                      contractBg,
+                      dayEntry && !dayEntry.driver_id && !dayEntry.notes && "bg-destructive/10"
+                    );
+                    if (!day) return <div key={col.idx} className={cellClass} />;
                     return (
-                      <div
+                      <PlanningDayCellEditor
                         key={col.idx}
-                        className={cn(
-                          "p-1.5 border-r last:border-r-0 flex items-center justify-center",
-                          isToday && "bg-primary/5",
-                          contractBg
-                        )}
+                        date={day}
+                        lineName={group.tourName}
+                        entry={dayEntry}
+                        defaultDriverId={group.driverId}
+                        drivers={drivers}
+                        onSave={(driverId, note) => onSetDay(group, day, driverId, note)}
+                        onRemove={dayEntry ? () => onRemoveDay(dayEntry) : null}
+                        className={cellClass}
                       >
                         {cellContent ? (
                           <div className="text-[11px] text-center leading-tight">
@@ -228,9 +243,11 @@ function VirtualizedGrid({ filteredGroups, weekDays, getDriverDisplay, getClient
                             )}
                           </div>
                         ) : dayEntry ? (
-                          <span className="text-[10px] text-muted-foreground">—</span>
-                        ) : null}
-                      </div>
+                          <span className="text-[10px] font-medium text-destructive">Sans conducteur</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground">+</span>
+                        )}
+                      </PlanningDayCellEditor>
                     );
                   })}
                 </div>
@@ -470,16 +487,40 @@ export default function Planning() {
     return group.entries.find(e => e.planning_date === dateStr);
   };
 
+  // La ligne se modifie ici, dans le planning (avant : une ligne liée à une tournée
+  // enregistrée renvoyait vers « Tournées »). Le panneau garde un lien vers la tournée.
   const handleRowClick = (group: TractionGroup) => {
-    // If linked to a saved tour, open Tours page directly
-    const linkedTourId = group.entries.find(e => (e as any).saved_tour_id)?.['saved_tour_id' as keyof PlanningEntry] as string | undefined;
-    if (linkedTourId) {
-      navigate(`/tours?openTour=${linkedTourId}`);
-      return;
-    }
     setSelectedGroup(group);
     setIsDetailOpen(true);
   };
+
+  // Case d'un jour : conducteur / remarque du jour, ou ajout du jour s'il n'existait pas.
+  const handleSetDay = useCallback(async (group: TractionGroup, date: Date, driverId: string | null, note: string | null) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const existing = group.entries.find(e => e.planning_date === dateStr);
+    if (existing) return updateEntry(existing.id, { driver_id: driverId, notes: note });
+    const base = group.entries[0];
+    const created = await createEntry({
+      planning_date: dateStr,
+      driver_id: driverId,
+      notes: note,
+      tour_name: base?.tour_name ?? group.tourName,
+      mission_order: base?.mission_order ?? null,
+      client_id: base?.client_id ?? null,
+      vehicle_id: base?.vehicle_id ?? null,
+      start_time: base?.start_time ?? null,
+      end_time: base?.end_time ?? null,
+      origin_address: base?.origin_address ?? null,
+      destination_address: base?.destination_address ?? null,
+      sector_manager: base?.sector_manager ?? null,
+      saved_tour_id: base?.saved_tour_id ?? null,
+      parent_tour_id: base?.parent_tour_id ?? null,
+      recurring_days: base?.recurring_days ?? [],
+    });
+    return !!created;
+  }, [updateEntry, createEntry]);
+
+  const handleRemoveDay = useCallback((entry: PlanningEntry) => deleteEntry(entry.id), [deleteEntry]);
 
   const dayFilterLabels = DAY_COLUMNS.map(d => d.label);
 
@@ -489,7 +530,7 @@ export default function Planning() {
       <div className="flex items-center justify-between flex-shrink-0 flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">Planning</h1>
-          <p className="text-muted-foreground text-sm">Cliquez sur une ligne pour gérer la traction</p>
+          <p className="text-muted-foreground text-sm">Cliquez sur un jour pour changer le conducteur, sur le nom de la ligne pour tout modifier</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -643,6 +684,9 @@ export default function Planning() {
               getClientName={getClientName}
               getGroupEntryForDay={getGroupEntryForDay}
               handleRowClick={handleRowClick}
+              drivers={allDrivers}
+              onSetDay={handleSetDay}
+              onRemoveDay={handleRemoveDay}
             />
           )}
         </CardContent>
@@ -653,7 +697,7 @@ export default function Planning() {
         <PlanningRowDetailPanel
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
-          entries={selectedGroup.entries}
+          entries={tractionGroups.find(g => g.tourName === selectedGroup.tourName && g.missionOrder === selectedGroup.missionOrder)?.entries ?? selectedGroup.entries}
           allEntries={entries}
           clients={clients}
           drivers={allDrivers}
