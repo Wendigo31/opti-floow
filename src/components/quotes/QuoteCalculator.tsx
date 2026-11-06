@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useCompanyVatRate } from '@/components/opti-settings/useCompanyVat';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +53,9 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
   const [trailerId, setTrailerId] = useState(NONE);
   const [driverIds, setDriverIds] = useState<string[]>(initial?.driverIds ?? []);
   const [margin, setMargin] = useState(15);
+  const companyVat = useCompanyVatRate(settings.tvaRate || 20);
   const [tva, setTva] = useState(settings.tvaRate || 20);
+  useEffect(() => setTva(companyVat), [companyVat]);
   const [validUntil, setValidUntil] = useState('');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [saving, setSaving] = useState(false);

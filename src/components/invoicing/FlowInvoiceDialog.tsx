@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useCompanyVatRate } from '@/components/opti-settings/useCompanyVat';
 import { Fuel, Loader2, Plus, Save, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export function FlowInvoiceDialog({
   const [clientId, setClientId] = useState('');
   const [month, setMonth] = useState(lastMonth);
   const [lines, setLines] = useState<InvoiceLine[]>([]);
+  const companyVat = useCompanyVatRate();
   const [taxRate, setTaxRate] = useState(20);
   const [terms, setTerms] = useState(defaultTerms);
   const [notes, setNotes] = useState('');
@@ -75,11 +77,16 @@ export function FlowInvoiceDialog({
     setClientId(invoice?.clientId ?? '');
     setMonth(invoice?.periodStart?.slice(0, 7) ?? lastMonth);
     setLines(invoice?.lines ?? []);
-    setTaxRate(invoice?.taxRate ?? 20);
+    setTaxRate(invoice?.taxRate ?? companyVat);
     setTerms(invoice?.paymentTermsDays ?? defaultTerms);
     setNotes(invoice?.notes ?? '');
     setPicked([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- la TVA a son propre effet ci-dessous
   }, [open, invoice, lastMonth, defaultTerms]);
+  // Nouvelle facture : TVA par défaut de la société (chargée après l'ouverture).
+  useEffect(() => {
+    if (open && !invoice) setTaxRate(companyVat);
+  }, [open, invoice, companyVat]);
 
   const { start, end } = monthBounds(month);
   const client = clients.find((c) => c.id === clientId);
