@@ -106,6 +106,7 @@ export async function handleCheck(body: any, supabase: any, req: Request): Promi
       postalCode: license.postal_code,
       activatedAt: license.activated_at,
       planType,
+      planName: license.plan_type ?? null,
       maxDrivers: license.max_drivers,
       maxClients: license.max_clients,
       maxDailyCharges: license.max_daily_charges,

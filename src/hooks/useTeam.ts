@@ -204,12 +204,23 @@ export function useTeam(): UseTeamReturn {
         },
       });
 
-      // supabase.functions.invoke ne rejette pas sur un statut HTTP non-2xx :
-      // `error` n'est posé que pour une vraie erreur réseau/invocation, donc
-      // le message d'erreur applicatif (ex. "déjà membre") est dans `data`.
+      // Correctif nov. 2026 : sur un refus (400/403/404), supabase-js pose
+      // `error` et laisse `data` vide — le vrai motif (« déjà membre »,
+      // « limite atteinte », « seule la Direction… ») est dans la réponse
+      // HTTP (error.context). On le lit pour l'afficher au manager.
       if (error) {
         console.error('Error invoking invite-teammate:', error);
-        return { success: false, error: 'Erreur lors de l\'invitation' };
+        let reason: string | undefined;
+        const ctx = (error as { context?: unknown }).context;
+        if (ctx && typeof (ctx as Response).json === 'function') {
+          try {
+            const body = await (ctx as Response).clone().json();
+            if (body && typeof body.error === 'string') reason = body.error;
+          } catch {
+            /* réponse non JSON */
+          }
+        }
+        return { success: false, error: reason || 'Erreur lors de l\'invitation' };
       }
       if (!data?.success) {
         return { success: false, error: data?.error || 'Erreur lors de l\'invitation' };

@@ -23,7 +23,7 @@ describe('données locales liées à la société', () => {
     Object.defineProperty(window, 'sessionStorage', { configurable: true, value: memoryStorage() });
   });
 
-  it("efface les données d'une autre société, garde session et réglages", () => {
+  it("met de côté les données d'une autre société, garde session et réglages", () => {
     const reload = vi.fn();
     Object.defineProperty(window, 'location', { configurable: true, value: { ...window.location, reload } });
     localStorage.setItem('opti-data-owner', 'societe-A');
@@ -42,6 +42,19 @@ describe('données locales liées à la société', () => {
     expect(localStorage.getItem('optiflow-license')).toBe('{}');
     expect(localStorage.getItem('optixpress_clients::societe-B')).toBe('[2]');
     expect(localStorage.getItem('opti-data-owner')).toBe('societe-B');
+    // Rien n'est perdu : la société A retrouve ses données en revenant.
+    expect(bindLocalDataToCompany('societe-A', false)).toBe(true);
+    expect(localStorage.getItem('optiflow_vehicles_cache')).toBe('[{"name":"TEST Audit"}]');
+    expect(localStorage.getItem('optixpress_routes')).toBe('[1]');
+  });
+
+  it('première ouverture après la mise à jour : rien n\'est effacé', () => {
+    localStorage.setItem('optiflow_trips', '[{"id":1}]');
+    localStorage.setItem('optifret_fec_accounts', '{"client":"411000"}');
+    expect(bindLocalDataToCompany('societe-A')).toBe(false);
+    expect(localStorage.getItem('optiflow_trips')).toBe('[{"id":1}]');
+    expect(localStorage.getItem('optifret_fec_accounts')).toBe('{"client":"411000"}');
+    expect(localStorage.getItem('opti-data-owner')).toBe('societe-A');
   });
 
   it('même société : rien ne change', () => {

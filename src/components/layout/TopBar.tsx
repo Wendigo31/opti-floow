@@ -103,8 +103,9 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
     return () => clearInterval(timer);
   }, []);
 
-  const plan = planConfig[licenseData?.planName ?? ''] ?? planConfig.pro;
-  const PlanIcon = plan.icon;
+  // Forfait inconnu (pas encore reçu) : pas de badge plutôt qu'un faux « Pro ».
+  const plan = planConfig[licenseData?.planName ?? ''] ?? null;
+  const PlanIcon = plan?.icon;
 
   // User display name - prioritize user-specific info from company_users over license owner info
   const userName = currentUserInfo.displayName 
@@ -162,10 +163,12 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
             )}
 
             {/* Plan Badge */}
-            <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
-              <PlanIcon className="w-3.5 h-3.5" />
-              <span className="font-medium">{plan.label}</span>
-            </Badge>
+            {plan && PlanIcon && (
+              <Badge variant="outline" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 ${plan.color}`}>
+                <PlanIcon className="w-3.5 h-3.5" />
+                <span className="font-medium">{plan.label}</span>
+              </Badge>
+            )}
 
             {/* Date */}
             <div className="hidden xl:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
