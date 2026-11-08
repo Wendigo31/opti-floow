@@ -12,6 +12,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.4.1',
+    date: '2026-11-08',
+    title: 'Corrections',
+    changes: [
+      "Les trajets, rapports clients, favoris, devis et réglages gardés sur l'appareil ne sont plus effacés après une mise à jour, ni perdus au changement de société",
+      "Exploitation : les charges fixes sont de nouveau prises en compte dans le calculateur, les tournées, le montage de lignes et les devis",
+      "Le badge du forfait reste juste après un rechargement",
+      "Équipe : le vrai motif d'un refus d'invitation s'affiche (déjà membre, limite du forfait, compte Direction)",
+    ],
+  },
+  {
     version: '2.4.0',
     date: '2026-11-06',
     title: 'GPS poids lourd, planning et forfaits',
