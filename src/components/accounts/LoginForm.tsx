@@ -330,6 +330,14 @@ export function LoginForm({
               <span className="font-medium text-foreground">Pas encore de compte ?</span> Demandez-le à
               votre direction ou à vos RH.
             </p>
+            <p className="mt-1">
+              <span className="font-medium text-foreground">Vous êtes le responsable de la société ?</span>{' '}
+              Utilisez « Mot de passe oublié » ou écrivez à{' '}
+              <a href="mailto:support@opti-group.fr" className="underline underline-offset-2">
+                support@opti-group.fr
+              </a>
+              .
+            </p>
           </div>
           {footer && <div className="mt-4">{footer}</div>}
         </div>
