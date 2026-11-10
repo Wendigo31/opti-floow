@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.5.0',
+    date: '2026-11-10',
+    title: 'Dossier de la société',
+    changes: [
+      "Fichiers rangés dans le dossier de la société, à son adresse (<identifiant>.opti-flow.app) : « documents » pour ce qu'OptiGroup vous envoie (factures, Kbis, licence), « software » pour les données du logiciel",
+      "Dossier « software / fichiers » prêt pour les fichiers du logiciel",
+      "Copie de vos données mise à jour chaque nuit dans le dossier « software » (un fichier par tableau, lisible dans Excel)",
+    ],
+  },
+  {
     version: '2.4.1',
     date: '2026-11-08',
     title: 'Corrections',
