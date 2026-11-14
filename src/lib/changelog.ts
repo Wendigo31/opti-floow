@@ -14,7 +14,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '2.6.1',
     date: '2026-11-14',
-    title: 'Corrections après l'audit',
+    title: "Corrections après l'audit",
     changes: [
       "Calculateur : la tournée enregistrée garde le véhicule et les conducteurs choisis (devis et rentabilité justes)",
       "Calculateur : les primes et indemnités des conducteurs apparaissent dans le récapitulatif ; péages indiqués HT ou TTC",
