@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.5.2',
+    date: '2026-11-14',
+    title: 'Mise à jour de sécurité',
+    changes: [
+      "Import et export Excel : bibliothèque remplacée par la version à jour de son éditeur (failles connues corrigées)",
+      "Vérification des formulaires : bibliothèque mise à jour (faille connue corrigée)",
+    ],
+  },
+  {
     version: '2.5.1',
     date: '2026-11-14',
     title: 'Nouvelle adresse de contact',
