@@ -54,7 +54,7 @@ export function LegalSummary() {
           ))}
         </ul>
         <p className="mt-3 text-xs text-muted-foreground">
-          Seuls les textes publiés sur opti-group.fr font foi. Une question : support@opti-group.fr.
+          Seuls les textes publiés sur opti-group.fr font foi. Une question : contact@opti-group.fr.
         </p>
       </div>
     </div>

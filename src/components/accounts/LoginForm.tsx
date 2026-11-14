@@ -333,8 +333,8 @@ export function LoginForm({
             <p className="mt-1">
               <span className="font-medium text-foreground">Vous êtes le responsable de la société ?</span>{' '}
               Utilisez « Mot de passe oublié » ou écrivez à{' '}
-              <a href="mailto:support@opti-group.fr" className="underline underline-offset-2">
-                support@opti-group.fr
+              <a href="mailto:contact@opti-group.fr" className="underline underline-offset-2">
+                contact@opti-group.fr
               </a>
               .
             </p>

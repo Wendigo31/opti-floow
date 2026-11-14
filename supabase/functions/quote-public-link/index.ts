@@ -462,7 +462,7 @@ async function sendQuoteEmail(params: {
   `;
 
   await resend.emails.send({
-    from: "OptiFlow <support@opti-group.fr>",
+    from: "OptiFlow <contact@opti-group.fr>",
     to: [clientEmail],
     subject: `Devis ${quoteNumber} - ${companyName}`,
     html: emailHtml,

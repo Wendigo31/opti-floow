@@ -331,7 +331,7 @@ async function sendInviteEmail(email: string, displayName: string | undefined, r
   `;
 
   await resend.emails.send({
-    from: "OptiFlow <support@opti-group.fr>",
+    from: "OptiFlow <contact@opti-group.fr>",
     to: [email],
     subject: "Vous êtes invité(e) à rejoindre OptiFlow",
     html: emailHtml,

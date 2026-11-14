@@ -442,7 +442,7 @@ const SLIDES = [
             <div className="flex items-center justify-center gap-8 mb-20">
               <div className="flex items-center gap-4 bg-[hsl(180,15%,97%)] rounded-2xl px-8 py-5 border border-[hsl(180,15%,90%)]">
                 <Mail className="w-6 h-6 text-[hsl(175,85%,35%)]" />
-                <span className="text-[22px] text-[hsl(210,45%,15%)] font-medium">support@opti-group.fr</span>
+                <span className="text-[22px] text-[hsl(210,45%,15%)] font-medium">contact@opti-group.fr</span>
               </div>
               <div className="flex items-center gap-4 bg-[hsl(180,15%,97%)] rounded-2xl px-8 py-5 border border-[hsl(180,15%,90%)]">
                 <Globe className="w-6 h-6 text-[hsl(175,85%,35%)]" />

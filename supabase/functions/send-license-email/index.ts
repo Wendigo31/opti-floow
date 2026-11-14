@@ -154,7 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending license email to: ${email}`);
 
     const emailResponse = await resend.emails.send({
-      from: "OptiFlow <support@opti-group.fr>",
+      from: "OptiFlow <contact@opti-group.fr>",
       to: [email],
       subject: "Votre accès OptiFlow est actif : le coût réel de vos tournées en quelques secondes",
       html: emailHtml,

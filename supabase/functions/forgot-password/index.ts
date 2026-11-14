@@ -32,7 +32,7 @@ serve(async (req) => {
 
     const appName = Deno.env.get("APP_NAME") || (typeof app === "string" ? app.slice(0, 40) : "OptiGroup");
     const url = (Deno.env.get("PUBLIC_APP_URL") || "").replace(/\/$/, "");
-    const from = Deno.env.get("MAIL_FROM") || `${appName} <support@opti-group.fr>`;
+    const from = Deno.env.get("MAIL_FROM") || `${appName} <contact@opti-group.fr>`;
     const key = Deno.env.get("RESEND_API_KEY");
     if (!key) {
       console.error("forgot-password: RESEND_API_KEY manquant");
@@ -45,7 +45,7 @@ serve(async (req) => {
 <p style="font-size:28px;font-weight:bold;letter-spacing:4px;text-align:center;background:#f1f5f9;border-radius:8px;padding:14px;margin:0 0 16px;font-family:monospace">${esc(data.code)}</p>
 <p style="margin:0 0 16px;line-height:1.5">Vous choisirez ensuite un nouveau mot de passe. Votre ancien mot de passe ne fonctionne plus.</p>
 ${url ? `<p style="text-align:center;margin:0 0 16px"><a href="${esc(url)}" style="display:inline-block;background:#3553e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:bold">Ouvrir ${esc(appName)}</a></p>` : ""}
-<p style="margin:0;font-size:12px;color:#64748b">Vous n'êtes pas à l'origine de cette demande ? Prévenez votre direction ou écrivez à support@opti-group.fr.</p>
+<p style="margin:0;font-size:12px;color:#64748b">Vous n'êtes pas à l'origine de cette demande ? Prévenez votre direction ou écrivez à contact@opti-group.fr.</p>
 </div></div></body></html>`;
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",

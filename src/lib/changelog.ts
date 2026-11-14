@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.5.1',
+    date: '2026-11-14',
+    title: 'Nouvelle adresse de contact',
+    changes: [
+      "L'adresse pour nous écrire devient contact@opti-group.fr (à la place de support@opti-group.fr), partout dans le logiciel",
+    ],
+  },
+  {
     version: '2.5.0',
     date: '2026-11-10',
     title: 'Dossier de la société',

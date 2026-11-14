@@ -79,7 +79,7 @@ export async function signInWithPassword(login: string, password: string): Promi
   // de connexion (audit final, nov. 2026).
   if (!companies.some((c) => c.license_active !== false)) {
     await supabase.auth.signOut();
-    throw new Error("L'accès de votre société est suspendu. Contactez OptiGroup : support@opti-group.fr");
+    throw new Error("L'accès de votre société est suspendu. Contactez OptiGroup : contact@opti-group.fr");
   }
   return companies;
 }

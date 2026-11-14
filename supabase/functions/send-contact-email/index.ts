@@ -182,8 +182,8 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "OptiFlow <support@opti-group.fr>",
-        to: ["support@opti-group.fr"],
+        from: "OptiFlow <contact@opti-group.fr>",
+        to: ["contact@opti-group.fr"],
         subject: `[OptiFlow] ${safeSubject}`,
         html: `
           <h2>Nouveau message de contact - Drive Profit</h2>

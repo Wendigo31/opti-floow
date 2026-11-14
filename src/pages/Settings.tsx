@@ -39,11 +39,11 @@ const FLOW_PAGES = [
 ];
 
 const FAQ = [
-  { q: 'Comment changer de forfait ?', a: 'Écrivez au support (bouton Support ou support@opti-group.fr) : le changement se fait sans nouveau code.' },
+  { q: 'Comment changer de forfait ?', a: 'Écrivez au support (bouton Support ou contact@opti-group.fr) : le changement se fait sans nouveau code.' },
   { q: 'Mes données sont-elles sécurisées ?', a: "Oui : elles sont hébergées en Union européenne, séparées de celles des autres sociétés, et chaque membre n'accède qu'à ce que permet son rôle." },
-  { q: 'Comment résilier mon abonnement ?', a: 'À tout moment, par e-mail à support@opti-group.fr. La résiliation prend effet à la fin de la période en cours.' },
+  { q: 'Comment résilier mon abonnement ?', a: 'À tout moment, par e-mail à contact@opti-group.fr. La résiliation prend effet à la fin de la période en cours.' },
   { q: 'Puis-je récupérer mes données ?', a: "Oui : Paramètres › Fichier › Exporter au format .opp (Direction). Pour un autre format, contactez le support." },
-  { q: 'Comment contacter le support ?', a: 'Avec le bouton Support, du lundi au vendredi de 9 h à 18 h, ou par e-mail à support@opti-group.fr.' },
+  { q: 'Comment contacter le support ?', a: 'Avec le bouton Support, du lundi au vendredi de 9 h à 18 h, ou par e-mail à contact@opti-group.fr.' },
 ];
 
 export default function Settings() {
