@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.6.0',
+    date: '2026-11-14',
+    title: 'Mot de passe oublié',
+    changes: [
+      "Mot de passe oublié : la demande part directement chez OptiGroup, qui vous envoie aussitôt un email avec un mot de passe provisoire",
+      "À la connexion avec ce mot de passe provisoire, le logiciel vous demande d'en choisir un nouveau",
+    ],
+  },
+  {
     version: '2.5.2',
     date: '2026-11-14',
     title: 'Mise à jour de sécurité',

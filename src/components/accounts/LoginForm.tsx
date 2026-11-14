@@ -9,6 +9,11 @@ import { LogoMarkAnimated, type LoaderApp } from '@/components/LogoLoader';
 import { CentralBanner } from '@/components/CentralBanner';
 import { supabase } from '@/integrations/supabase/client';
 
+/** Adresse d'OptiCentral, qui traite les demandes de mot de passe oublié. */
+const CENTRAL_URL = (
+  (import.meta.env.VITE_OPTICENTRAL_URL as string | undefined) || 'https://opti-command-center.lovable.app'
+).replace(/\/+$/, '');
+
 /**
  * Écran de connexion — identique dans OptiFlow, OptiFret et OptiXpress, aux couleurs de
  * chaque logiciel : un panneau de marque (logo animé, promesse, points forts) et le
@@ -276,9 +281,9 @@ export function LoginForm({
               {forgotSent ? (
                 <p className="text-sm text-muted-foreground">
                   <Mail className="mr-1 inline h-4 w-4" />
-                  Si un compte correspond, un <b>code provisoire</b> vient d'être envoyé à son adresse
-                  email (pensez aux courriers indésirables). Connectez-vous avec ce code comme mot de
-                  passe : vous choisirez ensuite votre nouveau mot de passe.
+                  Si un compte correspond, un <b>mot de passe provisoire</b> vient d'être envoyé à son adresse
+                  email (pensez aux courriers indésirables). Connectez-vous avec : vous choisirez
+                  ensuite votre nouveau mot de passe.
                 </p>
               ) : (
                 <form
@@ -288,9 +293,24 @@ export function LoginForm({
                     if (!forgotLogin.trim()) return;
                     setForgotBusy(true);
                     try {
-                      await supabase.functions.invoke('forgot-password', {
-                        body: { login: forgotLogin.trim(), app: appName },
-                      });
+                      // La demande part vers OptiCentral, qui envoie l'email avec le mot de
+                      // passe provisoire. S'il est injoignable, on repasse par l'envoi du logiciel.
+                      let sent = false;
+                      try {
+                        const r = await fetch(`${CENTRAL_URL}/api/public/v1/forgot-password`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ app: appName.toLowerCase(), login: forgotLogin.trim() }),
+                        });
+                        sent = r.ok;
+                      } catch {
+                        sent = false;
+                      }
+                      if (!sent) {
+                        await supabase.functions.invoke('forgot-password', {
+                          body: { login: forgotLogin.trim(), app: appName },
+                        });
+                      }
                     } catch {
                       /* même réponse dans tous les cas */
                     } finally {
@@ -310,7 +330,7 @@ export function LoginForm({
                   <div className="flex gap-2">
                     <Button type="submit" size="sm" disabled={forgotBusy || !forgotLogin.trim()}>
                       {forgotBusy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Mail className="mr-1.5 h-3.5 w-3.5" />}
-                      Recevoir un code par email
+                      Recevoir un mot de passe provisoire par email
                     </Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => setForgot(false)}>
                       Annuler
