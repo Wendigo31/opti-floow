@@ -180,7 +180,7 @@ export function FlowInvoiceDialog({
                 <p className="text-sm text-muted-foreground">
                   {(work.data?.length ?? 0) > 0
                     ? `Les ${work.data?.length} prestation(s) de ce mois sont déjà sur une autre facture. Pour refacturer, créez d'abord un avoir total sur celle-ci.`
-                    : 'Aucune tournée ni trajet à facturer pour ce client ce mois-ci.'}
+                    : 'Aucune tournée ni trajet à facturer pour ce client ce mois-ci. Sont facturés les jours du Planning et les trajets de l\'Historique : une tournée seulement sauvegardée doit d\'abord être planifiée.'}
                 </p>
               ) : (
                 <>

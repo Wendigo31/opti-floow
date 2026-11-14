@@ -51,8 +51,12 @@ export function SupportSessionStart({ app }: { app: LoaderApp }) {
     }
     (async () => {
       try {
-        // On quitte d'abord une éventuelle session déjà ouverte dans ce navigateur.
-        await supabase.auth.signOut().catch(() => undefined);
+        // On quitte d'abord une éventuelle session déjà ouverte dans ce navigateur (ici
+        // seulement : l'administrateur reste connecté sur ses autres appareils), et on efface
+        // la licence et les données gardées de ce compte : sinon le logiciel reconnectait
+        // l'ancien compte au chargement, ou affichait ses données en cache.
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        clearLocalAppData();
         const { data, error: fnError } = await supabase.functions.invoke('support-session', {
           body: { token },
         });
@@ -105,9 +109,27 @@ export function SupportSessionStart({ app }: { app: LoaderApp }) {
   return <LogoLoader app={app} label="Ouverture de la session support…" />;
 }
 
+/**
+ * Efface ce que le logiciel garde dans le navigateur pour un compte (licence, données en cache),
+ * sauf les préférences d'affichage (thème, densité, langue, menu).
+ */
+function clearLocalAppData() {
+  const keep = /theme|density|lang|sidebar|cookie|consent/i;
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k === SUPPORT_SESSION_KEY || keep.test(k)) continue;
+      localStorage.removeItem(k);
+    }
+    sessionStorage.clear();
+  } catch {
+    /* stockage indisponible */
+  }
+}
+
 async function endSupportSession() {
   localStorage.removeItem(SUPPORT_SESSION_KEY);
-  await supabase.auth.signOut().catch(() => undefined);
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  clearLocalAppData();
   window.location.replace('/');
 }
 

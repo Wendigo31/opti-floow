@@ -24,6 +24,8 @@ import html2canvas from 'html2canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AIAnalysisPanel from '@/components/dashboard/AIAnalysisPanel';
 import { FeatureGate } from '@/components/license/FeatureGate';
+import { useLicenseContext } from '@/context/LicenseContext';
+import { useCompanyAccess } from '@/lib/companyAccess';
 
 type ChartType = 'pie' | 'donut' | 'bar' | 'radial';
 
@@ -35,6 +37,12 @@ interface StoredRoute {
 }
 
 export default function Dashboard() {
+  // L'IA (prédiction des coûts, analyse par IA) suit le forfait : elle est fermée quand l'onglet
+  // « Analyse par IA » est désactivé pour la société (forfaits Essentiel et Pro).
+  const { licenseId: accessLicenseId } = useLicenseContext();
+  const { access: companyAccess } = useCompanyAccess(accessLicenseId);
+  const aiAllowed = !companyAccess.hidden_pages.includes('/ai-analysis');
+
   const { trip, vehicle, selectedDriverIds, charges, settings } = useApp();
   // Conducteurs cloud (et non useApp()'s `drivers`, un tableau local-storage hérité toujours
   // vide pour un compte réel) : sinon le coût conducteur est silencieusement exclu du
@@ -325,10 +333,12 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1">Visualisez la rentabilité de vos trajets</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Button onClick={() => setShowPrediction(!showPrediction)} variant={showPrediction ? "default" : "outline"} size="sm" className="gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Prédiction IA
-          </Button>
+          {aiAllowed && (
+            <Button onClick={() => setShowPrediction(!showPrediction)} variant={showPrediction ? "default" : "outline"} size="sm" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Prédiction IA
+            </Button>
+          )}
           <FeatureGate feature="btn_export_pdf" showLockedIndicator={false}>
             <Button onClick={() => setShowExportDialog(true)} variant="outline" size="sm" className="gap-2">
               <FileDown className="w-4 h-4" />
@@ -463,7 +473,7 @@ export default function Dashboard() {
       </div>
 
       {/* Cost Prediction Panel */}
-      {showPrediction && (
+      {aiAllowed && showPrediction && (
         <CostPredictionPanel
           currentFuelPrice={vehicle.fuelPriceHT}
           currentTollCost={displayCosts.tolls}
@@ -477,15 +487,17 @@ export default function Dashboard() {
 
       {/* Tabs for Analysis and AI */}
       <Tabs defaultValue="analysis" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className={cn("grid w-full max-w-md", aiAllowed ? "grid-cols-2" : "grid-cols-1")}>
           <TabsTrigger value="analysis" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             Analyse
           </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            Analyse par IA
-          </TabsTrigger>
+          {aiAllowed && (
+            <TabsTrigger value="ai" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Analyse par IA
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="analysis" className="space-y-6 mt-6">
@@ -563,7 +575,7 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="ai" className="mt-6">
+        {aiAllowed && <TabsContent value="ai" className="mt-6">
           <FeatureGate 
             feature="ai_optimization" 
             mode="blur"
@@ -571,7 +583,7 @@ export default function Dashboard() {
           >
             <AIAnalysisPanel />
           </FeatureGate>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
 
       <PDFExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} onExport={handleExportPDF} routeCoordinates={lastRoute?.coordinates || []} markers={lastRoute?.markers || []} />

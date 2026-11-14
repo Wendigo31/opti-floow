@@ -12,6 +12,19 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '2.6.1',
+    date: '2026-11-14',
+    title: 'Corrections après l'audit',
+    changes: [
+      "Calculateur : la tournée enregistrée garde le véhicule et les conducteurs choisis (devis et rentabilité justes)",
+      "Calculateur : les primes et indemnités des conducteurs apparaissent dans le récapitulatif ; péages indiqués HT ou TTC",
+      "Devis : une ancienne tournée enregistrée sans conducteur garde son coût calculé au lieu d'un coût trop bas",
+      "Factures : une facture ne peut plus être émise sans SIREN ni adresse de la société",
+      "Analyse : la prédiction et l'analyse par IA suivent le forfait",
+      "Assistance : l'ouverture d'une session par OptiGroup ne reconnecte plus l'ancien compte du navigateur",
+    ],
+  },
+  {
     version: '2.6.0',
     date: '2026-11-14',
     title: 'Mot de passe oublié',

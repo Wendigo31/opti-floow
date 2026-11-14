@@ -61,9 +61,8 @@ export default function Clients() {
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
-
-    if (!canManage) { deny(); return; }
     e.preventDefault();
+    if (!canManage) { deny(); return; }
 
     if (editingClient) {
       await updateClient(editingClient.id, formData);

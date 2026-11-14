@@ -97,6 +97,15 @@ export function CalculatorResultsSummary({
                 <span className="font-medium">{formatCurrency(costs.driverCost)}</span>
               </div>
             )}
+            {/* Primes et indemnités (repas, découcher) : comptées dans le total, elles doivent
+                aussi apparaître ici, sinon les lignes ne tombent pas sur le coût total. */}
+            {(isDirection || canExploitationView('can_view_driver_cost')) &&
+              (costs.driverBonuses || 0) + (costs.driverAllowances || 0) > 0 && (
+              <div className="flex justify-between py-1 border-b border-border/30">
+                <span className="text-muted-foreground">Primes et indemnités</span>
+                <span className="font-medium">{formatCurrency((costs.driverBonuses || 0) + (costs.driverAllowances || 0))}</span>
+              </div>
+            )}
             {(isDirection || canExploitationView('can_view_structure_cost')) && (
               <div className="flex justify-between py-1 border-b border-border/30">
                 <span className="text-muted-foreground">Structure</span>

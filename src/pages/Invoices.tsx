@@ -68,9 +68,18 @@ export default function Invoices() {
     return !q || [i.number, i.clientName].some((v) => v?.toLowerCase().includes(q));
   });
 
+  // Mentions obligatoires d'une facture (art. L441-9 du Code de commerce et 242 nonies A de
+  // l'annexe II du CGI) : raison sociale, SIREN, adresse. Sans elles, la facture émise
+  // (numérotée, donc définitive) serait irrégulière.
   const ensureIssuer = () => {
-    if (!inv.issuer.companyName) {
-      toast.error('Renseignez d\'abord votre société (onglet « Ma société »)');
+    const i = inv.issuer;
+    const missing = [
+      !i.companyName?.trim() && 'raison sociale',
+      !(i.siren ?? '').replace(/\s/g, '') && 'SIREN',
+      (!i.addressStreet?.trim() || !i.addressPostalCode?.trim() || !i.addressCity?.trim()) && 'adresse',
+    ].filter(Boolean);
+    if (missing.length) {
+      toast.error(`Complétez votre société avant d'émettre : ${missing.join(', ')} (onglet « Ma société »)`);
       setTab('issuer');
       return false;
     }

@@ -61,7 +61,7 @@ export function CalculatorTripPricingSection({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="tollCost" className="text-xs">Péages (€)</Label>
+          <Label htmlFor="tollCost" className="text-xs">{trip.tollIsHT ? 'Péages (€ HT)' : 'Péages (€ TTC)'}</Label>
           <Input
             id="tollCost"
             type="number"

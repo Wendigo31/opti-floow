@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Save, 
   X, 
@@ -77,6 +77,17 @@ export function SaveTourDialog({
   const [notes, setNotes] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+
+  // La fenêtre est montée avant que l'on choisisse véhicule et conducteurs dans le calculateur :
+  // on reprend la sélection du moment à chaque ouverture (sinon la tournée était enregistrée
+  // sans conducteur ni véhicule, et son coût recalculé ensuite — devis, rentabilité — était faux).
+  useEffect(() => {
+    if (!open) return;
+    setSelectedVehicleIds(initialVehicleId ? [initialVehicleId] : []);
+    setTrailerId(initialTrailerId);
+    setSelectedDriverIds(initialSelectedDriverIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();

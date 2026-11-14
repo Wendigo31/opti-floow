@@ -45,6 +45,26 @@ export function useTourRealCosts(tours: SavedTour[]): Map<string, TourCostResult
         map.set(tour.id, cached.result);
         continue;
       }
+      // Tournée enregistrée sans conducteur ni véhicule (calculateur avant nov. 2026) : un
+      // recalcul oublierait le salaire et la flotte. On garde alors les coûts enregistrés.
+      const stored = Number(tour.total_cost) || 0;
+      if (selectedDrivers.length === 0 && selectedVehicles.length === 0 && Number(tour.driver_cost) > 0 && stored > 0) {
+        const result: TourCostResult = {
+          fuelCost: Number(tour.fuel_cost) || 0,
+          adBlueCost: Number(tour.adblue_cost) || 0,
+          tollCost: Number(tour.toll_cost) || 0,
+          driverCost: Number(tour.driver_cost) || 0,
+          driverBonuses: 0,
+          driverAllowances: 0,
+          structureCost: Number(tour.structure_cost) || 0,
+          vehicleCost: Number(tour.vehicle_cost) || 0,
+          trailerCost: 0,
+          totalCost: stored,
+        };
+        cache.set(tour.id, { key, result });
+        map.set(tour.id, result);
+        continue;
+      }
       const result = calculateTourCosts({
         distance: tour.distance_km,
         tollCost: tour.toll_cost,
