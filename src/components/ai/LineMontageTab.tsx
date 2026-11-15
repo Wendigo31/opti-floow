@@ -9,6 +9,7 @@ import { LineMontageResults } from '@/components/ai/line-montage/LineMontageResu
 import { computeDriverDailyCost } from '@/lib/driverDailyCost';
 import type { Driver } from '@/types';
 import type { Position, StopWaypoint, MontageScenario, MontageResponse } from '@/types/lineMontage';
+import { userAccessToken } from '@/lib/userAccessToken';
 
 export function LineMontageTab() {
   const { toast } = useToast();
@@ -164,7 +165,7 @@ export function LineMontageTab() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${await userAccessToken()}`,
         },
         body: JSON.stringify({
           origin: inputMode === 'text' ? undefined : origin,

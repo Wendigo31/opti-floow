@@ -505,7 +505,7 @@ export function LimitWarning({ limitKey, currentCount, entityName, className }: 
         variant="ghost" 
         size="sm" 
         className="h-7 text-xs"
-        onClick={() => navigate('/pricing')}
+        onClick={() => navigate('/settings')}
       >
         Augmenter
       </Button>

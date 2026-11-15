@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { PLAN_INFO, PLAN_ORDER, includedText } from '@/lib/planCatalog';
 import { ChevronLeft, ChevronRight, Printer, Calculator, Route, Users, Truck, BarChart3, Shield, Clock, Target, Zap, CheckCircle2, Star, Mail, Globe, TrendingUp, MapPin, FileText, CalendarDays, Gauge, PieChart, AlertTriangle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import optiflowLogo from '@/assets/optiflow-logo.svg';
@@ -395,13 +396,11 @@ const SLIDES = [
             Un investissement qui se<br />
             <span className="text-[hsl(175,85%,35%)]">rentabilise dès le 1er mois.</span>
           </h2>
-          <p className="text-[22px] text-[hsl(210,20%,45%)] mb-16 text-center">Un forfait unique, tout inclus. Tarif sur devis.</p>
-          <div className="grid grid-cols-1 gap-10 w-full max-w-[640px]">
-            {[
-              { plan: 'OptiFlow', desc: 'Toutes les fonctionnalités, sans option', features: ['Calculateur de rentabilité & itinéraires PL', 'Planning conducteurs & tournées', 'Utilisateurs, véhicules et conducteurs illimités', 'IA, prévisionnel & devis intelligents', 'Gestion d\'équipe par rôles, multi-agences', 'Support prioritaire'], highlight: true },
-            ].map((item, i) => (
+          <p className="text-[22px] text-[hsl(210,20%,45%)] mb-16 text-center">Trois forfaits, mêmes noms dans tous les logiciels OptiGroup. Tarif sur devis.</p>
+          <div className="grid grid-cols-3 gap-8 w-full max-w-[1500px]">
+            {PLAN_ORDER.map((k) => PLAN_INFO[k]).map((p) => ({ plan: p.label, desc: p.description, features: [includedText(p), ...p.adds], highlight: p.key === 'pro' })).map((item, i) => (
               <div key={i} className={`rounded-3xl p-10 ${item.highlight ? 'bg-[hsl(175,85%,35%)] text-white ring-4 ring-[hsl(175,85%,28%)] scale-105' : 'bg-white border border-[hsl(180,15%,88%)]'}`}>
-                {item.highlight && <p className="text-white/80 text-[14px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Tout inclus</p>}
+                
                 <h3 className={`text-[34px] font-bold mb-3 text-center ${item.highlight ? 'text-white' : 'text-[hsl(210,45%,15%)]'}`}>{item.plan}</h3>
                 <p className={`mb-8 text-center text-[18px] ${item.highlight ? 'text-white/75' : 'text-[hsl(210,20%,45%)]'}`}>{item.desc}</p>
                 <div className="space-y-4">

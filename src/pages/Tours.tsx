@@ -444,7 +444,7 @@ export default function Tours() {
         pdf.rect(14, y, pageWidth - 28, 8, 'F');
         y += 6;
         pdf.setFont('helvetica', 'bold');
-        pdf.text('🤖 Analyse IA Enterprise', 20, y);
+        pdf.text('🤖 Analyse IA', 20, y);
         y += 12;
         
         pdf.setTextColor(0, 0, 0);

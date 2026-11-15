@@ -1,30 +1,15 @@
 /**
- * SINGLE SOURCE OF TRUTH for pricing plans displayed publicly.
+ * Forfaits affichés publiquement (page d'activation, présentation, export /pricing-export).
  *
- * ⚠️ STRATEGIC DECISION — DO NOT REVERT WITHOUT BUSINESS APPROVAL ⚠️
+ * ⚠️ DÉCISION COMMERCIALE — aucun montant sur les pages publiques : « Sur devis ».
+ * Vérifié par src/test/marketing-no-prices.test.ts.
  *
- * Public/marketing pages (Activation, Presentation, PricingSection) MUST NEVER
- * display monetary amounts. Pricing is intentionally hidden from competitors
- * and communicated only on demand ("Sur devis").
- *
- * Rules enforced by `src/test/marketing-no-prices.test.ts`:
- *   - No `€`, `EUR`, `USD`, `$` followed by digits
- *   - No `\d+ /mois`, `/an`, `HT`, `TTC` patterns
- *
- * If you need real amounts for billing/invoicing logic, keep them in:
- *   - Edge functions (server-side only)
- *   - `src/types/team.ts` constants used by authenticated billing flows
- * — never inline them into a marketing component.
+ * Contenu repris du catalogue des forfaits (src/lib/planCatalog.ts, copie d'OptiCentral) :
+ * les trois forfaits Essentiel, Pro et Entreprise, mêmes noms dans les trois logiciels.
  */
-
-import {
-  Crown,
-  Users,
-  Truck,
-  Calculator,
-  FileSpreadsheet,
-  type LucideIcon,
-} from 'lucide-react';
+import { Crown, Star, Zap, Users, Truck, type LucideIcon } from 'lucide-react';
+import { PLAN_INFO, PLAN_ORDER } from '@/lib/planCatalog';
+import type { PlanKey } from '@/lib/plans';
 
 export interface PublicPlanLimit {
   icon: LucideIcon;
@@ -38,15 +23,13 @@ export interface PublicPlanFeature {
 }
 
 export interface PublicPlan {
-  id: 'optiflow';
+  id: PlanKey;
   name: string;
   subtitle: string;
   description: string;
-  /** Always the literal string shown publicly. Never a number. */
+  /** Toujours le texte affiché, jamais un nombre. */
   priceLabel: string;
-  /** Helper text shown under the price label. */
   priceHelper: string;
-  /** CTA shown on every public plan card. */
   ctaLabel: string;
   icon: LucideIcon;
   color: string;
@@ -60,42 +43,36 @@ export const PUBLIC_PRICE_LABEL = 'Sur devis';
 export const PUBLIC_PRICE_HELPER = 'Tarif communiqué sur demande';
 export const PUBLIC_CTA_LABEL = 'Nous contacter';
 
-/** Single all-inclusive plan. Every feature is included. */
-export const PUBLIC_PLANS: PublicPlan[] = [
-  {
-    id: 'optiflow',
-    name: 'OptiFlow',
-    subtitle: 'Tout inclus',
-    description:
-      'Un forfait unique avec toutes les fonctionnalités : coûts, itinéraires, planning, IA, équipe et analyses.',
+const ICONS: Record<PlanKey, LucideIcon> = { start: Star, pro: Zap, enterprise: Crown };
+const COLORS: Record<PlanKey, string> = {
+  start: 'from-sky-500 to-blue-600',
+  pro: 'from-orange-500 to-amber-600',
+  enterprise: 'from-amber-500 to-orange-600',
+};
+
+const allAdds = PLAN_ORDER.flatMap((k) => PLAN_INFO[k].adds.map((label) => ({ label, plan: k })));
+
+export const PUBLIC_PLANS: PublicPlan[] = PLAN_ORDER.map((key, i) => {
+  const p = PLAN_INFO[key];
+  return {
+    id: key,
+    name: p.label,
+    subtitle: i === 0 ? "L'essentiel pour démarrer" : i === 1 ? 'Pour les PME' : 'Tout inclus',
+    description: p.description,
     priceLabel: PUBLIC_PRICE_LABEL,
     priceHelper: PUBLIC_PRICE_HELPER,
     ctaLabel: PUBLIC_CTA_LABEL,
-    icon: Crown,
-    bestValue: true,
-    color: 'from-amber-500 to-orange-600',
+    icon: ICONS[key],
+    color: COLORS[key],
+    bestValue: key === 'enterprise',
     limits: [
-      { icon: Users, label: 'Équipe illimitée' },
-      { icon: Truck, label: 'Véhicules & conducteurs illimités' },
-      { icon: Calculator, label: 'Calculs illimités' },
-      { icon: Users, label: 'Clients illimités' },
-      { icon: FileSpreadsheet, label: 'Tournées illimitées' },
+      { icon: Truck, label: p.vehicles == null ? 'Véhicules illimités' : `${p.vehicles} véhicules inclus` },
+      { icon: Users, label: p.users == null ? 'Accès illimités' : `${p.users} accès inclus` },
     ],
-    features: [
-      { label: 'Calculateur de coûts complet', included: true },
-      { label: 'Itinéraire poids lourd (péages, restrictions)', included: true },
-      { label: 'Suivi des charges (journalières, mensuelles, annuelles)', included: true },
-      { label: 'Planning conducteurs complet', included: true },
-      { label: 'Analyses IA illimitées', included: true },
-      { label: 'Export PDF professionnel & Excel', included: true },
-      { label: 'Alertes de marge en temps réel', included: true },
-      { label: 'Historique des trajets & tableau de bord avancé', included: true },
-      { label: 'Prévisionnel de coûts & devis intelligents', included: true },
-      { label: "Gestion d'équipe avec rôles (Direction / Exploitation)", included: true },
-      { label: 'Confidentialité des métriques par rôle', included: true },
-      { label: 'Multi-agences', included: true },
-      { label: 'Intégration TMS / ERP', included: true },
-      { label: 'Support prioritaire', included: true },
-    ],
-  },
-];
+    features: allAdds.map((a) => ({
+      label: a.label,
+      included: PLAN_ORDER.indexOf(a.plan) <= i,
+      highlight: a.plan === key && i > 0,
+    })),
+  };
+});

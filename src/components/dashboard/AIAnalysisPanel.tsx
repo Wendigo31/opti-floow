@@ -33,6 +33,7 @@ import { useLicense } from '@/hooks/useLicense';
 import { validateAIRequest } from '@/utils/aiValidation';
 import type { Vehicle } from '@/types/vehicle';
 import type { SavedTour } from '@/types/savedTour';
+import { userAccessToken } from '@/lib/userAccessToken';
 
 interface AIResponse {
   recommendation: {
@@ -186,7 +187,7 @@ export default function AIAnalysisPanel() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${await userAccessToken()}`,
         },
         body: JSON.stringify({
           origin,
@@ -282,7 +283,7 @@ export default function AIAnalysisPanel() {
             <RefreshCw className="w-4 h-4" />
             Synchroniser ma licence
           </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
+          <Button variant="outline" onClick={() => window.location.href = '/settings'}>
             Voir les forfaits
           </Button>
         </div>

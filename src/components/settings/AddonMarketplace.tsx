@@ -1,318 +1,107 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ShoppingCart, Route, Truck, Users2, UserPlus, Brain, 
-  Shield, Check, Loader2, RefreshCw, Sparkles, X
-} from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { CreditCard, Loader2, ShoppingCart, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLicense } from '@/hooks/useLicense';
-import { useLicenseContext } from '@/context/LicenseContext';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { PlansOverview } from '@/components/plans/PlansOverview';
+import { PLAN_INFO, asPlanKey, includedText, optionsFor, type PlanOption } from '@/lib/planCatalog';
 
-interface Addon {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  /** Ancien identifiant Stripe, inutilisé (facturation par prélèvement mensuel). */
-  priceId: string;
-  icon: React.ElementType;
-  category: 'feature' | 'capacity';
-}
+const eur = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
-// Features included by plan - used to hide already-included add-ons
-// Single plan 'optiflow' includes every feature: only capacity add-ons are listed.
-const PLAN_INCLUDED_FEATURES: Record<string, string[]> = {
-  optiflow: ['itinerary_planning', 'monthly_tracking', 'ai_optimization', 'multi_users'],
-};
-
-const ADDONS: Addon[] = [
-  {
-    id: 'extra_tours',
-    name: '+10 Tournées',
-    description: '10 tournées supplémentaires pour votre forfait.',
-    price: 4.99,
-    priceId: 'price_1T8pX80uHa1YT0odiz1jfTAh',
-    icon: Route,
-    category: 'capacity',
-  },
-  {
-    id: 'extra_vehicles',
-    name: '+10 Véhicules',
-    description: '10 véhicules supplémentaires à gérer dans votre flotte.',
-    price: 9.99,
-    priceId: 'price_1T8pX50uHa1YT0odFmezVKaV',
-    icon: Truck,
-    category: 'capacity',
-  },
-  {
-    id: 'extra_drivers',
-    name: '+10 Conducteurs',
-    description: '10 conducteurs supplémentaires à enregistrer.',
-    price: 9.99,
-    priceId: 'price_1T8pX60uHa1YT0odlbLxTVFt',
-    icon: UserPlus,
-    category: 'capacity',
-  },
-  {
-    id: 'extra_clients',
-    name: '+10 Clients',
-    description: '10 clients supplémentaires dans votre carnet.',
-    price: 4.99,
-    priceId: 'price_1T8pX70uHa1YT0odiCwaIHsO',
-    icon: Users2,
-    category: 'capacity',
-  },
-];
-
+/**
+ * Paramètres › Votre forfait : forfait de la société, les trois forfaits et les options à ajouter
+ * (catalogue d'OptiCentral). Une demande part dans OptiCentral › Demandes ; acceptée, l'option et
+ * ses onglets sont ouverts et ajoutés au prélèvement mensuel.
+ */
 export function AddonMarketplace() {
   const { licenseData } = useLicense();
-  const { licenseId } = useLicenseContext();
   const [cart, setCart] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const activating = false;
-  const [activeAddons, setActiveAddons] = useState<string[]>([]);
+  const [sent, setSent] = useState(false);
 
-  // Fetch active addons
-  useEffect(() => {
-    if (!licenseId) return;
-    const fetchActiveAddons = async () => {
-      const { data } = await supabase
-        .from('license_addons')
-        .select('addon_id')
-        .eq('license_id', licenseId)
-        .eq('is_active', true);
-      if (data) {
-        setActiveAddons(data.map(a => a.addon_id));
-      }
-    };
-    fetchActiveAddons();
-  }, [licenseId]);
+  const planKey = asPlanKey(licenseData?.planName);
+  const plan = PLAN_INFO[planKey];
+  const features = (licenseData?.customFeatures ?? {}) as Record<string, unknown>;
+  const isActive = (o: PlanOption) => o.features.length > 0 && o.features.every((f) => features[f] === true);
+  const options = optionsFor(planKey);
+  const chosen = options.filter((o) => cart.includes(o.key));
+  const total = chosen.reduce((s, o) => s + o.monthly, 0);
 
-  const toggleCart = (addonId: string) => {
-    setCart(prev => 
-      prev.includes(addonId) 
-        ? prev.filter(id => id !== addonId) 
-        : [...prev, addonId]
-    );
-  };
-
-  const cartTotal = cart.reduce((sum, id) => {
-    const addon = ADDONS.find(a => a.id === id);
-    return sum + (addon?.price || 0);
-  }, 0);
-
-  /**
-   * Plus de paiement en ligne : la demande part à OptiGroup (OptiCentral → Demandes) ; une fois
-   * acceptée, les modules sont activés et ajoutés au prélèvement mensuel suivant.
-   */
-  const handleCheckout = async () => {
-    if (!cart.length || !licenseId) return;
+  const request = async () => {
+    if (!chosen.length) return;
     setLoading(true);
     try {
-      const chosen = cart.map((id) => ADDONS.find((a) => a.id === id)!).filter(Boolean);
       const { error } = await supabase.rpc('create_access_request', {
-        p_requested_features: chosen.map((a) => `addon:${a.id}`),
-        p_message: `Modules demandés : ${chosen.map((a) => `${a.name} (${a.price.toFixed(2)} €/mois)`).join(', ')}`,
+        p_requested_features: chosen.flatMap((o) => [`option:${o.key}`, ...o.pages.map((p) => `page:${p}`)]),
+        p_message: `Options demandées : ${chosen.map((o) => `${o.label} (${eur(o.monthly)} € HT/mois)`).join(', ')}`,
       });
       if (error) throw new Error(error.message);
       setCart([]);
-      setShowSuccess(true);
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'envoi de la demande");
+      setSent(true);
+      toast.success("Demande envoyée : OptiGroup active les options et les ajoute à votre prochain prélèvement.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de l'envoi de la demande");
     } finally {
       setLoading(false);
     }
   };
 
-  const featureAddons = ADDONS.filter(a => a.category === 'feature');
-  const capacityAddons = ADDONS.filter(a => a.category === 'capacity');
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Modules complémentaires
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Ajoutez des fonctionnalités à votre forfait actuel
-          </p>
-        </div>
-        {cart.length > 0 && (
-          <Button variant="gradient" onClick={handleCheckout} disabled={loading}>
-            {loading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <ShoppingCart className="w-4 h-4 mr-2" />
-            )}
-            Demander ({cartTotal.toFixed(2)} €/mois, {cart.length})
-          </Button>
-        )}
-      </div>
-
-      {activating && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-sm text-foreground">Activation de vos modules en cours...</span>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Feature add-ons */}
-      <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Fonctionnalités</h4>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {featureAddons.map(addon => {
-            const Icon = addon.icon;
-            const inCart = cart.includes(addon.id);
-            const isActive = activeAddons.includes(addon.id);
-
-            return (
-              <Card
-                key={addon.id}
-                className={`relative transition-all cursor-pointer hover:shadow-md ${
-                  inCart ? 'ring-2 ring-primary bg-primary/5' : ''
-                } ${isActive ? 'opacity-60' : ''}`}
-                onClick={() => !isActive && toggleCart(addon.id)}
-              >
-                {isActive && (
-                  <Badge className="absolute top-2 right-2 bg-success/20 text-success border-success/30">
-                    <Check className="w-3 h-3 mr-1" /> Actif
-                  </Badge>
-                )}
-                {inCart && !isActive && (
-                  <Badge className="absolute top-2 right-2 bg-primary/20 text-primary border-primary/30">
-                    <ShoppingCart className="w-3 h-3 mr-1" /> Panier
-                  </Badge>
-                )}
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Icon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{addon.name}</CardTitle>
-                      <CardDescription className="text-xs">{addon.description}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-foreground">{addon.price.toFixed(2)}€<span className="text-xs text-muted-foreground font-normal">/mois TTC</span></span>
-                    {!isActive && (
-                      <Button
-                        variant={inCart ? "outline" : "default"}
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); toggleCart(addon.id); }}
-                      >
-                        {inCart ? <><X className="w-3 h-3 mr-1" /> Retirer</> : 'Ajouter'}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Capacity add-ons */}
-      <div>
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">Augmenter vos limites</h4>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {capacityAddons.map(addon => {
-            const Icon = addon.icon;
-            const inCart = cart.includes(addon.id);
-
-            return (
-              <Card
-                key={addon.id}
-                className={`relative transition-all cursor-pointer hover:shadow-md ${
-                  inCart ? 'ring-2 ring-primary bg-primary/5' : ''
-                }`}
-                onClick={() => toggleCart(addon.id)}
-              >
-                {inCart && (
-                  <Badge className="absolute top-2 right-2 bg-primary/20 text-primary border-primary/30 text-[10px]">
-                    <ShoppingCart className="w-3 h-3 mr-0.5" />
-                  </Badge>
-                )}
-                <CardContent className="pt-4 pb-3 text-center">
-                  <div className="p-2 rounded-lg bg-primary/10 w-fit mx-auto mb-2">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="font-semibold text-sm text-foreground">{addon.name}</p>
-                  <p className="text-lg font-bold text-foreground mt-1">
-                    {addon.price.toFixed(2)}€<span className="text-[10px] text-muted-foreground font-normal">/mois</span>
-                  </p>
-                  <Button
-                    variant={inCart ? "outline" : "default"}
-                    size="sm"
-                    className="mt-2 w-full"
-                    onClick={(e) => { e.stopPropagation(); toggleCart(addon.id); }}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <CreditCard className="w-4 h-4 text-primary" /> Votre forfait : {plan.label}
+        </CardTitle>
+        <CardDescription>{plan.description} — {includedText(plan)}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <PlansOverview current={planKey} appName="OptiFlow" contactUrl="https://opti-group.fr/contact?produit=optiflow" compact />
+        {options.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <h4 className="font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Options à ajouter à votre forfait</h4>
+              <p className="text-xs text-muted-foreground">Prix hors taxes, ajoutés à votre prélèvement mensuel.</p>
+            </div>
+            {sent && <p className="text-sm rounded-lg border border-primary/20 bg-primary/5 p-3">Demande envoyée à OptiGroup. Dès qu'elle est validée, rechargez la page pour accéder aux nouvelles fonctions.</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {options.map((o) => {
+                const owned = isActive(o);
+                const inCart = cart.includes(o.key);
+                return (
+                  <button
+                    key={o.key}
+                    type="button"
+                    disabled={owned}
+                    onClick={() => setCart((c) => (c.includes(o.key) ? c.filter((k) => k !== o.key) : [...c, o.key]))}
+                    className={`text-left rounded-xl border-2 p-4 transition-all ${owned ? 'border-primary/30 bg-primary/5 opacity-80' : inCart ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-border hover:border-primary/40'}`}
                   >
-                    {inCart ? 'Retirer' : 'Ajouter'}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Cart summary */}
-      {cart.length > 0 && (
-        <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <ShoppingCart className="w-5 h-5 text-primary" />
-              <div>
-                <p className="font-semibold text-foreground">{cart.length} module{cart.length > 1 ? 's' : ''} sélectionné{cart.length > 1 ? 's' : ''}</p>
-                <p className="text-xs text-muted-foreground">
-                  {cart.map(id => ADDONS.find(a => a.id === id)?.name).join(', ')}
-                </p>
-              </div>
+                    <div className="flex items-center gap-2">
+                      <h5 className="font-semibold text-sm">{o.label}</h5>
+                      {owned && <Badge className="bg-primary/10 text-primary text-[10px]">Actif</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{o.description}</p>
+                    <div className="mt-2 flex items-center justify-between text-sm">
+                      <span className="font-bold">{eur(o.monthly)} € <span className="text-muted-foreground font-normal text-xs">HT/mois</span></span>
+                      {!owned && <span className={`text-xs ${inCart ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{inCart ? '✓ Sélectionnée' : 'Ajouter'}</span>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-xl font-bold text-foreground">{cartTotal.toFixed(2)}€</p>
-                <p className="text-xs text-muted-foreground">/mois TTC</p>
-              </div>
-              <Button variant="gradient" size="lg" onClick={handleCheckout} disabled={loading}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Envoyer la demande'}
+            {chosen.length > 0 && (
+              <Button onClick={request} className="w-full gap-2" disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                Demander {chosen.length > 1 ? 'ces options' : 'cette option'} ({eur(total)} € HT/mois)
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Success dialog */}
-      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-success" />
-              Demande envoyée à OptiGroup
-            </DialogTitle>
-            <DialogDescription>
-              OptiGroup active les modules demandés et les ajoute à votre prochain prélèvement mensuel. Vous verrez la réponse dans Paramètres, et les modules apparaîtront après un rafraîchissement.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="gradient" onClick={() => window.location.reload()}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Fermer et rafraîchir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

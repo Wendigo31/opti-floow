@@ -17,15 +17,15 @@ interface PricingSectionProps {
 
 export default function PricingSection({ onChoosePlan }: PricingSectionProps) {
   return (
-    <section className="w-full max-w-md">
+    <section className="w-full max-w-5xl">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Un forfait unique, tout inclus</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Trois forfaits : Essentiel, Pro et Entreprise</h2>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Toutes les fonctionnalités d'OptiFlow, sans option à choisir.
+          Véhicules et accès au-delà de ceux inclus sont facturés à l'unité. Des options peuvent compléter chaque forfait.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {PUBLIC_PLANS.map((plan) => {
           const Icon = plan.icon;
           const isBest = plan.bestValue;

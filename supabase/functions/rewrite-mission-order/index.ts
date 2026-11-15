@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,8 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const denied = await requirePlanFeature(req, [], corsHeaders);
+  if (denied) return denied;
 
   try {
     const { missionOrder, tourName, driverName, clientName, originAddress, destinationAddress, startTime } = await req.json();

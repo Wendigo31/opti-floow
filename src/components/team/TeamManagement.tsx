@@ -203,11 +203,10 @@ export function TeamManagement() {
         <CardContent>
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Fonctionnalité Pro / Enterprise</h3>
+            <h3 className="text-lg font-medium mb-2">Gestion d'équipe fermée</h3>
             <p className="text-muted-foreground mb-4">
-              La gestion d'équipe multi-utilisateurs est disponible avec les forfaits Pro et Enterprise.
+              La gestion d'équipe n'est pas ouverte pour votre société. Votre Direction peut la demander à OptiGroup depuis Paramètres › Votre forfait.
             </p>
-            <Badge variant="outline">Forfait actuel : OptiFlow</Badge>
           </div>
         </CardContent>
       </Card>

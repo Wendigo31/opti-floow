@@ -200,7 +200,22 @@ export function getVisibleNavCategories(ctx: NavAccessContext): (NavCategoryConf
       ...category,
       pages: category.pages.filter((page) => canSeeNavPage(page, ctx)),
     }))
-    .filter((category) => category.pages.length > 0);
+    .filter((category) => category.pages.length > 0)
+    // Un espace dont toutes les pages propres (absentes des autres espaces) sont fermées n'apporte
+    // rien : « Appels d'offres » sans « Devis par client » en Essentiel, par exemple. Un espace
+    // sans page propre (Géoloc) reste affiché tant qu'il lui reste une page.
+    .filter((category) => {
+      const own = ownPaths(category.id);
+      return own.length === 0 || category.pages.some((page) => own.includes(page.to));
+    });
+}
+
+/** Pages d'un espace qui ne figurent dans aucun autre espace. */
+function ownPaths(categoryId: string): string[] {
+  const category = NAV_CATEGORIES.find((c) => c.id === categoryId);
+  if (!category) return [];
+  const elsewhere = new Set(NAV_CATEGORIES.filter((c) => c.id !== categoryId).flatMap((c) => c.pages.map((p) => p.to)));
+  return category.pages.map((p) => p.to).filter((to) => !elsewhere.has(to));
 }
 
 /** Alias de routes : une même page peut être joignable par plusieurs chemins. */

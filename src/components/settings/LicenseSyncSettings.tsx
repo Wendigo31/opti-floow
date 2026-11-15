@@ -458,7 +458,7 @@ export function LicenseSyncSettings() {
                                 <span className="font-medium text-sm">{feature.label}</span>
                                 {false && (
                                   <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">
-                                    Enterprise
+                                    Entreprise
                                   </Badge>
                                 )}
                                 {false && (

@@ -726,7 +726,7 @@ export default function Drivers() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {!isUnlimited('maxDrivers') && !canAddDriver && (
-            <Button variant="outline" size="sm" onClick={() => navigate('/pricing')} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="gap-2">
               <Sparkles className="w-4 h-4" />
               Débloquer plus de conducteurs
             </Button>

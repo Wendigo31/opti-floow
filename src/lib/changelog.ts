@@ -12,6 +12,19 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.7.0",
+    date: "2026-11-15",
+    title: "Forfaits Essentiel, Pro et Entreprise",
+    changes: [
+      "Paramètres › Votre forfait : votre forfait, les trois forfaits côte à côte et les options à ajouter, avec leur prix",
+      "Page d'activation et présentation : les trois forfaits remplacent l'ancien forfait unique",
+      "Fonctions d'IA protégées : il faut être connecté et les avoir dans son forfait",
+      "L'espace Appels d'offres n'apparaît plus quand son onglet n'est pas dans votre forfait",
+      "Tutoriel adapté à votre forfait : il ne présente que ce qui est ouvert pour vous et dit ce qu'apporte le forfait suivant",
+      "Les boutons « Voir les forfaits » mènent à vos Paramètres (la page n'existait pas)",
+    ],
+  },
+  {
     version: '2.6.1',
     date: '2026-11-14',
     title: "Corrections après l'audit",

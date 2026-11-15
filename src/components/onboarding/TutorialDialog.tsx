@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils';
 import { CATEGORY_ACCENT } from '@/config/categoryAccent';
 import { useVisibleNavigation } from '@/hooks/useVisibleNavigation';
 import type { NavCategoryId } from '@/config/appNavigation';
+import { useLicense } from '@/hooks/useLicense';
+import { planTutorialStep, visibleDetails, type TutorialDetail } from '@/lib/tutorialPlan';
+import { CreditCard } from 'lucide-react';
 
 /**
  * Tutoriel de premier lancement : un pas par espace de l'accueil, dans l'ordre de
@@ -30,42 +33,47 @@ const CATEGORY_TEXT: Record<NavCategoryId, string> = {
   rentabilite: 'Votre marge, en un coup d\'œil.',
 };
 
-const CATEGORY_DETAILS: Record<NavCategoryId, string[]> = {
+const CATEGORY_DETAILS: Record<NavCategoryId, TutorialDetail[]> = {
   exploitation: [
-    'Planning : vos tournées par jour, conducteur et véhicule',
-    'Tournées, création de ligne, itinéraire et calculateur de coût',
-    'Clients avec leur grille tarifaire, et palettes échangées (solde par client)',
-    "Conducteurs : chacun reçoit un lien vers ses tournées du jour, sans mot de passe",
+    ['Planning : vos tournées par jour, conducteur et véhicule', '/planning'],
+    ['Tournées, itinéraire et calculateur de coût', '/tours', '/itinerary', '/calculator'],
+    ['Création de ligne et optimisation des tournées', '/line-montage'],
+    ['Clients avec leur grille tarifaire, et palettes échangées (solde par client)', '/clients', '/pallets'],
+    ["Conducteurs : chacun reçoit un lien vers ses tournées du jour, sans mot de passe", '/drivers'],
   ],
   geoloc: [
-    'Calcul d\'itinéraire poids lourd : ponts bas, restrictions, zones interdites',
-    'Tournées et analyse de vos trajets',
+    ["Calcul d'itinéraire poids lourd : ponts bas, restrictions, zones interdites", '/itinerary'],
+    ['Analyse de vos trajets par IA', '/ai-analysis'],
+    ['Tournées enregistrées', '/tours'],
   ],
   parc: [
-    'Véhicules : suivi, coûts et rapports détaillés',
-    'Conducteurs affectés à chaque véhicule',
-    "Installation de l'application sur téléphone et ordinateur",
+    ['Véhicules : suivi et coûts', '/vehicles'],
+    ['Rapports détaillés par véhicule', '/vehicle-reports'],
+    ['Conducteurs affectés à chaque véhicule', '/drivers'],
+    ["Installation de l'application sur téléphone et ordinateur", '/install'],
   ],
   rh: [
-    'Conducteurs : fiche, coûts, absences, import depuis Excel',
-    'Équipe : invitez vos collaborateurs et choisissez leurs onglets',
-    '« Mes accès » : les onglets ouverts pour votre compte',
+    ['Conducteurs : fiche, coûts, absences, import depuis Excel', '/drivers'],
+    ['Équipe : invitez vos collaborateurs et choisissez leurs onglets', '/team'],
+    ['« Mes accès » : les onglets ouverts pour votre compte', '/my-restrictions'],
   ],
   'appels-offres': [
-    'Devis par client, avec la grille tarifaire appliquée automatiquement',
-    'Lien envoyé au client pour accepter le devis en ligne',
-    'Comparaison avec vos tournées passées',
+    ['Devis par client, avec la grille tarifaire appliquée automatiquement', '/tenders'],
+    ['Lien envoyé au client pour accepter le devis en ligne', '/tenders'],
+    ['Comparaison avec vos tournées passées', '/tours', '/calculator'],
   ],
   comptabilite: [
-    'Facture mensuelle par donneur d\'ordre, à partir des tournées réalisées',
-    'Factures électroniques Factur-X, avoirs, export comptable (FEC), indexation gazole',
-    "Charges fixes, avec import Excel ; votre abonnement OptiGroup y est compté d'office",
-    'Prévisionnel de vos revenus et dépenses',
+    ["Facture mensuelle par donneur d'ordre, à partir des tournées réalisées", '/invoices'],
+    ['Factures électroniques Factur-X, avoirs, export comptable (FEC), indexation gazole', '/invoices'],
+    ["Charges fixes, avec import Excel ; votre abonnement OptiGroup y est compté d'office", '/charges'],
+    ['Prévisionnel de vos revenus et dépenses', '/forecast'],
   ],
   rentabilite: [
-    'Analyse de la marge par tournée, client et période',
-    'Prévisionnel et historique des trajets',
-    'Calculée avec toutes vos charges, abonnement compris',
+    ['Analyse de la marge par tournée, client et période', '/dashboard'],
+    ['Prévisionnel', '/forecast'],
+    ['Prédictions et analyses par IA', '/ai-analysis'],
+    ['Historique des trajets', '/history'],
+    ['Calculée avec toutes vos charges, abonnement compris', '/charges', '/dashboard'],
   ],
 };
 
@@ -84,6 +92,9 @@ interface TutorialDialogProps {
 
 export function TutorialDialog({ open, onOpenChange }: TutorialDialogProps) {
   const categories = useVisibleNavigation();
+  const { licenseData } = useLicense();
+  const openPaths = new Set(categories.flatMap((c) => c.pages.map((p) => p.to)));
+  const planStep = planTutorialStep(licenseData?.planName, 'OptiFlow', 'Paramètres › Votre forfait');
   const [step, setStep] = useState(0);
 
   const steps: Step[] = [
@@ -102,9 +113,10 @@ export function TutorialDialog({ open, onOpenChange }: TutorialDialogProps) {
       icon: c.icon,
       title: c.label,
       description: CATEGORY_TEXT[c.id],
-      details: CATEGORY_DETAILS[c.id],
+      details: visibleDetails(CATEGORY_DETAILS[c.id], openPaths),
       accent: CATEGORY_ACCENT[c.id],
     })),
+    { icon: CreditCard, ...planStep, accent: BRAND_ACCENT },
     {
       icon: FileSpreadsheet,
       title: 'Importez vos données',

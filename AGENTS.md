@@ -1,5 +1,5 @@
 
-- Single plan: `plan_type` is always `optiflow` (DB CHECK enforces it); legacy values are normalized client- and server-side so old caches never restrict features.
+- Plans: three plans, same names in OptiFlow, OptiFret and OptiXpress — `start` (Essentiel), `pro` (Pro), `enterprise` (Entreprise), set by OptiCentral (`licenses.plan_type`). What each plan opens is applied by the database (`license_features`, `hidden_pages`); the client-side `planType` 'optiflow' is only an internal label. Plan names, content and options shown to users come from `src/lib/planCatalog.ts` (copy of OptiCentral's catalog) — never hard-code plan names, prices or limits elsewhere.
 - Navigation: `src/config/appNavigation.ts` is the single source for authenticated business navigation so desktop, mobile, and home access rules cannot drift.
 
 - Security (open redirect): never pass a path taken from the URL, a query parameter, storage or any user input to `navigate()`, `<Link to>`, `<Navigate to>` or `window.location` without validating it first. Accept only same-origin absolute paths: must start with a single `/`, and must not start with `//` or `/\\` (see `getRedirectTarget` in Globr `src/lib/auth-redirect.ts` for the reference implementation). Fall back to `/` otherwise.

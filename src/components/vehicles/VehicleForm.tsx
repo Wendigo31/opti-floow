@@ -68,9 +68,9 @@ export function VehicleForm({
         <Alert className="border-amber-500/30 bg-amber-500/10">
           <Lock className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-700 dark:text-amber-400">
-            <span className="font-medium">Version Start :</span> Les fonctionnalités avancées (amortissement, entretien, pneus, consommation) sont disponibles avec l'add-on Gestion flotte avancée.{' '}
-            <Button variant="link" className="p-0 h-auto text-amber-600" onClick={() => navigate('/pricing')}>
-              Voir les options →
+            Les fonctionnalités avancées (amortissement, entretien, pneus, consommation) ne sont pas ouvertes pour votre société.{' '}
+            <Button variant="link" className="p-0 h-auto text-amber-600" onClick={() => navigate('/settings')}>
+              Voir votre forfait →
             </Button>
           </AlertDescription>
         </Alert>
@@ -407,7 +407,7 @@ export function VehicleForm({
                   <Lock className="w-8 h-8 text-muted-foreground mx-auto" />
                   <p className="text-sm font-medium">Amortissement</p>
                   <p className="text-xs text-muted-foreground">Add-on Gestion flotte avancée requis</p>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/pricing')}>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
                     <Sparkles className="w-3 h-3 mr-1" />
                     Débloquer
                   </Button>

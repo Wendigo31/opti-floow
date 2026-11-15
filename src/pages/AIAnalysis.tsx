@@ -21,6 +21,7 @@ import { AIAnalysisResultsPanel } from '@/components/ai-analysis/AIAnalysisResul
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { QuoteCalculator } from '@/components/quotes/QuoteCalculator';
 import type { AIResponse, AnalysisMode, Position, StopWaypoint } from '@/types/aiAnalysis';
+import { userAccessToken } from '@/lib/userAccessToken';
 
 // Import itinerary state to get current search
 const ITINERARY_STORAGE_KEY = 'optiflow_itinerary_state';
@@ -330,7 +331,7 @@ export default function AIAnalysis() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${await userAccessToken()}`,
         },
         body: JSON.stringify(requestBody),
       });
