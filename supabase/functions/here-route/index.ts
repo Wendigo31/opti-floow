@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +79,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  // Cartographie : réservée aux utilisateurs connectés (quota des API payantes).
+  const denied = await requirePlanFeature(req, [], corsHeaders);
+  if (denied) return denied;
 
   try {
     const HERE_API_KEY = Deno.env.get('HERE_API_KEY');

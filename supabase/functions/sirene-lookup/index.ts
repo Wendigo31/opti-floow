@@ -1,3 +1,4 @@
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 // Lovable Cloud Edge Function: sirene-lookup
 // Looks up company information from SIRET/SIREN using the French government's open API
 
@@ -51,6 +52,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Cartographie : réservée aux utilisateurs connectés (quota des API payantes).
+  const denied = await requirePlanFeature(req, [], corsHeaders);
+  if (denied) return denied;
 
   try {
     if (req.method !== 'POST') {

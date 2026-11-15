@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.7.1",
+    date: "2026-11-15",
+    title: "Sécurité des cartes",
+    changes: [
+      "Cartes, itinéraires, péages et recherche d'adresses réservés aux utilisateurs connectés",
+    ],
+  },
+  {
     version: "2.7.0",
     date: "2026-11-15",
     title: "Forfaits Essentiel, Pro et Entreprise",
