@@ -446,6 +446,44 @@ export type Database = {
           },
         ]
       }
+      client_rate_cards: {
+        Row: {
+          card: Json
+          client_id: string
+          created_at: string
+          id: string
+          license_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          card: Json
+          client_id: string
+          created_at?: string
+          id?: string
+          license_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          card?: Json
+          client_id?: string
+          created_at?: string
+          id?: string
+          license_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_rate_cards_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -874,6 +912,41 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_access_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          last_used_at: string | null
+          license_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          last_used_at?: string | null
+          license_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          last_used_at?: string | null
+          license_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_access_links_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exploitation_metric_settings: {
         Row: {
           can_view_dashboard_financials: boolean | null
@@ -985,6 +1058,160 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "favorite_addresses_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_settings: {
+        Row: {
+          fuel: Json
+          issuer: Json
+          license_id: string
+          updated_at: string
+        }
+        Insert: {
+          fuel?: Json
+          issuer?: Json
+          license_id: string
+          updated_at?: string
+        }
+        Update: {
+          fuel?: Json
+          issuer?: Json
+          license_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_settings_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: true
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_ht: number
+          cancelled_at: string | null
+          client: Json
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_of: string | null
+          credit_reason: string | null
+          due_date: string | null
+          fuel_amount: number
+          id: string
+          issue_date: string | null
+          kind: string
+          last_reminder_at: string | null
+          license_id: string
+          lines: Json
+          notes: string | null
+          number: string | null
+          paid_at: string | null
+          payment_terms_days: number
+          period_end: string | null
+          period_start: string | null
+          reminder_count: number
+          sent_at: string | null
+          status: string
+          tax_amount: number
+          tax_rate: number
+          total_ttc: number
+          updated_at: string
+        }
+        Insert: {
+          amount_ht?: number
+          cancelled_at?: string | null
+          client?: Json
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_of?: string | null
+          credit_reason?: string | null
+          due_date?: string | null
+          fuel_amount?: number
+          id?: string
+          issue_date?: string | null
+          kind?: string
+          last_reminder_at?: string | null
+          license_id: string
+          lines?: Json
+          notes?: string | null
+          number?: string | null
+          paid_at?: string | null
+          payment_terms_days?: number
+          period_end?: string | null
+          period_start?: string | null
+          reminder_count?: number
+          sent_at?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+          total_ttc?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_ht?: number
+          cancelled_at?: string | null
+          client?: Json
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_of?: string | null
+          credit_reason?: string | null
+          due_date?: string | null
+          fuel_amount?: number
+          id?: string
+          issue_date?: string | null
+          kind?: string
+          last_reminder_at?: string | null
+          license_id?: string
+          lines?: Json
+          notes?: string | null
+          number?: string | null
+          paid_at?: string | null
+          payment_terms_days?: number
+          period_end?: string | null
+          period_start?: string | null
+          reminder_count?: number
+          sent_at?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+          total_ttc?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_credit_of_fkey"
+            columns: ["credit_of"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
@@ -1234,6 +1461,7 @@ export type Database = {
           siren: string | null
           siret: string | null
           slug: string | null
+          storage_folder: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
@@ -1287,6 +1515,7 @@ export type Database = {
           siren?: string | null
           siret?: string | null
           slug?: string | null
+          storage_folder?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
@@ -1340,6 +1569,7 @@ export type Database = {
           siren?: string | null
           siret?: string | null
           slug?: string | null
+          storage_folder?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
@@ -1387,6 +1617,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_lookup_attempts: {
+        Row: {
+          at: string
+          key: string
+        }
+        Insert: {
+          at?: string
+          key: string
+        }
+        Update: {
+          at?: string
+          key?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -1436,6 +1681,117 @@ export type Database = {
         }
         Relationships: []
       }
+      opti_company_preferences: {
+        Row: {
+          license_id: string
+          updated_at: string
+          updated_by: string | null
+          vat_rate: number
+        }
+        Insert: {
+          license_id: string
+          updated_at?: string
+          updated_by?: string | null
+          vat_rate?: number
+        }
+        Update: {
+          license_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opti_company_preferences_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: true
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opti_member_preferences: {
+        Row: {
+          license_id: string
+          member_id: string
+          notify_team_changes: boolean
+          tutorial_seen: string | null
+          updated_at: string
+        }
+        Insert: {
+          license_id: string
+          member_id: string
+          notify_team_changes?: boolean
+          tutorial_seen?: string | null
+          updated_at?: string
+        }
+        Update: {
+          license_id?: string
+          member_id?: string
+          notify_team_changes?: boolean
+          tutorial_seen?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opti_member_preferences_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opti_team_activity: {
+        Row: {
+          action: string
+          actor_name: string
+          created_at: string
+          entity: string
+          entity_label: string | null
+          fields: string[]
+          id: number
+          license_id: string
+          member_id: string | null
+          row_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          actor_name: string
+          created_at?: string
+          entity: string
+          entity_label?: string | null
+          fields?: string[]
+          id?: never
+          license_id: string
+          member_id?: string | null
+          row_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          actor_name?: string
+          created_at?: string
+          entity?: string
+          entity_label?: string | null
+          fields?: string[]
+          id?: never
+          license_id?: string
+          member_id?: string | null
+          row_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opti_team_activity_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_usage: {
         Row: {
           first_visited_at: string
@@ -1461,6 +1817,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "page_usage_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pallet_movements: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          given: number
+          id: string
+          license_id: string
+          movement_date: string
+          note: string | null
+          pallet_type: string
+          reference: string | null
+          returned: number
+          site: string | null
+          source: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          given?: number
+          id?: string
+          license_id: string
+          movement_date?: string
+          note?: string | null
+          pallet_type?: string
+          reference?: string | null
+          returned?: number
+          site?: string | null
+          source?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          given?: number
+          id?: string
+          license_id?: string
+          movement_date?: string
+          note?: string | null
+          pallet_type?: string
+          reference?: string | null
+          returned?: number
+          site?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pallet_movements_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
@@ -2048,6 +2460,21 @@ export type Database = {
           },
         ]
       }
+      storage_export_settings: {
+        Row: {
+          id: number
+          token_hash: string
+        }
+        Insert: {
+          id?: number
+          token_hash: string
+        }
+        Update: {
+          id?: number
+          token_hash?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           author: string | null
@@ -2316,6 +2743,7 @@ export type Database = {
           created_at: string
           id: string
           is_ht: boolean | null
+          is_system: boolean
           license_id: string | null
           local_id: string
           name: string
@@ -2331,6 +2759,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_ht?: boolean | null
+          is_system?: boolean
           license_id?: string | null
           local_id: string
           name: string
@@ -2346,6 +2775,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_ht?: boolean | null
+          is_system?: boolean
           license_id?: string | null
           local_id?: string
           name?: string
@@ -2854,8 +3284,24 @@ export type Database = {
         Args: { p_expires: string; p_issued: string; p_kind: string }
         Returns: string
       }
+      _company_export: { Args: { p_license_id: string }; Returns: Json }
+      _company_storage_objects: {
+        Args: { p_license_id: string }
+        Returns: {
+          bucket_id: string
+          created_at: string
+          mime: string
+          name: string
+          size: number
+        }[]
+      }
       _company_temp_password: {
         Args: { p_company_user_id: string }
+        Returns: string
+      }
+      _flow_can_invoice: { Args: { p_license: string }; Returns: boolean }
+      _flow_next_number: {
+        Args: { p_license: string; p_prefix: string }
         Returns: string
       }
       _is_last_direction: {
@@ -2863,7 +3309,34 @@ export type Database = {
         Returns: boolean
       }
       _my_role_in: { Args: { p_license_id: string }; Returns: string }
+      _opti_changed_fields: { Args: { n: Json; o: Json }; Returns: string[] }
+      _opti_export: { Args: { p_license: string }; Returns: Json }
+      _opti_me: {
+        Args: never
+        Returns: {
+          email: string
+          license_id: string
+          member_id: string
+          name: string
+          role: string
+        }[]
+      }
+      _opti_row_label: { Args: { j: Json }; Returns: string }
+      _opti_strip_secrets: { Args: { j: Json }; Returns: Json }
       _plan_cfg: { Args: never; Returns: Json }
+      _storage_export_targets: {
+        Args: never
+        Returns: {
+          bucket: string
+          folder: string
+          license_id: string
+        }[]
+      }
+      _storage_export_token_ok: { Args: { p_token: string }; Returns: boolean }
+      _sync_subscription_charge: {
+        Args: { p_license: string }
+        Returns: undefined
+      }
       _team_guard: { Args: { p_company_user_id: string }; Returns: string }
       active_announcements: { Args: { p_license_id: string }; Returns: Json }
       admin_add_company_user: {
@@ -2918,6 +3391,14 @@ export type Database = {
       }
       central_documents: {
         Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      central_files: {
+        Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      central_forgot_password: {
+        Args: { p_payload: Json; p_secret: string }
         Returns: Json
       }
       central_support_session: {
@@ -2981,9 +3462,65 @@ export type Database = {
         Args: { p_message?: string; p_requested_features: string[] }
         Returns: string
       }
+      create_credit_note: {
+        Args: { p_amount_ht?: number; p_invoice: string; p_reason: string }
+        Returns: {
+          amount_ht: number
+          cancelled_at: string | null
+          client: Json
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_of: string | null
+          credit_reason: string | null
+          due_date: string | null
+          fuel_amount: number
+          id: string
+          issue_date: string | null
+          kind: string
+          last_reminder_at: string | null
+          license_id: string
+          lines: Json
+          notes: string | null
+          number: string | null
+          paid_at: string | null
+          payment_terms_days: number
+          period_end: string | null
+          period_start: string | null
+          reminder_count: number
+          sent_at: string | null
+          status: string
+          tax_amount: number
+          tax_rate: number
+          total_ttc: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_company_driver: {
         Args: { p_license_id: string; p_local_id: string }
         Returns: boolean
+      }
+      driver_access_link: {
+        Args: { p_driver_id: string; p_reset?: boolean }
+        Returns: string
+      }
+      driver_day: { Args: { p_date?: string; p_token: string }; Returns: Json }
+      driver_update_tour: {
+        Args: {
+          p_entry: string
+          p_note?: string
+          p_pallets_given?: number
+          p_pallets_returned?: number
+          p_status: string
+          p_token: string
+        }
+        Returns: Json
       }
       flow_license_payload: { Args: { p_license_id: string }; Returns: Json }
       forgot_password_issue: { Args: { p_login: string }; Returns: Json }
@@ -3161,6 +3698,7 @@ export type Database = {
         }[]
       }
       get_user_license_id: { Args: { p_user_id: string }; Returns: string }
+      get_user_storage_folder: { Args: never; Returns: string }
       is_any_direction: { Args: { p_user_id: string }; Returns: boolean }
       is_company_admin: {
         Args: { p_license_id: string; p_user_id: string }
@@ -3182,12 +3720,87 @@ export type Database = {
         Args: { p_license_id: string; p_user_id: string }
         Returns: boolean
       }
+      issue_invoice: {
+        Args: { p_id: string }
+        Returns: {
+          amount_ht: number
+          cancelled_at: string | null
+          client: Json
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_of: string | null
+          credit_reason: string | null
+          due_date: string | null
+          fuel_amount: number
+          id: string
+          issue_date: string | null
+          kind: string
+          last_reminder_at: string | null
+          license_id: string
+          lines: Json
+          notes: string | null
+          number: string | null
+          paid_at: string | null
+          payment_terms_days: number
+          period_end: string | null
+          period_start: string | null
+          reminder_count: number
+          sent_at: string | null
+          status: string
+          tax_amount: number
+          tax_rate: number
+          total_ttc: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       license_has_members: { Args: { p_license_id: string }; Returns: boolean }
       link_user_to_company: {
         Args: { p_company_user_id: string; p_user_id: string }
         Returns: boolean
       }
       my_companies: { Args: never; Returns: Json }
+      opti_export_company: { Args: never; Returns: Json }
+      opti_get_settings: { Args: never; Returns: Json }
+      opti_set_member_preferences: { Args: { p_prefs: Json }; Returns: Json }
+      opti_set_vat_rate: { Args: { p_rate: number }; Returns: number }
+      opti_team_activity: {
+        Args: { p_limit?: number; p_member?: string; p_since?: string }
+        Returns: {
+          action: string
+          actor_name: string
+          created_at: string
+          entity: string
+          entity_label: string | null
+          fields: string[]
+          id: number
+          license_id: string
+          member_id: string | null
+          row_key: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "opti_team_activity"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      opti_team_members: {
+        Args: never
+        Returns: {
+          is_me: boolean
+          member_id: string
+          name: string
+          role: string
+        }[]
+      }
       pick_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
       plan_features_of: { Args: { p_license_id: string }; Returns: Json }
       process_access_request: {
@@ -3207,6 +3820,17 @@ export type Database = {
         }[]
       }
       resolve_login: { Args: { p_login: string }; Returns: string }
+      resolve_login_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          name: string
+          slug: string
+        }[]
+      }
+      storage_folder_base: {
+        Args: { p_id: string; p_name: string; p_slug: string }
+        Returns: string
+      }
       strip_driver_salary_keys: { Args: { p_data: Json }; Returns: Json }
       support_create: {
         Args: {
