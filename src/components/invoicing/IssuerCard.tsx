@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,15 +26,31 @@ export function IssuerCard({ issuer, onSave }: IssuerCardProps) {
   const set = <K extends keyof InvoiceIssuer>(key: K, value: InvoiceIssuer[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const prefill = () => {
+  const prefill = async () => {
+    // Téléphone et email de la société : lus sur la licence (ils n'étaient pas repris).
+    let lic: { company_phone: string | null; company_email: string | null } | null = null;
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth?.user) {
+        const { data } = await supabase
+          .from("licenses")
+          .select("company_phone, company_email")
+          .limit(1)
+          .maybeSingle();
+        lic = data as typeof lic;
+      }
+    } catch {
+      lic = null;
+    }
     setForm((prev) => ({
       ...prev,
+      phone: lic?.company_phone || prev.phone,
       companyName: licenseData?.companyName || prev.companyName,
       siren: licenseData?.siren || prev.siren,
       addressStreet: licenseData?.address || prev.addressStreet,
       addressPostalCode: licenseData?.postalCode || prev.addressPostalCode,
       addressCity: licenseData?.city || prev.addressCity,
-      email: licenseData?.email || prev.email,
+      email: lic?.company_email || licenseData?.email || prev.email,
     }));
     toast.success("Informations de la société reprises");
   };

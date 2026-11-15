@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -412,7 +413,7 @@ export default function Planning() {
   const getClientName = useCallback((clientId: string | null) => {
     if (!clientId) return null;
     const client = clients.find(c => c.id === clientId);
-    return client?.name || client?.company || null;
+    return clientLabel(client) || null;
   }, [clients]);
 
   // Build traction groups

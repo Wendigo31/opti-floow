@@ -1,3 +1,4 @@
+import { clientLabel, clientSublabel } from '@/lib/clientLabel';
 import { useState, useMemo } from 'react';
 import { Save, Loader2, MapPin, Route, Euro, Users, Truck, Container } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -324,7 +325,7 @@ export function SaveItineraryDialog({
                   <SelectItem value="">Aucun client</SelectItem>
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name} {client.company ? `(${client.company})` : ''}
+                      {clientLabel(client)}{clientSublabel(client) ? ` (${clientSublabel(client)})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,3 +1,4 @@
+import { clientLabel, clientSublabel } from '@/lib/clientLabel';
 import { useEffect, useState } from 'react';
 import { 
   Save, 
@@ -77,6 +78,10 @@ export function SaveTourDialog({
   const [notes, setNotes] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  // Adresses à saisir quand la tournée vient du calculateur (qui n'en a pas).
+  const needsAddresses = !tourData.origin_address && !tourData.destination_address;
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
 
   // La fenêtre est montée avant que l'on choisisse véhicule et conducteurs dans le calculateur :
   // on reprend la sélection du moment à chaque ouverture (sinon la tournée était enregistrée
@@ -129,6 +134,7 @@ export function SaveTourDialog({
 
     await onSave({
       ...tourData,
+      ...(needsAddresses ? { origin_address: origin.trim(), destination_address: destination.trim() } : {}),
       name: name.trim(),
       client_id: clientId || null,
       vehicle_id: primaryVehicleId,
@@ -184,7 +190,9 @@ export function SaveTourDialog({
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" />
                 <span className="text-muted-foreground truncate">
-                  {tourData.origin_address} → {tourData.destination_address}
+                  {needsAddresses
+                    ? (origin || destination ? `${origin || '?'} → ${destination || '?'}` : 'Trajet du calculateur')
+                    : `${tourData.origin_address} → ${tourData.destination_address}`}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
@@ -208,6 +216,19 @@ export function SaveTourDialog({
               />
             </div>
 
+            {needsAddresses && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="tour-origin">Départ (facultatif)</Label>
+                  <Input id="tour-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Ex : Toulouse" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tour-destination">Arrivée (facultatif)</Label>
+                  <Input id="tour-destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Ex : Lyon" />
+                </div>
+              </div>
+            )}
+
             {/* Client selection */}
             <div className="space-y-2">
               <Label htmlFor="tour-client" className="flex items-center gap-2">
@@ -219,8 +240,8 @@ export function SaveTourDialog({
                 onValueChange={(val) => setClientId(val || '')}
                 options={clients.filter(c => c.id).map((client) => ({
                   value: client.id,
-                  label: client.name,
-                  sublabel: client.company || undefined,
+                  label: clientLabel(client),
+                  sublabel: clientSublabel(client),
                 }))}
                 placeholder="Sélectionnez un client (optionnel)"
                 emptyLabel="Aucun client"

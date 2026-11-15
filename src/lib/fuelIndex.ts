@@ -13,9 +13,11 @@ export interface FuelIndexSettings {
   refIndex: number | null;
   /** Indice CNR du mois facturé. */
   currentIndex: number | null;
+  /** Ajustement du prix du gazole propre à la société, en €/L HT (+ ou −), ajouté au prix officiel relevé en direct. */
+  priceAdjust?: number;
 }
 
-export const DEFAULT_FUEL_INDEX: FuelIndexSettings = { enabled: false, sharePct: 25, refIndex: null, currentIndex: null };
+export const DEFAULT_FUEL_INDEX: FuelIndexSettings = { enabled: false, sharePct: 25, refIndex: null, currentIndex: null, priceAdjust: 0 };
 
 export function fuelSurcharge(amountHT: number, s: FuelIndexSettings): number {
   if (!s.enabled || !s.refIndex || !s.currentIndex) return 0;

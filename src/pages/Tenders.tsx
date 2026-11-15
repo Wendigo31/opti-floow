@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useMemo, useState } from 'react';
 import { FileText, Plus, Trash2, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,7 +45,7 @@ export default function Tenders() {
   const [calcKey, setCalcKey] = useState(0);
   const [sendingLinkId, setSendingLinkId] = useState<string | null>(null);
 
-  const clientName = (id: string | null) => clients.find((c) => c.id === id)?.name ?? 'Sans client';
+  const clientName = (id: string | null) => clientLabel(clients.find((c) => c.id === id)) || 'Sans client';
   const clientEmail = (id: string | null) => clients.find((c) => c.id === id)?.email ?? null;
 
   // Lien public d'acceptation de devis (remplace le changement de statut
@@ -130,7 +131,7 @@ export default function Tenders() {
           <SelectTrigger className="w-64"><SelectValue placeholder="Client" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les clients</SelectItem>
-            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Button onClick={() => { setForm({ ...emptyForm, client_id: clientFilter === 'all' ? '' : clientFilter }); setOpen(true); }}>
@@ -206,7 +207,7 @@ export default function Tenders() {
             <div><Label>Client</Label>
               <Select value={form.client_id} onValueChange={(v) => setForm({ ...form, client_id: v, tour_id: '' })}>
                 <SelectTrigger><SelectValue placeholder="Choisir un client" /></SelectTrigger>
-                <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>À partir d'une tournée (coût recalculé)</Label>

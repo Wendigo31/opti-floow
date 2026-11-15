@@ -1,3 +1,4 @@
+import { clientLabel, clientSublabel } from '@/lib/clientLabel';
 import { useState, useEffect, useMemo } from 'react';
 import {
   Pencil,
@@ -283,8 +284,8 @@ export function EditTourDialog({
                   onValueChange={(val) => setClientId(val || '')}
                   options={clients.filter(c => c.id).map((client) => ({
                     value: client.id,
-                    label: client.name,
-                    sublabel: client.company || undefined,
+                    label: clientLabel(client),
+                    sublabel: clientSublabel(client),
                   }))}
                   placeholder="Sélectionnez un client"
                   emptyLabel="Aucun client"

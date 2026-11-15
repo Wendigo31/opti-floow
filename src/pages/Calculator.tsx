@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useDieselPrice } from '@/hooks/useDieselPrice';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
@@ -256,7 +257,26 @@ export default function Calculator() {
   };
 
   // Fetch current fuel price based on vehicle type
+  // Gazole : prix HT officiel en direct + ajustement de la société, appliqué à l'ouverture.
+  const diesel = useDieselPrice();
+  const dieselApplied = useRef(false);
+  useEffect(() => {
+    if (dieselApplied.current || currentFuelType !== 'diesel' || diesel.effectiveHT == null) return;
+    dieselApplied.current = true;
+    setVehicle(prev => ({ ...prev, fuelPriceHT: diesel.effectiveHT as number, fuelPriceIsHT: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diesel.effectiveHT, currentFuelType]);
+
   const handleFetchFuelPrice = async () => {
+    if (currentFuelType === 'diesel') {
+      const { data: ht } = await diesel.refetch();
+      if (ht != null) {
+        const eff = Math.max(0, Math.round((ht + diesel.adjust) * 1000) / 1000);
+        setVehicle(prev => ({ ...prev, fuelPriceHT: eff, fuelPriceIsHT: true }));
+        toast.success(`Gazole : ${eff.toFixed(3)} €/L HT${diesel.adjust ? ` (officiel ${ht.toFixed(3)} ${diesel.adjust > 0 ? '+' : '−'} ${Math.abs(diesel.adjust).toFixed(3)})` : ' (moyenne nationale)'}`);
+      }
+      return;
+    }
     const priceTTC = await fetchFuelPrice(currentFuelType);
     if (priceTTC) {
       // Set as TTC and let user toggle
@@ -372,8 +392,10 @@ export default function Calculator() {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         tourData={{
-          origin_address: 'Adresse de départ (calculateur)',
-          destination_address: 'Adresse d\'arrivée (calculateur)',
+          // Le calculateur n'a pas d'adresses : elles se saisissent dans la fenêtre d'enregistrement
+          // (avant, des libellés fictifs étaient enregistrés dans l'historique).
+          origin_address: '',
+          destination_address: '',
           stops: [],
           distance_km: trip.distance,
           duration_minutes: 0,
@@ -403,10 +425,8 @@ export default function Calculator() {
         onSave={async (input) => {
           setSaving(true);
           try {
-            const result = await saveTour(input);
-            if (result) {
-              toast.success('Tournée sauvegardée ! Retrouvez-la dans l\'onglet Tournées.');
-            }
+            // Le message de confirmation est affiché par saveTour (il apparaissait deux fois).
+            await saveTour(input);
           } finally {
             setSaving(false);
           }

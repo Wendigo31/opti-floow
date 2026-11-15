@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useState, useEffect } from 'react';
 import { useSavedTours } from '@/hooks/useSavedTours';
 import { useDriverAbsences } from '@/hooks/useDriverAbsences';
@@ -358,7 +359,7 @@ import { Plus, UserPlus, Save, FileText, ChevronDown, Loader2, AlertTriangle } f
                     <SelectItem value="none">Aucun</SelectItem>
                    {clients.map((client) => (
                      <SelectItem key={client.id} value={client.id}>
-                       {client.name}
+                       {clientLabel(client)}
                      </SelectItem>
                    ))}
                  </SelectContent>

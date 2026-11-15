@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Button } from '@/components/ui/button';
@@ -46,7 +47,7 @@ export function PlanningFilters({
       <SearchableSelect
         value={selectedClient || ''}
         onValueChange={v => onClientChange(v || null)}
-        options={clients.map(c => ({ value: c.id, label: c.name }))}
+        options={clients.map(c => ({ value: c.id, label: clientLabel(c) }))}
         placeholder="Client"
         emptyLabel="Tous les clients"
         searchPlaceholder="Rechercher un client..."

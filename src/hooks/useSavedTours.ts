@@ -231,7 +231,7 @@ export function useSavedTours() {
 
       const newTour = mapDbToSavedTour(data);
       setTours(prev => [newTour, ...prev]);
-      toast.success('Tournée sauvegardée avec succès');
+      toast.success('Tournée sauvegardée ! Retrouvez-la dans l\'onglet Tournées.');
       return newTour;
     } catch (error) {
       console.error('Error saving tour:', error);

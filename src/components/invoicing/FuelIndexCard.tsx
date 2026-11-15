@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useDieselPrice } from "@/hooks/useDieselPrice";
 import { useEffect, useState } from "react";
 import { Fuel, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +18,8 @@ import { fuelSurcharge, type FuelIndexSettings } from "@/lib/fuelIndex";
  */
 export function FuelIndexCard({ value, onSave }: { value: FuelIndexSettings; onSave: (v: FuelIndexSettings) => void }) {
   const [form, setForm] = useState(value);
+  const diesel = useDieselPrice();
+  const qc = useQueryClient();
   useEffect(() => setForm(value), [value]);
   const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
   const example = fuelSurcharge(1000, { ...form, enabled: true });
@@ -40,6 +44,23 @@ export function FuelIndexCard({ value, onSave }: { value: FuelIndexSettings; onS
           />
         </div>
       </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label>Prix officiel du jour (HT)</Label>
+            <p className="h-10 rounded-md border bg-muted/40 px-3 py-2 text-sm">{diesel.officialHT != null ? `${diesel.officialHT.toFixed(3)} €/L` : "—"}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="fuel-adjust">Votre ajustement (+ ou −, €/L)</Label>
+            <Input id="fuel-adjust" inputMode="decimal" value={form.priceAdjust ?? 0} onChange={(e) => setForm({ ...form, priceAdjust: num(e.target.value) ?? 0 })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Prix utilisé dans vos calculs</Label>
+            <p className="h-10 rounded-md border bg-primary/5 px-3 py-2 text-sm font-semibold">{diesel.officialHT != null ? `${Math.max(0, diesel.officialHT + (Number(form.priceAdjust) || 0)).toFixed(3)} €/L HT` : "—"}</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Le prix moyen national HT est relevé automatiquement. Ajoutez ou retirez la différence avec votre prix réel (remboursement de taxe sur le gazole, remise carte carburant, cuve…) : elle s'applique au calculateur et à vos coûts.</p>
+      </CardContent>
       {form.enabled && (
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
@@ -68,7 +89,8 @@ export function FuelIndexCard({ value, onSave }: { value: FuelIndexSettings; onS
           className="gap-2"
           onClick={() => {
             onSave(form);
-            toast.success("Indexation gazole enregistrée");
+            qc.invalidateQueries({ queryKey: ["diesel-adjust"] });
+            toast.success("Gazole enregistré");
           }}
         >
           <Save className="h-4 w-4" />

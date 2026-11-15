@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import {
   Navigation,
   Loader2,
@@ -239,7 +240,7 @@ export function ItineraryRouteForm({
           <SearchableSelect
             value={selectedClientId || ''}
             onValueChange={(v) => setSelectedClientId(v || null)}
-            options={clients.map(c => ({ value: c.id, label: c.name }))}
+            options={clients.map(c => ({ value: c.id, label: clientLabel(c) }))}
             placeholder="Client"
             emptyLabel="Aucun"
             searchPlaceholder="Rechercher un client..."

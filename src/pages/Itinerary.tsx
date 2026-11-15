@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Navigation,
@@ -846,7 +847,7 @@ export default function Itinerary() {
               <SearchableSelect
                 value={saveFormData.selectedClientId}
                 onValueChange={(v) => setSaveFormData(prev => ({ ...prev, selectedClientId: v }))}
-                options={clients.map(c => ({ value: c.id, label: c.name }))}
+                options={clients.map(c => ({ value: c.id, label: clientLabel(c) }))}
                 placeholder="Sélectionner un client"
                 searchPlaceholder="Rechercher un client..."
               />

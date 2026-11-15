@@ -207,7 +207,7 @@ describe('useSavedTours', () => {
       expect(h.fromMock).toHaveBeenCalledWith('saved_tours');
       expect(h.insertMock).toHaveBeenCalled();
       expect(savedTour).not.toBeNull();
-      expect(toast.success).toHaveBeenCalledWith('Tournée sauvegardée avec succès');
+      expect(toast.success).toHaveBeenCalledWith('Tournée sauvegardée ! Retrouvez-la dans l\'onglet Tournées.');
       expect(result.current.tours.length).toBeGreaterThan(0);
     });
   });

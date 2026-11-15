@@ -12,6 +12,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.8.0",
+    date: "2026-11-15",
+    title: "Gazole, clients et calculateur",
+    changes: [
+      "Prix du gazole : prix HT officiel relevé en direct, plus votre ajustement en + ou en − (Factures › Indexation gazole), appliqué dès l'ouverture du calculateur",
+      "Calculateur : départ et arrivée à saisir (facultatifs) en enregistrant la tournée, au lieu d'adresses fictives",
+      "Le message de confirmation ne s'affiche plus deux fois en enregistrant une tournée",
+      "Un client s'affiche partout de la même façon : sa société, puis le nom du contact",
+      "Factures : le téléphone et l'email de la société sont repris avec les autres informations",
+    ],
+  },
+  {
     version: "2.7.1",
     date: "2026-11-15",
     title: "Sécurité des cartes",

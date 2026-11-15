@@ -1,3 +1,4 @@
+import { clientLabel, clientSublabel } from '@/lib/clientLabel';
 import '@/lib/jspdfFrenchSpaces';
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -1052,8 +1053,8 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                 onValueChange={setDuplicateTargetClientId}
                 options={clients.filter(c => c.id !== client.id).map(c => ({
                   value: c.id,
-                  label: c.name,
-                  sublabel: c.company || undefined,
+                  label: clientLabel(c),
+                  sublabel: clientSublabel(c),
                 }))}
                 placeholder="Choisir un client"
                 emptyLabel="Aucun"

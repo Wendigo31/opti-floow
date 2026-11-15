@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,7 +155,7 @@ export default function TripHistory() {
 
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
-    return clients.find(c => c.id === clientId)?.name;
+    return clientLabel(clients.find(c => c.id === clientId));
   };
 
   const getDriverNames = (driversData: any[] | null) => {
@@ -224,7 +225,7 @@ export default function TripHistory() {
           <SearchableSelect
             value={clientFilter === 'all' ? '' : clientFilter}
             onValueChange={(v) => setClientFilter(v || 'all')}
-            options={clients.map(c => ({ value: c.id, label: c.name }))}
+            options={clients.map(c => ({ value: c.id, label: clientLabel(c) }))}
             placeholder="Filtrer par client"
             emptyLabel="Tous les clients"
             searchPlaceholder="Rechercher un client..."

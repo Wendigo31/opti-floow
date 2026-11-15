@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useMemo, useState } from 'react';
 import { Boxes, Download, Plus, Smartphone, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -99,7 +100,7 @@ export function PalletsPanel({ licenseId, clients }: { licenseId: string | null 
             <SelectTrigger className="w-56" aria-label="Filtrer par client"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Tous les clients</SelectItem>
-              {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {clients.map((c) => <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>)}
             </SelectContent>
           </Select>
         </CardHeader>

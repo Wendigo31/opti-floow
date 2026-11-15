@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -130,7 +131,7 @@ export function PlanningRowDetailPanel({
 
   const clientName = useMemo(() => {
     const c = clients.find(c => c.id === clientId);
-    return c?.name || '';
+    return clientLabel(c);
   }, [clients, clientId]);
 
   const driverName = useMemo(() => {
@@ -379,7 +380,7 @@ export function PlanningRowDetailPanel({
               <SelectTrigger><SelectValue placeholder="Client" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">Aucun</SelectItem>
-                {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { currentTargetMargin } from '@/components/opti-settings/targetMargin';
 import '@/lib/jspdfFrenchSpaces';
 import { useState, useMemo, useCallback } from 'react';
@@ -321,7 +322,7 @@ export default function Forecast() {
                 <SelectContent>
                   <SelectItem value="all">Tous les clients</SelectItem>
                   {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

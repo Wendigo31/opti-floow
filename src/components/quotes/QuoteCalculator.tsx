@@ -1,3 +1,4 @@
+import { clientLabel } from '@/lib/clientLabel';
 import { useEffect, useMemo, useState } from 'react';
 import { useCompanyVatRate } from '@/components/opti-settings/useCompanyVat';
 import { useTargetMargin } from '@/components/opti-settings/targetMargin';
@@ -124,7 +125,7 @@ export function QuoteCalculator({ initial, onSaved }: { initial?: QuoteCalculato
         <div><Label>Client</Label>
           <Select value={clientId} onValueChange={setClientId}>
             <SelectTrigger><SelectValue placeholder="Choisir un client" /></SelectTrigger>
-            <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{clientLabel(c)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-3">
