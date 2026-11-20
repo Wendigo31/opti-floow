@@ -12,6 +12,23 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.9.0",
+    date: "2026-11-20",
+    title: "Paie, palettes et navigation",
+    changes: [
+      "Fiches de paie : même écran qu'OptiFret (bulletin par conducteur et par mois, brouillon → validé → PDF), dans RH et Comptabilité",
+      "Itinéraire et Création de ligne réunis dans un seul onglet « Itinéraire & lignes »",
+      "Palettes : stock de la société, « Dispatcher », filtres « Dûes » / « À rendre »",
+      "Véhicules et remorques : tous types de tracteurs, porteurs et remorques, et types sur mesure",
+      "Congés : mettre un conducteur en congés (ou toute autre absence) ne provoque plus d'erreur",
+      "Bouton Accueil en haut de toutes les pages, Paramètres compris",
+      "L'espace « Gestion de rentabilité » s'appelle maintenant « Pilotage »",
+      "Kbis / licence : la fiche société se complète toute seule avec ce que lit l'IA",
+      "Affichage : fenêtres qui défilent, onglets et textes qui ne débordent plus ; l'itinéraire ne recouvre plus l'en-tête",
+      "« Mot de passe oublié » rétabli (nouvelle adresse d'OptiCentral)",
+    ],
+  },
+  {
     version: "2.8.0",
     date: "2026-11-15",
     title: "Gazole, clients et calculateur",
