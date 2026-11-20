@@ -1,6 +1,7 @@
 import { clientLabel } from '@/lib/clientLabel';
 import { useMemo, useState } from 'react';
-import { Boxes, Download, Plus, Smartphone, Trash2 } from 'lucide-react';
+import { Boxes, Download, Plus, Smartphone, Trash2, Warehouse, Send } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
@@ -8,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { usePallets } from '@/hooks/usePallets';
+import { usePallets, usePalletStock } from '@/hooks/usePallets';
 import { PalletMovementDialog } from '@/components/pallets/PalletMovementDialog';
-import { balanceText, palletBalances } from '@/lib/pallets';
+import { PALLET_TYPES, balanceText, palletBalances } from '@/lib/pallets';
 
 const ALL = '__all__';
 const fr = (d?: string | null) => (d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('fr-FR') : '—');
@@ -22,13 +23,34 @@ const fr = (d?: string | null) => (d ? new Date(`${d.slice(0, 10)}T00:00:00`).to
 export function PalletsPanel({ licenseId, clients }: { licenseId: string | null | undefined; clients: { id: string; name: string }[] }) {
   const p = usePallets(licenseId);
   const nameOf = useMemo(() => new Map(clients.map((c) => [c.id, c.name])), [clients]);
+  const st = usePalletStock(licenseId);
   const [filter, setFilter] = useState(ALL);
+  const [side, setSide] = useState<'all' | 'dues' | 'rendre'>('all');
   const [open, setOpen] = useState(false);
+  const [dispatchType, setDispatchType] = useState<string | undefined>();
 
-  const balances = palletBalances(p.moves);
-  const rows = p.moves.filter((m) => filter === ALL || m.client_id === filter);
-  const owed = balances.filter((b) => b.total > 0).reduce((s, b) => s + b.total, 0);
-  const due = balances.filter((b) => b.total < 0).reduce((s, b) => s - b.total, 0);
+  const allBalances = palletBalances(p.moves);
+  // Filtre « Dûes » (les clients nous doivent) / « À rendre » (nous devons au client)
+  const balances = allBalances.filter((b) => side === 'all' || (side === 'dues' ? b.total > 0 : b.total < 0));
+  const sideClients = new Set(balances.map((b) => b.clientId));
+  const rows = p.moves.filter((m) => (filter === ALL || m.client_id === filter) && (side === 'all' || sideClients.has(m.client_id)));
+  // Stock : palettes possédées, chez les clients (dues), à rendre, et au dépôt (possédées − chez les clients + à rendre)
+  const types = Array.from(new Set([...PALLET_TYPES, ...Object.keys(st.stock), ...p.moves.map((m) => m.pallet_type)]));
+  const stockRows = types.map((t) => {
+    const owned = st.stock[t] ?? 0;
+    let out = 0;
+    let toReturn = 0;
+    for (const b of allBalances) {
+      const n = b.byType[t] ?? 0;
+      if (n > 0) out += n;
+      else toReturn -= n;
+    }
+    return { type: t, owned, out, toReturn, depot: owned - out + toReturn };
+  }).filter((r) => r.owned || r.out || r.toReturn || (PALLET_TYPES as readonly string[]).includes(r.type));
+  const owed = allBalances.filter((b) => b.total > 0).reduce((s, b) => s + b.total, 0);
+  const due = allBalances.filter((b) => b.total < 0).reduce((s, b) => s - b.total, 0);
+  const ownedTotal = stockRows.reduce((s, r) => s + r.owned, 0);
+  const depotTotal = stockRows.reduce((s, r) => s + r.depot, 0);
 
   const exportXlsx = () => {
     const wb = XLSX.utils.book_new();
@@ -54,21 +76,75 @@ export function PalletsPanel({ licenseId, clients }: { licenseId: string | null 
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={exportXlsx} disabled={!p.moves.length}><Download className="h-4 w-4" /> Exporter</Button>
-          <Button className="gap-2" onClick={() => setOpen(true)} disabled={!p.available || !clients.length}><Plus className="h-4 w-4" /> Échange de palettes</Button>
+          <Button className="gap-2" onClick={() => { setDispatchType(undefined); setOpen(true); }} disabled={!p.available || !clients.length}><Plus className="h-4 w-4" /> Échange de palettes</Button>
         </div>
       </div>
       {!p.available && <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">La gestion des palettes sera disponible après la prochaine mise à jour de votre espace.</p>}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Palettes dues par vos clients</p><p className="text-2xl font-bold text-amber-600">{owed}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Palettes que vous devez</p><p className="text-2xl font-bold">{due}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Clients avec un solde</p><p className="text-2xl font-bold">{balances.filter((b) => b.total !== 0).length}</p></CardContent></Card>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Stock de la société</p><p className="text-2xl font-bold">{ownedTotal}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Au dépôt</p><p className={`text-2xl font-bold ${depotTotal < 0 ? 'text-destructive' : 'text-emerald-600'}`}>{depotTotal}</p></CardContent></Card>
+        <Card className="cursor-pointer" onClick={() => setSide('dues')}><CardContent className="p-4"><p className="text-xs text-muted-foreground">Dûes par vos clients</p><p className="text-2xl font-bold text-amber-600">{owed}</p></CardContent></Card>
+        <Card className="cursor-pointer" onClick={() => setSide('rendre')}><CardContent className="p-4"><p className="text-xs text-muted-foreground">À rendre</p><p className="text-2xl font-bold text-sky-600">{due}</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Soldes par client</CardTitle>
-          <CardDescription>Cliquez sur un client pour voir ses échanges.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Warehouse className="h-4 w-4 text-primary" /> Stock de palettes</CardTitle>
+          <CardDescription>Saisissez le nombre de palettes que possède la société ; le dépôt se calcule avec les échanges. « Dispatcher » envoie des palettes du stock chez un client.</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto p-0">
+          {!st.available ? (
+            <p className="px-6 pb-6 text-sm text-muted-foreground">Le stock sera disponible après la prochaine mise à jour de votre espace.</p>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Type</TableHead><TableHead className="w-32">Possédées</TableHead><TableHead className="text-right">Chez les clients</TableHead><TableHead className="text-right">À rendre</TableHead><TableHead className="text-right">Au dépôt</TableHead><TableHead /></TableRow></TableHeader>
+              <TableBody>
+                {stockRows.map((r) => (
+                  <TableRow key={r.type}>
+                    <TableCell className="font-medium">{r.type}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        className="h-8 w-24"
+                        aria-label={`Palettes ${r.type} possédées`}
+                        defaultValue={r.owned}
+                        key={`${r.type}-${r.owned}`}
+                        onBlur={(e) => {
+                          const v = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                          if (v !== r.owned) void st.set(r.type, v).then(() => toast.success(`Stock ${r.type} : ${v}`)).catch((err) => toast.error((err as Error).message));
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right text-amber-600">{r.out || '—'}</TableCell>
+                    <TableCell className="text-right text-sky-600">{r.toReturn || '—'}</TableCell>
+                    <TableCell className={`text-right font-semibold ${r.depot < 0 ? 'text-destructive' : ''}`}>{r.depot}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" className="gap-1" disabled={!clients.length || !p.available} onClick={() => { setDispatchType(r.type); setOpen(true); }}>
+                        <Send className="h-3.5 w-3.5" /> Dispatcher
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 pb-3">
+          <div>
+            <CardTitle className="text-base">Soldes par client</CardTitle>
+            <CardDescription>Cliquez sur un client pour voir ses échanges.</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Filtrer les soldes">
+            {([['all', 'Tous'], ['dues', 'Dûes'], ['rendre', 'À rendre']] as const).map(([v, l]) => (
+              <Button key={v} size="sm" variant={side === v ? 'default' : 'outline'} onClick={() => setSide(v)}>{l}</Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {!balances.length ? (
@@ -132,7 +208,8 @@ export function PalletsPanel({ licenseId, clients }: { licenseId: string | null 
 
       <PalletMovementDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(o) => { setOpen(o); if (!o) setDispatchType(undefined); }}
+        defaultPalletType={dispatchType}
         clients={clients}
         defaultClientId={filter === ALL ? undefined : filter}
         onSave={async (m) => {

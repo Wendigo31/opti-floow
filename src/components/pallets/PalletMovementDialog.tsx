@@ -16,6 +16,7 @@ export function PalletMovementDialog({
   clients,
   defaultClientId,
   reference,
+  defaultPalletType,
   onSave,
 }: {
   open: boolean;
@@ -23,6 +24,8 @@ export function PalletMovementDialog({
   clients: { id: string; name: string }[];
   defaultClientId?: string;
   reference?: string;
+  /** Type présélectionné (bouton « Dispatcher » du stock : palettes laissées chez le client). */
+  defaultPalletType?: string;
   onSave: (m: NewPalletMovement) => Promise<void>;
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -31,11 +34,11 @@ export function PalletMovementDialog({
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (open) {
-      setForm({ client_id: defaultClientId ?? '', movement_date: today, pallet_type: 'EUR', given: 0, returned: 0, reference: reference ?? null, site: null, note: null });
+      setForm({ client_id: defaultClientId ?? '', movement_date: today, pallet_type: defaultPalletType ?? 'EUR', given: 0, returned: 0, reference: reference ?? null, site: null, note: null });
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, defaultClientId, reference]);
+  }, [open, defaultClientId, reference, defaultPalletType]);
   const int = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
   const valid = !!form.client_id && (form.given > 0 || form.returned > 0);
 

@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 /** Adresse d'OptiCentral, qui traite les demandes de mot de passe oublié. */
 const CENTRAL_URL = (
-  (import.meta.env.VITE_OPTICENTRAL_URL as string | undefined) || 'https://opti-command-center.lovable.app'
+  (import.meta.env.VITE_OPTICENTRAL_URL as string | undefined) || 'https://opti-central.lovable.app'
 ).replace(/\/+$/, '');
 
 /**

@@ -716,7 +716,7 @@ export default function Itinerary() {
   const hasResults = highwayRoute || nationalRoute;
 
   return (
-    <div className="h-[calc(100vh-80px)] lg:h-[calc(100vh-140px)] -m-4 lg:-m-6 flex flex-col lg:flex-row">
+    <div className="min-h-[calc(100vh-180px)] lg:h-[calc(100vh-200px)] flex flex-col lg:flex-row overflow-hidden rounded-xl border border-border/50">
       {/* Left Panel - Form */}
       <div className="w-full lg:w-[520px] bg-gradient-to-b from-background to-muted/20 border-r border-border/50 flex flex-col">
         {/* Header */}

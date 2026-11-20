@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MemoryRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { LicenseProvider, useLicenseContext } from "./context/LicenseContext";
 import { installCloudStatus } from "@/lib/cloudStatus";
@@ -28,7 +28,7 @@ import { LogoLoader } from '@/components/LogoLoader';
 // Lazy-loaded routes for code-splitting (reduces main bundle size)
 const Index = lazy(() => import("./pages/Index"));
 const CalculatorWithHistory = lazy(() => import("./pages/CalculatorWithHistory"));
-const Itinerary = lazy(() => import("./pages/Itinerary"));
+const Itinerary = lazy(() => import("./pages/ItineraryAndLines"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
 const Charges = lazy(() => import("./pages/Charges"));
@@ -40,7 +40,6 @@ const Forecast = lazy(() => import("./pages/Forecast"));
 const Activation = lazy(() => import("./pages/Activation"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AIAnalysis = lazy(() => import("./pages/AIAnalysis"));
-const LineMontage = lazy(() => import("./pages/LineMontage"));
 const VehicleReports = lazy(() => import("./pages/VehicleReports"));
 const Tours = lazy(() => import("./pages/Tours"));
 const Tenders = lazy(() => import("./pages/Tenders"));
@@ -135,7 +134,7 @@ function LicensedAppContent() {
                   {/* Pricing page removed */}
                   
                   <Route path="/ai-analysis" element={<AIAnalysis />} />
-                  <Route path="/line-montage" element={<LineMontage />} />
+                  <Route path="/line-montage" element={<Navigate to="/itinerary?vue=ligne" replace />} />
                   <Route path="/vehicle-reports" element={<VehicleReports />} />
                   <Route path="/tours" element={<Tours />} />
                   <Route path="/tenders" element={<Tenders />} />

@@ -46,3 +46,41 @@ export function usePallets(licenseId: string | null | undefined) {
     },
   };
 }
+
+/**
+ * Stock de palettes possédées par la société, par type (table pallet_stock).
+ * Ajouté nov. 2026 : savoir ce qui est au dépôt, chez les clients (dues) ou à rendre.
+ */
+export function usePalletStock(licenseId: string | null | undefined) {
+  const qc = useQueryClient();
+  const key = ['pallet-stock', licenseId];
+  const db = supabase as unknown as {
+    from: (t: string) => {
+      select: (c: string) => { eq: (k: string, v: string) => Promise<Res<{ pallet_type: string; quantity: number }[]>> };
+      upsert: (v: Record<string, unknown>) => Promise<Res>;
+    };
+  };
+  const q = useQuery({
+    queryKey: key,
+    enabled: !!licenseId,
+    queryFn: async (): Promise<{ stock: Record<string, number>; available: boolean }> => {
+      const { data, error } = await db.from('pallet_stock').select('pallet_type, quantity').eq('license_id', licenseId as string);
+      if (error) return { stock: {}, available: false };
+      return { stock: Object.fromEntries((data ?? []).map((r) => [r.pallet_type, r.quantity])), available: true };
+    },
+  });
+  return {
+    stock: q.data?.stock ?? {},
+    available: q.data?.available ?? true,
+    async set(palletType: string, quantity: number) {
+      const { error } = await db.from('pallet_stock').upsert({
+        license_id: licenseId,
+        pallet_type: palletType,
+        quantity: Math.max(0, Math.floor(quantity) || 0),
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+      await qc.invalidateQueries({ queryKey: key });
+    },
+  };
+}

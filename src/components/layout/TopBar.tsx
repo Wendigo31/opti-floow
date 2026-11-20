@@ -1,7 +1,7 @@
 import { ThemeModeSwitch } from '@/components/ThemeModeSwitch';
 import React, { useEffect, useState } from 'react';
-import { Calendar, Crown, Star, Sparkles, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, Crown, Star, Sparkles, Clock, Building2, User, LogOut, Briefcase, RefreshCw, Settings, Users, Home } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -61,6 +61,7 @@ const pageLabel = (path: string) => {
 };
 
 export function TopBar({ leftOffsetClass }: TopBarProps) {
+  const { pathname } = useLocation();
   const { licenseData, clearLicense, hasFeature } = useLicense();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentUserRole, currentUserInfo } = useTeam();
@@ -179,6 +180,15 @@ export function TopBar({ leftOffsetClass }: TopBarProps) {
 
             {/* Thème jour / nuit : Automatique, Clair ou Sombre */}
             <ThemeModeSwitch />
+
+            {/* Retour à l'accueil depuis n'importe quelle page (Paramètres compris) — fix nov. 2026 */}
+            {pathname !== '/' && (
+              <Button variant="ghost" size="icon" className="rounded-full" title="Accueil" asChild>
+                <Link to="/" aria-label="Retour à l'accueil">
+                  <Home className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
 
             {/* Paramètres (hors des 5 catégories métier) */}
             {hasFeature('page_settings') && (

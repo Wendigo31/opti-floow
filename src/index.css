@@ -450,3 +450,13 @@
     opacity: 1 !important;
   }
 }
+/* Fix UI (nov. 2026) : plus de textes coupés ni de blocs qui débordent les uns sur les autres.
+   Les mots longs (références, emails, SIREN…) passent à la ligne au lieu de sortir de leur bloc,
+   et les éléments d'une grille ou d'une ligne flexible peuvent rétrécir. */
+@layer base {
+  h1, h2, h3, h4, p, label, td, th, li, dd, dt { overflow-wrap: break-word; }
+  html { scroll-behavior: auto; overflow-x: hidden; }
+}
+@layer utilities {
+  :where(.grid) > :where(*) { min-width: 0; }
+}
