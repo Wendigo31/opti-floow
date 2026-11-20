@@ -1880,6 +1880,27 @@ export type Database = {
           },
         ]
       }
+      pallet_stock: {
+        Row: {
+          license_id: string
+          pallet_type: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          license_id: string
+          pallet_type: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          license_id?: string
+          pallet_type?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       password_reset_requests: {
         Row: {
           created_at: string
@@ -1895,6 +1916,84 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+        }
+        Relationships: []
+      }
+      payroll_settings: {
+        Row: {
+          license_id: string
+          rates: Json
+          updated_at: string
+        }
+        Insert: {
+          license_id: string
+          rates?: Json
+          updated_at?: string
+        }
+        Update: {
+          license_id?: string
+          rates?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payslips: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          driver_id: string | null
+          employee_classification: string | null
+          employee_job: string | null
+          employee_name: string
+          employer_cost: number
+          gross: number
+          id: string
+          input: Json
+          license_id: string
+          net_to_pay: number
+          period: string
+          result: Json
+          status: string
+          updated_at: string
+          validated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          employee_classification?: string | null
+          employee_job?: string | null
+          employee_name: string
+          employer_cost?: number
+          gross?: number
+          id?: string
+          input?: Json
+          license_id: string
+          net_to_pay?: number
+          period: string
+          result?: Json
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          employee_classification?: string | null
+          employee_job?: string | null
+          employee_name?: string
+          employer_cost?: number
+          gross?: number
+          id?: string
+          input?: Json
+          license_id?: string
+          net_to_pay?: number
+          period?: string
+          result?: Json
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
         }
         Relationships: []
       }
