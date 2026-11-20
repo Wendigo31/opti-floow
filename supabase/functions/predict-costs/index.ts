@@ -22,7 +22,20 @@ serve(async (req) => {
   if (denied) return denied;
 
   try {
-    const { currentFuelPrice, currentTollCost, distanceKm, fuelConsumption, months = 6 }: PredictionRequest = await req.json();
+    const body = (await req.json().catch(() => ({}))) as Partial<PredictionRequest>;
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+    const currentFuelPrice = num(body.currentFuelPrice);
+    const currentTollCost = num(body.currentTollCost ?? 0);
+    const distanceKm = num(body.distanceKm);
+    const fuelConsumption = num(body.fuelConsumption);
+    const months = Math.min(12, Math.max(1, Math.round(num(body.months ?? 6)) || 6));
+    // Données manquantes (ex. appel de contrôle de l'audit OptiCentral) : erreur claire, pas une panne.
+    if ([currentFuelPrice, currentTollCost, distanceKm, fuelConsumption].some(Number.isNaN)) {
+      return new Response(
+        JSON.stringify({ error: "Données manquantes : prix du carburant, péages, distance et consommation sont nécessaires." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

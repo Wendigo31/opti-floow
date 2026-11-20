@@ -213,6 +213,14 @@ export function TrailerDialog({ open, onOpenChange, trailer, onSave }: TrailerDi
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.type === 'other' && (
+                  <Input
+                    placeholder="Ex. : semi porte-bateaux 4 essieux"
+                    value={formData.customType || ''}
+                    onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
+                    aria-label="Type de remorque sur mesure"
+                  />
+                )}
               </div>
             </div>
 

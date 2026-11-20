@@ -67,6 +67,8 @@ import {
   depreciationMethods
 } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
+import { trailerTypeLabel } from '@/types/trailer';
+import { vehicleTypeLabel } from '@/types/vehicle';
 import type { FixedCharge } from '@/types';
 import { TrailerDialog } from '@/components/vehicles/TrailerDialog';
 import { DepreciationReport } from '@/components/vehicles/DepreciationReport';
@@ -1400,7 +1402,7 @@ export default function Vehicles() {
                           <TableCell>
                             <Badge variant="secondary" className="font-mono text-xs">{vehicle.licensePlate}</Badge>
                           </TableCell>
-                          <TableCell className="capitalize">{vehicle.type}</TableCell>
+                          <TableCell>{vehicleTypeLabel(vehicle)}</TableCell>
                           <TableCell className="text-muted-foreground">{vehicle.brand} {vehicle.model}</TableCell>
                           <TableCell className="text-right">{formatNumber(vehicle.currentKm)} km</TableCell>
                           <TableCell className="text-right">{vehicle.fuelConsumption} L</TableCell>
@@ -1613,7 +1615,7 @@ export default function Vehicles() {
                             {trailer.licensePlate}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatTrailerType(trailer.type)}
+                            {trailerTypeLabel(trailer)}
                           </p>
                         </div>
                       </div>

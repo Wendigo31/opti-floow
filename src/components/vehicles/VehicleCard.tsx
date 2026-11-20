@@ -23,7 +23,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { SharedDataBadge } from '@/components/shared/SharedDataBadge';
 import { cn } from '@/lib/utils';
 import type { Vehicle, VehicleMaintenance, VehicleTire } from '@/types/vehicle';
-import { maintenanceTypes, vehicleAvailabilityStatuses, getVehicleAvailabilityStatus } from '@/types/vehicle';
+import { maintenanceTypes, vehicleAvailabilityStatuses, getVehicleAvailabilityStatus, vehicleTypeLabel } from '@/types/vehicle';
 import { formatCostPerKm, getCostPerKmColor, type VehicleCostBreakdown } from '@/hooks/useVehicleCost';
 
 interface SharedVehicleInfo {
@@ -224,7 +224,7 @@ export function VehicleCard({
               <Settings2 className="w-4 h-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground">Type</p>
-                <p className="font-medium capitalize">{vehicle.type}</p>
+                <p className="font-medium">{vehicleTypeLabel(vehicle)}</p>
               </div>
             </div>
           </div>

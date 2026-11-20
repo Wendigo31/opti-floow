@@ -29,7 +29,9 @@ export interface Trailer {
   brand: string;
   model: string;
   year: number;
-  type: 'tautliner' | 'frigo' | 'benne' | 'citerne' | 'porte-conteneur' | 'plateau' | 'savoyarde' | 'caisse' | 'other';
+  type: TrailerTypeValue;
+  /** Libellé libre quand le type est « Sur mesure / autre » (remorque spéciale). */
+  customType?: string;
   
   // Dimensions
   length: number; // mètres
@@ -101,17 +103,39 @@ export const trailerDepreciationMethods = [
   { value: 'km', label: 'Par kilomètre', description: 'Basé sur le kilométrage parcouru' },
 ] as const;
 
+// Tous types de remorques et semi-remorques (demande nov. 2026), et « Sur mesure » avec un libellé libre.
 export const trailerTypes = [
-  { value: 'tautliner', label: 'Tautliner' },
-  { value: 'frigo', label: 'Frigorifique' },
-  { value: 'benne', label: 'Benne' },
-  { value: 'citerne', label: 'Citerne' },
-  { value: 'porte-conteneur', label: 'Porte-conteneur' },
-  { value: 'plateau', label: 'Plateau' },
+  { value: 'tautliner', label: 'Tautliner (rideaux coulissants)' },
   { value: 'savoyarde', label: 'Savoyarde' },
-  { value: 'caisse', label: 'Caisse' },
-  { value: 'other', label: 'Autre' },
+  { value: 'fourgon', label: 'Fourgon / caisse sèche' },
+  { value: 'caisse', label: 'Caisse mobile' },
+  { value: 'frigo', label: 'Frigorifique' },
+  { value: 'frigo-multitemp', label: 'Frigorifique multi-température' },
+  { value: 'mega', label: 'Méga / volume (3 m)' },
+  { value: 'double-plancher', label: 'Double plancher' },
+  { value: 'plateau', label: 'Plateau' },
+  { value: 'plateau-extensible', label: 'Plateau extensible' },
+  { value: 'porte-engins', label: 'Porte-engins / surbaissée' },
+  { value: 'porte-voitures', label: 'Porte-voitures' },
+  { value: 'porte-conteneur', label: 'Porte-conteneur' },
+  { value: 'benne', label: 'Benne' },
+  { value: 'benne-tp', label: 'Benne TP / enrochement' },
+  { value: 'fond-mouvant', label: 'Fond mouvant' },
+  { value: 'citerne', label: 'Citerne' },
+  { value: 'citerne-alimentaire', label: 'Citerne alimentaire' },
+  { value: 'citerne-adr', label: 'Citerne ADR (matières dangereuses)' },
+  { value: 'pulverulent', label: 'Citerne pulvérulent' },
+  { value: 'bachee', label: 'Bâchée / ridelles' },
+  { value: 'grumiere', label: 'Grumière' },
+  { value: 'betaillere', label: 'Bétaillère' },
+  { value: 'tombereau', label: 'Tombereau' },
+  { value: 'remorque', label: 'Remorque (attelage porteur)' },
+  { value: 'other', label: 'Sur mesure / autre' },
 ] as const;
+export type TrailerTypeValue = (typeof trailerTypes)[number]['value'];
+/** Libellé à afficher (le libellé libre pour une remorque sur mesure). */
+export const trailerTypeLabel = (t: { type?: string; customType?: string }) =>
+  (t.type === 'other' && t.customType?.trim()) || trailerTypes.find((x) => x.value === t.type)?.label || 'Remorque';
 
 export const trailerMaintenanceTypes = [
   { value: 'mines', label: 'Contrôle technique (MINES)' },

@@ -133,6 +133,14 @@ export function VehicleForm({
                   ))}
                 </SelectContent>
               </Select>
+              {formData.type === 'other' && (
+                <Input
+                  placeholder="Ex. : tracteur 4x4 forestier"
+                  value={formData.customType || ''}
+                  onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
+                  aria-label="Type de véhicule sur mesure"
+                />
+              )}
             </div>
           </div>
 

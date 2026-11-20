@@ -35,7 +35,9 @@ export interface Vehicle {
   brand: string;
   model: string;
   year: number;
-  type: 'porteur' | 'tracteur' | 'porteur_caisse' | 'fourgon' | 'other';
+  type: VehicleTypeValue;
+  /** Libellé libre quand le type est « Sur mesure / autre ». */
+  customType?: string;
 
   // Disponibilité (absent sur les véhicules créés avant cet ajout : à traiter
   // comme 'disponible', voir getVehicleAvailabilityStatus ci-dessous)
@@ -130,13 +132,30 @@ export const maintenanceTypes = [
 ] as const;
 
 // Vehicle types - Trailers are now managed separately
+// Tous types de tracteurs et porteurs (demande nov. 2026), et « Sur mesure » avec un libellé libre.
 export const vehicleTypes = [
-  { value: 'tracteur', label: 'Tracteur' },
-  { value: 'porteur', label: 'Porteur' },
-  { value: 'porteur_caisse', label: 'Porteur Caisse' },
-  { value: 'fourgon', label: 'Fourgon' },
-  { value: 'other', label: 'Autre' },
+  { value: 'tracteur', label: 'Tracteur routier 4x2' },
+  { value: 'tracteur_6x2', label: 'Tracteur 6x2' },
+  { value: 'tracteur_6x4', label: 'Tracteur 6x4 (TP / lourd)' },
+  { value: 'tracteur_8x4', label: 'Tracteur 8x4 (convoi exceptionnel)' },
+  { value: 'tracteur_gnv', label: 'Tracteur GNV / bioGNV' },
+  { value: 'tracteur_electrique', label: 'Tracteur électrique' },
+  { value: 'porteur', label: 'Porteur 19 t' },
+  { value: 'porteur_26t', label: 'Porteur 26 t' },
+  { value: 'porteur_32t', label: 'Porteur 32 t (8x4)' },
+  { value: 'porteur_caisse', label: 'Porteur caisse' },
+  { value: 'porteur_frigo', label: 'Porteur frigorifique' },
+  { value: 'porteur_plateau', label: 'Porteur plateau / grue' },
+  { value: 'porteur_benne', label: 'Porteur benne' },
+  { value: 'porteur_citerne', label: 'Porteur citerne' },
+  { value: 'porteur_12t', label: 'Porteur 7,5 à 12 t' },
+  { value: 'fourgon', label: 'Fourgon / VUL (moins de 3,5 t)' },
+  { value: 'other', label: 'Sur mesure / autre' },
 ] as const;
+export type VehicleTypeValue = (typeof vehicleTypes)[number]['value'];
+/** Libellé à afficher (le libellé libre pour un véhicule sur mesure). */
+export const vehicleTypeLabel = (v: { type?: string; customType?: string }) =>
+  (v.type === 'other' && v.customType?.trim()) || vehicleTypes.find((x) => x.value === v.type)?.label || 'Véhicule';
 
 export const vehicleAvailabilityStatuses: readonly {
   value: VehicleAvailabilityStatus;
