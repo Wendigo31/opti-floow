@@ -181,6 +181,49 @@ Deno.serve(async (req) => {
       if (typeof ex.notes === "string" && ex.notes.trim()) issues.push(`Remarque de lecture : ${ex.notes.trim()}`);
     }
 
+    // Remplissage automatique de la fiche société (demande nov. 2026) : seulement les champs
+    // encore vides, et seulement si le document est lisible et que son SIREN correspond à la
+    // société (ou que la fiche n'a pas encore de SIREN). Jamais d'écrasement d'une donnée saisie.
+    const filled: string[] = [];
+    if (aiStatus === "done" && ex.readable !== false) {
+      const docSiren = String(ex.siren ?? "").replace(/\D/g, "").slice(0, 9);
+      const ownSiren = String(L.siren ?? L.siret ?? "").replace(/\D/g, "").slice(0, 9);
+      if (/^\d{9}$/.test(docSiren) && (!ownSiren || ownSiren === docSiren)) {
+        const empty = (k: string) => k in L && (L[k] == null || String(L[k]).trim() === "");
+        const patch: Record<string, unknown> = {};
+        const put = (col: string, v: unknown, label: string) => {
+          if (typeof v === "string" && v.trim() && empty(col)) {
+            patch[col] = v.trim();
+            filled.push(label);
+          }
+        };
+        put("siren", docSiren, "SIREN");
+        put("company_name", ex.company_name, "raison sociale");
+        put("manager_name", ex.manager_name, "dirigeant");
+        // Adresse : colonne « address » (OptiFret, OptiFlow) ou « address_street » (OptiXpress).
+        const addr = typeof ex.address === "string" ? ex.address.trim() : "";
+        const m = addr.match(/^(.*?)[,\s]+(\d{5})\s+(.+)$/);
+        if ("address_street" in L) {
+          put("address_street", m ? m[1] : addr, "adresse");
+          if (m) {
+            put("address_postal_code", m[2], "code postal");
+            put("address_city", m[3], "ville");
+          }
+        } else {
+          put("address", m ? m[1] : addr, "adresse");
+          if (m) {
+            put("postal_code", m[2], "code postal");
+            put("city", m[3], "ville");
+          }
+        }
+        if (Object.keys(patch).length) {
+          const { error: upErr } = await admin.from("licenses").update(patch).eq("id", license_id);
+          if (upErr) filled.length = 0;
+        }
+      }
+    }
+    if (filled.length) issues.push(`Fiche société complétée automatiquement : ${filled.join(", ")}.`);
+
     const { data: row, error } = await admin
       .from("company_documents")
       .insert({
@@ -199,7 +242,7 @@ Deno.serve(async (req) => {
       .select("id, kind, issued_on, expires_on, issues, ai_status, status, uploaded_at")
       .single();
     if (error) throw new Error(error.message);
-    return json({ ok: true, document: row, extracted: ex });
+    return json({ ok: true, document: row, extracted: ex, filled });
   } catch (e) {
     return json({ ok: false, error: e instanceof Error ? e.message : "Erreur" }, 500);
   }
