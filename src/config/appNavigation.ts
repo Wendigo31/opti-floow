@@ -46,6 +46,7 @@ import {  Receipt,
   ShieldCheck,
   Settings as SettingsIcon,
   type LucideIcon,
+  Wallet,
 } from 'lucide-react';
 import type { FeatureKey } from '@/hooks/useLicense';
 import type { FeatureKey as UserFeatureKey } from '@/hooks/useUserFeatureOverrides';
@@ -102,6 +103,8 @@ const P = {
   history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
   install: { to: '/install', icon: Download, label: "Installer l'application" },
   tenders: { to: '/tenders', icon: FileText, label: 'Devis par client', userFeatureKeys: ['view_pricing'] },  invoices: { to: '/invoices', icon: Receipt, label: 'Factures', userFeatureKeys: ['view_pricing'], allowedRoles: ['direction', 'comptabilite'] },
+  // Fiches de paie : même écran qu'OptiFret (RH prépare, Comptabilité / Direction valident).
+  payslips: { to: '/payslips', icon: Wallet, label: 'Fiches de paie', allowedRoles: ['direction', 'rh', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 } satisfies Record<string, NavPageConfig>;
 
@@ -134,7 +137,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
     id: 'rh', label: 'RH', icon: Users,
     allowedRoles: ['direction', 'rh'],
     // Les conducteurs → l'équipe → leur planning → mes propres accès.
-    pages: [P.drivers, P.team, P.planning, P.restrictions],
+    pages: [P.drivers, P.team, P.payslips, P.planning, P.restrictions],
   },
   {
     id: 'appels-offres', label: "Appels d'offres", icon: Gavel,
@@ -148,7 +151,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
     allowedRoles: ['direction', 'comptabilite'],
     // Les charges fixes (base de coût) → calculer → historiser → analyser → prévoir → clients.
     // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
-    pages: [P.invoices, P.charges, P.calculator, P.history, P.dashboard, P.forecast, P.clients],
+    pages: [P.invoices, P.charges, P.payslips, P.calculator, P.history, P.dashboard, P.forecast, P.clients],
   },
   {
     id: 'rentabilite', label: 'Pilotage', icon: TrendingUp,

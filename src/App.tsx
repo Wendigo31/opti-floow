@@ -29,6 +29,7 @@ import { LogoLoader } from '@/components/LogoLoader';
 const Index = lazy(() => import("./pages/Index"));
 const CalculatorWithHistory = lazy(() => import("./pages/CalculatorWithHistory"));
 const Itinerary = lazy(() => import("./pages/ItineraryAndLines"));
+const Payslips = lazy(() => import("./pages/Payslips"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
 const Charges = lazy(() => import("./pages/Charges"));
@@ -143,6 +144,7 @@ function LicensedAppContent() {
                   <Route path="/my-restrictions" element={<MyRestrictions />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/install" element={<Install />} />
+                  <Route path="/payslips" element={<Payslips />} />
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -27,6 +27,7 @@ const PAGE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   '/history': lazy(() => import('./TripHistory')),
   '/tenders': lazy(() => import('./Tenders')),
   '/install': lazy(() => import('./Install')),
+  '/payslips': lazy(() => import('./Payslips')),
 };
 
 export default function CategoryWorkspace() {
