@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.10.0",
+    date: "2026-11-21",
+    title: "Pénalités",
+    changes: [
+      "Nouvel onglet Comptabilité › Pénalités : retenues des clients (retard, colis perdu ou abîmé…) avec suivi à vérifier / contestée / acceptée / remboursée",
+      "Retards de paiement : factures payées en retard ou impayées, pénalités au taux de vos CGV (8,25 % par défaut, 3 fois le taux légal) + 40 € d'indemnité, décompte PDF à envoyer au client",
+      "Amendes et PV : avis, véhicule, conducteur et compte à rebours des 45 jours pour désigner le conducteur",
+    ],
+  },
+  {
     version: "2.9.1",
     date: "2026-11-21",
     title: "Grilles tarifaires mixtes",

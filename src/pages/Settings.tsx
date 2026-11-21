@@ -33,6 +33,7 @@ const FLOW_PAGES = [
   { path: '/team', label: 'Équipe', space: 'RH' },
   { path: '/tenders', label: 'Devis par client', space: "Appels d'offres" },
   { path: '/invoices', label: 'Factures', space: 'Comptabilité' },
+  { path: '/penalties', label: 'Pénalités', space: 'Comptabilité' },
   { path: '/charges', label: 'Charges fixes', space: 'Comptabilité' },
   { path: '/dashboard', label: 'Analyse', space: 'Pilotage' },
   { path: '/forecast', label: 'Prévisionnel', space: 'Pilotage' },

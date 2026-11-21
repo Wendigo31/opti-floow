@@ -65,6 +65,7 @@ const CATEGORY_DETAILS: Record<NavCategoryId, TutorialDetail[]> = {
   comptabilite: [
     ["Facture mensuelle par donneur d'ordre, à partir des tournées réalisées", '/invoices'],
     ['Factures électroniques Factur-X, avoirs, export comptable (FEC), indexation gazole', '/invoices'],
+    ['Pénalités : retenues des clients, retards de paiement (décompte PDF), amendes et PV', '/penalties'],
     ["Charges fixes, avec import Excel ; votre abonnement OptiGroup y est compté d'office", '/charges'],
     ['Prévisionnel de vos revenus et dépenses', '/forecast'],
   ],
