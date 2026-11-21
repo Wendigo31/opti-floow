@@ -16,7 +16,7 @@ export const RATE_BASIS_LABELS: Record<RateBasis, { label: string; unit: string;
   weight: { label: 'Poids', unit: 'kg', hint: 'Prix au kg ou forfait selon la tranche de poids' },
   stop: { label: 'Arrêts', unit: 'arrêt', hint: 'Prix par point de livraison' },
   package: { label: 'Colis', unit: 'colis', hint: 'Prix par colis, dégressif selon le volume' },
-  tour: { label: 'Tournée', unit: 'tournée', hint: 'Forfait par tournée (tractionnaire, messagerie)' },
+  tour: { label: 'Tournée / journée', unit: 'tournée', hint: 'Forfait par tournée ou par journée (tractionnaire, messagerie)' },
   hour: { label: 'Heures', unit: 'h', hint: 'Prix à l\'heure (mise à disposition)' },
 };
 
@@ -36,9 +36,17 @@ export interface RateExtra {
   price: number;
 }
 
+/** Élément de prix supplémentaire, additionné au prix principal (ex. forfait journée + prix au point). */
+export interface RateComponent {
+  basis: RateBasis;
+  bands: RateBand[];
+}
+
 export interface RateCard {
   basis: RateBasis;
   bands: RateBand[];
+  /** Autres bases additionnées (grille mixte : journée + points + km…). Absent = grille simple. */
+  components?: RateComponent[] | null;
   /** Minimum de perception HT. */
   minimum?: number | null;
   /** Frais annexes proposés (cochés au cas par cas). */
@@ -96,40 +104,55 @@ function quantityFor(basis: RateBasis, q: RateQuery): number | null {
   return v == null || Number.isNaN(Number(v)) ? null : Number(v);
 }
 
+// Forme non discriminée : OptiFlow compile sans strictNullChecks (pas de rétrécissement).
+type BasisResult = { ok: boolean; line?: RateLine; reason?: string };
+
+/** Prix d'une base (tranches) pour une prestation : une ligne de facture. */
+function priceBasis(basis: RateBasis, bands: RateBand[], q: RateQuery): BasisResult {
+  const meta = RATE_BASIS_LABELS[basis];
+  let band: RateBand | undefined;
+  let qty = 1;
+  let label = '';
+  if (basis === 'zone') {
+    const dept = departmentOf(q.destination);
+    if (!dept) return { ok: false, reason: 'Code postal de livraison manquant' };
+    band = bands.find((b) => (b.zone || '').trim() === dept) ?? bands.find((b) => (b.zone || '').trim() === '*');
+    if (!band) return { ok: false, reason: `Département ${dept} absent de la grille` };
+    label = `Transport — zone ${band.zone === '*' ? `autres départements (${dept})` : dept}`;
+  } else {
+    const v = quantityFor(basis, q);
+    if (v == null || v <= 0) return { ok: false, reason: `${meta.label} manquant(e)` };
+    qty = v;
+    band = bands.find((b) => (b.from == null || v >= Number(b.from)) && (b.to == null || v <= Number(b.to)));
+    if (!band) return { ok: false, reason: `${v} ${meta.unit} hors des tranches de la grille` };
+    const range = band.to != null ? `${band.from ?? 0} à ${band.to}` : `${band.from ?? 0} et plus`;
+    label = `Transport — ${meta.label.toLowerCase()} ${range} ${meta.unit}`;
+  }
+  if (band.mode === 'unit' && basis !== 'zone') {
+    return { ok: true, line: { label, quantity: r2(qty), unit: meta.unit, unitPrice: band.price, total: r2(qty * band.price) } };
+  }
+  return { ok: true, line: { label, quantity: 1, unit: 'forfait', unitPrice: band.price, total: r2(band.price) } };
+}
+
 export function priceFromRateCard(card: RateCard, q: RateQuery): RateResult {
-  const meta = RATE_BASIS_LABELS[card.basis];
   const day = (q.date || '').slice(0, 10);
   if (day && card.validFrom && day < card.validFrom) return { ok: false, amount: 0, lines: [], reason: `Grille valable à partir du ${card.validFrom}` };
   if (day && card.validTo && day > card.validTo) return { ok: false, amount: 0, lines: [], reason: `Grille expirée le ${card.validTo}` };
 
-  let band: RateBand | undefined;
-  let qty = 1;
-  let label = '';
-  if (card.basis === 'zone') {
-    const dept = departmentOf(q.destination);
-    if (!dept) return { ok: false, amount: 0, lines: [], reason: 'Code postal de livraison manquant' };
-    band = card.bands.find((b) => (b.zone || '').trim() === dept) ?? card.bands.find((b) => (b.zone || '').trim() === '*');
-    if (!band) return { ok: false, amount: 0, lines: [], reason: `Département ${dept} absent de la grille` };
-    label = `Transport — zone ${band.zone === '*' ? `autres départements (${dept})` : dept}`;
-  } else {
-    const v = quantityFor(card.basis, q);
-    if (v == null || v <= 0) return { ok: false, amount: 0, lines: [], reason: `${meta.label} manquant(e)` };
-    qty = v;
-    band = card.bands.find((b) => (b.from == null || v >= Number(b.from)) && (b.to == null || v <= Number(b.to)));
-    if (!band) return { ok: false, amount: 0, lines: [], reason: `${v} ${meta.unit} hors des tranches de la grille` };
-    const range = band.to != null ? `${band.from ?? 0} à ${band.to}` : `${band.from ?? 0} et plus`;
-    label = `Transport — ${meta.label.toLowerCase()} ${range} ${meta.unit}`;
+  const main = priceBasis(card.basis, card.bands, q);
+  if (!main.ok || !main.line) return { ok: false, amount: 0, lines: [], reason: main.reason };
+  const lines: RateLine[] = [main.line];
+  for (const c of card.components ?? []) {
+    if (!c?.bands?.length) continue;
+    const part = priceBasis(c.basis, c.bands, q);
+    if (!part.ok || !part.line) return { ok: false, amount: 0, lines: [], reason: part.reason };
+    lines.push(part.line);
   }
-
-  const lines: RateLine[] = [];
-  if (band.mode === 'unit' && card.basis !== 'zone') {
-    lines.push({ label, quantity: r2(qty), unit: meta.unit, unitPrice: band.price, total: r2(qty * band.price) });
-  } else {
-    lines.push({ label, quantity: 1, unit: 'forfait', unitPrice: band.price, total: r2(band.price) });
-  }
-  const base = lines[0].total;
-  if (card.minimum && base < card.minimum) {
-    lines[0] = { label: `${label} (minimum de perception)`, quantity: 1, unit: 'forfait', unitPrice: card.minimum, total: r2(card.minimum) };
+  // Minimum de perception : sur le transport (toutes bases), avant les frais annexes.
+  const transport = r2(lines.reduce((s, l) => s + l.total, 0));
+  if (card.minimum && transport < card.minimum) {
+    const label = lines.length === 1 ? `${lines[0].label} (minimum de perception)` : 'Transport (minimum de perception)';
+    lines.splice(0, lines.length, { label, quantity: 1, unit: 'forfait', unitPrice: card.minimum, total: r2(card.minimum) });
   }
   for (const name of q.extras ?? []) {
     const extra = card.extras?.find((e) => e.label === name);
@@ -138,20 +161,24 @@ export function priceFromRateCard(card: RateCard, q: RateQuery): RateResult {
   return { ok: true, amount: r2(lines.reduce((s, l) => s + l.total, 0)), lines };
 }
 
+/** Tranches vides de départ pour une base donnée. */
+export function emptyBands(basis: RateBasis): RateBand[] {
+  return basis === 'zone'
+    ? [{ zone: '', price: 0, mode: 'flat' }, { zone: '*', price: 0, mode: 'flat' }]
+    : basis === 'tour'
+      ? [{ from: 1, to: null, price: 0, mode: 'flat' }]
+      : [{ from: 0, to: null, price: 0, mode: 'unit' }];
+}
+
 /** Grille vide de départ pour une base donnée. */
 export function emptyRateCard(basis: RateBasis = 'km'): RateCard {
-  const bands: RateBand[] =
-    basis === 'zone'
-      ? [{ zone: '', price: 0, mode: 'flat' }, { zone: '*', price: 0, mode: 'flat' }]
-      : basis === 'tour'
-        ? [{ from: 1, to: null, price: 0, mode: 'unit' }]
-        : [{ from: 0, to: null, price: 0, mode: 'unit' }];
-  return { basis, bands, minimum: null, extras: [], fuelIndexed: true, validFrom: null, validTo: null, notes: null };
+  return { basis, bands: emptyBands(basis), components: [], minimum: null, extras: [], fuelIndexed: true, validFrom: null, validTo: null, notes: null };
 }
 
 /** Résumé court d'une grille (« Distance · 3 tranches · min. 150 € »). */
 export function rateCardSummary(card: RateCard): string {
-  const parts = [RATE_BASIS_LABELS[card.basis].label, `${card.bands.length} tranche${card.bands.length > 1 ? 's' : ''}`];
+  const bases = [card.basis, ...(card.components ?? []).map((c) => c.basis)].map((b) => RATE_BASIS_LABELS[b].label);
+  const parts = [bases.join(' + '), `${card.bands.length} tranche${card.bands.length > 1 ? 's' : ''}`];
   if (card.minimum) parts.push(`min. ${card.minimum} €`);
   if (card.extras?.length) parts.push(`${card.extras.length} frais annexe${card.extras.length > 1 ? 's' : ''}`);
   return parts.join(' · ');

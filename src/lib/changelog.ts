@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.9.1",
+    date: "2026-11-21",
+    title: "Grilles tarifaires mixtes",
+    changes: [
+      "Grille tarifaire d'un client : plusieurs bases peuvent s'additionner (ex. forfait à la journée + prix au point + km au-delà d'un seuil)",
+      "Minimum de perception appliqué sur l'ensemble du transport",
+    ],
+  },
+  {
     version: "2.9.0",
     date: "2026-11-20",
     title: "Paie, palettes et navigation",

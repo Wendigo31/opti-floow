@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { emptyRateCard, priceFromRateCard, RATE_BASIS_LABELS, type RateBand, type RateBasis, type RateCard } from '@/lib/rateCard';
+import { emptyBands, emptyRateCard, priceFromRateCard, RATE_BASIS_LABELS, type RateBand, type RateBasis, type RateCard, type RateComponent } from '@/lib/rateCard';
 
 /**
  * Édition de la grille tarifaire d'un client : base, tranches (prix à l'unité ou
@@ -50,23 +50,21 @@ export function RateCardDialog({
 
   const meta = RATE_BASIS_LABELS[form.basis];
   const isZone = form.basis === 'zone';
-  const setBand = (i: number, patch: Partial<RateBand>) => setForm({ ...form, bands: form.bands.map((b, j) => (j === i ? { ...b, ...patch } : b)) });
-  const addBand = () => {
-    const last = form.bands[form.bands.length - 1];
-    const from = last?.to != null ? Number(last.to) + 1 : null;
-    setForm({ ...form, bands: [...form.bands, isZone ? { zone: '', price: 0, mode: 'flat' } : { from, to: null, price: 0, mode: last?.mode ?? 'unit' }] });
-  };
+  const mixed = (form.components ?? []).length > 0;
+  const setComponent = (i: number, next: RateComponent) => setForm({ ...form, components: (form.components ?? []).map((c, j) => (j === i ? next : c)) });
   const trialResult = trial
-    ? priceFromRateCard(form, isZone ? { destination: trial } : { km: num(trial), pallets: num(trial), weightKg: num(trial), stops: num(trial), packages: num(trial), hours: num(trial), tours: num(trial) })
+    ? priceFromRateCard(form, isZone ? { destination: trial } : { km: num(trial), pallets: num(trial), weightKg: num(trial), stops: num(trial), packages: num(trial), hours: num(trial), tours: mixed ? 1 : num(trial) })
     : null;
 
-  const valid = form.bands.length > 0 && form.bands.every((b) => b.price >= 0 && (isZone ? !!b.zone?.trim() : true));
+  const bandsValid = (basis: RateBasis, bands: RateBand[]) => bands.length > 0 && bands.every((b) => b.price >= 0 && (basis === 'zone' ? !!b.zone?.trim() : true));
+  const valid = bandsValid(form.basis, form.bands) && (form.components ?? []).every((c) => bandsValid(c.basis, c.bands));
 
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      await onSave({ ...form, bands: form.bands.map((b) => ({ ...b, zone: b.zone?.trim() || null })) });
+      const clean = (bands: RateBand[]) => bands.map((b) => ({ ...b, zone: b.zone?.trim() || null }));
+      await onSave({ ...form, bands: clean(form.bands), components: (form.components ?? []).map((c) => ({ ...c, bands: clean(c.bands) })) });
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -87,7 +85,7 @@ export function RateCardDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Le prix dépend de</Label>
-              <Select value={form.basis} onValueChange={(v) => setForm({ ...emptyRateCard(v as RateBasis), minimum: form.minimum, extras: form.extras, fuelIndexed: form.fuelIndexed, validFrom: form.validFrom, validTo: form.validTo, notes: form.notes })}>
+              <Select value={form.basis} onValueChange={(v) => setForm({ ...emptyRateCard(v as RateBasis), components: form.components, minimum: form.minimum, extras: form.extras, fuelIndexed: form.fuelIndexed, validFrom: form.validFrom, validTo: form.validTo, notes: form.notes })}>
                 <SelectTrigger aria-label="Base de la grille"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {bases.map((b) => (
@@ -105,36 +103,31 @@ export function RateCardDialog({
 
           <div className="space-y-2">
             <Label>Tranches</Label>
-            <div className="space-y-2">
-              {form.bands.map((b, i) => (
-                <div key={i} className="grid grid-cols-12 items-center gap-2">
-                  {isZone ? (
-                    <Input className="col-span-5" value={b.zone ?? ''} onChange={(e) => setBand(i, { zone: e.target.value })} placeholder="Département (31) ou * pour les autres" aria-label={`Zone de la tranche ${i + 1}`} />
-                  ) : (
-                    <>
-                      <Input className="col-span-2" inputMode="decimal" value={b.from ?? ''} onChange={(e) => setBand(i, { from: num(e.target.value) })} placeholder="de" aria-label={`Début de la tranche ${i + 1}`} />
-                      <Input className="col-span-3" inputMode="decimal" value={b.to ?? ''} onChange={(e) => setBand(i, { to: num(e.target.value) })} placeholder={`à (vide = et plus) ${meta.unit}`} aria-label={`Fin de la tranche ${i + 1}`} />
-                    </>
-                  )}
-                  <Input className="col-span-3" inputMode="decimal" value={b.price} onChange={(e) => setBand(i, { price: num(e.target.value) ?? 0 })} aria-label={`Prix de la tranche ${i + 1}`} />
-                  {isZone ? (
-                    <span className="col-span-3 text-xs text-muted-foreground">€ HT par envoi</span>
-                  ) : (
-                    <Select value={b.mode} onValueChange={(v) => setBand(i, { mode: v as RateBand['mode'] })}>
-                      <SelectTrigger className="col-span-3" aria-label={`Type de prix de la tranche ${i + 1}`}><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unit">€ / {meta.unit}</SelectItem>
-                        <SelectItem value="flat">forfait</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <Button type="button" variant="ghost" size="icon" className="col-span-1" onClick={() => setForm({ ...form, bands: form.bands.filter((_, j) => j !== i) })} aria-label={`Supprimer la tranche ${i + 1}`} disabled={form.bands.length === 1}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
+            <BandsEditor basis={form.basis} bands={form.bands} onChange={(bands) => setForm({ ...form, bands })} prefix="" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Autres éléments de prix (additionnés)</Label>
+            <p className="text-xs text-muted-foreground">Pour une grille mixte : par exemple un forfait à la journée, plus un prix au point, plus les km au-delà d'un seuil.</p>
+            {(form.components ?? []).map((c, ci) => (
+              <div key={ci} className="space-y-2 rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Select value={c.basis} onValueChange={(v) => setComponent(ci, { basis: v as RateBasis, bands: emptyBands(v as RateBasis) })}>
+                    <SelectTrigger className="max-w-56" aria-label={`Base de l'élément ${ci + 1}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {bases.map((b) => (
+                        <SelectItem key={b} value={b}>{RATE_BASIS_LABELS[b].label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="ghost" size="sm" className="ml-auto text-destructive" onClick={() => setForm({ ...form, components: (form.components ?? []).filter((_, j) => j !== ci) })}>
+                    Retirer
                   </Button>
                 </div>
-              ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addBand} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter une tranche</Button>
+                <BandsEditor basis={c.basis} bands={c.bands} onChange={(bands) => setComponent(ci, { ...c, bands })} prefix={`de l'élément ${ci + 1} `} />
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, components: [...(form.components ?? []), { basis: bases.find((b) => b !== form.basis) ?? bases[0], bands: emptyBands(bases.find((b) => b !== form.basis) ?? bases[0]) }] })} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter un élément de prix</Button>
           </div>
 
           <div className="space-y-2">
@@ -172,7 +165,7 @@ export function RateCardDialog({
           </div>
 
           <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-            <Label htmlFor="rc-trial" className="text-xs text-muted-foreground">Essayer : {isZone ? 'code postal de livraison' : `nombre de ${meta.unit}`}</Label>
+            <Label htmlFor="rc-trial" className="text-xs text-muted-foreground">Essayer : {isZone ? 'code postal de livraison' : mixed ? 'une même quantité pour chaque base (1 tournée)' : `nombre de ${meta.unit}`}</Label>
             <div className="mt-1 flex items-center gap-3">
               <Input id="rc-trial" className="max-w-40" value={trial} onChange={(e) => setTrial(e.target.value)} placeholder={isZone ? '31200' : '250'} />
               {trialResult && (trialResult.ok ? <span className="font-semibold">{eur(trialResult.amount)} HT</span> : <span className="text-muted-foreground">{trialResult.reason}</span>)}
@@ -198,5 +191,49 @@ export function RateCardDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Tranches d'une base : de / à (ou zone), prix, à l'unité ou forfait. */
+function BandsEditor({ basis, bands, onChange, prefix }: { basis: RateBasis; bands: RateBand[]; onChange: (b: RateBand[]) => void; prefix: string }) {
+  const meta = RATE_BASIS_LABELS[basis];
+  const isZone = basis === 'zone';
+  const setBand = (i: number, patch: Partial<RateBand>) => onChange(bands.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  const addBand = () => {
+    const last = bands[bands.length - 1];
+    const from = last?.to != null ? Number(last.to) + 1 : null;
+    onChange([...bands, isZone ? { zone: '', price: 0, mode: 'flat' } : { from, to: null, price: 0, mode: last?.mode ?? 'unit' }]);
+  };
+  return (
+    <div className="space-y-2">
+      {bands.map((b, i) => (
+        <div key={i} className="grid grid-cols-12 items-center gap-2">
+          {isZone ? (
+            <Input className="col-span-5" value={b.zone ?? ''} onChange={(e) => setBand(i, { zone: e.target.value })} placeholder="Département (31) ou * pour les autres" aria-label={`Zone de la tranche ${i + 1} ${prefix}`.trim()} />
+          ) : (
+            <>
+              <Input className="col-span-2" inputMode="decimal" value={b.from ?? ''} onChange={(e) => setBand(i, { from: num(e.target.value) })} placeholder="de" aria-label={`Début de la tranche ${i + 1} ${prefix}`.trim()} />
+              <Input className="col-span-3" inputMode="decimal" value={b.to ?? ''} onChange={(e) => setBand(i, { to: num(e.target.value) })} placeholder={`à (vide = et plus) ${meta.unit}`} aria-label={`Fin de la tranche ${i + 1} ${prefix}`.trim()} />
+            </>
+          )}
+          <Input className="col-span-3" inputMode="decimal" value={b.price} onChange={(e) => setBand(i, { price: num(e.target.value) ?? 0 })} aria-label={`Prix de la tranche ${i + 1} ${prefix}`.trim()} />
+          {isZone ? (
+            <span className="col-span-3 text-xs text-muted-foreground">€ HT par envoi</span>
+          ) : (
+            <Select value={b.mode} onValueChange={(v) => setBand(i, { mode: v as RateBand['mode'] })}>
+              <SelectTrigger className="col-span-3" aria-label={`Type de prix de la tranche ${i + 1} ${prefix}`.trim()}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unit">€ / {meta.unit}</SelectItem>
+                <SelectItem value="flat">forfait</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Button type="button" variant="ghost" size="icon" className="col-span-1" onClick={() => onChange(bands.filter((_, j) => j !== i))} aria-label={`Supprimer la tranche ${i + 1} ${prefix}`.trim()} disabled={bands.length === 1}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={addBand} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter une tranche</Button>
+    </div>
   );
 }

@@ -35,4 +35,23 @@ describe('grilles tarifaires', () => {
     expect(priceFromRateCard(pal, { pallets: 10, date: '2027-01-02' }).ok).toBe(false);
     expect(priceFromRateCard(pal, { pallets: 40 }).reason).toContain('hors des tranches');
   });
+
+  it('grille mixte : forfait journée + prix au point + km au-delà de 80', () => {
+    const mix: RateCard = {
+      basis: 'tour',
+      bands: [{ from: 1, to: null, price: 90, mode: 'flat' }],
+      components: [
+        { basis: 'stop', bands: [{ from: 0, to: null, price: 1.2, mode: 'unit' }] },
+        { basis: 'km', bands: [{ from: 0, to: 80, price: 0, mode: 'flat' }, { from: 81, to: null, price: 0.3, mode: 'unit' }] },
+      ],
+      minimum: 150,
+    };
+    const r = priceFromRateCard(mix, { tours: 1, stops: 60, km: 100 });
+    expect(r.lines).toHaveLength(3);
+    expect(r.amount).toBe(90 + 72 + 30);
+    // Sous le minimum : une seule ligne au minimum.
+    expect(priceFromRateCard(mix, { tours: 1, stops: 10, km: 40 }).amount).toBe(150);
+    // Une base manquante fait échouer le calcul.
+    expect(priceFromRateCard(mix, { tours: 1, km: 40 }).ok).toBe(false);
+  });
 });

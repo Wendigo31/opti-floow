@@ -3,7 +3,9 @@ import { NAV_CATEGORIES } from '@/config/appNavigation';
 import { PLAN_INFO, PLAN_OPTIONS, optionsFor, nextPlan } from '@/lib/planCatalog';
 import { visibleDetails } from '@/lib/tutorialPlan';
 
-const navPaths = new Set(NAV_CATEGORIES.flatMap((c) => c.pages.map((p) => p.to)));
+// « Création de ligne » est une vue de l'Itinéraire depuis la 2.9.0 : son chemin reste
+// le verrou de la vue (forfait, onglets retirés) sans être un onglet du menu.
+const navPaths = new Set([...NAV_CATEGORIES.flatMap((c) => c.pages.map((p) => p.to)), '/line-montage']);
 
 describe('catalogue des forfaits', () => {
   it('ne cite que des onglets qui existent', () => {
