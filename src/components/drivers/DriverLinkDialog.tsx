@@ -50,7 +50,7 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
       window.prompt('Lien de l\'application conducteur :', link);
     }
   };
-  const sms = `sms:${(phone || '').replace(/\s/g, '')}?&body=${encodeURIComponent(`Bonjour ${driverName}, voici ton lien pour voir tes tournées et les valider : ${link}`)}`;
+  const sms = `sms:${(phone || '').replace(/\s/g, '')}?&body=${encodeURIComponent(`Bonjour ${driverName}, voici ton appli OptiFlow Conducteur (planning, pointage, documents, frais). Ouvre le lien puis « Ajouter à l'écran d'accueil » : ${link}`)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,7 +58,7 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Smartphone className="h-5 w-5" /> Application de {driverName}</DialogTitle>
           <DialogDescription>
-            Envoyez ce lien au conducteur : il l'ouvre sur son téléphone pour voir ses tournées du jour, les démarrer, les terminer et noter les palettes. Les tournées terminées sont prêtes à facturer.
+            Envoyez ce lien au conducteur : il l'ouvre une fois sur son téléphone puis « Ajouter à l'écran d'accueil ». L'appli OptiFlow Conducteur s'installe : lignes de la semaine, pointage et heures, documents (CMR, bons, photos, signature), pleins, frais, check-list et pannes. Tout remonte dans RH › Remontées conducteurs.
           </DialogDescription>
         </DialogHeader>
         {busy && !link ? (

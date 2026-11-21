@@ -30,6 +30,7 @@ const FLOW_PAGES = [
   { path: '/vehicles', label: 'Véhicules', space: 'Gestion de parc' },
   { path: '/vehicle-reports', label: 'Rapports véhicules', space: 'Gestion de parc' },
   { path: '/drivers', label: 'Conducteurs', space: 'RH' },
+  { path: '/driver-activity', label: 'Remontées conducteurs', space: 'RH' },
   { path: '/team', label: 'Équipe', space: 'RH' },
   { path: '/tenders', label: 'Devis par client', space: "Appels d'offres" },
   { path: '/invoices', label: 'Factures', space: 'Comptabilité' },

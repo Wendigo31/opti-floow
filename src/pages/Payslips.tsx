@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { PayslipsPanel } from '@/components/payslips/PayslipsPanel';
+import { supabase } from '@/integrations/supabase/client';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
 import { useLicense } from '@/hooks/useLicense';
 import { useLicenseContext } from '@/context/LicenseContext';
@@ -15,10 +17,24 @@ export default function Payslips() {
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
   const unique = drivers.filter((d, i) => drivers.findIndex((x) => x.id === d.id) === i);
+  // Jours pointés dans l'appli OptiFlow Conducteur (aide à la saisie des repas et des heures).
+  const [worked, setWorked] = useState<Map<string, Set<string>>>(new Map());
+  useEffect(() => {
+    if (!licenseId) return;
+    const since = new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10);
+    void (supabase as unknown as { from: (t: string) => any }) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .from('driver_time_entries').select('driver_id, work_date').eq('license_id', licenseId).eq('kind', 'start').gte('work_date', since)
+      .then(({ data }: { data: { driver_id: string; work_date: string }[] | null }) => {
+        const m = new Map<string, Set<string>>();
+        for (const r of data ?? []) { if (!m.has(r.driver_id)) m.set(r.driver_id, new Set()); m.get(r.driver_id)!.add(r.work_date); }
+        setWorked(m);
+      });
+  }, [licenseId]);
   return (
     <PayslipsPanel
       licenseId={licenseId}
       currentUser={currentUserInfo?.email ?? null}
+      workedDaysOf={(driverId, month) => [...(worked.get(driverId) ?? [])].filter((d) => d.startsWith(month)).length}
       drivers={unique.map((d) => ({
         id: d.id,
         name: d.name,

@@ -32,6 +32,7 @@ const Itinerary = lazy(() => import("./pages/ItineraryAndLines"));
 const Payslips = lazy(() => import("./pages/Payslips"));
 const Penalties = lazy(() => import("./pages/Penalties"));
 const Accountant = lazy(() => import("./pages/Accountant"));
+const DriverActivity = lazy(() => import("./pages/DriverActivity"));
 const AccountantPortal = lazy(() => import("./pages/AccountantPortal"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
@@ -58,7 +59,7 @@ const CategoryWorkspace = lazy(() => import("./pages/CategoryWorkspace"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const AcceptQuote = lazy(() => import("./pages/AcceptQuote"));
 // Application conducteur (lien personnel, sans connexion).
-const DriverDay = lazy(() => import("./pages/DriverDay"));
+const DriverDay = lazy(() => import("./pages/DriverApp"));
 const queryClient = new QueryClient();
 // Indicateur du cloud, hors ligne et session : identiques dans les 3 logiciels.
 installCloudStatus(queryClient, supabase);
@@ -150,6 +151,7 @@ function LicensedAppContent() {
                   <Route path="/payslips" element={<Payslips />} />
                   <Route path="/penalties" element={<Penalties />} />
                   <Route path="/accountant" element={<Accountant />} />
+                  <Route path="/driver-activity" element={<DriverActivity />} />
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

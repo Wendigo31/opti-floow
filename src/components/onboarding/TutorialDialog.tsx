@@ -39,7 +39,7 @@ const CATEGORY_DETAILS: Record<NavCategoryId, TutorialDetail[]> = {
     ['Tournées, itinéraire et calculateur de coût', '/tours', '/itinerary', '/calculator'],
     ['Création de ligne et optimisation des tournées', '/line-montage'],
     ['Clients avec leur grille tarifaire, et palettes échangées (solde par client)', '/clients', '/pallets'],
-    ["Conducteurs : chacun reçoit un lien vers ses tournées du jour, sans mot de passe", '/drivers'],
+    ["Conducteurs : chacun installe l'appli OptiFlow Conducteur par son lien personnel, sans mot de passe", '/drivers'],
   ],
   geoloc: [
     ["Calcul d'itinéraire poids lourd : ponts bas, restrictions, zones interdites", '/itinerary'],
@@ -54,6 +54,7 @@ const CATEGORY_DETAILS: Record<NavCategoryId, TutorialDetail[]> = {
   ],
   rh: [
     ['Conducteurs : fiche, coûts, absences, import depuis Excel', '/drivers'],
+    ['Remontées conducteurs : heures pointées, nuit, repas, découchers, pleins, frais, check-lists, pannes et documents', '/driver-activity'],
     ['Équipe : invitez vos collaborateurs et choisissez leurs onglets', '/team'],
     ['« Mes accès » : les onglets ouverts pour votre compte', '/my-restrictions'],
   ],

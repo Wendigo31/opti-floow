@@ -12,6 +12,21 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.0",
+    date: "2026-11-21",
+    title: "Appli OptiFlow Conducteur",
+    changes: [
+      "Nouvelle appli OptiFlow Conducteur, installable sur le téléphone par le lien personnel du conducteur (sans mot de passe)",
+      "Lignes du jour et de la semaine (horaires, adresses, ordre de mission, relais, absences), itinéraire Google Maps ou Waze",
+      "Pointage : prise de service, coupures, fin de service, kilométrage ; heures de travail, de nuit (21 h – 6 h), repas et découchers",
+      "Documents et preuves par ligne : CMR signée, bon de livraison, photos, réserves, ticket de pesée, bon de chantier, signature du destinataire",
+      "Véhicule et frais : check-list de départ, pleins gazole et AdBlue, péages et frais avec photo du ticket, signalement de panne",
+      "RH › Remontées conducteurs : heures (export tableur), pleins et frais, contrôles et pannes à traiter, documents",
+      "Fiches de paie : les jours pointés dans l'appli aident à la saisie",
+      "Matériel : porteurs toupie, fond mouvant, ampliroll, hydrocureur, 4x4 chantier ; semi toupie, fond mouvant bâché, bennes céréalière et ferrailleuse, citerne gaz, porte-bobines, caisson ampliroll",
+    ],
+  },
+  {
     version: "2.11.0",
     date: "2026-11-21",
     title: "Espace expert-comptable",

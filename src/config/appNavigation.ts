@@ -88,6 +88,7 @@ import {
   FileText,
 
   Gavel,
+  Smartphone,
   FolderArchive,
 
   ShieldCheck,
@@ -214,6 +215,8 @@ const P = {
   // Pénalités : retenues des clients, retards de paiement, amendes et PV (nov. 2026).
   penalties: { to: '/penalties', icon: Gavel, label: 'Pénalités', allowedRoles: ['direction', 'comptabilite', 'exploitation'] },
   // Expert-comptable : dossier comptable du mois et lien d'accès du cabinet (nov. 2026).
+  // Remontées de l'appli OptiFlow Conducteur : heures, frais, contrôles, documents (nov. 2026).
+  driverActivity: { to: '/driver-activity', icon: Smartphone, label: 'Remontées conducteurs', allowedRoles: ['direction', 'rh', 'exploitation', 'comptabilite'] },
   accountant: { to: '/accountant', icon: FolderArchive, label: 'Expert-comptable', allowedRoles: ['direction', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 
@@ -279,7 +282,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
 
     // Les conducteurs → l'équipe → leur planning → mes propres accès.
 
-    pages: [P.drivers, P.team, P.payslips, P.planning, P.restrictions],
+    pages: [P.drivers, P.driverActivity, P.team, P.payslips, P.planning, P.restrictions],
 
   },
 
