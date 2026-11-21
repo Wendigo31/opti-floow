@@ -22,6 +22,7 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
   onOpenChange: (o: boolean) => void;
 }) {
   const [link, setLink] = useState('');
+  const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = async (reset = false) => {
@@ -34,7 +35,10 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
       return;
     }
     setLink(`${window.location.origin}/conducteur?token=${data as string}`);
-    if (reset) toast.success('Nouveau lien créé : l\'ancien ne fonctionne plus');
+    // Code pour l'appli OptiGroup Conducteur (stores) : même accès que le lien.
+    const p = await rpc('driver_access_pin', { p_driver_id: driverId });
+    setPin(!p.error && p.data ? `FL-${p.data as string}` : '');
+    if (reset) toast.success('Nouveau lien et nouveau code créés : les anciens ne fonctionnent plus');
   };
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
       window.prompt('Lien de l\'application conducteur :', link);
     }
   };
-  const sms = `sms:${(phone || '').replace(/\s/g, '')}?&body=${encodeURIComponent(`Bonjour ${driverName}, voici ton appli OptiFlow Conducteur (planning, pointage, documents, frais). Ouvre le lien puis « Ajouter à l'écran d'accueil » : ${link}`)}`;
+  const sms = `sms:${(phone || '').replace(/\s/g, '')}?&body=${encodeURIComponent(`Bonjour ${driverName}, voici ton appli conducteur OptiFlow (planning, pointage, documents, frais). ${pin ? `Dans l'appli « OptiGroup Conducteur » (App Store / Google Play), saisis le code ${pin}. ` : ''}Ou ouvre ce lien puis « Ajouter à l'écran d'accueil » : ${link}`)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,13 +62,19 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Smartphone className="h-5 w-5" /> Application de {driverName}</DialogTitle>
           <DialogDescription>
-            Envoyez ce lien au conducteur : il l'ouvre une fois sur son téléphone puis « Ajouter à l'écran d'accueil ». L'appli OptiFlow Conducteur s'installe : lignes de la semaine, pointage et heures, documents (CMR, bons, photos, signature), pleins, frais, check-list et pannes. Tout remonte dans RH › Remontées conducteurs.
+            Le conducteur installe l'appli « OptiGroup Conducteur » (App Store / Google Play) et saisit son code, ou ouvre ce lien une fois puis « Ajouter à l'écran d'accueil ». Il retrouve : lignes de la semaine, pointage et heures, documents (CMR, bons, photos, signature), pleins, frais, check-list et pannes. Tout remonte dans RH › Remontées conducteurs.
           </DialogDescription>
         </DialogHeader>
         {busy && !link ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Préparation du lien…</p>
         ) : link ? (
           <div className="space-y-3">
+            {pin && (
+              <div className="rounded-lg border bg-muted/40 p-3 text-center">
+                <p className="text-xs text-muted-foreground">Code dans l'appli OptiGroup Conducteur</p>
+                <p className="font-mono text-2xl font-bold tracking-widest">{pin}</p>
+              </div>
+            )}
             <Input readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Lien de l'application conducteur" />
             <div className="flex flex-wrap gap-2">
               <Button className="gap-2" onClick={() => void copy()}><Copy className="h-4 w-4" /> Copier</Button>
@@ -73,7 +83,7 @@ export function DriverLinkDialog({ driverId, driverName, phone, open, onOpenChan
                 <RefreshCw className="h-4 w-4" /> Nouveau lien
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Lien perdu ou téléphone changé : créez un nouveau lien, l'ancien est aussitôt désactivé.</p>
+            <p className="text-xs text-muted-foreground">Lien ou code perdu, téléphone changé : créez un nouveau lien. L'ancien lien et l'ancien code sont aussitôt désactivés.</p>
           </div>
         ) : null}
       </DialogContent>

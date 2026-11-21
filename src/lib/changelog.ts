@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.1",
+    date: "2026-11-21",
+    title: "Code conducteur pour l'appli OptiGroup Conducteur",
+    changes: [
+      "Chaque conducteur a un code FL-xxxxxx pour l'appli OptiGroup Conducteur (App Store / Google Play), commune à OptiFret, OptiFlow et OptiXpress",
+      "Le code est affiché dans la fenêtre « Application » du conducteur et ajouté au SMS ; « Nouveau lien » change aussi le code",
+      "Connexion par code limitée à 10 essais par quart d'heure",
+    ],
+  },
+  {
     version: "2.12.0",
     date: "2026-11-21",
     title: "Appli OptiFlow Conducteur",
