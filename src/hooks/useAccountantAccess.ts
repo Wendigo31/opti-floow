@@ -79,7 +79,11 @@ export function useAccountantAccess(licenseId: string | null | undefined) {
     const { error: upErr } = await supabase.storage.from(ACCOUNTING_BUCKET).upload(path, new Blob([zip as BlobPart], { type: 'application/zip' }), { contentType: 'application/zip', upsert: false });
     if (upErr) throw new Error(upErr.message);
     const old = (exports.data ?? []).filter((e) => e.period === period);
-    const { error } = await db.from('accounting_exports').insert({ license_id: licenseId, period, path, size: zip.length, contents });
+    // Lien de téléchargement signé (≈ 13 mois) : le cabinet, non connecté, le reçoit
+    // par la fonction accountant_portal seulement avec un jeton valide.
+    const { data: signed, error: signErr } = await supabase.storage.from(ACCOUNTING_BUCKET).createSignedUrl(path, 400 * 86_400, { download: `dossier-comptable-${period}.zip` });
+    if (signErr || !signed) throw new Error(signErr?.message || 'Lien de téléchargement impossible');
+    const { error } = await db.from('accounting_exports').insert({ license_id: licenseId, period, path, size: zip.length, contents, share_url: signed.signedUrl });
     if (error) throw new Error(error.message);
     if (old.length) {
       await supabase.storage.from(ACCOUNTING_BUCKET).remove(old.map((o) => o.path));

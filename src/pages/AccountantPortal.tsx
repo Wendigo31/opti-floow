@@ -6,8 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Espace expert-comptable (page publique, lien personnel #t=<jeton>) : dossiers
- * comptables mensuels de la société, en lecture seule. Le jeton n'est jamais
- * envoyé dans l'adresse (fragment #), seulement au serveur.
+ * comptables mensuels de la société, en lecture seule. Le jeton reste dans le
+ * fragment # de l'adresse (jamais envoyé au serveur web), seulement à la base.
  * Fichier partagé (bridge/shared/accounting).
  */
 interface PortalData {
@@ -26,7 +26,9 @@ export default function AccountantPortal() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.hash.slice(1)).get('t');
     if (!token) { setError('Lien incomplet : demandez un nouveau lien à votre client.'); return; }
-    void supabase.functions.invoke('accountant-portal', { body: { token } }).then(({ data: d, error: e }) => {
+    // Fonction de la base (sans Edge Function) : vérifie le jeton et renvoie les dossiers.
+    const rpc = supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+    void rpc.call(supabase, 'accountant_portal', { p_token: token }).then(({ data: d, error: e }) => {
       if (e || !d || (d as { error?: string }).error) setError((d as { error?: string })?.error || 'Lien invalide, expiré ou révoqué. Demandez un nouveau lien à votre client.');
       else setData(d as PortalData);
     });
