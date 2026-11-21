@@ -12,6 +12,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.3",
+    date: "2026-11-21",
+    title: "Sécurité (analyse complète)",
+    changes: [
+      "Mot de passe oublié : le code provisoire ne remplace l'ancien mot de passe qu'au moment où il est utilisé (plus de blocage d'un compte par un tiers)",
+      "Coordonnées société complétées uniquement par la Direction connectée",
+      "Fonctions serveur : le lien de société ne suffit plus à ouvrir une session avec un email, ancien envoi de code de licence fermé, versions non publiées masquées, dépôt de documents limité aux types courants",
+      "Plus de données affichées dans la console du navigateur",
+    ],
+  },
+  {
     version: "2.12.2",
     date: "2026-11-21",
     title: "Sécurité",

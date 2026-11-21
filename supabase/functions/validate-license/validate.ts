@@ -8,16 +8,10 @@ export async function handleValidate(body: any, supabase: any, req: Request, cli
   const { email } = body;
   let { licenseCode } = body;
 
-  // Connexion depuis le lien de la société (?societe=…) : le lien remplace
-  // l'identifiant société, retrouvé ici côté serveur (jamais envoyé à la page).
-  if (!licenseCode && typeof body.slug === "string" && /^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/.test(body.slug.toLowerCase())) {
-    const { data: bySlug } = await supabase
-      .from("licenses")
-      .select("company_identifier, license_code")
-      .eq("slug", body.slug.toLowerCase())
-      .maybeSingle();
-    licenseCode = bySlug?.company_identifier || bySlug?.license_code || null;
-    if (!licenseCode) return errorResponse("Lien de société inconnu", 404);
+  // Le lien de société (?societe=…) ne suffit plus à ouvrir une session avec un simple
+  // email : il faut le code société, ou se connecter avec son compte personnel.
+  if (!licenseCode && typeof body.slug === "string") {
+    return errorResponse("Connectez-vous avec votre email et votre mot de passe personnel.", 403);
   }
 
   if (!licenseCode || !email) {

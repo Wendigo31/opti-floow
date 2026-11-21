@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, updateId } = body;
 
-    console.log(`[manage-updates] Action: ${action}`);
 
     // Publication des mises à jour : l'ancien panneau d'administration est supprimé
     // (administration dans OptiCentral). Seules la lecture et le compteur restent ouverts.
@@ -41,6 +40,7 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase
           .from('app_updates')
           .select('*')
+          .eq('is_active', true) // versions publiées seulement
           .order('created_at', { ascending: false });
 
         if (error) {

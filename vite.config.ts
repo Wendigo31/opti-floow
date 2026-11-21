@@ -7,6 +7,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // En production, les console.log/info/debug sont retirés : ils affichaient des données
+  // (clients, adresses, conducteurs) dans les outils du navigateur. Les erreurs restent.
+  esbuild: mode === "production" ? { pure: ["console.log", "console.info", "console.debug"] } : undefined,
   server: {
     host: "::",
     port: 8080,

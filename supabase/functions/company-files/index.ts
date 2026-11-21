@@ -147,10 +147,21 @@ Deno.serve(async (req) => {
     const raw = body.base64.replace(/^data:[^;]+;base64,/, "");
     const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
     if (bytes.length > 20 * 1024 * 1024) return json({ error: "Document trop volumineux (20 Mo max)" }, 413);
-    const path = `${folder}/documents/${safeName(body.name)}`;
+    // Types de documents acceptés : le type enregistré vient de l'extension, jamais de l'appelant.
+    const ALLOWED: Record<string, string> = {
+      pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+      txt: "text/plain", csv: "text/csv", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", zip: "application/zip",
+    };
+    const name = safeName(body.name);
+    const ext = (name.split(".").pop() ?? "").toLowerCase();
+    if (!ALLOWED[ext] || name.includes("/") || name.startsWith(".")) {
+      return json({ error: "Type de document non accepté (PDF, image, tableur, texte, Word ou ZIP)" }, 415);
+    }
+    const path = `${folder}/documents/${name}`;
     const { error } = await admin.storage
       .from(bucket)
-      .upload(path, bytes, { contentType: body.mime || "application/octet-stream", upsert: true });
+      .upload(path, bytes, { contentType: ALLOWED[ext], upsert: true });
     if (error) return json({ error: error.message }, 500);
     return json({ bucket, path });
   }
