@@ -12,6 +12,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.2",
+    date: "2026-11-21",
+    title: "Sécurité",
+    changes: [
+      "Sécurité : réglages d'accès (forfait, onglets) et bandeaux OptiCentral d'une société réservés à ses membres",
+      "Sécurité : fonctions de base réécrites sans requêtes assemblées à l'exécution",
+      "Exports du dossier comptable (CSV) : un texte commençant par = + - @ n'est plus pris pour une formule par Excel",
+      "Code conducteur FL- : plafond global d'essais en plus de la limite par adresse",
+    ],
+  },
+  {
     version: "2.12.1",
     date: "2026-11-21",
     title: "Code conducteur pour l'appli OptiGroup Conducteur",

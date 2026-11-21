@@ -22,7 +22,9 @@ export function monthBounds(period: string): { from: string; to: string } {
 export function toCsv(header: string[], rows: (string | number | null | undefined)[][]): string {
   const cell = (v: string | number | null | undefined) => {
     if (v == null) return '';
-    const s = typeof v === 'number' ? v.toFixed(2).replace('.', ',') : String(v);
+    let s = typeof v === 'number' ? v.toFixed(2).replace('.', ',') : String(v);
+    // Texte commençant par = + - @ : Excel le prendrait pour une formule (injection) → apostrophe devant.
+    if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return '﻿' + [header, ...rows].map((r) => r.map(cell).join(';')).join('\r\n');
