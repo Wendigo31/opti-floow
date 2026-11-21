@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.company-files]
 verify_jwt = false
+
+[functions.accountant-portal]
+verify_jwt = false

@@ -31,6 +31,8 @@ const CalculatorWithHistory = lazy(() => import("./pages/CalculatorWithHistory")
 const Itinerary = lazy(() => import("./pages/ItineraryAndLines"));
 const Payslips = lazy(() => import("./pages/Payslips"));
 const Penalties = lazy(() => import("./pages/Penalties"));
+const Accountant = lazy(() => import("./pages/Accountant"));
+const AccountantPortal = lazy(() => import("./pages/AccountantPortal"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
 const Charges = lazy(() => import("./pages/Charges"));
@@ -147,6 +149,7 @@ function LicensedAppContent() {
                   <Route path="/install" element={<Install />} />
                   <Route path="/payslips" element={<Payslips />} />
                   <Route path="/penalties" element={<Penalties />} />
+                  <Route path="/accountant" element={<Accountant />} />
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -176,6 +179,8 @@ function AppRoutes() {
   const isAcceptQuoteRoute = location.pathname === '/accepter-devis';
   // Application conducteur : lien personnel /conducteur?token=..., sans licence.
   const isDriverRoute = location.pathname === '/conducteur';
+  // Espace expert-comptable : lien personnel /espace-comptable#t=..., sans licence.
+  const isAccountantRoute = location.pathname === '/espace-comptable';
 
   return (
     <AppProvider>
@@ -190,6 +195,10 @@ function AppRoutes() {
       ) : isAcceptQuoteRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
           <AcceptQuote />
+        </Suspense>
+      ) : isAccountantRoute ? (
+        <Suspense fallback={<RouteSuspenseFallback />}>
+          <AccountantPortal />
         </Suspense>
       ) : isDriverRoute ? (
         <Suspense fallback={<RouteSuspenseFallback />}>
@@ -219,6 +228,7 @@ function AppContent() {
     pathname === '/accept-invite' ? `/accept-invite${search}` :
     pathname === '/accepter-devis' ? `/accepter-devis${search}` :
     pathname === '/conducteur' ? `/conducteur${search}` :
+    pathname === '/espace-comptable' ? '/espace-comptable' :
     '/';
 
   return (

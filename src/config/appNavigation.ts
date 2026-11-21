@@ -88,6 +88,7 @@ import {
   FileText,
 
   Gavel,
+  FolderArchive,
 
   ShieldCheck,
 
@@ -212,6 +213,8 @@ const P = {
   payslips: { to: '/payslips', icon: Wallet, label: 'Fiches de paie', allowedRoles: ['direction', 'rh', 'comptabilite'] },
   // Pénalités : retenues des clients, retards de paiement, amendes et PV (nov. 2026).
   penalties: { to: '/penalties', icon: Gavel, label: 'Pénalités', allowedRoles: ['direction', 'comptabilite', 'exploitation'] },
+  // Expert-comptable : dossier comptable du mois et lien d'accès du cabinet (nov. 2026).
+  accountant: { to: '/accountant', icon: FolderArchive, label: 'Expert-comptable', allowedRoles: ['direction', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
 
 } satisfies Record<string, NavPageConfig>;
@@ -304,7 +307,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
 
     // Planning retiré d'ici : réservé à Exploitation / RH / Gestion de parc.
 
-    pages: [P.invoices, P.charges, P.penalties, P.payslips, P.calculator, P.history, P.dashboard, P.forecast, P.clients],
+    pages: [P.invoices, P.charges, P.penalties, P.accountant, P.payslips, P.calculator, P.history, P.dashboard, P.forecast, P.clients],
 
   },
 

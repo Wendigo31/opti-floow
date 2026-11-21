@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.11.0",
+    date: "2026-11-21",
+    title: "Espace expert-comptable",
+    changes: [
+      "Comptabilité › Expert-comptable : dossier comptable du mois en un clic (factures et avoirs Factur-X, FEC, fiches de paie validées, pénalités, charges, récapitulatifs en tableur)",
+      "Lien d'accès personnel pour votre cabinet : lecture seule, sans compte, valable 12 mois, révocable, avec la date de sa dernière visite",
+    ],
+  },
+  {
     version: "2.10.0",
     date: "2026-11-21",
     title: "Pénalités",

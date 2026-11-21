@@ -34,6 +34,7 @@ const FLOW_PAGES = [
   { path: '/tenders', label: 'Devis par client', space: "Appels d'offres" },
   { path: '/invoices', label: 'Factures', space: 'Comptabilité' },
   { path: '/penalties', label: 'Pénalités', space: 'Comptabilité' },
+  { path: '/accountant', label: 'Expert-comptable', space: 'Comptabilité' },
   { path: '/charges', label: 'Charges fixes', space: 'Comptabilité' },
   { path: '/dashboard', label: 'Analyse', space: 'Pilotage' },
   { path: '/forecast', label: 'Prévisionnel', space: 'Pilotage' },
