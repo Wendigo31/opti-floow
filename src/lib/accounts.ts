@@ -68,7 +68,14 @@ export async function loginEmail(input: string): Promise<string | null> {
 export async function signInWithPassword(login: string, password: string): Promise<MyCompany[]> {
   const email = await loginEmail(login);
   if (!email) throw new Error('Identifiant inconnu');
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  let { error } = await supabase.auth.signInWithPassword({ email, password });
+  // Code provisoire reçu par « Mot de passe oublié » : il ne devient le mot de passe
+  // qu'à ce moment-là (l'ancien reste valable tant que le code n'est pas utilisé).
+  const code = password.trim().toUpperCase();
+  if (error && /^[A-Z0-9]{10}$/.test(code)) {
+    const { data: redeemed } = await rpc('redeem_reset_code', { p_login: login.trim(), p_code: code });
+    if (redeemed === true) ({ error } = await supabase.auth.signInWithPassword({ email, password: code }));
+  }
   if (error) throw new Error('Email / identifiant ou mot de passe incorrect');
   const companies = await myCompanies();
   if (!companies.length) {
