@@ -220,7 +220,7 @@ const P = {
   // Expert-comptable : dossier comptable du mois et lien d'accès du cabinet (nov. 2026).
   // Remontées de l'appli OptiFlow Conducteur : heures, frais, contrôles, documents (nov. 2026).
   // Lecture des cartes conducteur du chronotachygraphe (.ddd) : temps de conduite et infractions (nov. 2026).
-  tachograph: { to: '/tachograph', icon: Gauge, label: 'Chronotachygraphe', allowedRoles: ['direction', 'rh', 'exploitation'] },
+  tachograph: { to: '/tachograph', icon: Gauge, label: 'Relevés tachy', allowedRoles: ['direction', 'rh', 'exploitation', 'comptabilite'] },
   driverActivity: { to: '/driver-activity', icon: Smartphone, label: 'Remontées conducteurs', allowedRoles: ['direction', 'rh', 'exploitation', 'comptabilite'] },
   accountant: { to: '/accountant', icon: FolderArchive, label: 'Expert-comptable', allowedRoles: ['direction', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },

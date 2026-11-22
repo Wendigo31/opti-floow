@@ -17,12 +17,14 @@ export const CHANGELOG: Release[] = [
     title: "Double authentification, chronotachygraphe, CNR et carburant",
     changes: [
       "Double authentification : code à 6 chiffres d'une application (Google Authenticator, Authy…) à la connexion, à activer dans Paramètres",
-      "Chronotachygraphe : lecture des fichiers .ddd de la carte conducteur, temps de conduite et infractions au règlement CE 561/2006 (RH › Chronotachygraphe)",
+      "Chronotachygraphe : lecture des fichiers .ddd de la carte conducteur, temps de conduite et infractions au règlement CE 561/2006",
       "Analyse : trajets des 30 derniers jours comparés au coût de revient CNR (indices modifiables)",
       "Carburant : import des relevés de cartes carburant (AS24, DKV, Total, Shell, UTA…), consommation et coût réels par véhicule",
       "Fiches de paie : pré-paie depuis le fichier .ddd de la carte conducteur (temps de service, heures d'équivalence et sup., nuit, dimanche, repas, casse-croûte selon la convention collective, jours fériés, découchers estimés pour les grands routiers)",
       "Conducteurs : modèle de contrat (catégorie, coefficient, ancienneté) qui remplit heures, taux et salaire minimum",
       "Grilles tarifaires clients : modifiables par la Direction et la Comptabilité seulement",
+      "RH › Relevés tachy : cartes conducteur importées et enregistrées, synthèse mensuelle pour la paie (export CSV), détail jour par jour et infractions ; la pré-paie du bulletin reprend les relevés enregistrés",
+      "Sociétés de démonstration : relevés de chronotachygraphe sur 6 mois, complétés chaque soir",
     ],
   },
   {

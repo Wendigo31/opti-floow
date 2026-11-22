@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Gauge, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { parseDriverCard } from '@/lib/tachograph';
 import { computePrePayroll, type PrePayroll } from '@/lib/prePayroll';
 import { CATEGORY_INFO, NIGHT_PREMIUM_PER_HOUR, ROAD_ALLOWANCES_2026, type DriverCategory } from '@/lib/driverContract';
 import type { PayslipInput } from '@/lib/payslipCalc';
+import { loadTachoMonth, rowToDay } from '@/lib/tachoRecords';
 
 const n = (v: number, d = 2) => v.toLocaleString('fr-FR', { maximumFractionDigits: d });
 
@@ -16,7 +17,7 @@ const n = (v: number, d = 2) => v.toLocaleString('fr-FR', { maximumFractionDigit
  * carte du conducteur et propose heures (équivalences, sup.), nuit, dimanche et frais
  * de route du mois. Les heures du contrat restent garanties (jamais moins que prévu).
  */
-export function TachoPrePayrollCard({ month, input, onApply }: { month: string; input: PayslipInput; onApply: (input: PayslipInput) => void }) {
+export function TachoPrePayrollCard({ month, input, onApply, licenseId, driverId }: { month: string; input: PayslipInput; onApply: (input: PayslipInput) => void; licenseId?: string | null; driverId?: string | null }) {
   const file = useRef<HTMLInputElement>(null);
   // Heures sup. structurelles du contrat, telles qu'à l'ouverture du bulletin.
   const contractOt25 = useRef(input.overtime25Hours);
@@ -24,6 +25,18 @@ export function TachoPrePayrollCard({ month, input, onApply }: { month: string; 
   const [category, setCategory] = useState<DriverCategory>(monthly >= 186 ? 'longue_distance' : monthly >= 168 ? 'courte_distance' : 'messagerie');
   const [loading, setLoading] = useState(false);
   const [card, setCard] = useState<{ name: string; days: Parameters<typeof computePrePayroll>[0] } | null>(null);
+  // Relevés déjà enregistrés (RH › Relevés tachy) : chargés d'office.
+  const [stored, setStored] = useState<number | null>(null);
+  useEffect(() => {
+    if (!licenseId || !driverId) return;
+    let alive = true;
+    loadTachoMonth(licenseId, month, driverId).then((rows) => {
+      if (!alive) return;
+      setStored(rows.length);
+      if (rows.length) setCard((c) => c ?? { name: 'relevés enregistrés', days: rows.map(rowToDay) });
+    }).catch(() => alive && setStored(0));
+    return () => { alive = false; };
+  }, [licenseId, driverId, month]);
   const pre: PrePayroll | null = useMemo(() => (card ? computePrePayroll(card.days, month, category) : null), [card, month, category]);
 
   const onFile = async (f?: File) => {
@@ -78,13 +91,13 @@ export function TachoPrePayrollCard({ month, input, onApply }: { month: string; 
         </Select>
       </div>
       {!pre ? (
-        <p className="text-xs text-muted-foreground">Téléchargez la carte du conducteur (lecteur de carte ou boîtier) et déposez le fichier : temps de service, heures d'équivalence et sup., nuit, dimanche, repas et casse-croûte du mois sont calculés selon la convention collective.</p>
+        <p className="text-xs text-muted-foreground">{stored === 0 ? 'Aucun relevé enregistré pour ce conducteur ce mois-ci (RH › Relevés tachy). ' : ''}Téléchargez la carte du conducteur (lecteur de carte ou boîtier) et déposez le fichier : temps de service, heures d'équivalence et sup., nuit, dimanche, repas et casse-croûte du mois sont calculés selon la convention collective.</p>
       ) : pre.days.length === 0 ? (
         <p className="text-xs text-warning">Carte de {card?.name} : aucune journée de service en {month.split('-').reverse().join('/')}.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
-            <span>Carte : <b>{card?.name}</b></span>
+            <span>Source : <b>{card?.name}</b></span>
             <span>Journées de service : <b>{pre.days.length}</b></span>
             <span>Temps de service : <b>{n(pre.serviceHours)} h</b></span>
             <span>dont conduite : {n(pre.drivingHours)} h</span>

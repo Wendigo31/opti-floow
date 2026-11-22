@@ -61,6 +61,8 @@ export interface ServiceDay {
   end: string;
   serviceMin: number;
   drivingMin: number;
+  workMin: number;
+  availabilityMin: number;
   nightMin: number;
   sundayMin: number;
   meals: number;
@@ -158,10 +160,12 @@ export function computePrePayroll(days: TachoDay[], month: string, category: Dri
   groups.forEach((group, gi) => {
     const first = local(group[0].start);
     if (!first.date.startsWith(month)) return;
-    let serviceMin = 0, drivingMin = 0, nightMin = 0, sundayMin = 0, lateNight = 0;
+    let serviceMin = 0, drivingMin = 0, workMin = 0, availabilityMin = 0, nightMin = 0, sundayMin = 0, lateNight = 0;
     for (const s of group) {
       serviceMin += (s.end - s.start) / MIN;
       if (s.activity === 'driving') drivingMin += (s.end - s.start) / MIN;
+      else if (s.activity === 'work') workMin += (s.end - s.start) / MIN;
+      else availabilityMin += (s.end - s.start) / MIN;
       eachSlice(s.start, s.end, (m, t) => {
         if (inRange(t.minute, 21 * 60, 6 * 60)) nightMin += m;
         if (inRange(t.minute, 22 * 60, 7 * 60)) lateNight += m;
@@ -184,6 +188,8 @@ export function computePrePayroll(days: TachoDay[], month: string, category: Dri
       end: hhmm(endMin),
       serviceMin: Math.round(serviceMin),
       drivingMin: Math.round(drivingMin),
+      workMin: Math.round(workMin),
+      availabilityMin: Math.round(availabilityMin),
       nightMin: Math.round(nightMin),
       sundayMin: Math.round(sundayMin),
       meals,
