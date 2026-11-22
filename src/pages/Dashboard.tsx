@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { CnrTripsCard } from '@/components/cnr/CnrTripsCard';
 import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, PiggyBank, Sparkles, Filter, X, TrendingUp } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CostChart } from '@/components/dashboard/CostChart';
@@ -592,6 +593,8 @@ export default function Dashboard() {
           </FeatureGate>
         </TabsContent>}
       </Tabs>
+
+      <CnrTripsCard licenseId={accessLicenseId} />
 
       <PDFExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} onExport={handleExportPDF} routeCoordinates={lastRoute?.coordinates || []} markers={lastRoute?.markers || []} />
     </div>

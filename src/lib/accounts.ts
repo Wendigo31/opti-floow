@@ -6,6 +6,7 @@
  * Fonctions SQL : migrations *_user_accounts.sql et *_team_usage.sql.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { completeMfaIfNeeded } from '@/lib/mfa';
 
 type RpcResult = { data: unknown; error: { message: string } | null };
 // Fonctions absentes des types générés : appel non typé.
@@ -77,6 +78,8 @@ export async function signInWithPassword(login: string, password: string): Promi
     if (redeemed === true) ({ error } = await supabase.auth.signInWithPassword({ email, password: code }));
   }
   if (error) throw new Error('Email / identifiant ou mot de passe incorrect');
+  // Double authentification activée sur le compte : code à 6 chiffres demandé avant d'aller plus loin.
+  await completeMfaIfNeeded();
   const companies = await myCompanies();
   if (!companies.length) {
     await supabase.auth.signOut();

@@ -12,6 +12,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.7",
+    date: "2026-11-22",
+    title: "Double authentification, chronotachygraphe, CNR et carburant",
+    changes: [
+      "Double authentification : code à 6 chiffres d'une application (Google Authenticator, Authy…) à la connexion, à activer dans Paramètres",
+      "Chronotachygraphe : lecture des fichiers .ddd de la carte conducteur, temps de conduite et infractions au règlement CE 561/2006 (RH › Chronotachygraphe)",
+      "Analyse : trajets des 30 derniers jours comparés au coût de revient CNR (indices modifiables)",
+      "Carburant : import des relevés de cartes carburant (AS24, DKV, Total, Shell, UTA…), consommation et coût réels par véhicule",
+    ],
+  },
+  {
     version: "2.12.6",
     date: "2026-11-22",
     title: "Analyse prête dès l'ouverture",

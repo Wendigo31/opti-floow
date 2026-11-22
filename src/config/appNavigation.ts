@@ -46,6 +46,7 @@
 
 import {
   Receipt,
+  Gauge,
 
   Calculator,
 
@@ -98,6 +99,7 @@ import {
   type LucideIcon,
 
   Wallet,
+  Fuel,
 } from 'lucide-react';
 
 import type { FeatureKey } from '@/hooks/useLicense';
@@ -201,6 +203,7 @@ const P = {
 
   forecast: { to: '/forecast', icon: TrendingUp, label: 'Prévisionnel', requiredFeature: 'page_forecast', userFeatureKey: 'page_forecast', userFeatureKeys: ['view_profits'], allowedRoles: ['direction', 'comptabilite'] },
 
+  fuel: { to: '/fuel', icon: Fuel, label: 'Carburant', requiredFeature: 'page_vehicles', userFeatureKey: 'page_vehicles', allowedRoles: ['direction', 'exploitation', 'comptabilite'] },
   vehicleReports: { to: '/vehicle-reports', icon: FileSpreadsheet, label: 'Rapports véhicules', requiredFeature: 'page_vehicle_reports' },
 
   history: { to: '/history', icon: History, label: 'Historique des trajets', requiredFeature: 'page_calculator', userFeatureKey: 'page_calculator' },
@@ -216,6 +219,8 @@ const P = {
   penalties: { to: '/penalties', icon: Gavel, label: 'Pénalités', allowedRoles: ['direction', 'comptabilite', 'exploitation'] },
   // Expert-comptable : dossier comptable du mois et lien d'accès du cabinet (nov. 2026).
   // Remontées de l'appli OptiFlow Conducteur : heures, frais, contrôles, documents (nov. 2026).
+  // Lecture des cartes conducteur du chronotachygraphe (.ddd) : temps de conduite et infractions (nov. 2026).
+  tachograph: { to: '/tachograph', icon: Gauge, label: 'Chronotachygraphe', allowedRoles: ['direction', 'rh', 'exploitation'] },
   driverActivity: { to: '/driver-activity', icon: Smartphone, label: 'Remontées conducteurs', allowedRoles: ['direction', 'rh', 'exploitation', 'comptabilite'] },
   accountant: { to: '/accountant', icon: FolderArchive, label: 'Expert-comptable', allowedRoles: ['direction', 'comptabilite'] },
   settings: { to: '/settings', icon: SettingsIcon, label: 'Paramètres', requiredFeature: 'page_settings' },
@@ -270,7 +275,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
 
     // indisponibles - entretien, accident...) → ses rapports → les conducteurs qui les utilisent → installer l'appli.
 
-    pages: [P.vehicles, P.planning, P.vehicleReports, P.drivers, P.install],
+    pages: [P.vehicles, P.fuel, P.planning, P.vehicleReports, P.drivers, P.install],
 
   },
 
@@ -282,7 +287,7 @@ export const NAV_CATEGORIES: NavCategoryConfig[] = [
 
     // Les conducteurs → l'équipe → leur planning → mes propres accès.
 
-    pages: [P.drivers, P.driverActivity, P.team, P.payslips, P.planning, P.restrictions],
+    pages: [P.drivers, P.driverActivity, P.tachograph, P.team, P.payslips, P.planning, P.restrictions],
 
   },
 

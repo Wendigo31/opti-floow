@@ -1,4 +1,5 @@
 import { useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
+import { MfaPrompt } from '@/components/security/MfaPrompt';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,6 +34,8 @@ const Payslips = lazy(() => import("./pages/Payslips"));
 const Penalties = lazy(() => import("./pages/Penalties"));
 const Accountant = lazy(() => import("./pages/Accountant"));
 const DriverActivity = lazy(() => import("./pages/DriverActivity"));
+const Tachograph = lazy(() => import("./pages/Tachograph"));
+const FuelCards = lazy(() => import("./pages/FuelCards"));
 const AccountantPortal = lazy(() => import("./pages/AccountantPortal"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
@@ -152,6 +155,8 @@ function LicensedAppContent() {
                   <Route path="/penalties" element={<Penalties />} />
                   <Route path="/accountant" element={<Accountant />} />
                   <Route path="/driver-activity" element={<DriverActivity />} />
+                  <Route path="/tachograph" element={<Tachograph />} />
+                  <Route path="/fuel" element={<FuelCards />} />
                   <Route path="/pricing-export" element={<PricingExport />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -249,6 +254,7 @@ const App = () => (
         <PlanningImportProvider>
           <Toaster />
           <Sonner />
+          <MfaPrompt />
           <AppContent />
           <BackgroundImportIndicator />
         </PlanningImportProvider>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TwoFactorCard } from '@/components/security/TwoFactorCard';
 import { Settings as SettingsIcon, FileText, HelpCircle, HardDrive, Info as InfoIcon } from 'lucide-react';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { AddonMarketplace } from '@/components/settings/AddonMarketplace';
@@ -84,6 +85,7 @@ export default function Settings() {
 
   const appSettings = (
     <div className="space-y-5">
+      <TwoFactorCard />
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2"><HardDrive className="w-4 h-4 text-primary" /> Téléchargements</CardTitle>
