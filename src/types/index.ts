@@ -42,6 +42,9 @@ export interface Driver {
   interimAgency?: string;
   interimHourlyRate?: number;
   interimCoefficient?: number;
+  /** Convention collective : catégorie (longue/courte distance, messagerie) et coefficient (150M…). */
+  ccnCategory?: string;
+  ccnCoefficient?: string;
   documents?: DriverDocument[];
 }
 

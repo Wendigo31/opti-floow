@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { ContractPresetPicker } from '@/components/drivers/ContractPresetPicker';
 import type { DriverContractType, ExtendedDriver } from '@/types/driver';
 import type { DriverDocument, DriverDocumentType } from '@/types';
 import {
@@ -244,6 +245,23 @@ export function DriverForm({
       {!isInterim && !isAutre && canViewFinancialData && (
         <div className="border-t border-border pt-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Rémunération</h3>
+          <div className="mb-4">
+            <ContractPresetPicker onApply={(p, hireDate) => {
+              const days = formData.workingDaysPerMonth || 22;
+              setFormData({
+                ...formData,
+                hireDate,
+                ccnCategory: p.category,
+                ccnCoefficient: p.coefficient,
+                baseSalary: p.baseSalary,
+                hourlyRate: p.hourlyRate,
+                workingDaysPerMonth: days,
+                hoursPerDay: Math.round((p.monthlyHours / days) * 100) / 100,
+                mealAllowance: p.mealAllowance,
+                overnightAllowance: p.overnightAllowance,
+              });
+            }} />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="baseSalary">Salaire brut mensuel (€)</Label>

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { usePayslips, useSavePayslip, useDeletePayslip, usePayrollRates, useSavePayrollRates, type PayslipRow } from '@/hooks/usePayslips';
 import { computePayslip, emptyPayslipInput, DEFAULT_PAYROLL_RATES, type PayslipInput, type PayrollRates } from '@/lib/payslipCalc';
 import { exportPayslipPDF, periodLabel } from '@/lib/pdfPayslip';
+import { TachoPrePayrollCard } from '@/components/tachograph/TachoPrePayrollCard';
 
 const eur = (n: number) => `${(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 
@@ -232,6 +233,7 @@ export function PayslipsPanel({
                   <F label="Emploi"><Input value={draft.job} onChange={(e) => setDraft({ ...draft, job: e.target.value })} placeholder="Conducteur routier" /></F>
                   <F label="Classification (CCN)"><Input value={draft.classification} onChange={(e) => setDraft({ ...draft, classification: e.target.value })} placeholder="Groupe 7 — coef. 150 M" /></F>
                 </div>
+                {draft.driverId && <TachoPrePayrollCard key={draft.driverId} month={month} input={draft.input} onApply={(input) => setDraft({ ...draft, input })} />}
                 <Section title="Salaire">
                   <N label="Taux horaire brut (€)" v={draft.input.hourlyRate} on={(v) => setDraft({ ...draft, input: { ...draft.input, hourlyRate: v } })} />
                   <N label="Heures mensualisées" v={draft.input.baseHours} on={(v) => setDraft({ ...draft, input: { ...draft.input, baseHours: v } })} />

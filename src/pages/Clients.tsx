@@ -30,8 +30,12 @@ import { Tags } from 'lucide-react';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { useRateCards } from '@/hooks/useRateCards';
 import { RateCardDialog } from '@/components/pricing/RateCardDialog';
+import { useTeam } from '@/hooks/useTeam';
 
 export default function Clients() {
+  // Grilles tarifaires : modifiables par la Direction et la Comptabilité seulement.
+  const { currentUserRole } = useTeam();
+  const canEditRates = currentUserRole === 'direction' || currentUserRole === 'comptabilite';
   const { canManage, deny } = useCanManage('clients');
   const { licenseId: rcLicenseId } = useLicenseContext();
   const rateCards = useRateCards(rcLicenseId);
@@ -640,6 +644,7 @@ export default function Clients() {
           clientName={pricingClient.name}
           card={rateCards.cards.get(pricingClient.id)}
           bases={['tour', 'km', 'stop', 'hour', 'zone', 'pallet']}
+          readOnly={!canEditRates}
           onSave={async (card) => {
             await rateCards.save(pricingClient.id, card);
             sonnerToast.success('Grille tarifaire enregistrée');

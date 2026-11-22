@@ -25,6 +25,7 @@ export function RateCardDialog({
   bases,
   onSave,
   onDelete,
+  readOnly = false,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -34,6 +35,8 @@ export function RateCardDialog({
   bases: RateBasis[];
   onSave: (card: RateCard) => Promise<void>;
   onDelete?: () => Promise<void>;
+  /** Grille consultable seulement (rôle sans droit de modification). */
+  readOnly?: boolean;
 }) {
   const [form, setForm] = useState<RateCard>(card ?? emptyRateCard(bases[0]));
   const [busy, setBusy] = useState(false);
@@ -176,17 +179,19 @@ export function RateCardDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          {card && onDelete ? (
+          {readOnly ? (
+            <p className="text-xs text-muted-foreground">Seules la Direction et la Comptabilité peuvent modifier cette grille.</p>
+          ) : card && onDelete ? (
             <Button type="button" variant="ghost" className="text-destructive" onClick={() => void onDelete().then(() => onOpenChange(false))} disabled={busy}>
               Supprimer la grille
             </Button>
           ) : <span />}
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Annuler</Button>
-            <Button type="button" onClick={() => void submit()} disabled={!valid || busy} className="gap-2">
+            {!readOnly && <Button type="button" onClick={() => void submit()} disabled={!valid || busy} className="gap-2">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Enregistrer la grille
-            </Button>
+            </Button>}
           </div>
         </DialogFooter>
       </DialogContent>
