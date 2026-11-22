@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.5",
+    date: "2026-11-22",
+    title: "Fonction de connexion plus robuste",
+    changes: [
+      "Fonction serveur de connexion : une requête sans contenu reçoit un refus propre au lieu d'une erreur serveur",
+    ],
+  },
+  {
     version: "2.12.4",
     date: "2026-11-21",
     title: "Coût de revient : structure répartie sur la flotte",

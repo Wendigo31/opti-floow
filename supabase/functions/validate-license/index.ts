@@ -25,7 +25,14 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const supabase = createServiceClient();
     const clientIp = getClientIp(req);
-    const body = await req.json();
+    // Corps absent ou illisible (ex. simple GET) : réponse 400 propre au lieu d'une erreur 500.
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Requête invalide' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
     const action = body.action || "validate";
 
     if (REMOVED_ADMIN_ACTIONS.has(action)) {
