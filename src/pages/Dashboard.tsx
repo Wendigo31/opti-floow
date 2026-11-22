@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Euro, Gauge, BarChart3, FileDown, Image, FileSpreadsheet, Banknote, PiggyBank, Sparkles, Filter, X, TrendingUp } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CostChart } from '@/components/dashboard/CostChart';
@@ -68,6 +68,13 @@ export default function Dashboard() {
   // Filter state
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
+  // À l'ouverture, toutes les tournées sont analysées (au lieu d'une page vide avec « Marge faible : 0 % »).
+  const autoSelectedTours = useRef(false);
+  useEffect(() => {
+    if (autoSelectedTours.current || tours.length === 0) return;
+    autoSelectedTours.current = true;
+    setSelectedTourIds((prev) => (prev.length === 0 ? tours.map((t) => t.id) : prev));
+  }, [tours]);
   
   // Get filtered tours based on selected client
   const filteredTours = useMemo(() => {
@@ -502,7 +509,7 @@ export default function Dashboard() {
 
         <TabsContent value="analysis" className="space-y-6 mt-6">
           {/* Margin Alert for current analysis */}
-          {marginSettings.showInDashboard && displayCosts.profitMargin < marginSettings.minMarginPercent && (
+          {marginSettings.showInDashboard && displayCosts.revenue > 0 && displayCosts.profitMargin < marginSettings.minMarginPercent && (
             <MarginAlertIndicator
               currentMargin={displayCosts.profitMargin}
               profit={displayCosts.profit}

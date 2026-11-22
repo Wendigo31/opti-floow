@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.6",
+    date: "2026-11-22",
+    title: "Analyse prête dès l'ouverture",
+    changes: [
+      "Analyse : toutes les tournées sont sélectionnées à l'ouverture, plus d'alerte « Marge faible : 0 % » sur une page vide",
+      "Fiches de paie : les intérimaires ne sont plus listés (payés par leur agence)",
+      "Sociétés de démonstration : activité simulée chaque soir (journées, factures, paies) et pas de demande de Kbis",
+    ],
+  },
+  {
     version: "2.12.5",
     date: "2026-11-22",
     title: "Fonction de connexion plus robuste",

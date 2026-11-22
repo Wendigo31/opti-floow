@@ -14,8 +14,9 @@ export default function Payslips() {
   const { licenseId } = useLicenseContext();
   const { licenseData } = useLicense();
   const { currentUserInfo } = useTeam();
-  const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
-  const drivers = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
+  // Intérimaires : payés par leur agence, pas de bulletin chez nous.
+  const { cdiDrivers, cddDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
+  const drivers = [...cdiDrivers, ...cddDrivers, ...autreDrivers, ...jokerDrivers];
   const unique = drivers.filter((d, i) => drivers.findIndex((x) => x.id === d.id) === i);
   // Jours pointés dans l'appli OptiFlow Conducteur (aide à la saisie des repas et des heures).
   const [worked, setWorked] = useState<Map<string, Set<string>>>(new Map());
