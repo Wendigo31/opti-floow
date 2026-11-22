@@ -71,6 +71,100 @@ export type Database = {
           },
         ]
       }
+      accountant_links: {
+        Row: {
+          company: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string | null
+          id: string
+          label: string
+          last_access_at: string | null
+          license_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          label: string
+          last_access_at?: string | null
+          license_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string
+          last_access_at?: string | null
+          license_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountant_links_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_exports: {
+        Row: {
+          contents: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          license_id: string
+          path: string
+          period: string
+          share_url: string | null
+          size: number
+        }
+        Insert: {
+          contents?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          license_id: string
+          path: string
+          period: string
+          share_url?: string | null
+          size?: number
+        }
+        Update: {
+          contents?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          license_id?: string
+          path?: string
+          period?: string
+          share_url?: string | null
+          size?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_exports_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       active_itinerary_sessions: {
         Row: {
           avoid_low_bridges: boolean | null
@@ -919,6 +1013,7 @@ export type Database = {
           driver_id: string
           last_used_at: string | null
           license_id: string
+          pin_code: string | null
           token: string
         }
         Insert: {
@@ -927,6 +1022,7 @@ export type Database = {
           driver_id: string
           last_used_at?: string | null
           license_id: string
+          pin_code?: string | null
           token?: string
         }
         Update: {
@@ -935,11 +1031,250 @@ export type Database = {
           driver_id?: string
           last_used_at?: string | null
           license_id?: string
+          pin_code?: string | null
           token?: string
         }
         Relationships: [
           {
             foreignKeyName: "driver_access_links_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_day_reports: {
+        Row: {
+          driver_id: string
+          license_id: string
+          meals: number
+          notes: string | null
+          overnight: boolean
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          driver_id: string
+          license_id: string
+          meals?: number
+          notes?: string | null
+          overnight?: boolean
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          driver_id?: string
+          license_id?: string
+          meals?: number
+          notes?: string | null
+          overnight?: boolean
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_day_reports_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_documents: {
+        Row: {
+          created_at: string
+          driver_id: string
+          entry_id: string | null
+          id: string
+          kind: string
+          license_id: string
+          note: string | null
+          path: string | null
+          work_date: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          entry_id?: string | null
+          id?: string
+          kind: string
+          license_id: string
+          note?: string | null
+          path?: string | null
+          work_date: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          entry_id?: string | null
+          id?: string
+          kind?: string
+          license_id?: string
+          note?: string | null
+          path?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_documents_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_logs: {
+        Row: {
+          amount: number | null
+          created_at: string
+          data: Json
+          doc_path: string | null
+          driver_id: string
+          entry_id: string | null
+          id: string
+          kind: string
+          license_id: string
+          liters: number | null
+          odometer: number | null
+          status: string
+          vehicle_id: string | null
+          work_date: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          data?: Json
+          doc_path?: string | null
+          driver_id: string
+          entry_id?: string | null
+          id?: string
+          kind: string
+          license_id: string
+          liters?: number | null
+          odometer?: number | null
+          status?: string
+          vehicle_id?: string | null
+          work_date: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          data?: Json
+          doc_path?: string | null
+          driver_id?: string
+          entry_id?: string | null
+          id?: string
+          kind?: string
+          license_id?: string
+          liters?: number | null
+          odometer?: number | null
+          status?: string
+          vehicle_id?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_logs_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_pin_attempts: {
+        Row: {
+          at: string
+          id: number
+          ip: string
+        }
+        Insert: {
+          at?: string
+          id?: number
+          ip: string
+        }
+        Update: {
+          at?: string
+          id?: number
+          ip?: string
+        }
+        Relationships: []
+      }
+      driver_time_entries: {
+        Row: {
+          at: string
+          created_at: string
+          driver_id: string
+          id: string
+          kind: string
+          lat: number | null
+          license_id: string
+          lng: number | null
+          odometer: number | null
+          work_date: string
+        }
+        Insert: {
+          at?: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          kind: string
+          lat?: number | null
+          license_id: string
+          lng?: number | null
+          odometer?: number | null
+          work_date: string
+        }
+        Update: {
+          at?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          kind?: string
+          lat?: number | null
+          license_id?: string
+          lng?: number | null
+          odometer?: number | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_time_entries_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_upload_tickets: {
+        Row: {
+          driver_id: string
+          expires_at: string
+          license_id: string
+          path: string
+          used: boolean
+        }
+        Insert: {
+          driver_id: string
+          expires_at?: string
+          license_id: string
+          path: string
+          used?: boolean
+        }
+        Update: {
+          driver_id?: string
+          expires_at?: string
+          license_id?: string
+          path?: string
+          used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_upload_tickets_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
             referencedRelation: "licenses"
@@ -1901,6 +2236,27 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          email: string
+          expires_at: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          email: string
+          expires_at: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          email?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
       password_reset_requests: {
         Row: {
           created_at: string
@@ -1996,6 +2352,100 @@ export type Database = {
           validated_at?: string | null
         }
         Relationships: []
+      }
+      penalties: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          driver_id: string | null
+          due_on: string | null
+          id: string
+          kind: string
+          license_id: string
+          notes: string | null
+          occurred_on: string
+          reason: string | null
+          reference: string | null
+          route_id: string | null
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          due_on?: string | null
+          id?: string
+          kind: string
+          license_id: string
+          notes?: string | null
+          occurred_on: string
+          reason?: string | null
+          reference?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          due_on?: string | null
+          id?: string
+          kind?: string
+          license_id?: string
+          notes?: string | null
+          occurred_on?: string
+          reason?: string | null
+          reference?: string | null
+          route_id?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "penalties_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      penalty_settings: {
+        Row: {
+          late_rate: number
+          license_id: string
+          updated_at: string
+        }
+        Insert: {
+          late_rate?: number
+          license_id: string
+          updated_at?: string
+        }
+        Update: {
+          late_rate?: number
+          license_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "penalty_settings_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: true
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       planning_entries: {
         Row: {
@@ -3398,6 +3848,15 @@ export type Database = {
         Args: { p_company_user_id: string }
         Returns: string
       }
+      _driver_claim_path: {
+        Args: { k_driver: string; k_license: string; p_path: string }
+        Returns: string
+      }
+      _driver_link: {
+        Args: { p_token: string }
+        Returns: Record<string, unknown>
+      }
+      _driver_new_pin: { Args: never; Returns: string }
       _flow_can_invoice: { Args: { p_license: string }; Returns: boolean }
       _flow_next_number: {
         Args: { p_license: string; p_prefix: string }
@@ -3422,6 +3881,7 @@ export type Database = {
       }
       _opti_row_label: { Args: { j: Json }; Returns: string }
       _opti_strip_secrets: { Args: { j: Json }; Returns: Json }
+      _paris_today: { Args: never; Returns: string }
       _plan_cfg: { Args: never; Returns: Json }
       _storage_export_targets: {
         Args: never
@@ -3437,6 +3897,7 @@ export type Database = {
         Returns: undefined
       }
       _team_guard: { Args: { p_company_user_id: string }; Returns: string }
+      accountant_portal: { Args: { p_token: string }; Returns: Json }
       active_announcements: { Args: { p_license_id: string }; Returns: Json }
       admin_add_company_user: {
         Args: {
@@ -3609,7 +4070,61 @@ export type Database = {
         Args: { p_driver_id: string; p_reset?: boolean }
         Returns: string
       }
+      driver_access_pin: { Args: { p_driver_id: string }; Returns: string }
+      driver_add_document: {
+        Args: {
+          p_entry: string
+          p_kind: string
+          p_note: string
+          p_path: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      driver_add_log: {
+        Args: {
+          p_amount: number
+          p_data: Json
+          p_entry: string
+          p_kind: string
+          p_liters: number
+          p_odometer: number
+          p_path: string
+          p_token: string
+          p_vehicle_id: string
+        }
+        Returns: undefined
+      }
+      driver_app_day: {
+        Args: { p_date?: string; p_token: string }
+        Returns: Json
+      }
+      driver_app_week: {
+        Args: { p_from: string; p_token: string }
+        Returns: Json
+      }
+      driver_clock: {
+        Args: {
+          p_kind: string
+          p_lat?: number
+          p_lng?: number
+          p_odometer?: number
+          p_token: string
+        }
+        Returns: Json
+      }
       driver_day: { Args: { p_date?: string; p_token: string }; Returns: Json }
+      driver_login_pin: { Args: { p_pin: string }; Returns: string }
+      driver_save_day: {
+        Args: {
+          p_date: string
+          p_meals: number
+          p_notes: string
+          p_overnight: boolean
+          p_token: string
+        }
+        Returns: undefined
+      }
       driver_update_tour: {
         Args: {
           p_entry: string
@@ -3620,6 +4135,10 @@ export type Database = {
           p_token: string
         }
         Returns: Json
+      }
+      driver_upload_ticket: {
+        Args: { p_ext: string; p_token: string }
+        Returns: string
       }
       flow_license_payload: { Args: { p_license_id: string }; Returns: Json }
       forgot_password_issue: { Args: { p_login: string }; Returns: Json }
@@ -3909,6 +4428,10 @@ export type Database = {
           p_request_id: string
           p_status: string
         }
+        Returns: boolean
+      }
+      redeem_reset_code: {
+        Args: { p_code: string; p_login: string }
         Returns: boolean
       }
       resolve_company_link: {
