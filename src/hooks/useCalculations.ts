@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { activeFleetSize } from '@/lib/fleetSize';
 import type { Driver, FixedCharge, TripCalculation, VehicleParams, CostBreakdown, AppSettings } from '@/types';
 
 // Convert TTC to HT
@@ -78,7 +79,8 @@ export function useCalculations(
       }
       return total + dailyAmount;
     }, 0);
-    const structureCost = dailyCharges;
+    // Part d'un véhicule de la flotte : les charges du jour sont réparties entre les tournées.
+    const structureCost = dailyCharges / activeFleetSize();
 
     // Total calculations (all in HT)
     const totalCost = fuelCost + adBlueCost + tollsHT + driverCost + driverBonuses + driverAllowances + structureCost;

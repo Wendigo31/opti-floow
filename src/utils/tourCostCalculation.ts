@@ -12,6 +12,7 @@ import type { Vehicle } from '@/types/vehicle';
 import type { Trailer } from '@/types/trailer';
 import { calculateVehicleCosts, type VehicleCostParams } from '@/hooks/useVehicleCost';
 import { calculateTrailerCosts } from '@/hooks/useVehicleCost';
+import { activeFleetSize } from '@/lib/fleetSize';
 
 export interface TourCostResult {
   fuelCost: number;
@@ -40,6 +41,8 @@ export function calculateTourCosts(params: {
   charges: FixedCharge[];
   settings: AppSettings;
   appVehicleParams: VehicleParams;
+  /** Véhicules actifs entre lesquels la structure du jour est répartie (défaut : flotte connue). */
+  fleetSize?: number;
 }): TourCostResult {
   const { distance, tollCost, selectedDrivers, selectedVehicles, selectedTrailer, charges, settings, appVehicleParams } = params;
   const tvaRate = settings.tvaRate || 20;
@@ -97,7 +100,8 @@ export function calculateTourCosts(params: {
     }
   }
 
-  // ── Structure costs (fixed charges) ──
+  // ── Structure costs (fixed charges), part d'un véhicule de la flotte ──
+  const fleet = Math.max(1, Math.round(params.fleetSize ?? activeFleetSize()));
   const structureCost = charges.reduce((total, charge) => {
     const amountHT = toHT(charge.amount, tvaRate, charge.isHT);
     let dailyAmount = 0;
@@ -107,7 +111,7 @@ export function calculateTourCosts(params: {
       case 'daily': dailyAmount = amountHT; break;
     }
     return total + dailyAmount;
-  }, 0);
+  }, 0) / fleet;
 
   // ── Vehicle costs (full: leasing + insurance + sinister + depreciation + maintenance + tires) ──
   let vehicleCost = 0;

@@ -187,7 +187,7 @@ export function PayslipsPanel({
                     <div className="min-w-40 flex-1">
                       <p className="font-medium">{name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {row ? `Brut ${eur(Number(row.gross))} · Net ${eur(Number(row.net_to_pay))}` : driverId ? `${workedDays(driverId)} jour(s) avec affrètements ce mois-ci` : ''}
+                        {row ? `Brut ${eur(Number(row.gross))} · Net ${eur(Number(row.net_to_pay))}` : driverId ? `${workedDays(driverId)} jour(s) travaillé(s) ce mois-ci` : ''}
                       </p>
                     </div>
                     {row ? (

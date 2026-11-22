@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.4",
+    date: "2026-11-21",
+    title: "Coût de revient : structure répartie sur la flotte",
+    changes: [
+      "Charges de structure du jour réparties entre les véhicules actifs (avant : chaque tournée portait toutes les charges de la société)",
+      "Prévisionnel recalculé en conséquence",
+    ],
+  },
+  {
     version: "2.12.3",
     date: "2026-11-21",
     title: "Sécurité (analyse complète)",
