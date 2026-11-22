@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePrePayroll } from './prePayroll';
+import { computePrePayroll, frenchHolidays } from './prePayroll';
 import { contractPreset, seniorityYears, splitServiceHours } from './driverContract';
 import type { Activity, TachoDay } from './tachograph';
 
@@ -65,5 +65,26 @@ describe('Pré-paie depuis la carte conducteur', () => {
   });
   it('ignore les journées des autres mois', () => {
     expect(computePrePayroll([day('2026-10-30', [[0, 'rest'], [8, 'driving'], [10, 'rest']])], '2026-11', 'longue_distance').days).toHaveLength(0);
+  });
+  it('jours fériés : le 11 novembre compte comme un dimanche', () => {
+    const r = computePrePayroll([day('2026-11-11', [[0, 'rest'], [7, 'driving'], [10, 'rest']])], '2026-11', 'courte_distance');
+    expect(r.sundayHours).toBe(3);
+    expect(r.holidayHours).toBe(3);
+  });
+  it('Pâques et ses fêtes mobiles', () => {
+    const h = frenchHolidays(2027);
+    expect(h.has('2027-03-29')).toBe(true); // lundi de Pâques
+    expect(h.has('2027-05-06')).toBe(true); // Ascension
+    expect(h.has('2027-05-17')).toBe(true); // lundi de Pentecôte
+  });
+  it('heure d’été : la nuit est comptée à l’heure de Paris (UTC+2)', () => {
+    // 2026-07-01, 18 h – 21 h UTC = 20 h – 23 h à Paris : 2 h de nuit.
+    const r = computePrePayroll([day('2026-07-01', [[0, 'rest'], [18, 'driving'], [21, 'rest']])], '2026-07', 'courte_distance');
+    expect(r.nightHours).toBe(2);
+  });
+  it('grand routier : découchers estimés par les repos de moins de 24 h', () => {
+    const days = ['2026-11-02', '2026-11-03', '2026-11-04'].map((d) => day(d, [[0, 'rest'], [5, 'driving'], [15, 'rest']]));
+    expect(computePrePayroll(days, '2026-11', 'longue_distance').overnights).toBe(2);
+    expect(computePrePayroll(days, '2026-11', 'courte_distance').overnights).toBe(0);
   });
 });

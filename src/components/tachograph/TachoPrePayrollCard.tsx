@@ -52,7 +52,8 @@ export function TachoPrePayrollCard({ month, input, onApply }: { month: string; 
       sundayHours: pre.sundayHours,
       mealAllowanceCount: pre.meals,
       mealAllowanceUnit: ROAD_ALLOWANCES_2026.repas,
-      overnightUnit: input.overnightCount ? input.overnightUnit : ROAD_ALLOWANCES_2026.grandDeplacement1Repas - ROAD_ALLOWANCES_2026.repas,
+      overnightCount: pre.overnights || input.overnightCount,
+      overnightUnit: pre.overnights || !input.overnightCount ? Math.round((ROAD_ALLOWANCES_2026.grandDeplacement1Repas - ROAD_ALLOWANCES_2026.repas) * 100) / 100 : input.overnightUnit,
       otherAllowances: Math.round((pre.casseCroutes * ROAD_ALLOWANCES_2026.casseCroute + pre.nightMeals * ROAD_ALLOWANCES_2026.repasUniqueNuit) * 100) / 100,
     });
     toast.success('Bulletin rempli avec les données du chronotachygraphe : vérifiez les découchers et les repas');
@@ -91,13 +92,14 @@ export function TachoPrePayrollCard({ month, input, onApply }: { month: string; 
             <span>Heures sup. +25 % : <b>{n(pre.overtime25)} h</b></span>
             <span>Heures sup. +50 % : <b>{n(pre.overtime50)} h</b></span>
             <span>Nuit (21 h – 6 h) : <b>{n(pre.nightHours)} h</b></span>
-            <span>Dimanche : <b>{n(pre.sundayHours)} h</b></span>
+            <span>Dimanche / férié : <b>{n(pre.sundayHours)} h</b>{pre.holidayHours ? ` (dont ${n(pre.holidayHours)} h fériées)` : ''}</span>
             <span>Repas : <b>{pre.meals}</b></span>
             <span>Repas de nuit : <b>{pre.nightMeals}</b></span>
             <span>Casse-croûte : <b>{pre.casseCroutes}</b></span>
+            {category === 'longue_distance' && <span>Découchers estimés : <b>{pre.overnights}</b></span>}
           </div>
           {pre.serviceHours < 151.67 && <p className="text-xs text-warning">Moins de 151,67 h de service : congés ou absences à saisir (le salaire mensualisé reste payé).</p>}
-          <p className="text-xs text-muted-foreground">Repas et casse-croûte ne sont dus qu'en déplacement ; les découchers ne figurent pas sur la carte : saisissez-les. Nuit : prime de {n(NIGHT_PREMIUM_PER_HOUR)} €/h (20 % du taux 150M), repas {n(ROAD_ALLOWANCES_2026.repas)} €, casse-croûte {n(ROAD_ALLOWANCES_2026.casseCroute)} €, repas de nuit {n(ROAD_ALLOWANCES_2026.repasUniqueNuit)} € (barème 2026).</p>
+          <p className="text-xs text-muted-foreground">Repas et casse-croûte ne sont dus qu'en déplacement. {category === 'longue_distance' ? "Découchers estimés par les repos de moins de 24 h entre deux journées (la carte n'indique pas le lieu) : corrigez les nuits passées à la maison." : 'Découchers : saisissez-les (la carte n\'indique pas le lieu).'} Découcher {n(Math.round((ROAD_ALLOWANCES_2026.grandDeplacement1Repas - ROAD_ALLOWANCES_2026.repas) * 100) / 100)} € (grand déplacement moins le repas compté à part). Nuit : prime de {n(NIGHT_PREMIUM_PER_HOUR)} €/h (20 % du taux 150M), repas {n(ROAD_ALLOWANCES_2026.repas)} €, casse-croûte {n(ROAD_ALLOWANCES_2026.casseCroute)} €, repas de nuit {n(ROAD_ALLOWANCES_2026.repasUniqueNuit)} € (barème 2026).</p>
           <div className="flex justify-end"><Button type="button" size="sm" onClick={apply}>Remplir le bulletin</Button></div>
         </>
       )}
