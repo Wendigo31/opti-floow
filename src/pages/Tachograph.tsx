@@ -2,11 +2,13 @@ import { useMemo } from 'react';
 import { TachoRecordsPanel, type TachoDriver } from '@/components/tachograph/TachoRecordsPanel';
 import { useLicenseContext } from '@/context/LicenseContext';
 import { useCloudDrivers } from '@/hooks/useCloudDrivers';
+import { useTeam } from '@/hooks/useTeam';
 import type { DriverCategory } from '@/lib/driverContract';
 
 /** RH › Relevés tachy : relevés journaliers et mensuels des cartes conducteur. */
 export default function Tachograph() {
   const { licenseId } = useLicenseContext();
+  const { currentUserRole } = useTeam();
   const { cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers } = useCloudDrivers();
   const list: TachoDriver[] = useMemo(() => {
     const all = [...cdiDrivers, ...cddDrivers, ...interimDrivers, ...autreDrivers, ...jokerDrivers];
@@ -16,5 +18,5 @@ export default function Tachograph() {
       return { id: d.id, name: d.name, category };
     });
   }, [cdiDrivers, cddDrivers, interimDrivers, autreDrivers, jokerDrivers]);
-  return <TachoRecordsPanel licenseId={licenseId} drivers={list} />;
+  return <TachoRecordsPanel licenseId={licenseId} drivers={list} canEdit={currentUserRole === 'direction' || currentUserRole === 'rh'} />;
 }

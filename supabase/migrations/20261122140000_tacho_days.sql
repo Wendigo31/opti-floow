@@ -18,8 +18,20 @@ create table if not exists public.tacho_days (
 create index if not exists tacho_days_license_day on public.tacho_days (license_id, day desc);
 alter table public.tacho_days enable row level security;
 drop policy if exists tacho_days_own_license on public.tacho_days;
-create policy tacho_days_own_license on public.tacho_days for all to authenticated
-  using (license_id = public.get_user_license_id(auth.uid())) with check (license_id = public.get_user_license_id(auth.uid()));
+drop policy if exists tacho_days_read on public.tacho_days;
+drop policy if exists tacho_days_write on public.tacho_days;
+-- Lecture : tous les membres de la société. Import et modification : Direction et RH seulement.
+create policy tacho_days_read on public.tacho_days for select to authenticated
+  using (license_id = public.get_user_license_id(auth.uid()));
+create policy tacho_days_write on public.tacho_days for all to authenticated
+  using (license_id = public.get_user_license_id(auth.uid()) and (
+    exists (select 1 from public.licenses l where l.id = tacho_days.license_id and lower(l.email) = lower(auth.jwt()->>'email'))
+    or exists (select 1 from public.company_users cu where cu.license_id = tacho_days.license_id and cu.user_id = auth.uid()
+               and coalesce(cu.is_active, true) and cu.role::text in ('direction', 'rh'))))
+  with check (license_id = public.get_user_license_id(auth.uid()) and (
+    exists (select 1 from public.licenses l where l.id = tacho_days.license_id and lower(l.email) = lower(auth.jwt()->>'email'))
+    or exists (select 1 from public.company_users cu where cu.license_id = tacho_days.license_id and cu.user_id = auth.uid()
+               and coalesce(cu.is_active, true) and cu.role::text in ('direction', 'rh'))));
 
 -- ---------------------------------------------------------------------------
 -- Démonstration : journées de carte plausibles pour chaque conducteur des sociétés de démo.

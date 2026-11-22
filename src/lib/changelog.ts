@@ -23,7 +23,7 @@ export const CHANGELOG: Release[] = [
       "Fiches de paie : pré-paie depuis le fichier .ddd de la carte conducteur (temps de service, heures d'équivalence et sup., nuit, dimanche, repas, casse-croûte selon la convention collective, jours fériés, découchers estimés pour les grands routiers)",
       "Conducteurs : modèle de contrat (catégorie, coefficient, ancienneté) qui remplit heures, taux et salaire minimum",
       "Grilles tarifaires clients : modifiables par la Direction et la Comptabilité seulement",
-      "RH › Relevés tachy : cartes conducteur importées et enregistrées, synthèse mensuelle pour la paie (export CSV), détail jour par jour et infractions ; la pré-paie du bulletin reprend les relevés enregistrés",
+      "RH › Relevés tachy : cartes conducteur importées et enregistrées, synthèse mensuelle pour la paie (export CSV), détail jour par jour et infractions (import par la Direction et les RH, consultation pour l'Exploitation et la Comptabilité) ; la pré-paie du bulletin reprend les relevés enregistrés",
       "Sociétés de démonstration : relevés de chronotachygraphe sur 6 mois, complétés chaque soir",
     ],
   },

@@ -27,9 +27,10 @@ interface DriverMonth { key: string; name: string; category: DriverCategory; lin
 /**
  * RH › Relevés tachy : fichiers de carte conducteur importés et enregistrés, vus par mois
  * (synthèse pour la paie) et par jour (contrôle), avec les infractions au règlement 561/2006.
+ * Import réservé à la Direction et aux RH ; Exploitation et Comptabilité consultent seulement.
  * Composant identique dans OptiFret et OptiFlow.
  */
-export function TachoRecordsPanel({ licenseId, drivers }: { licenseId: string | null | undefined; drivers: TachoDriver[] }) {
+export function TachoRecordsPanel({ licenseId, drivers, canEdit = false }: { licenseId: string | null | undefined; drivers: TachoDriver[]; canEdit?: boolean }) {
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -68,7 +69,7 @@ export function TachoRecordsPanel({ licenseId, drivers }: { licenseId: string | 
   const current = months.find((m) => m.key === selected) ?? months[0];
 
   const onFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
+    if (!files?.length || !canEdit) return;
     const next: Pending[] = [];
     for (const f of Array.from(files)) {
       try {
@@ -123,11 +124,13 @@ export function TachoRecordsPanel({ licenseId, drivers }: { licenseId: string | 
           <input ref={input} type="file" accept=".ddd,.DDD,.c1b,.C1B,.tgd,.TGD,.esm,.ESM,.v1b,.V1B" multiple className="sr-only"
             onChange={(e) => { void onFiles(e.target.files); e.target.value = ''; }} />
           <Button variant="outline" className="gap-2" onClick={exportCsv} disabled={!months.length}><Download className="h-4 w-4" /> Export CSV du mois</Button>
-          <Button className="gap-2" onClick={() => input.current?.click()}><FileUp className="h-4 w-4" /> Importer des cartes (.ddd)</Button>
+          {canEdit
+            ? <Button className="gap-2" onClick={() => input.current?.click()}><FileUp className="h-4 w-4" /> Importer des cartes (.ddd)</Button>
+            : <Badge variant="secondary" className="self-center">Consultation seule — import par la Direction ou les RH</Badge>}
         </div>
       </div>
 
-      {pending.length > 0 && (
+      {canEdit && pending.length > 0 && (
         <Card className="border-primary/40">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{pending.length} carte(s) à enregistrer</CardTitle>
