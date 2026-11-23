@@ -23,7 +23,7 @@ export async function requirePlanFeature(
   // RLS : l'utilisateur ne lit que la ligne de sa société.
   const { data, error } = await sb.from("license_features").select(anyOf.join(",")).limit(5);
   if (error) return deny(403, "Licence introuvable");
-  const rows = (data ?? []) as Record<string, unknown>[];
+  const rows = (data ?? []) as unknown as Record<string, unknown>[];
   if (!rows.some((r) => anyOf.some((f) => r[f] === true))) {
     return deny(403, "Cette fonction n'est pas incluse dans votre forfait");
   }
