@@ -967,6 +967,36 @@ export type Database = {
           },
         ]
       }
+      demo_sim_state: {
+        Row: {
+          app_base: string
+          base_start: string
+          last_day: string
+          late_client: string | null
+          license_id: string
+          template_month: string
+          updated_at: string
+        }
+        Insert: {
+          app_base: string
+          base_start: string
+          last_day: string
+          late_client?: string | null
+          license_id: string
+          template_month: string
+          updated_at?: string
+        }
+        Update: {
+          app_base?: string
+          base_start?: string
+          last_day?: string
+          late_client?: string | null
+          license_id?: string
+          template_month?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       driver_absences: {
         Row: {
           absence_type: string
@@ -1400,6 +1430,68 @@ export type Database = {
           },
         ]
       }
+      fuel_transactions: {
+        Row: {
+          amount_ht: number | null
+          amount_ttc: number | null
+          card: string | null
+          created_at: string
+          id: string
+          import_key: string | null
+          license_id: string
+          liters: number | null
+          mileage: number | null
+          occurred_at: string
+          plate: string | null
+          product: string | null
+          source: string | null
+          station: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          amount_ht?: number | null
+          amount_ttc?: number | null
+          card?: string | null
+          created_at?: string
+          id?: string
+          import_key?: string | null
+          license_id: string
+          liters?: number | null
+          mileage?: number | null
+          occurred_at: string
+          plate?: string | null
+          product?: string | null
+          source?: string | null
+          station?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          amount_ht?: number | null
+          amount_ttc?: number | null
+          card?: string | null
+          created_at?: string
+          id?: string
+          import_key?: string | null
+          license_id?: string
+          liters?: number | null
+          mileage?: number | null
+          occurred_at?: string
+          plate?: string | null
+          product?: string | null
+          source?: string | null
+          station?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_transactions_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_settings: {
         Row: {
           fuel: Json
@@ -1769,6 +1861,7 @@ export type Database = {
           hidden_pages: string[]
           id: string
           is_active: boolean
+          is_demo: boolean
           last_name: string | null
           last_stripe_sync_at: string | null
           last_used_at: string | null
@@ -1823,6 +1916,7 @@ export type Database = {
           hidden_pages?: string[]
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_stripe_sync_at?: string | null
           last_used_at?: string | null
@@ -1877,6 +1971,7 @@ export type Database = {
           hidden_pages?: string[]
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_stripe_sync_at?: string | null
           last_used_at?: string | null
@@ -3166,6 +3261,59 @@ export type Database = {
           },
         ]
       }
+      tacho_days: {
+        Row: {
+          card_number: string
+          changes: Json
+          created_at: string
+          day: string
+          distance_km: number
+          driver_id: string | null
+          driver_name: string | null
+          id: string
+          license_id: string
+          longest_continuous: number
+          minutes: Json
+          source: string | null
+        }
+        Insert: {
+          card_number?: string
+          changes: Json
+          created_at?: string
+          day: string
+          distance_km?: number
+          driver_id?: string | null
+          driver_name?: string | null
+          id?: string
+          license_id: string
+          longest_continuous?: number
+          minutes: Json
+          source?: string | null
+        }
+        Update: {
+          card_number?: string
+          changes?: Json
+          created_at?: string
+          day?: string
+          distance_km?: number
+          driver_id?: string | null
+          driver_name?: string | null
+          id?: string
+          license_id?: string
+          longest_continuous?: number
+          minutes?: Json
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tacho_days_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           adblue_cost: number | null
@@ -3848,6 +3996,16 @@ export type Database = {
         Args: { p_company_user_id: string }
         Returns: string
       }
+      _demo_dates: {
+        Args: { d: string; s: string; t: string }
+        Returns: string
+      }
+      _demo_h: { Args: { i: number; k: string; m: number }; Returns: number }
+      _demo_mois: { Args: { m: string }; Returns: string }
+      _demo_src: {
+        Args: { base: string; d: string; n?: number }
+        Returns: string
+      }
       _driver_claim_path: {
         Args: { k_driver: string; k_license: string; p_path: string }
         Returns: string
@@ -4066,6 +4224,39 @@ export type Database = {
         Args: { p_license_id: string; p_local_id: string }
         Returns: boolean
       }
+      demo_flow_day: {
+        Args: { p_day: string; p_license: string; p_today: string }
+        Returns: undefined
+      }
+      demo_flow_invoice: {
+        Args: {
+          p_client: string
+          p_end: string
+          p_license: string
+          p_start: string
+        }
+        Returns: undefined
+      }
+      demo_flow_month: {
+        Args: { p_license: string; p_month: string }
+        Returns: undefined
+      }
+      demo_sim_run: { Args: { p_today?: string }; Returns: undefined }
+      demo_tacho_day: {
+        Args: {
+          p_day: string
+          p_driver: string
+          p_license: string
+          p_name: string
+          p_profile: string
+        }
+        Returns: undefined
+      }
+      demo_tacho_fill: {
+        Args: { p_from: string; p_license: string; p_to: string }
+        Returns: undefined
+      }
+      demo_tacho_run: { Args: { p_today?: string }; Returns: undefined }
       driver_access_link: {
         Args: { p_driver_id: string; p_reset?: boolean }
         Returns: string
