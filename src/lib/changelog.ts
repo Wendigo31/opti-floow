@@ -16,6 +16,7 @@ export const CHANGELOG: Release[] = [
     date: "2026-11-27",
     title: "Double authentification renforcée",
     changes: [
+      "Sécurité : vue des clients alignée sur les droits de la personne connectée",
       "Double authentification : la base de données refuse désormais toute lecture ou écriture tant que le code à 6 chiffres n'a pas été saisi (pour les comptes qui l'ont activée)",
       "Double authentification : une session restée sans code (onglet fermé pendant la saisie) redemande le code à l'ouverture",
     ],
