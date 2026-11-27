@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "2.12.8",
+    date: "2026-11-27",
+    title: "Double authentification renforcée",
+    changes: [
+      "Double authentification : la base de données refuse désormais toute lecture ou écriture tant que le code à 6 chiffres n'a pas été saisi (pour les comptes qui l'ont activée)",
+      "Double authentification : une session restée sans code (onglet fermé pendant la saisie) redemande le code à l'ouverture",
+    ],
+  },
+  {
     version: "2.12.7",
     date: "2026-11-22",
     title: "Double authentification, chronotachygraphe, CNR et carburant",

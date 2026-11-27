@@ -20,9 +20,13 @@ export async function listTotpFactors(): Promise<MfaFactor[]> {
 
 /** Le compte a la double authentification et la session n'a pas encore été confirmée par un code. */
 export async function mfaCodeNeeded(): Promise<boolean> {
-  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (error || !data) return false;
-  return data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+  try {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data) return false;
+    return data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+  } catch {
+    return false; // client sans MFA (démo, tests) : rien à demander
+  }
 }
 
 /** Vérifie un code à 6 chiffres pour la session en cours. */

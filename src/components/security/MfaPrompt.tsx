@@ -3,13 +3,27 @@ import { ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { answerMfaPrompt, onMfaPrompt } from '@/lib/mfa';
+import { answerMfaPrompt, completeMfaIfNeeded, mfaCodeNeeded, onMfaPrompt } from '@/lib/mfa';
 
-/** Fenêtre « Code de double authentification », ouverte par la connexion quand le compte l'exige. */
+/**
+ * Fenêtre « Code de double authentification », ouverte par la connexion quand le compte l'exige.
+ * Au démarrage, une session restée sans code (onglet fermé pendant la saisie, par exemple)
+ * redemande aussi le code : la base refuse toute donnée tant qu'il n'est pas saisi.
+ */
 export function MfaPrompt() {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
   useEffect(() => onMfaPrompt((o) => { setOpen(o); if (o) setCode(''); }), []);
+  useEffect(() => {
+    let cancelled = false;
+    mfaCodeNeeded().then((needed) => {
+      if (!needed || cancelled) return;
+      // Code bon : on recharge pour relire les données avec la session confirmée.
+      // Code faux 3 fois ou annulé : la session est fermée, retour à la connexion.
+      completeMfaIfNeeded().finally(() => window.location.reload());
+    });
+    return () => { cancelled = true; };
+  }, []);
   const valid = /^\d{6}$/.test(code.replace(/\s/g, ''));
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) answerMfaPrompt(null); }}>
