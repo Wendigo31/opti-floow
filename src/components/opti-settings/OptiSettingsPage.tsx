@@ -24,6 +24,7 @@ import {
   type OptiSettings, type TeamActivity, type TeamMember,
 } from '@/components/opti-settings/optiSettingsApi';
 import { buildOpp, downloadText, oppFileName, type OppExport } from '@/components/opti-settings/oppFormat';
+import { buildExcel, downloadBlob, excelFileName } from '@/components/opti-settings/oppExcel';
 
 export interface Release {
   version: string;
@@ -297,20 +298,26 @@ function HistoryCard() {
 // Fichier
 // ---------------------------------------------------------------------------
 function ExportCard({ app, isDirection }: { app: OptiSettingsPageProps['app']; isDirection: boolean }) {
-  const [busy, setBusy] = useState(false);
-  const run = async () => {
-    setBusy(true);
+  const [busy, setBusy] = useState<null | 'opp' | 'xlsx'>(null);
+  const run = async (kind: 'opp' | 'xlsx') => {
+    setBusy(kind);
     try {
       const data = (await exportCompany()) as unknown as OppExport;
-      const text = await buildOpp(data);
-      const name = oppFileName(app, String(data.company?.company_name ?? data.company?.company_identifier ?? ''));
-      downloadText(text, name);
+      const companyName = String(data.company?.company_name ?? data.company?.company_identifier ?? '');
+      let name: string;
+      if (kind === 'xlsx') {
+        name = excelFileName(app, companyName);
+        downloadBlob(await buildExcel(data), name);
+      } else {
+        name = oppFileName(app, companyName);
+        downloadText(await buildOpp(data), name);
+      }
       const total = Object.values(data.tables ?? {}).reduce((n, t) => n + (Array.isArray(t) ? t.length : 0), 0);
       toast.success(`Export terminé : ${name} (${total} élément(s))`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Export impossible');
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
   return (
@@ -318,15 +325,22 @@ function ExportCard({ app, isDirection }: { app: OptiSettingsPageProps['app']; i
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base"><FileArchive className="h-4 w-4 text-primary" /> Exporter toutes vos données</CardTitle>
         <CardDescription>
-          Un fichier .opp, le format des logiciels Opti : toutes les données de votre société (clients, factures, conducteurs,
-          véhicules, charges, réglages…) dans un seul fichier compressé et vérifié.
+          Toutes les données de votre société (clients, factures, conducteurs, véhicules, charges, réglages…). En Excel,
+          un onglet par type de données, à ouvrir dans Excel, LibreOffice ou Google Sheets. En .opp, le format des
+          logiciels Opti : un seul fichier compressé et vérifié, pour une sauvegarde ou un transfert.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Button onClick={() => void run()} disabled={!isDirection || busy} className="gap-2">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          Exporter au format .opp
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => void run('xlsx')} disabled={!isDirection || busy !== null} className="gap-2">
+            {busy === 'xlsx' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Exporter en Excel
+          </Button>
+          <Button variant="outline" onClick={() => void run('opp')} disabled={!isDirection || busy !== null} className="gap-2">
+            {busy === 'opp' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileArchive className="h-4 w-4" />}
+            Exporter au format .opp
+          </Button>
+        </div>
         {!isDirection && <p className="text-xs text-muted-foreground">L'export des données est réservé à la Direction.</p>}
         <p className="text-xs text-muted-foreground">Les mots de passe, codes PIN et jetons d'accès ne sont jamais exportés. Chaque export est noté dans l'historique.</p>
       </CardContent>

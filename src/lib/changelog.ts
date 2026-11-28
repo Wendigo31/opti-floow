@@ -14,8 +14,9 @@ export const CHANGELOG: Release[] = [
   {
     version: "2.12.8",
     date: "2026-11-27",
-    title: "Double authentification renforcée et économie de serveur",
+    title: "Double authentification renforcée, économie de serveur, export Excel",
     changes: [
+      "Paramètres › Mon App : export de toutes les données en Excel (un onglet par type de données), en plus du format .opp",
       "Économie de serveur : la session n'est plus réenregistrée chaque minute quand rien n'a changé",
       "Économie de serveur : les vérifications automatiques (équipe, support, synchronisation) s'arrêtent quand l'onglet est caché et sont plus espacées",
       "Bandeau « Service momentanément indisponible » quand le serveur ne répond pas",
