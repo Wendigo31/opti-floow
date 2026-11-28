@@ -1,5 +1,6 @@
 import { uniqueChannelName } from '@/lib/realtimeChannel';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { setVisibleInterval } from '@/lib/visibleInterval';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { VehicleParams, TripCalculation, AppSettings } from '@/types';
@@ -59,6 +60,7 @@ export function useCloudSession({
   const userIdRef = useRef<string | null>(null);
   const licenseIdRef = useRef<string | null>(null);
   const autoSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSavedFingerprintRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
   const onSessionLoadedRef = useRef(onSessionLoaded);
@@ -147,6 +149,10 @@ export function useCloudSession({
       return false;
     }
 
+    // Rien n'a changé depuis la dernière sauvegarde : pas d'écriture (chaque écriture coûte des crédits).
+    const fingerprint = JSON.stringify([vehicle, trip, settings, selectedDriverIds]);
+    if (sessionId && fingerprint === lastSavedFingerprintRef.current) return true;
+
     setIsSaving(true);
 
     try {
@@ -187,7 +193,7 @@ export function useCloudSession({
         const session = result.data as CloudSession;
         setSessionId(session.id);
         setLastSavedAt(new Date(session.last_saved_at));
-        console.log('[CloudSession] Session saved to cloud');
+        lastSavedFingerprintRef.current = fingerprint;
       }
 
       return true;
@@ -235,16 +241,12 @@ export function useCloudSession({
     }
 
     // Setup new interval
-    autoSaveIntervalRef.current = setInterval(() => {
-      console.log('[CloudSession] Auto-save triggered');
-      saveSession();
+    const stopAutoSave = setVisibleInterval(() => {
+      void saveSession();
     }, AUTO_SAVE_INTERVAL);
 
     return () => {
-      if (autoSaveIntervalRef.current) {
-        clearInterval(autoSaveIntervalRef.current);
-        autoSaveIntervalRef.current = null;
-      }
+      stopAutoSave();
     };
   }, [saveSession]);
 

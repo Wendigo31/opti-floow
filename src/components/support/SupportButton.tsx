@@ -39,6 +39,7 @@ import {
   type SupportKind,
   type SupportThread,
 } from "@/lib/support";
+import { setVisibleInterval } from '@/lib/visibleInterval';
 import { OptiGroupLink } from "./OptiGroupLink";
 
 const KIND_ICONS = {
@@ -112,11 +113,10 @@ export function SupportButton({
     }
   }, [licenseId]);
 
-  // Réponses du support : vérifiées toutes les 15 s fenêtre ouverte, toutes les 2 min sinon.
+  // Réponses du support : vérifiées toutes les 15 s fenêtre ouverte, toutes les 5 min sinon (onglet visible seulement).
   useEffect(() => {
     void load();
-    const t = setInterval(() => void load(), open ? 15_000 : 120_000);
-    return () => clearInterval(t);
+    return setVisibleInterval(() => void load(), open ? 15_000 : 5 * 60_000);
   }, [load, open]);
 
   const unread = threads.filter((t) => t.unread).length;

@@ -14,8 +14,11 @@ export const CHANGELOG: Release[] = [
   {
     version: "2.12.8",
     date: "2026-11-27",
-    title: "Double authentification renforcée",
+    title: "Double authentification renforcée et économie de serveur",
     changes: [
+      "Économie de serveur : la session n'est plus réenregistrée chaque minute quand rien n'a changé",
+      "Économie de serveur : les vérifications automatiques (équipe, support, synchronisation) s'arrêtent quand l'onglet est caché et sont plus espacées",
+      "Bandeau « Service momentanément indisponible » quand le serveur ne répond pas",
       "Sécurité : vue des clients alignée sur les droits de la personne connectée",
       "Double authentification : la base de données refuse désormais toute lecture ou écriture tant que le code à 6 chiffres n'a pas été saisi (pour les comptes qui l'ont activée)",
       "Double authentification : une session restée sans code (onglet fermé pendant la saisie) redemande le code à l'ouverture",

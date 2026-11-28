@@ -1,5 +1,6 @@
 import { useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { MfaPrompt } from '@/components/security/MfaPrompt';
+import { BackendDownBanner } from '@/components/BackendDownBanner';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -255,6 +256,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <MfaPrompt />
+          <BackendDownBanner />
           <AppContent />
           <BackgroundImportIndicator />
         </PlanningImportProvider>

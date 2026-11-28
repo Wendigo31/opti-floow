@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { signInWithPassword, myCompanies, type MyCompany } from '@/lib/accounts';
 import type { LicenseFeatures } from '@/types/features';
+import { setVisibleInterval } from '@/lib/visibleInterval';
 
 // Flag to prevent re-validation loops
 let isRevalidating = false;
@@ -932,11 +933,11 @@ export function useLicense(): UseLicenseReturn {
     const onVisible = () => { if (document.visibilityState === 'visible') void sync(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
-    const timer = window.setInterval(() => void sync(true), 3 * 60_000);
+    const stopTimer = setVisibleInterval(() => void sync(true), 10 * 60_000);
     return () => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
-      window.clearInterval(timer);
+      stopTimer();
     };
   }, [isLicensed]);
 

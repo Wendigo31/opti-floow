@@ -7,8 +7,9 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { describeActivity, getSettings, teamActivity } from '@/components/opti-settings/optiSettingsApi';
+import { setVisibleInterval } from '@/lib/visibleInterval';
 
-const EVERY_MS = 60_000;
+const EVERY_MS = 2 * 60_000;
 const KEY = 'opti-team-activity-since';
 
 // Le point de départ survit au changement de page (la mise en page est remontée à chaque écran).
@@ -51,10 +52,10 @@ export function TeamChangeNotifier({ enabled }: { enabled: boolean }) {
         /* hors ligne ou session expirée : on réessaie à la minute suivante */
       }
     };
-    const id = window.setInterval(() => void tick(), EVERY_MS);
+    const stopInterval = setVisibleInterval(() => void tick(), EVERY_MS);
     return () => {
       stop = true;
-      window.clearInterval(id);
+      stopInterval();
     };
   }, [enabled]);
   return null;

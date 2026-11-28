@@ -8,6 +8,7 @@ import { useSavedTours } from '@/hooks/useSavedTours';
 import { useTrips } from '@/hooks/useTrips';
 import { useQuotes } from '@/hooks/useQuotes';
 import { useLicenseContext } from '@/context/LicenseContext';
+import { setVisibleInterval } from '@/lib/visibleInterval';
 
 // Sync interval in ms (5 minutes - reduced frequency since we have realtime)
 const SYNC_INTERVAL = 5 * 60 * 1000;
@@ -150,7 +151,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Setup interval for periodic sync (less frequent since realtime handles updates)
-    syncIntervalRef.current = setInterval(() => {
+    const stopInterval = setVisibleInterval(() => {
       if (licenseId && authUserId) {
         void forceSync();
       }
@@ -158,9 +159,7 @@ export function DataSyncProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMountedRef.current = false;
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-      }
+      stopInterval();
     };
   }, [licenseId, authUserId, forceSync]);
 
